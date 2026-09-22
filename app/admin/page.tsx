@@ -1,15 +1,21 @@
-import { list, today } from "@/lib/store";
+import { isAdmin } from "@/lib/admin";
+import { store } from "@/lib/store";
 import { MENU } from "@/lib/menu";
+import { todayIST } from "@/lib/time";
+import AdminLogin from "@/components/admin-login";
+import GrievanceList from "@/components/grievance-list";
 
 export const dynamic = "force-dynamic";
 
 export default async function Admin() {
-  const date = today();
+  if (!(await isAdmin())) return <AdminLogin />;
+
+  const date = todayIST();
   const [attendance, orders, grievances, wifi] = await Promise.all([
-    list("attendance", date),
-    list("orders", date),
-    list("grievances"),
-    list("wifi"),
+    store.listAttendance(date),
+    store.listOrders(date),
+    store.listGrievances(),
+    store.listWifi(50),
   ]);
 
   const consolidated = MENU.map((m) => ({
@@ -20,7 +26,6 @@ export default async function Admin() {
   return (
     <div className="max-w-3xl">
       <h1 className="text-xl font-bold">Admin — {date}</h1>
-      <p className="mt-1 text-sm text-slate-500">Consolidated view. TODO: protect this route.</p>
 
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="font-semibold">Today&apos;s snack orders</h2>
@@ -52,17 +57,7 @@ export default async function Admin() {
 
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="font-semibold">Grievances — {grievances.length}</h2>
-        <ul className="mt-3 space-y-3 text-sm">
-          {grievances.map((g) => (
-            <li key={g.id} className="rounded-lg bg-slate-50 p-3">
-              <div className="flex justify-between text-xs text-slate-400">
-                <span>{g.displayName ?? "Anonymous"}</span>
-                <span>{g.status}</span>
-              </div>
-              <p className="mt-1 text-slate-700">{g.body}</p>
-            </li>
-          ))}
-        </ul>
+        <GrievanceList items={grievances.map(({ submitterRef: _r, ...g }) => g)} />
       </section>
 
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">

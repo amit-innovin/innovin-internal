@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { add, id, list } from "@/lib/store";
+import { id, store } from "@/lib/store";
 
 export async function GET() {
-  return NextResponse.json((await list("wifi")).slice(0, 50));
+  return NextResponse.json(await store.listWifi(50));
 }
 
 export async function POST(req: Request) {
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json(
-    await add("wifi", {
+    await store.addWifi({
       id: id(),
       quality,
       note: (note || "").slice(0, 500),

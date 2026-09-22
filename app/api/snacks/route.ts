@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { MENU, ORDER_CUTOFF_HOUR } from "@/lib/menu";
-import { add, id, list, submitterRef, today } from "@/lib/store";
+import { id, store, submitterRef } from "@/lib/store";
+import { istHour, todayIST } from "@/lib/time";
 
 export async function GET() {
-  return NextResponse.json(await list("orders", today()));
+  const rows = await store.listOrders(todayIST());
+  return NextResponse.json(rows.map(({ submitterRef: _r, ...rest }) => rest));
 }
 
 export async function POST(req: Request) {
-  if (new Date().getHours() >= ORDER_CUTOFF_HOUR) {
+  if (istHour() >= ORDER_CUTOFF_HOUR) {
     return NextResponse.json({ error: "Orders closed for today" }, { status: 403 });
   }
 
@@ -16,9 +18,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pick a valid item" }, { status: 400 });
   }
 
-  const { submitterRef: _r, ...row } = await add("orders", {
+  // One order per person per day — re-submitting changes your order.
+  const { submitterRef: _r, ...row } = await store.upsertOrder({
     id: id(),
-    date: today(),
+    date: todayIST(),
     itemId,
     preference: preference || "anything",
     instructions: (instructions || "").slice(0, 500),

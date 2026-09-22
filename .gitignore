@@ -1,0 +1,17 @@
+# Local secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Vercel local project link
+.vercel
+
+# Dependencies & build output
+node_modules
+.next
+out
+*.tsbuildinfo
+next-env.d.ts
+
+# Local data store (v0 JSON persistence)
+data/

@@ -1,8 +1,6 @@
 // Snack & tea menu — admin-managed from backend later.
 export const MENU = [
-  { id: "tea", name: "Tea", price: 15 },
-  { id: "snacks", name: "Snacks", price: 40 },
-  { id: "healthy", name: "Healthy Option", price: 60 },
+  { id: "tea", name: "Tea", price: 15, icon: "coffee", tone: "sky" },
+  { id: "snacks", name: "Snacks", price: 40, icon: "cookie", tone: "blue" },
+  { id: "healthy", name: "Healthy Option", price: 60, icon: "leaf", tone: "green" },
 ] as const;
-
-export const ORDER_CUTOFF_HOUR = 11; // orders close at 11:00 AM

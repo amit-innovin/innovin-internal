@@ -4,28 +4,64 @@ Simple tools for everyday needs. Built for our team. See [PRODUCT.md](PRODUCT.md
 
 ## Modules
 
-- **Attendance** — check in/out with your `@innovinlabs.com` email
-- **Snacks & Tea** — morning orders, consolidated daily list (orders close 11 AM IST)
-- **Daily Grievances** — anonymous or named; identity never exposed in the UI
-- **Wi-Fi Quality** — good/poor reports + notes with a recent feed
-- **Admin** (`/admin`) — consolidated dashboard, passcode-gated
+- **Attendance** — check in/out with your company email; remembered per device
+- **Snacks & Tea** — one order per device per day, changeable/cancellable until the cutoff (default 11:00 AM IST); consolidated list for the coordinator
+- **Daily Grievances** — anonymous or named; submitters track status on their own device; identity never exposed, not even to admins
+- **Wi-Fi Quality** — speed test + Good/Poor reports with notes and a recent feed
+- **Announcements** — posted by admins, shown on everyone's home dashboard
+- **Admin** (`/admin`) — passcode-gated dashboard: attendance, orders, grievance inbox with statuses, Wi-Fi feed, announcements
+
+## Stack
+
+Next.js 16 (App Router) · React 19 · Tailwind 4 · shadcn/ui · beUI + transitions.dev motion · Postgres via `pg` (JSON file for local dev) · Vitest · Playwright. Brand (Figtree, palette, cards, logo) follows innovinlabs.com.
 
 ## Run locally
 
 ```bash
 npm install
-npm run dev   # http://localhost:3000
+cp .env.example .env.local   # ADMIN_PASSCODE=1704 for local use
+npm run dev                  # http://localhost:3000
 ```
 
-## Configuration (`.env`)
+Without `DATABASE_URL`, data is stored in `data/store.json` (git-ignored).
+
+## Configuration
 
 | Var | Purpose |
 |---|---|
-| `ADMIN_PASSCODE` | Enables `/admin` — unset means admin is locked |
-| `DATABASE_URL` | Postgres connection (Neon/Supabase/Vercel PG). Unset → local `data/store.json` |
-| `ALLOWED_EMAIL_DOMAINS` | Domains allowed to mark attendance (default `innovinlabs.com`) |
-| `VERCEL_TOKEN` | For deploy commands (never commit) |
+| `ADMIN_PASSCODE` | Enables `/admin`. 4–8 digits → PIN pad, otherwise password field. Unset → admin locked. **Use a long, unique value in production.** |
+| `DATABASE_URL` | Postgres (Supabase/Neon/any). Required when deployed — the app refuses the file store on Vercel. |
+| `DATABASE_CA_CERT` / `DATABASE_SSL_VERIFY` | TLS verification for remote Postgres (default: encrypted, unverified — see `lib/pgconfig.ts`). |
+| `DATABASE_POOL_MAX` | Connections per serverless instance (default 5). |
+| `ALLOWED_EMAIL_DOMAINS` | Comma-separated domains allowed to mark attendance (default `innovinlabs.com`). |
+| `ORDER_CUTOFF_HOUR` | IST hour (0–24) when snack orders close (default 11). |
 
-## Deploy
+Tables and indexes are created automatically on first use.
 
-`vercel link --token "$VERCEL_TOKEN"` then `vercel deploy --token "$VERCEL_TOKEN"`. Set `DATABASE_URL` (Postgres) and `ADMIN_PASSCODE` in project env — the JSON file store does not survive serverless.
+## Testing
+
+```bash
+npm run typecheck
+npm test                                  # unit + JSON store contract
+TEST_DATABASE_URL=postgres://… npm test   # + Postgres store contract
+npm run test:e2e                          # production build + Playwright (desktop & mobile + API)
+E2E_DATABASE_URL=postgres://… npm run test:e2e   # E2E against Postgres
+```
+
+Playwright uses its bundled Chromium (`npx playwright install chromium`); set `CHROME_PATH` to use a local Chromium-based browser instead. CI (`.github/workflows/ci.yml`) runs typecheck, unit + Postgres contract, `npm audit`, and E2E against both storage backends.
+
+What's covered: every employee and admin flow in the browser (with console-error guard), the after-cutoff flow, horizontal overflow on all pages, and at the HTTP level validation, auth, privacy (no submitter identity leaks), idempotency, rate limits, and security headers.
+
+## Security notes
+
+- Admin sessions are HMAC-signed, expire server-side after 12h, and are invalidated when `ADMIN_PASSCODE` changes. Cookies are `HttpOnly`, `SameSite=Lax`, `Secure` in production.
+- Failed admin logins are rate limited (5 per IP / 15 min, 50 globally); grievances, Wi-Fi reports and speed tests are limited per device and per IP. Limits are in-memory per instance — use a shared store (e.g. Redis) if strict global limits are ever needed.
+- Rate limiting trusts `X-Forwarded-For`, which Vercel sets. Behind other proxies, make sure the proxy overwrites it.
+- Attendance intentionally has no employee login (MVP decision): anyone can mark attendance for any allowed email.
+- CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` and HSTS are set in `next.config.ts`.
+
+## Deploy (Vercel)
+
+1. Create a Postgres database (Supabase: use the pooled connection string).
+2. In the Vercel project set `DATABASE_URL`, a strong `ADMIN_PASSCODE`, and optionally `ALLOWED_EMAIL_DOMAINS` / `ORDER_CUTOFF_HOUR`.
+3. `vercel link --token "$VERCEL_TOKEN"` then `vercel deploy --token "$VERCEL_TOKEN"`.

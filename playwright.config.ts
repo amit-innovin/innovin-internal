@@ -1,0 +1,47 @@
+import { defineConfig, devices } from "@playwright/test";
+
+// E2E runs against production builds (`next build` first — see `npm run test:e2e`).
+//   main   :3210 — orders always open (ORDER_CUTOFF_HOUR=24) so results don't depend on time of day
+//   closed :3211 — orders always closed (ORDER_CUTOFF_HOUR=0) to cover the after-cutoff flow
+// Storage: E2E_DATABASE_URL → Postgres; otherwise isolated JSON files under .test-data/.
+// Browser: CHROME_PATH → use a local Chromium-based browser instead of Playwright's download.
+export const MAIN_URL = "http://localhost:3210";
+export const CLOSED_URL = "http://localhost:3211";
+
+const db = process.env.E2E_DATABASE_URL;
+const serverEnv = (name: string, cutoff: string) => ({
+  ADMIN_PASSCODE: "1704",
+  ORDER_CUTOFF_HOUR: cutoff,
+  ALLOWED_EMAIL_DOMAINS: "innovinlabs.com",
+  ...(db ? { DATABASE_URL: db } : { DATA_FILE: `.test-data/${name}.json` }),
+});
+
+const launchOptions = process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {};
+
+export default defineConfig({
+  testDir: "./e2e",
+  globalSetup: "./e2e/global-setup.ts",
+  fullyParallel: false,
+  workers: 1,
+  retries: process.env.CI ? 1 : 0,
+  forbidOnly: !!process.env.CI,
+  timeout: 45_000,
+  expect: { timeout: 10_000 },
+  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
+  use: {
+    baseURL: MAIN_URL,
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    launchOptions,
+  },
+  projects: [
+    { name: "desktop", testIgnore: /api\.spec/, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, launchOptions } },
+    { name: "mobile", testIgnore: /api\.spec/, use: { ...devices["Pixel 7"], launchOptions } },
+    // API tests run last: they deliberately trip rate limits.
+    { name: "api", testMatch: /api\.spec/, dependencies: ["desktop", "mobile"] },
+  ],
+  webServer: [
+    { command: "npm run start -- -p 3210", url: MAIN_URL, env: serverEnv("main", "24"), reuseExistingServer: false, timeout: 60_000 },
+    { command: "npm run start -- -p 3211", url: CLOSED_URL, env: serverEnv("closed", "0"), reuseExistingServer: false, timeout: 60_000 },
+  ],
+});

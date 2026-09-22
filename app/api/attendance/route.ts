@@ -1,39 +1,61 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { allowedEmailDomains } from "@/lib/config";
+import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
+import { enforce } from "@/lib/guard";
+import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
 
-const allowedDomain = (email: string) => {
-  const allowed = (process.env.ALLOWED_EMAIL_DOMAINS || "innovinlabs.com").split(",");
-  return allowed.includes(email.split("@")[1]?.toLowerCase());
-};
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export async function GET() {
-  return NextResponse.json(await store.listAttendance(todayIST()));
+// Public: today's count + the caller's own status (identified by their remembered email).
+export async function GET(req: NextRequest) {
+  const email = req.cookies.get(EMAIL_COOKIE)?.value ?? null;
+  const rows = await store.listAttendance(todayIST());
+  const mine = email ? rows.find((r) => r.email === email) : undefined;
+  return NextResponse.json({
+    count: rows.length,
+    email,
+    me: mine ? { checkInAt: mine.checkInAt, checkOutAt: mine.checkOutAt } : null,
+  });
 }
 
-export async function POST(req: Request) {
-  const { email, action } = await req.json();
-  const normalized = (email || "").trim().toLowerCase();
-  if (!/^\S+@\S+\.\S+$/.test(normalized)) {
-    return NextResponse.json({ error: "Valid email required" }, { status: 400 });
-  }
-  if (!allowedDomain(normalized)) {
+export async function POST(req: NextRequest) {
+  const limited = enforce([["writeIp", clientIp(req)]]);
+  if (limited) return limited;
+
+  const body = await readJSON(req);
+  if (!body) return badRequest();
+  const email = str(body.email).trim().toLowerCase().slice(0, 254);
+  const action = body.action;
+
+  if (!EMAIL.test(email)) return badRequest("Enter a valid email");
+  if (!allowedEmailDomains().includes(email.split("@")[1])) {
     return NextResponse.json({ error: "Use your Innovin email" }, { status: 403 });
   }
+  if (action !== "in" && action !== "out") return badRequest("Invalid attendance action");
 
   const date = todayIST();
   const now = new Date().toISOString();
+  const existing = await store.getAttendance(email, date);
 
+  let row;
   if (action === "out") {
-    const row = await store.checkOut(normalized, date, now);
-    if (!row) return NextResponse.json({ error: "No check-in found for today" }, { status: 404 });
-    return NextResponse.json(row);
+    if (!existing) return NextResponse.json({ error: "Check in first" }, { status: 404 });
+    // Idempotent: a repeated check-out keeps the original time.
+    row = existing.checkOutAt ? existing : await store.checkOut(email, date, now);
+  } else {
+    row = existing ?? (await store.checkIn({ id: id(), email, date, checkInAt: now, checkOutAt: null }));
   }
 
-  const existing = await store.getAttendance(normalized, date);
-  if (existing) return NextResponse.json(existing);
+  const res = NextResponse.json(row);
+  res.cookies.set(EMAIL_COOKIE, email, longLivedCookie);
+  return res;
+}
 
-  return NextResponse.json(
-    await store.checkIn({ id: id(), email: normalized, date, checkInAt: now, checkOutAt: null }),
-  );
+// "Not you?" — forget the remembered email on this device.
+export async function DELETE() {
+  const res = NextResponse.json({ ok: true });
+  res.cookies.set(EMAIL_COOKIE, "", { expires: new Date(0), path: "/" });
+  return res;
 }

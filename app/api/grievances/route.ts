@@ -1,11 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
-import { id, store, submitterRef } from "@/lib/store";
+import { DEVICE_COOKIE } from "@/lib/cookies";
+import { enforce } from "@/lib/guard";
+import { badRequest, clientIp, readJSON, str } from "@/lib/http";
+import { id, store } from "@/lib/store";
+import { grievancesForDevice, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 import type { GrievanceStatus } from "@/lib/types";
 
 const STATUSES: GrievanceStatus[] = ["open", "in_progress", "resolved"];
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (req.nextUrl.searchParams.get("scope") === "mine") {
+    return NextResponse.json(await grievancesForDevice(req.cookies.get(DEVICE_COOKIE)?.value, 20));
+  }
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -14,31 +21,42 @@ export async function GET() {
   return NextResponse.json(rows.map(({ submitterRef: _r, ...rest }) => rest));
 }
 
-export async function POST(req: Request) {
-  const { body, displayName } = await req.json();
-  if (!body?.trim()) {
-    return NextResponse.json({ error: "Tell us what's on your mind" }, { status: 400 });
-  }
+export async function POST(req: NextRequest) {
+  const identity = submitterIdentity(req);
+  const limited = enforce([
+    ["grievanceDevice", identity.ref],
+    ["grievanceIp", clientIp(req)],
+  ]);
+  if (limited) return limited;
+
+  const body = await readJSON(req);
+  if (!body) return badRequest();
+  const text = str(body.body).trim();
+  if (!text) return badRequest("Tell us what's on your mind");
 
   const { submitterRef: _r, ...row } = await store.addGrievance({
     id: id(),
-    body: body.trim().slice(0, 2000),
-    displayName: displayName?.trim() || null,
-    submitterRef: submitterRef(req),
+    body: text.slice(0, 2000),
+    displayName: str(body.displayName).trim().slice(0, 100) || null,
+    submitterRef: identity.ref,
     status: "open",
     createdAt: new Date().toISOString(),
   });
-  return NextResponse.json(row);
+  const res = NextResponse.json(row);
+  setSubmitterCookie(res, identity.deviceId);
+  return res;
 }
 
 export async function PATCH(req: Request) {
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { id: gid, status } = await req.json();
-  if (!gid || !STATUSES.includes(status)) {
-    return NextResponse.json({ error: "Invalid status update" }, { status: 400 });
-  }
-  await store.setGrievanceStatus(gid, status);
-  return NextResponse.json({ ok: true });
+  const body = await readJSON(req);
+  const gid = str(body?.id);
+  const status = body?.status as GrievanceStatus;
+  if (!gid || !STATUSES.includes(status)) return badRequest("Invalid status update");
+  const updated = await store.setGrievanceStatus(gid, status);
+  return updated
+    ? NextResponse.json({ ok: true })
+    : NextResponse.json({ error: "Grievance not found" }, { status: 404 });
 }

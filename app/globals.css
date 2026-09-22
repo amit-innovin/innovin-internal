@@ -1,10 +1,102 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "./transitions.css";
 
-:root {
-  --ink: #1e2a4a;
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --color-brand: var(--brand);
+  --color-brand-sky: var(--brand-sky);
+  --color-brand-tint: var(--brand-tint);
+  --color-surface-2: var(--surface-2);
+  --color-hairline: var(--hairline);
+  --color-ink: var(--primary);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-card: var(--r-card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --shadow-lift: 0 10px 24px -14px rgb(1 42 64 / 0.5);
+  --ease-brand: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-body {
-  color: var(--ink);
-  background: #f6f7fb;
+/* Design tokens mirrored from innovinlabs.com — ink, brand blues, hairline borders,
+   8px cards / 10px controls, Figtree. Layout is our own. */
+:root {
+  --brand: #015c89;
+  --brand-sky: #65c2e2;
+  --brand-tint: #e6f3fa;
+  --surface-2: #eff4f7;
+  --hairline: #ebf0f3;
+
+  --background: #f3f7f9;
+  --foreground: #111214;
+  --card: #ffffff;
+  --card-foreground: #111214;
+  --popover: #ffffff;
+  --popover-foreground: #111214;
+  --primary: #111214;
+  --primary-foreground: #ffffff;
+  --secondary: #eff4f7;
+  --secondary-foreground: #111214;
+  --muted: #eff4f7;
+  --muted-foreground: #586570;
+  --accent: #e6f3fa;
+  --accent-foreground: #015c89;
+  --destructive: #d23f4c;
+  --border: #dfe7ec;
+  --input: #dfe7ec;
+  --ring: #65c2e2;
+  --radius: 10px;
+  --r-card: 8px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.03em;
+  }
+}
+
+/* innovinlabs.com eyebrow label: small, uppercase, tracked, brand blue. */
+@utility eyebrow {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand);
 }

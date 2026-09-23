@@ -29,6 +29,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   poweredByHeader: false,
+  experimental: {
+    // Client router cache: re-navigating to a dynamic page within 30s reuses the streamed
+    // payload instead of refetching — makes tab switches feel instant.
+    staleTimes: { dynamic: 30 },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

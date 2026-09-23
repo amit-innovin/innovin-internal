@@ -29,5 +29,9 @@ export function pgConfig(url = process.env.DATABASE_URL ?? "", env: DbEnv = proc
     max: Number(env.DATABASE_POOL_MAX ?? 5),
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 10_000,
+    // Keep pooled connections alive across serverless invocations — without this, an idle
+    // TCP connection drops silently and the next query pays a full reconnect + TLS handshake.
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 5_000,
   };
 }

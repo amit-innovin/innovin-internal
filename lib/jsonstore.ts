@@ -8,6 +8,7 @@ import type {
   EventRow,
   GrievanceRow,
   LeaveBalanceRow,
+  PushSubscriptionRow,
   OrderRow,
   RsvpRow,
   Store,
@@ -29,9 +30,10 @@ type DB = {
   events: EventRow[];
   rsvps: RsvpRow[];
   leaveBalances: LeaveBalanceRow[];
+  pushSubscriptions: PushSubscriptionRow[];
 };
 
-const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [] });
+const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -217,6 +219,24 @@ export const jsonStore: Store = {
       return { result: row, changed: true };
     }),
   listLeaveBalances: (year) => query((db) => db.leaveBalances.filter((b) => b.year === year)),
+  savePushSubscription: (row) =>
+    mutate((db) => {
+      const existing = db.pushSubscriptions.find((s) => s.endpoint === row.endpoint);
+      if (existing) {
+        Object.assign(existing, row);
+        return { result: existing, changed: true };
+      }
+      db.pushSubscriptions.unshift(row);
+      return { result: row, changed: true };
+    }),
+  deletePushSubscription: (endpoint) =>
+    mutate((db) => {
+      const before = db.pushSubscriptions.length;
+      db.pushSubscriptions = db.pushSubscriptions.filter((s) => s.endpoint !== endpoint);
+      return { result: db.pushSubscriptions.length < before, changed: db.pushSubscriptions.length < before };
+    }),
+  listPushSubscriptions: (email) =>
+    query((db) => (email ? db.pushSubscriptions.filter((s) => s.email === email) : db.pushSubscriptions)),
   listEmployees: () =>
     query((db) => db.employees.slice().sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email))),
 

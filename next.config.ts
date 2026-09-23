@@ -18,6 +18,8 @@ const csp = [
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
+  // Service worker for Web Push (public/sw.js).
+  "worker-src 'self'",
 ].join("; ");
 
 const securityHeaders = [

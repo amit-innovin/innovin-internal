@@ -339,6 +339,32 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(await store.listLeaveBalances(2027)).toEqual([]);
       });
 
+      it("saves push subscriptions by endpoint, scopes them by email, and prunes them", async () => {
+        const sub = (p: Partial<{ endpoint: string; email: string | null }> = {}) => ({
+          endpoint: "https://push.example.com/a",
+          p256dh: "key",
+          auth: "auth",
+          email: "a@innovinlabs.com" as string | null,
+          createdAt: iso(),
+          ...p,
+        });
+        await store.savePushSubscription(sub());
+        // Re-subscribing the same browser refreshes the row rather than duplicating it.
+        await store.savePushSubscription(sub({ email: "b@innovinlabs.com" }));
+        expect(await store.listPushSubscriptions()).toHaveLength(1);
+        expect((await store.listPushSubscriptions())[0].email).toBe("b@innovinlabs.com");
+
+        await store.savePushSubscription(sub({ endpoint: "https://push.example.com/b", email: null }));
+        expect(await store.listPushSubscriptions()).toHaveLength(2);
+        // An email narrows to that person's devices; no email means a broadcast list.
+        expect(await store.listPushSubscriptions("b@innovinlabs.com")).toHaveLength(1);
+        expect(await store.listPushSubscriptions("nobody@innovinlabs.com")).toEqual([]);
+
+        expect(await store.deletePushSubscription("https://push.example.com/a")).toBe(true);
+        expect(await store.deletePushSubscription("https://push.example.com/a")).toBe(false);
+        expect(await store.listPushSubscriptions()).toHaveLength(1);
+      });
+
       it("lists employees sorted by name", async () => {
         await store.upsertEmployee(employee({ email: "z@innovinlabs.com", name: "Zara" }));
         await store.upsertEmployee(employee({ email: "a@innovinlabs.com", name: "Asha" }));

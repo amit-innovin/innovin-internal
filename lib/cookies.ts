@@ -4,6 +4,9 @@ export const DEVICE_COOKIE = "innovin_device";
 // link exists. The server stores a constant "anon" ref, so the DB can't be joined
 // against away/orders to de-anonymize anyone.
 export const GRIEVANCE_IDS_COOKIE = "innovin_grv";
+// When this browser last opened the notification feed — drives the unread count. A cookie, so
+// it works without signing in and needs no schema.
+export const NOTIFICATIONS_SEEN_COOKIE = "innovin_seen";
 
 export const longLivedCookie = {
   httpOnly: true,

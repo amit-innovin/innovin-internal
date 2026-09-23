@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
+import { sendPush } from "@/lib/push";
 import { id, store } from "@/lib/store";
 
 // Redirect back to the admin section with a flash key the page turns into a toast.
@@ -24,12 +25,15 @@ export async function POST(req: Request) {
 
   const title = text("title", 120);
   if (!title) return back("missing-title");
+  const body = text("body", 500);
   await store.addAnnouncement({
     id: id(),
     title,
-    body: text("body", 500),
+    body,
     tag: text("tag", 30) || "Office",
     createdAt: new Date().toISOString(),
   });
+  // Best-effort: a push that fails must not fail the post.
+  await sendPush({ title, body: body.slice(0, 120), href: "/#announcements", tag: "announcement" }).catch(() => {});
   return back("posted");
 }

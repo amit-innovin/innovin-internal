@@ -6,6 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import { CalendarCheck, CalendarDays, CircleHelp, Coffee, House, MessageSquare, Settings, Users, Wifi } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Logo, Wave } from "@/components/brand";
+import Notifications from "@/components/notifications";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -60,9 +61,12 @@ export function Sidebar() {
   const pathname = usePathname();
   return (
     <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r bg-card px-4 py-6 md:flex">
-      <Link href="/" className="mb-8 px-2">
-        <Logo />
-      </Link>
+      <div className="mb-8 flex items-center justify-between gap-2 px-2">
+        <Link href="/">
+          <Logo />
+        </Link>
+        <Notifications />
+      </div>
       <nav className="flex flex-col gap-1">
         {PRIMARY.map((item) => (
           <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
@@ -91,7 +95,8 @@ export function MobileTopBar() {
       <Link href="/">
         <Logo />
       </Link>
-      <div className="flex gap-1">
+      <div className="flex items-center gap-1">
+        <Notifications />
         {SECONDARY.map((item) => (
           <Tooltip key={item.href}>
             <TooltipTrigger asChild>

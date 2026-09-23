@@ -10,6 +10,7 @@ import type {
   GrievanceRow,
   GrievanceStatus,
   LeaveBalanceRow,
+  PushSubscriptionRow,
   OrderRow,
   Role,
   Store,
@@ -106,6 +107,14 @@ ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
 UPDATE grievances SET submitter_ref = 'anon' WHERE submitter_ref <> 'anon';
 -- Leave balances copied from Zoho People (the system of record) by an admin. One row per
 -- person per leave year; as_of is what makes app-side requests countable on top.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint text PRIMARY KEY,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  email text,
+  created_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS push_email_idx ON push_subscriptions (email);
 CREATE TABLE IF NOT EXISTS leave_balances (
   email text NOT NULL,
   year int NOT NULL,
@@ -199,6 +208,13 @@ const employee = (r: any): EmployeeRow => ({
   joinedOn: r.joined_on ?? null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
+});
+const pushSubscription = (r: any): PushSubscriptionRow => ({
+  endpoint: r.endpoint,
+  p256dh: r.p256dh,
+  auth: r.auth,
+  email: r.email ?? null,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const leaveBalance = (r: any): LeaveBalanceRow => ({
   email: r.email,
@@ -434,6 +450,24 @@ class PgStore implements Store {
   async listLeaveBalances(year: number) {
     const res = await this.q(`SELECT * FROM leave_balances WHERE year = $1`, [year]);
     return res.rows.map(leaveBalance);
+  }
+  async savePushSubscription(row: PushSubscriptionRow) {
+    const res = await this.q(
+      `INSERT INTO push_subscriptions (endpoint, p256dh, auth, email, created_at) VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (endpoint) DO UPDATE SET p256dh = $2, auth = $3, email = $4 RETURNING *`,
+      [row.endpoint, row.p256dh, row.auth, row.email, row.createdAt],
+    );
+    return pushSubscription(res.rows[0]);
+  }
+  async deletePushSubscription(endpoint: string) {
+    const res = await this.q(`DELETE FROM push_subscriptions WHERE endpoint = $1`, [endpoint]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async listPushSubscriptions(email?: string) {
+    const res = email
+      ? await this.q(`SELECT * FROM push_subscriptions WHERE email = $1`, [email])
+      : await this.q(`SELECT * FROM push_subscriptions`);
+    return res.rows.map(pushSubscription);
   }
   async getEmployee(email: string) {
     const res = await this.q(`SELECT * FROM employees WHERE email = $1`, [email]);

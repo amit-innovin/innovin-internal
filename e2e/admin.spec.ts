@@ -108,9 +108,11 @@ test.describe("Admin", () => {
   test("announcements: post → visible to employees → delete with confirmation", async ({ page, browser }) => {
     const title = uniqueText("Fire drill at 3 PM");
     await adminLogin(page, "publish");
-    await page.locator('#announcements input[name="title"]').fill(title);
-    await page.locator('#announcements input[name="tag"]').fill("Safety");
-    await page.locator('#announcements textarea[name="body"]').fill("Assemble at the parking lot.");
+    // The composer renders one form at a time, so these no longer need scoping to disambiguate
+    // them from the event form.
+    await page.getByLabel("Title", { exact: true }).fill(title);
+    await page.getByLabel("Tag").fill("Safety");
+    await page.getByLabel("Details").fill("Assemble at the parking lot.");
     await page.getByRole("button", { name: "Post announcement" }).click();
     await expect(page.getByText("Announcement posted")).toBeVisible();
     await expect(page).not.toHaveURL(/done=/);

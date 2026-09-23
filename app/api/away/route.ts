@@ -6,6 +6,7 @@ import { DEVICE_COOKIE } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { fmtShortDate } from "@/lib/format";
 import { isLeaveType, leaveCost, nonWorkingReason } from "@/lib/leave";
+import { sendPush } from "@/lib/push";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
 import { setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
@@ -108,7 +109,21 @@ export async function PATCH(req: Request) {
   const actor = await currentActor();
   const decidedBy = actor?.role === "admin" || actor?.role === "owner" ? actor.name || actor.email : null;
   const updated = await store.setAwayStatus(rid, status, decidedBy, new Date().toISOString());
-  return updated
-    ? NextResponse.json({ ok: true })
-    : NextResponse.json({ error: "Request not found" }, { status: 404 });
+  if (!updated) return NextResponse.json({ error: "Request not found" }, { status: 404 });
+
+  // Tell just that person's devices. Best-effort — the decision is already saved.
+  const row = (await store.listAway(200)).find((r) => r.id === rid);
+  if (row) {
+    const what = row.type === "wfh" ? "Work from home" : "Leave";
+    await sendPush(
+      {
+        title: `${what} ${status}`,
+        body: `${fmtShortDate(`${row.startDate}T00:00:00`)}${decidedBy ? ` · by ${decidedBy}` : ""}`,
+        href: "/attendance",
+        tag: `away-${rid}`,
+      },
+      row.email,
+    ).catch(() => {});
+  }
+  return NextResponse.json({ ok: true });
 }

@@ -61,6 +61,9 @@ so never describe the work as "opened a PR" or "merged a PR" — say the branch 
   snapshots in (`leave_balances`); only requests created after a snapshot's `asOf` count on top.
 - `data/` is gitignored. Never put data the app reads at runtime there: `vercel deploy` uploads
   the working directory, so it would ship to production while being absent from git and CI.
+- Notifications are derived in `lib/notifications.ts` — don't add a notifications table. Push
+  lives in `lib/push.ts` and must never send grievance updates; that would require storing a
+  grievance→subscription link, which is the join anonymity removed.
 - OAuth links must be plain `<a href>`, never `next/link` — a Link prefetches the route and the
   redirect to Google trips the `connect-src 'self'` CSP.
 - New dependencies: pin exact versions published ≥ 7 days ago.

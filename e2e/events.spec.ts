@@ -2,6 +2,8 @@ import { adminLogin, expect, test, uniqueText } from "./fixtures";
 
 async function publishEvent(page: import("@playwright/test").Page, title: string) {
   await adminLogin(page, "publish");
+  // The composer opens on Announcement; events are the other half of the toggle.
+  await page.getByRole("tab", { name: "Event" }).click();
   await page.getByLabel("Event title").fill(title);
   await page.getByLabel("Category").selectOption("sports");
   await page.getByLabel("Starts at").fill("2026-12-25T17:00");

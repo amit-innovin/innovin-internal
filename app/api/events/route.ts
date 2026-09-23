@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
+import { fmtShortDate } from "@/lib/format";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
+import { sendPush } from "@/lib/push";
 import { id, store } from "@/lib/store";
 import { setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 import type { EventCategory } from "@/lib/types";
@@ -47,16 +49,24 @@ export async function POST(req: Request) {
   if (!title) return flash("missing-title");
   if (!startsAt || !CATEGORIES.includes(category)) return flash("invalid-event");
 
+  const location = text("location", 80);
   await store.addEvent({
     id: id(),
     title,
     body: text("body", 500),
     category,
     startsAt,
-    location: text("location", 80),
+    location,
     createdBy: "admin",
     createdAt: new Date().toISOString(),
   });
+  // Best-effort: a push that fails must not fail the publish.
+  await sendPush({
+    title,
+    body: `${fmtShortDate(startsAt)}${location ? ` · ${location}` : ""}`,
+    href: "/events",
+    tag: "event",
+  }).catch(() => {});
   return flash("event-posted");
 }
 

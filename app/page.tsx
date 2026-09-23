@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { Suspense } from "react";
 import type { LucideIcon } from "lucide-react";
-import { BadgeCheck, CalendarCheck, CalendarOff, Check, Clock, Coffee, DoorOpen, Megaphone, MessageSquare, Users, Wifi } from "lucide-react";
+import { BadgeCheck, CalendarCheck, CalendarDays, CalendarOff, Check, Clock, Coffee, DoorOpen, Megaphone, MessageSquare, Users, Wifi } from "lucide-react";
 import { CityArt, WifiArt } from "@/components/art";
 import { ArrowLink, Empty, IconTile, MENU_ICONS, QualityDot, SectionHeader, STATUS_META, StatusPill, stagger, type Tone } from "@/components/kit";
 import { Button } from "@/components/ui/button";
@@ -219,7 +219,12 @@ async function DayColumn({ email, deviceId }: { email: string | null; deviceId: 
 }
 
 async function SocialColumn({ grievanceIds }: { grievanceIds: string[] }) {
-  const [announcements, grievances] = await Promise.all([store.listAnnouncements(2), grievancesFromIds(grievanceIds, 3)]);
+  const [announcements, grievances, events] = await Promise.all([
+    store.listAnnouncements(2),
+    grievancesFromIds(grievanceIds, 3),
+    // Events were publishable but invisible here, so nobody saw one without visiting /events.
+    store.listEvents(new Date().toISOString(), 2),
+  ]);
 
   return (
     <div className="flex min-w-0 flex-col gap-5" style={stagger(3)}>
@@ -239,6 +244,28 @@ async function SocialColumn({ grievanceIds }: { grievanceIds: string[] }) {
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{a.title}</p>
                   {a.body && <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{a.body}</p>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card className="gap-0 p-5">
+        <SectionHeader title="What's on" href="/events" linkLabel="All events" />
+        {events.length === 0 ? (
+          <Empty>Nothing scheduled right now.</Empty>
+        ) : (
+          <ul className="mt-4 space-y-4">
+            {events.map((e) => (
+              <li key={e.id} className="flex gap-3">
+                <IconTile icon={CalendarDays} tone="sky" size="sm" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{e.title}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {fmtShortDate(e.startsAt)} · {fmtTime(e.startsAt)}
+                    {e.location && ` · ${e.location}`}
+                  </p>
                 </div>
               </li>
             ))}

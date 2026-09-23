@@ -75,6 +75,20 @@ export type LeaveBalanceRow = {
   updatedBy: string | null;
 };
 
+// A browser's push subscription. `email` is set when the device is signed in, which is what
+// lets a leave decision reach the right person; broadcasts go to every row.
+//
+// Deliberately never linked to a grievance: push is server-initiated with no request context,
+// so delivering a grievance update would require storing exactly the grievance→device join that
+// anonymity forbids. Grievance updates appear in the in-app feed only.
+export type PushSubscriptionRow = {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  email: string | null;
+  createdAt: string;
+};
+
 export type EventCategory = "sports" | "arts" | "culture" | "learning" | "social" | "company";
 
 export type EventRow = {
@@ -174,4 +188,8 @@ export interface Store {
   setJoinedOn(email: string, joinedOn: string | null): Promise<boolean>;
   setLeaveBalance(row: LeaveBalanceRow): Promise<LeaveBalanceRow>;
   listLeaveBalances(year: number): Promise<LeaveBalanceRow[]>;
+  savePushSubscription(row: PushSubscriptionRow): Promise<PushSubscriptionRow>;
+  deletePushSubscription(endpoint: string): Promise<boolean>;
+  // `email` narrows to one person's devices; omit it to broadcast.
+  listPushSubscriptions(email?: string): Promise<PushSubscriptionRow[]>;
 }

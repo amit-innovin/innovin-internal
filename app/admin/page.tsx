@@ -5,6 +5,7 @@ import AccessList from "@/components/access-list";
 import AdminLogin from "@/components/admin-login";
 import { Flash } from "@/components/flash";
 import AwayList from "@/components/away-list";
+import PostComposer from "@/components/post-composer";
 import LeaveOverview from "@/components/leave-overview";
 import GrievanceList from "@/components/grievance-list";
 import { Empty, IconTile, MENU_ICONS, QualityDot, SectionHeader, stagger, type Tone } from "@/components/kit";
@@ -23,8 +24,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { currentActor, isAdmin, isOwner } from "@/lib/admin";
 import { leaveOverview } from "@/lib/leave-data";
 import { fmtDay, fmtDuration, fmtShortDate, fmtTime, relativeDay, totalMinutes } from "@/lib/format";
@@ -254,30 +253,10 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       )}
 
       <Card id="events" className={`mt-4 gap-0 p-5 ${tab === "publish" ? "" : "hidden"}`}>
-        <SectionHeader title="Events" aside="Shown on the Events page" />
-        <form action="/api/events" method="post" className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Input name="title" required maxLength={80} placeholder="Title — e.g. IPL screening in the common area" aria-label="Event title" className="sm:col-span-2" />
-          <select
-            name="category"
-            aria-label="Category"
-            className="h-10 w-full min-w-0 rounded-lg border border-input bg-card px-3.5 py-1 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
-          >
-            <option value="sports">Sports</option>
-            <option value="arts">Arts</option>
-            <option value="culture">Culture</option>
-            <option value="learning">Learning</option>
-            <option value="social">Social</option>
-            <option value="company" selected>
-              Company
-            </option>
-          </select>
-          <Input name="startsAt" type="datetime-local" required aria-label="Starts at" />
-          <Input name="location" maxLength={60} placeholder="Location (optional)" aria-label="Location" />
-          <Textarea name="body" maxLength={500} placeholder="Details (optional)" aria-label="Details" className="resize-none" />
-          <Button type="submit" size="xl" className="sm:col-span-2">
-            <CalendarDays /> Publish event
-          </Button>
-        </form>
+        <SectionHeader title="Post to the team" aside="Announcement or event" />
+        <PostComposer />
+        <p className="mt-6 border-t pt-4 text-xs font-medium text-muted-foreground">Published events</p>
+        
         {events.length === 0 ? (
           <Empty>No events yet.</Empty>
         ) : (
@@ -330,15 +309,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       </Card>
 
       <Card id="announcements" className={`mt-4 gap-0 p-5 ${tab === "publish" ? "" : "hidden"}`}>
-        <SectionHeader title="Announcements" aside="Shown on everyone's home dashboard" />
-        <form action="/api/announcements" method="post" className="mt-4 grid gap-3 sm:grid-cols-[1fr_8rem]">
-          <Input name="title" required maxLength={120} placeholder="Title — e.g. Team Lunch on Friday" aria-label="Title" />
-          <Input name="tag" maxLength={30} placeholder="Tag (Office)" aria-label="Tag" />
-          <Textarea name="body" maxLength={500} placeholder="Details (optional)" aria-label="Details" className="resize-none sm:col-span-2" />
-          <Button type="submit" size="xl" className="sm:col-span-2">
-            <Megaphone /> Post announcement
-          </Button>
-        </form>
+        <p className="text-xs font-medium text-muted-foreground">Posted announcements</p>
+        
         {announcements.length === 0 ? (
           <Empty>No announcements posted.</Empty>
         ) : (

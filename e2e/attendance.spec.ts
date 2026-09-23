@@ -39,7 +39,7 @@ test.describe("Attendance", () => {
     await expect(page.locator("ul >> li", { hasText: "– now" })).toHaveCount(1);
 
     await page.goto("/");
-    await expect(page.getByText(/Checked in/)).toBeVisible();
+    await expect(page.getByText("You're in")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(", Amit");
   });
 

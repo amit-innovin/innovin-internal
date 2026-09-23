@@ -10,7 +10,7 @@ import { readError, send } from "@/lib/fetcher";
 import { fmtTime, relativeDay } from "@/lib/format";
 import type { GrievanceStatus } from "@/lib/types";
 
-type Item = { id: string; body: string; displayName: string | null; image: string | null; status: GrievanceStatus; createdAt: string };
+type Item = { id: string; body: string; displayName: string | null; image: string | null; urgent: boolean; status: GrievanceStatus; createdAt: string };
 
 export default function GrievanceList({ items, now }: { items: Item[]; now?: number }) {
   const router = useRouter();
@@ -41,6 +41,7 @@ export default function GrievanceList({ items, now }: { items: Item[]; now?: num
               <p className="text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">{g.displayName ?? "Anonymous"}</span> · {relativeDay(g.createdAt, now)},{" "}
                 {fmtTime(g.createdAt)}
+                {g.urgent && <span className="ml-1.5 rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-950 dark:text-rose-300">URGENT</span>}
               </p>
               <Select value={status} onValueChange={(v) => setStatus(g.id, v as GrievanceStatus)}>
                 <SelectTrigger size="sm" aria-label="Status" className="h-auto rounded-full border-0 bg-transparent p-0 shadow-none focus-visible:ring-2">

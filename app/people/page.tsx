@@ -39,7 +39,7 @@ export default function People() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="People" subtitle="Everyone at Innovin — and who's in today" />
+      <PageHeader title="People" subtitle="The whole crew — and who's around today." />
 
       {!data ? (
         <div className="space-y-3">
@@ -59,7 +59,7 @@ export default function People() {
               In today{data.inToday.length > 0 ? ` · ${data.inToday.length}` : ""}
             </h2>
             {data.inToday.length === 0 ? (
-              <Empty>No one has checked in yet today.</Empty>
+              <Empty>Quiet so far — nobody's checked in yet.</Empty>
             ) : (
               <ul className="mt-1 divide-y">
                 {data.inToday.map((p, i) => (

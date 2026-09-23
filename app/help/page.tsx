@@ -27,8 +27,8 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
   {
     icon: MessageSquare,
     tone: "ink",
-    q: "Are grievances really anonymous?",
-    a: "Yes. Anonymous submissions never show your name or email to anyone, including admins. You can track the status of your own submissions on this device.",
+    q: "Is Speak Up really anonymous?",
+    a: "Yes. Anonymous reports never show your name or email to anyone, including admins — the database stores no link at all. Mark it Urgent and admins get pinged on their devices. You can track status on this device.",
   },
   {
     icon: CalendarOff,
@@ -59,7 +59,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
 export default function Help() {
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="Help" subtitle="Quick answers about how Innovin Internal works." />
+      <PageHeader title="Help" subtitle="How all of this works, in plain terms." />
       <div className="t-stagger space-y-3">
         {faq().map((f, i) => (
           <Card key={f.q} className="flex-row gap-4 p-5" style={stagger(i)}>

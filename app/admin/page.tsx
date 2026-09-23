@@ -154,7 +154,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           <Stat icon={Coffee} tone="sky" label="Orders today" value={orders.length} href="/admin?tab=today#orders" />
         </div>
         <div style={stagger(2)}>
-          <Stat icon={MessageSquare} tone="ink" label="Open grievances" value={openGrievances} href="/admin?tab=approvals#grievances" />
+          <Stat icon={MessageSquare} tone="ink" label="Open reports" value={openGrievances} href="/admin?tab=approvals#grievances" />
         </div>
         <div style={stagger(3)}>
           <Stat icon={Wifi} tone="blue" label="Poor Wi-Fi reports today" value={poorToday} href="/admin?tab=today#wifi" />
@@ -357,7 +357,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       </Card>
 
       <Card id="grievances" className={`mt-4 gap-0 p-5 ${tab === "approvals" ? "" : "hidden"}`}>
-        <SectionHeader title="Grievances" aside={`${openGrievances} need attention`} />
+        <SectionHeader title="Speak Up" aside={`${openGrievances} need attention`} />
         <GrievanceList items={grievances.map(({ submitterRef: _r, ...g }) => g)} now={now} />
       </Card>
 

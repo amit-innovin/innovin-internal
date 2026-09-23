@@ -3,7 +3,7 @@ import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { allowedEmailDomains } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { totalMinutes } from "@/lib/format";
-import { locationTag } from "@/lib/geo";
+import { locationTag, officeLocation, onOfficeNetwork } from "@/lib/geo";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { holidaysFor, isWorkingDay, nonWorkingReason, workingDaysInMonth } from "@/lib/leave";
@@ -35,6 +35,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     count: new Set(rows.map((r) => r.email)).size,
     email,
+    // Lets the client do confident auto check-in: on office Wi-Fi (IP match) or inside the
+    // geofence. The office's own coordinates aren't secret to the people who work there.
+    onOfficeNetwork: onOfficeNetwork(clientIp(req)),
+    office: officeLocation(),
     me: sessions.length
       ? {
           checkedIn: !!open,
@@ -120,12 +124,22 @@ export async function POST(req: NextRequest) {
   if (action !== "in" && action !== "out") return badRequest("Invalid attendance action");
 
   // Optional browser geolocation — present on check-in when the employee shared it.
-  const lat = num(body.lat);
-  const lng = num(body.lng);
-  const accuracyM = num(body.accuracyM);
+  let lat = num(body.lat);
+  let lng = num(body.lng);
+  let accuracyM = num(body.accuracyM);
   if ((lat === null) !== (lng === null)) return badRequest("Invalid coordinates");
   if (lat != null && (Math.abs(lat) > 90 || Math.abs(lng!) > 180 || (accuracyM != null && accuracyM < 0))) {
     return badRequest("Invalid coordinates");
+  }
+  // On office Wi-Fi the network itself is the proof — no GPS needed. We store the office's
+  // own coordinates so the session classifies as "in office" everywhere downstream.
+  if (lat === null && onOfficeNetwork(clientIp(req))) {
+    const office = officeLocation();
+    if (office) {
+      lat = office.lat;
+      lng = office.lng;
+      accuracyM = office.radiusM;
+    }
   }
 
   const date = todayIST();

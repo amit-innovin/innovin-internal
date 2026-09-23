@@ -17,7 +17,7 @@ const PRIMARY: Item[] = [
   { href: "/", label: "Home", short: "Home", icon: House },
   { href: "/attendance", label: "Attendance", short: "Attendance", icon: CalendarCheck },
   { href: "/snacks", label: "Meals & Snacks", short: "Meals", icon: Coffee },
-  { href: "/grievances", label: "Grievances", short: "Grievances", icon: MessageSquare },
+  { href: "/grievances", label: "Speak Up", short: "Speak Up", icon: MessageSquare },
   { href: "/wifi", label: "Wi-Fi Quality", short: "Wi-Fi", icon: Wifi },
 ];
 

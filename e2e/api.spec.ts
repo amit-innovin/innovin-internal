@@ -126,10 +126,14 @@ test.describe("API: behaviour", () => {
     expect(mine.me.checkedIn).toBe(true);
     expect(mine.me.sessions[0].checkInAt).toBeTruthy();
     expect(mine.me.totalMinutes).toBeGreaterThanOrEqual(0);
-    expect(Object.keys(mine).sort()).toEqual(["count", "email", "me"]);
+    // `office` (the geofence) and `onOfficeNetwork` are exposed on purpose — the client needs
+    // them to decide auto check-in. Everyone else's sessions stay hidden.
+    expect(Object.keys(mine).sort()).toEqual(["count", "email", "me", "office", "onOfficeNetwork"]);
 
     const stranger = await (await (await device()).get("/api/attendance")).json();
-    expect(stranger).toEqual({ count: mine.count, email: null, me: null });
+    expect(stranger.count).toBe(mine.count);
+    expect(stranger.email).toBeNull();
+    expect(stranger.me).toBeNull();
   });
 
   test("check-in coordinates are classified against the office geofence, raw coords never returned", async () => {
@@ -140,7 +144,10 @@ test.describe("API: behaviour", () => {
     let mine = await (await ctx.get("/api/attendance")).json();
     expect(mine.me.location).toBe("office");
     expect(mine.me.sessions[0].location).toBe("office");
-    expect(JSON.stringify(mine)).not.toContain("77.62");
+    // The submitted coordinates never echo back — only the classification does. (The office's
+    // own geofence config is deliberately exposed for client-side auto check-in.)
+    expect(JSON.stringify(mine)).not.toContain("77.6241");
+    expect(JSON.stringify(mine)).not.toContain("12.9352");
 
     // A new session from far away is remote; invalid coords are rejected.
     await ctx.post("/api/attendance", { data: { email: who, action: "out" } });

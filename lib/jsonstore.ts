@@ -154,7 +154,9 @@ export const jsonStore: Store = {
       if (row) row.status = status;
       return { result: !!row, changed: !!row };
     }),
-  listGrievances: () => query((db) => db.grievances.sort(newestFirst)),
+  listGrievances: () =>
+    // Urgent floats above everything else, then newest first.
+    query((db) => db.grievances.sort((a, b) => Number(b.urgent) - Number(a.urgent) || newestFirst(a, b))),
   listGrievancesByIds: (ids, limit) =>
     query((db) =>
       db.grievances

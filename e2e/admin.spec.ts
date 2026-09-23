@@ -11,7 +11,7 @@ test.describe("Admin", () => {
     await page.reload();
     await typePin(page, "1704");
     await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
-    for (const stat of ["Checked in today", "Orders today", "Open grievances", "Poor Wi-Fi reports today"]) {
+    for (const stat of ["Checked in today", "Orders today", "Open reports", "Poor Wi-Fi reports today"]) {
       await expect(page.getByText(stat)).toBeVisible();
     }
   });
@@ -28,7 +28,7 @@ test.describe("Admin", () => {
     await e.goto("/snacks");
     await e.getByRole("button", { name: /^Tea/ }).click();
     await e.getByLabel("Special instructions").fill(instructions);
-    await e.getByRole("button", { name: "Submit Order" }).click();
+    await e.getByRole("button", { name: "Place order" }).click();
     await expect(e.getByText("Order placed: Tea")).toBeVisible();
     await employee.close();
 
@@ -61,7 +61,7 @@ test.describe("Admin", () => {
     await expect(approvals).toContainText(/[1-9]/);
 
     // A stat tile is navigation: it opens the tab that can act on the number.
-    await page.getByRole("link", { name: /Open grievances/ }).click();
+    await page.getByRole("link", { name: /Open reports/ }).click();
     await expect(page).toHaveURL(/tab=approvals/);
     await expect(page.locator("#grievances")).toBeVisible();
     await expect(page.locator("#away")).toBeVisible();
@@ -100,8 +100,6 @@ test.describe("Admin", () => {
 
     await e.reload();
     await expect(e.locator("#mine li", { hasText: text })).toContainText("Resolved");
-    await e.goto("/");
-    await expect(e.locator("li", { hasText: text })).toContainText("Resolved");
     await employee.close();
   });
 

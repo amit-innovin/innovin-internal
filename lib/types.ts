@@ -116,6 +116,8 @@ export type GrievanceRow = {
   body: string;
   displayName: string | null;
   image: string | null;
+  // "can't wait" — admins see these first and get a push. Still anonymous either way.
+  urgent: boolean;
   submitterRef: string;
   status: GrievanceStatus;
   createdAt: string;

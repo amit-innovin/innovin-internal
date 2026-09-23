@@ -32,3 +32,16 @@ export function locationTag(lat: number | null | undefined, lng: number | null |
   if (lat == null || lng == null || !office) return "unknown";
   return distanceM(lat, lng, office.lat, office.lng) <= office.radiusM ? "office" : "remote";
 }
+
+// OFFICE_IPS: comma-separated public IPs of the office connection. Being on office Wi-Fi means
+// requests arrive from one of these — the network itself is the location proof, no GPS needed.
+export function officeIps() {
+  return (process.env.OFFICE_IPS || "")
+    .split(",")
+    .map((ip) => ip.trim())
+    .filter(Boolean);
+}
+
+export function onOfficeNetwork(ip: string) {
+  return officeIps().includes(ip);
+}

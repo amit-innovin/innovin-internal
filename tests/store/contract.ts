@@ -40,6 +40,7 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       body: "Issue",
       displayName: null,
       image: null,
+      urgent: false,
       submitterRef: "ref-1",
       status: "open",
       createdAt: iso(),
@@ -209,6 +210,19 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(rows.map((g) => g.body)).toEqual(["newer", "older"]);
         expect(rows[1].displayName).toBeNull();
         expect(rows[0].displayName).toBe("Amit");
+      });
+
+      it("sorts urgent above normal, then newest first", async () => {
+        await store.addGrievance(grievance({ body: "old normal", createdAt: iso(0) }));
+        await store.addGrievance(grievance({ body: "urgent but oldest", urgent: true, createdAt: iso(500) }));
+        await store.addGrievance(grievance({ body: "new normal", createdAt: iso(3000) }));
+        await store.addGrievance(grievance({ body: "urgent newest", urgent: true, createdAt: iso(2000) }));
+        expect((await store.listGrievances()).map((g) => g.body)).toEqual([
+          "urgent newest",
+          "urgent but oldest",
+          "new normal",
+          "old normal",
+        ]);
       });
 
       it("never stores a device-linked submitter ref — rows are always 'anon'", async () => {

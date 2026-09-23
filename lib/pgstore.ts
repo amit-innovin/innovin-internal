@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS grievances (
   body text NOT NULL,
   display_name text,
   image text,
+  urgent boolean NOT NULL DEFAULT false,
   submitter_ref text NOT NULL,
   status text NOT NULL DEFAULT 'open',
   created_at timestamptz NOT NULL
@@ -102,6 +103,7 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
 ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
 ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
+ALTER TABLE grievances ADD COLUMN IF NOT EXISTS urgent boolean NOT NULL DEFAULT false;
 -- Scrub device-linked refs written before hard anonymity: the DB must not be joinable
 -- against away/orders to de-anonymize a submission.
 UPDATE grievances SET submitter_ref = 'anon' WHERE submitter_ref <> 'anon';
@@ -181,6 +183,7 @@ const grievance = (r: any): GrievanceRow => ({
   body: r.body,
   displayName: r.display_name,
   image: r.image ?? null,
+  urgent: r.urgent === true,
   submitterRef: r.submitter_ref,
   status: r.status,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
@@ -371,10 +374,10 @@ class PgStore implements Store {
   }
   async addGrievance(row: GrievanceRow) {
     const res = await this.q(
-      `INSERT INTO grievances (id, body, display_name, image, submitter_ref, status, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      `INSERT INTO grievances (id, body, display_name, image, urgent, submitter_ref, status, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
       // Never persist a device-linked ref — "anonymous" must survive a DB leak.
-      [row.id, row.body, row.displayName, row.image, "anon", row.status, row.createdAt],
+      [row.id, row.body, row.displayName, row.image, row.urgent, "anon", row.status, row.createdAt],
     );
     return grievance(res.rows[0]);
   }
@@ -383,7 +386,7 @@ class PgStore implements Store {
     return (res.rowCount ?? 0) > 0;
   }
   async listGrievances() {
-    const res = await this.q(`SELECT * FROM grievances ORDER BY created_at DESC`);
+    const res = await this.q(`SELECT * FROM grievances ORDER BY urgent DESC, created_at DESC`);
     return res.rows.map(grievance);
   }
   async listGrievancesByIds(ids: string[], limit: number) {

@@ -97,7 +97,7 @@ export default function Attendance() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="Attendance" />
+      <PageHeader title="Attendance" subtitle="Check in, see your month, plan time off." />
 
       {!status ? (
         <Card className="items-center gap-3 p-8">

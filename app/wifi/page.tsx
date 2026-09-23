@@ -145,7 +145,7 @@ export default function Wifi() {
     <div className="mx-auto max-w-xl">
       <PageHeader
         title="Wi-Fi Quality"
-        subtitle="Is the Wi-Fi working well? Report any issues or check the current network quality."
+        subtitle="Fast or crawling? Check it, report it — we watch this."
       />
 
       {!reports ? (
@@ -219,7 +219,7 @@ export default function Wifi() {
           <Card className="mt-4 gap-0 p-5" style={stagger(2)}>
             <p className="text-sm font-medium">Recent Reports</p>
             {reports.length === 0 ? (
-              <Empty>Nothing reported yet.</Empty>
+              <Empty>No reports yet — hopefully it's just working.</Empty>
             ) : (
               <ul className="mt-1 divide-y">
                 {reports.slice(0, 10).map((r) => (

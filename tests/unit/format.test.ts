@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { firstName, fmtDay, fmtHour, fmtShortDate, fmtTime, greeting, initials, relativeDay, relativeTime } from "@/lib/format";
+import { firstName, fmtDay, fmtHour, fmtShortDate, fmtTime, greeting, initials, leaveDays, relativeDay, relativeTime } from "@/lib/format";
 
 // 2026-09-23 09:12 IST == 03:42 UTC
 const NOW = new Date("2026-09-23T03:42:00.000Z");
@@ -44,6 +44,12 @@ describe("format", () => {
     expect(fmtHour(15)).toBe("3:00 PM");
     expect(fmtHour(0)).toBe("12:00 AM");
     expect(fmtHour(24)).toBe("midnight");
+  });
+
+  it("counts leave days inclusively", () => {
+    expect(leaveDays("2026-10-07", "2026-10-07")).toBe(1);
+    expect(leaveDays("2026-10-01", "2026-10-05")).toBe(5);
+    expect(leaveDays("2026-10-05", "2026-10-01")).toBe(0); // bad range clamps, never negative
   });
 
   it("derives names and initials from emails", () => {

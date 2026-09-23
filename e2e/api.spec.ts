@@ -218,6 +218,32 @@ test.describe("API: behaviour", () => {
     expect(after.find((r: { id: string }) => r.id === req.id).status).toBe("approved");
   });
 
+  test("leave summary counts this year's approved/pending leave days per device", async () => {
+    const ctx = await device();
+    const who = email();
+    const y = new Date().getFullYear();
+    const mk = async (type: string, s: string, e: string) =>
+      (await ctx.post("/api/away", { data: { email: who, type, startDate: s, endDate: e } })).json();
+    const l1 = await mk("leave", `${y}-11-10`, `${y}-11-11`); // 2 days → approved
+    await mk("leave", `${y}-11-20`, `${y}-11-20`); // 1 day → pending
+    const l3 = await mk("leave", `${y}-11-25`, `${y}-11-28`); // 4 days → rejected
+    await mk("wfh", `${y}-11-12`, `${y}-11-12`); // WFH never counts
+    await mk("leave", `${y - 1}-11-10`, `${y - 1}-11-12`); // last year doesn't count
+
+    const adm = await admin();
+    await adm.patch("/api/away", { data: { id: l1.id, status: "approved" } });
+    await adm.patch("/api/away", { data: { id: l3.id, status: "rejected" } });
+
+    const sum = await (await ctx.get("/api/away?scope=summary")).json();
+    expect(sum).toMatchObject({ year: y, usedDays: 2, pendingDays: 1 });
+    expect(sum.allowance).toBeGreaterThan(0);
+    noRef(sum);
+
+    // Another device sees a clean slate — summaries never leak across devices.
+    const other = await (await (await device()).get("/api/away?scope=summary")).json();
+    expect(other).toMatchObject({ usedDays: 0, pendingDays: 0 });
+  });
+
   test("events: admin publishes, devices RSVP, nothing exposes internal refs", async () => {
     const ctx = await device();
     const adm = await admin();

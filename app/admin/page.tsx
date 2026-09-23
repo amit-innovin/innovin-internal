@@ -23,7 +23,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { isAdmin } from "@/lib/admin";
-import { fmtDay, fmtDuration, fmtShortDate, fmtTime, relativeDay, totalMinutes } from "@/lib/format";
+import { leaveAllowanceDays } from "@/lib/config";
+import { fmtDay, fmtDuration, fmtShortDate, fmtTime, leaveDays, relativeDay, totalMinutes } from "@/lib/format";
 import { locationTag } from "@/lib/geo";
 import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
@@ -69,6 +70,18 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const hasUnpriced = consolidated.some((m) => m.price == null && m.count > 0);
   const openGrievances = grievances.filter((g) => g.status !== "resolved").length;
   const poorToday = wifi.filter((w) => w.quality === "poor" && relativeDay(w.createdAt) === "Today").length;
+
+  // Leave usage this year per person — approved days count against the allowance; WFH doesn't count.
+  const year = date.slice(0, 4);
+  const allowance = leaveAllowanceDays();
+  const leaveByEmail = new Map<string, { used: number; pending: number }>();
+  for (const r of away) {
+    if (r.type !== "leave" || !r.startDate.startsWith(year) || r.status === "rejected") continue;
+    const e = leaveByEmail.get(r.email) ?? { used: 0, pending: 0 };
+    e[r.status === "approved" ? "used" : "pending"] += leaveDays(r.startDate, r.endDate);
+    leaveByEmail.set(r.email, e);
+  }
+  const leaveUsage = [...leaveByEmail.entries()].sort((a, b) => b[1].used - a[1].used);
 
   // One row per employee: their sessions today, total time, and whether they're in right now.
   const people = [...new Set(attendance.map((a) => a.email))].map((email) => {
@@ -175,6 +188,23 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           aside={away.filter((r) => r.status === "pending").length ? `${away.filter((r) => r.status === "pending").length} pending` : undefined}
         />
         <AwayList items={away} names={Object.fromEntries(names)} />
+        {leaveUsage.length > 0 && (
+          <>
+            <p className="mt-5 border-t pt-4 text-xs font-medium text-muted-foreground">
+              Leave balance · {year} · {allowance} days each
+            </p>
+            <ul className="mt-1 divide-y">
+              {leaveUsage.map(([email, u]) => (
+                <li key={email} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                  <span className="min-w-0 truncate font-medium">{names.get(email) ?? email}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {u.used} used{u.pending ? ` · ${u.pending} pending` : ""} · {Math.max(0, allowance - u.used)} left
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </Card>
 
       <Card id="events" className="mt-4 gap-0 p-5">

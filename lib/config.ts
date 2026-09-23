@@ -6,6 +6,12 @@ export function orderCutoffHour() {
   return Number.isInteger(hour) && hour >= 0 && hour <= 24 ? hour : 24;
 }
 
+// Annual paid-leave allowance per person, in days. Placeholder until real entitlement data lands.
+export function leaveAllowanceDays() {
+  const days = Number(process.env.LEAVE_ALLOWANCE_DAYS ?? 12);
+  return Number.isInteger(days) && days > 0 && days <= 365 ? days : 12;
+}
+
 export function allowedEmailDomains() {
   return (process.env.ALLOWED_EMAIL_DOMAINS || "innovinlabs.com")
     .split(",")

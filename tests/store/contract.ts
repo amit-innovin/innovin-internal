@@ -273,6 +273,14 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         await store.addAway(away({ reason: "three", createdAt: iso(3000) }));
         expect((await store.listAwayByRef("ref-1", 2)).map((r) => r.reason)).toEqual(["three", "two"]);
       });
+
+      it("lists a verified employee's requests across all their devices", async () => {
+        await store.addAway(away({ reason: "phone", createdAt: iso(0) }));
+        await store.addAway(away({ reason: "laptop", submitterRef: "ref-2", createdAt: iso(1000) }));
+        await store.addAway(away({ email: "other@innovinlabs.com", reason: "not mine", createdAt: iso(2000) }));
+        expect((await store.listAwayByEmail("a@innovinlabs.com", 10)).map((r) => r.reason)).toEqual(["laptop", "phone"]);
+        expect(await store.listAwayByEmail("nobody@innovinlabs.com", 10)).toEqual([]);
+      });
     });
 
     describe("events & RSVPs", () => {

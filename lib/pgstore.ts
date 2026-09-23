@@ -387,6 +387,10 @@ class PgStore implements Store {
     const res = await this.q(`SELECT * FROM away WHERE submitter_ref = $1 ORDER BY created_at DESC LIMIT $2`, [ref, limit]);
     return res.rows.map(away);
   }
+  async listAwayByEmail(email: string, limit: number) {
+    const res = await this.q(`SELECT * FROM away WHERE email = $1 ORDER BY created_at DESC LIMIT $2`, [email, limit]);
+    return res.rows.map(away);
+  }
   async addEvent(row: EventRow) {
     const res = await this.q(
       `INSERT INTO events (id, title, body, category, starts_at, location, created_by, created_at)

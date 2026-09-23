@@ -184,6 +184,13 @@ export const jsonStore: Store = {
         .sort(newestFirst)
         .slice(0, limit),
     ),
+  listAwayByEmail: (email, limit) =>
+    query((db) =>
+      db.away
+        .filter((r) => r.email === email)
+        .sort(newestFirst)
+        .slice(0, limit),
+    ),
 
   addEvent: (row) =>
     mutate((db) => {

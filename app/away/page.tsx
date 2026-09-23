@@ -26,6 +26,7 @@ type AwayRequest = {
   createdAt: string;
 };
 type Auth = { signedIn: boolean; googleEnabled: boolean; email?: string; name?: string };
+type LeaveSummary = { year: number; allowance: number; usedDays: number; pendingDays: number };
 
 const AWAY_META: Record<AwayStatus, { label: string; badge: "warning" | "success" | "danger" }> = {
   pending: { label: "Pending", badge: "warning" },
@@ -40,6 +41,7 @@ const fmtRange = (start: string, end: string) =>
 
 export default function Away() {
   const [requests, setRequests] = useState<AwayRequest[] | null>(null);
+  const [summary, setSummary] = useState<LeaveSummary | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
   const [type, setType] = useState<AwayType>("leave");
   const [startDate, setStartDate] = useState("");
@@ -50,12 +52,14 @@ export default function Away() {
   const [buttonState, run] = useButtonState();
 
   const load = async () => {
-    const [mine, me] = await Promise.all([
+    const [mine, me, sum] = await Promise.all([
       getJSON<AwayRequest[]>("/api/away?scope=mine", "your requests"),
       getJSON<Auth>("/api/auth/me", "your sign-in"),
+      getJSON<LeaveSummary>("/api/away?scope=summary", "your leave balance"),
     ]);
     if (mine) setRequests(mine);
     if (me) setAuth(me);
+    if (sum) setSummary(sum);
   };
   useEffect(() => {
     load();
@@ -199,6 +203,30 @@ export default function Away() {
           </form>
         </Card>
       )}
+
+      <Card className="mt-4 gap-0 p-5">
+        <h2 className="eyebrow">Leave balance · {summary?.year ?? "…"}</h2>
+        {!summary ? (
+          <Skeleton className="mt-3 h-10 w-full" />
+        ) : (
+          <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+            <div>
+              <p className="text-xl font-medium tabular-nums">{summary.usedDays}</p>
+              <p className="text-xs text-muted-foreground">used</p>
+            </div>
+            <div>
+              <p className="text-xl font-medium tabular-nums">{summary.pendingDays}</p>
+              <p className="text-xs text-muted-foreground">pending</p>
+            </div>
+            <div>
+              <p className="text-xl font-medium tabular-nums text-emerald-600">
+                {Math.max(0, summary.allowance - summary.usedDays)}
+              </p>
+              <p className="text-xs text-muted-foreground">of {summary.allowance} left</p>
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Card className="mt-4 gap-0 p-5">
         <h2 className="eyebrow">Your requests</h2>

@@ -63,4 +63,32 @@ test.describe("Time Away", () => {
     await expect(e.locator("li", { hasText: reason })).toContainText("Approved");
     await employee.close();
   });
+
+  test("the leave balance counts pending days, then used days once approved", async ({ page, browser }) => {
+    const year = new Date().getFullYear();
+    const reason = uniqueText("balance check");
+    const employee = await browser.newContext();
+    const e = await employee.newPage();
+    await e.goto("/away");
+    await e.locator("#away-start").fill(`${year}-11-10`);
+    await e.locator("#away-end").fill(`${year}-11-12`);
+    await e.getByLabel("Your Innovin email").fill(uniqueEmail("bal"));
+    await e.getByLabel("Reason").fill(reason);
+    await e.getByRole("button", { name: "Request Leave" }).click();
+    await expect(e.getByText("Leave request sent")).toBeVisible();
+
+    const balance = e.locator("[data-slot=card]").filter({ hasText: "Leave balance" });
+    await expect.poll(async () => balance.innerText()).toMatch(/0\s+used\s+3\s+pending\s+12\s+of 12 left/);
+
+    await adminLogin(page);
+    await page.locator("li", { hasText: reason }).getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText("Request approved")).toBeVisible();
+
+    // Admin sees the per-person usage line under Time away.
+    await expect(page.getByText(`Leave balance · ${year} · 12 days each`)).toBeVisible();
+
+    await e.reload();
+    await expect.poll(async () => balance.innerText()).toMatch(/3\s+used\s+0\s+pending\s+9\s+of 12 left/);
+    await employee.close();
+  });
 });

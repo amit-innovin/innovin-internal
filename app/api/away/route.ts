@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
-import { allowedEmailDomains } from "@/lib/config";
+import { allowedEmailDomains, leaveAllowanceDays } from "@/lib/config";
 import { DEVICE_COOKIE } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
+import { leaveDays } from "@/lib/format";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
 import { setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
+import { todayIST } from "@/lib/time";
 import type { AwayStatus, AwayType } from "@/lib/types";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -19,7 +21,21 @@ const strip = ({ submitterRef: _r, ...rest }: import("@/lib/types").AwayRow) => 
 const dayDiff = (a: string, b: string) => (Date.parse(b) - Date.parse(a)) / 86_400_000;
 
 export async function GET(req: NextRequest) {
-  if (req.nextUrl.searchParams.get("scope") === "mine") {
+  const scope = req.nextUrl.searchParams.get("scope");
+  // Leave balance for this year — signed-in users get their verified email's requests
+  // across all devices; everyone else sees this device's requests.
+  if (scope === "summary") {
+    const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+    const rows = session
+      ? await store.listAwayByEmail(session.email, 100)
+      : await store.listAwayByRef(submitterIdentity(req).ref, 100);
+    const year = todayIST().slice(0, 4);
+    const leave = rows.filter((r) => r.type === "leave" && r.startDate.startsWith(year));
+    const usedDays = leave.filter((r) => r.status === "approved").reduce((n, r) => n + leaveDays(r.startDate, r.endDate), 0);
+    const pendingDays = leave.filter((r) => r.status === "pending").reduce((n, r) => n + leaveDays(r.startDate, r.endDate), 0);
+    return NextResponse.json({ year: Number(year), allowance: leaveAllowanceDays(), usedDays, pendingDays });
+  }
+  if (scope === "mine") {
     const deviceId = req.cookies.get(DEVICE_COOKIE)?.value;
     if (!deviceId) return NextResponse.json([]);
     const ref = submitterIdentity(req).ref;

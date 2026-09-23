@@ -9,6 +9,7 @@ Simple tools for everyday needs. Built for our team. See [PRODUCT.md](PRODUCT.md
 - **Daily Grievances** — anonymous or named, with an optional photo; submitters track status on their own device; identity never exposed, not even to admins
 - **Wi-Fi Quality** — speed test + Good/Poor reports with notes and a recent feed
 - **Time Away** (`/away`) — leave and work-from-home requests: pick dates, submit, track approval status on your own device; admins approve/reject on the dashboard. Signed-in devices submit under their verified email.
+- **Leave tracker** — per-person leave balance: days used, pending and remaining against an annual allowance (`LEAVE_ALLOWANCE_DAYS`, default 12). Employees see their own on `/away`; admins see everyone's under Time away. WFH never counts.
 - **Events** (`/events`) — upcoming internal events (matches, workshops, celebrations, town halls) published by admins; one-tap RSVP per device showing only a going count — never a guest list.
 - **Announcements** — posted by admins, shown on everyone's home dashboard
 - **Admin** (`/admin`) — passcode-gated dashboard: attendance (with real names + location tags), orders, grievance inbox with statuses, Wi-Fi feed, time-away approvals, announcements

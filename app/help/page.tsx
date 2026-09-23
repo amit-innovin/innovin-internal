@@ -34,7 +34,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: CalendarOff,
     tone: "amber",
     q: "How do leave and WFH requests work?",
-    a: "Open Time Away, pick Leave or Work from home, choose your dates, and send — the coordinator approves or rejects it on the admin dashboard and you can watch the status under Your requests. Sign in with Google first so requests come from your verified identity.",
+    a: "Open Time Away, pick Leave or Work from home, choose your dates, and send — the coordinator approves or rejects it on the admin dashboard and you can watch the status under Your requests. The Leave balance card tracks your used, pending and remaining leave days for the year. Sign in with Google first so requests come from your verified identity.",
   },
   {
     icon: CalendarDays,

@@ -119,6 +119,8 @@ export interface Store {
   setAwayStatus(id: string, status: AwayStatus): Promise<boolean>;
   listAway(limit: number): Promise<AwayRow[]>;
   listAwayByRef(ref: string, limit: number): Promise<AwayRow[]>;
+  // A verified employee's requests across all their devices.
+  listAwayByEmail(email: string, limit: number): Promise<AwayRow[]>;
   addEvent(row: EventRow): Promise<EventRow>;
   getEvent(id: string): Promise<EventRow | null>;
   deleteEvent(id: string): Promise<boolean>;

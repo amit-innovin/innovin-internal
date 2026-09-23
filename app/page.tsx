@@ -1,19 +1,20 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, Check, Clock, Coffee, DoorOpen, Megaphone, MessageSquare, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarOff, Check, Clock, Coffee, DoorOpen, Megaphone, MessageSquare, Users, Wifi } from "lucide-react";
 import { CityArt, WifiArt } from "@/components/art";
 import { ArrowLink, Empty, IconTile, MENU_ICONS, QualityDot, SectionHeader, STATUS_META, StatusPill, stagger, type Tone } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { DEVICE_COOKIE, EMAIL_COOKIE } from "@/lib/cookies";
-import { firstName, fmtDuration, fmtShortDate, fmtTime, greeting, relativeDay, relativeTime, totalMinutes } from "@/lib/format";
+import { firstName, fmtDay, fmtDuration, fmtShortDate, fmtTime, greeting, relativeDay, relativeTime, totalMinutes } from "@/lib/format";
 import { locationTag } from "@/lib/geo";
 import { orderCutoffHour } from "@/lib/config";
 import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
-import { grievancesForDevice, ordersForDeviceOn } from "@/lib/submitter";
+import { awayForDevice, grievancesForDevice, ordersForDeviceOn } from "@/lib/submitter";
 import { istHour, todayIST } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -33,15 +34,18 @@ export default async function Home() {
   const deviceId = jar.get(DEVICE_COOKIE)?.value;
   const date = todayIST();
 
-  const [sessions, myOrders, announcements, grievances, wifi] = await Promise.all([
+  const session = verifyUserSession(jar.get(USER_COOKIE)?.value);
+  const [sessions, myOrders, announcements, grievances, wifi, todayAll, myAway] = await Promise.all([
     email ? store.listAttendanceByEmail(email, date) : Promise.resolve([]),
     ordersForDeviceOn(deviceId, date),
     store.listAnnouncements(2),
     grievancesForDevice(deviceId, 3),
     store.listWifi(3),
+    store.listAttendance(date),
+    awayForDevice(deviceId, 10),
   ]);
 
-  const name = firstName(email);
+  const name = session?.name.split(" ")[0] ?? firstName(email);
   const checkedIn = sessions.some((s) => !s.checkOutAt);
   const openSession = sessions.find((s) => !s.checkOutAt);
   const where = checkedIn ? locationTag(openSession?.lat, openSession?.lng) : null;
@@ -51,6 +55,54 @@ export default async function Home() {
   const orderTotal = items.reduce((sum, m) => sum + (m.price ?? 0), 0);
   const ordersOpen = istHour() < orderCutoffHour();
   const latestWifi = wifi[0];
+
+  // "Your day" strip — a one-line briefing composed from what we already know.
+  const tomorrow = new Date(Date.parse(date) + 86_400_000).toISOString().slice(0, 10);
+  const nextAway = myAway
+    .filter((r) => r.status !== "rejected" && r.endDate >= date)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+  const awayLabel = !nextAway
+    ? "Nothing scheduled"
+    : nextAway.status === "pending"
+      ? `${nextAway.type === "leave" ? "Leave" : "WFH"} · pending`
+      : nextAway.startDate <= date
+        ? nextAway.type === "leave"
+          ? "On leave today"
+          : "WFH today"
+        : nextAway.startDate === tomorrow
+          ? `${nextAway.type === "leave" ? "Leave" : "WFH"} tomorrow`
+          : `${nextAway.type === "leave" ? "Leave" : "WFH"} from ${fmtShortDate(`${nextAway.startDate}T00:00:00`)}`;
+
+  // Count people, not sessions — one open session per person is guaranteed.
+  const present = new Map<string, "office" | "remote" | "unknown">();
+  for (const s of todayAll) if (!s.checkOutAt) present.set(s.email, locationTag(s.lat, s.lng));
+  const inOffice = [...present.values()].filter((t) => t === "office").length;
+  const peopleLabel =
+    present.size === 0 ? "No one checked in yet" : `${present.size} in today${inOffice ? ` · ${inOffice} in office` : ""}`;
+
+  const dayCells: { href: string; icon: LucideIcon; tone: Tone; label: string; value: string }[] = [
+    {
+      href: "/attendance",
+      icon: CalendarCheck,
+      tone: sessions.length ? "green" : "slate",
+      label: "Attendance",
+      value:
+        sessions.length === 0
+          ? "Not checked in yet"
+          : checkedIn
+            ? `${whereLabel ?? "In"} · since ${fmtTime(openSession!.checkInAt)}`
+            : `Done · ${fmtDuration(totalMinutes(sessions))} today`,
+    },
+    {
+      href: "/snacks",
+      icon: Coffee,
+      tone: "sky",
+      label: "Meals",
+      value: items.length ? orderNames : ordersOpen ? "Not ordered yet" : "Closed for today",
+    },
+    { href: "/away", icon: CalendarOff, tone: "amber", label: "Time away", value: awayLabel },
+    { href: "/attendance", icon: Users, tone: "blue", label: "At Innovin", value: peopleLabel },
+  ];
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -62,6 +114,23 @@ export default async function Home() {
         <p className="mt-1 text-sm text-muted-foreground" style={stagger(1)}>
           Here&apos;s what&apos;s happening today at Innovin.
         </p>
+      </div>
+
+      <div className="t-stagger mt-5">
+        <Card className="gap-0 p-5" style={stagger(1)}>
+          <SectionHeader title="Your Day" aside={fmtDay()} />
+          <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+            {dayCells.map((c) => (
+              <Link key={c.label} href={c.href} className="group flex min-w-0 items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/60">
+                <IconTile icon={c.icon} tone={c.tone} size="sm" className="transition-transform duration-300 group-hover:-translate-y-0.5" />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">{c.label}</p>
+                  <p className="truncate text-sm font-medium">{c.value}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
       </div>
 
       <div className="t-stagger mt-6 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.85fr)]">

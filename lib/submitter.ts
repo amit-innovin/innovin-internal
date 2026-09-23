@@ -36,3 +36,8 @@ export async function ordersForDevice(deviceId: string | undefined, limit: numbe
 export async function grievancesForDevice(deviceId: string | undefined, limit: number) {
   return deviceId ? (await store.listGrievancesByRef(refFor(deviceId), limit)).map(strip) : [];
 }
+
+// Same rule for leave/WFH requests.
+export async function awayForDevice(deviceId: string | undefined, limit: number) {
+  return deviceId ? (await store.listAwayByRef(refFor(deviceId), limit)).map(strip) : [];
+}

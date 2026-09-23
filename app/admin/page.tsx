@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { CalendarCheck, Coffee, LogOut, Megaphone, MessageSquare, Trash2, Wifi } from "lucide-react";
 import AdminLogin from "@/components/admin-login";
 import { Flash } from "@/components/flash";
+import AwayList from "@/components/away-list";
 import GrievanceList from "@/components/grievance-list";
 import { Empty, IconTile, MENU_ICONS, QualityDot, SectionHeader, stagger, type Tone } from "@/components/kit";
 import { AnimatedNumber } from "@/components/motion/animated-number";
@@ -50,13 +51,14 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   }
 
   const date = todayIST();
-  const [attendance, orders, grievances, wifi, announcements, employees] = await Promise.all([
+  const [attendance, orders, grievances, wifi, announcements, employees, away] = await Promise.all([
     store.listAttendance(date),
     store.listOrders(date),
     store.listGrievances(),
     store.listWifi(50),
     store.listAnnouncements(10),
     store.listEmployees(),
+    store.listAway(50),
   ]);
   const names = new Map(employees.map((e) => [e.email, e.name]));
 
@@ -164,6 +166,14 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           )}
         </Card>
       </div>
+
+      <Card className="mt-4 gap-0 p-5">
+        <SectionHeader
+          title="Time away"
+          aside={away.filter((r) => r.status === "pending").length ? `${away.filter((r) => r.status === "pending").length} pending` : undefined}
+        />
+        <AwayList items={away} names={Object.fromEntries(names)} />
+      </Card>
 
       <Card id="announcements" className="mt-4 gap-0 p-5">
         <SectionHeader title="Announcements" aside="Shown on everyone's home dashboard" />

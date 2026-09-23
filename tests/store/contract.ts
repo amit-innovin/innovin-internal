@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AttendanceRow, EmployeeRow, GrievanceRow, OrderRow, Store, WifiRow } from "@/lib/types";
+import type { AttendanceRow, AwayRow, EmployeeRow, GrievanceRow, OrderRow, Store, WifiRow } from "@/lib/types";
 
 // Behavioural contract every Store adapter must satisfy (JSON file + Postgres).
 export function storeContract(name: string, getStore: () => Promise<Store>, resetData: () => Promise<void>) {
@@ -51,6 +51,18 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       note: "",
       downMbps: null,
       upMbps: null,
+      createdAt: iso(),
+      ...p,
+    });
+    const away = (p: Partial<AwayRow> = {}): AwayRow => ({
+      id: uid(),
+      email: "a@innovinlabs.com",
+      type: "leave",
+      startDate: "2026-10-01",
+      endDate: "2026-10-02",
+      reason: "",
+      status: "pending",
+      submitterRef: "ref-1",
       createdAt: iso(),
       ...p,
     });
@@ -224,6 +236,31 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         await store.upsertEmployee(employee({ email: "b@innovinlabs.com", name: "Asha" }));
         const list = await store.listEmployees();
         expect(list.map((e) => e.email)).toEqual(["a@innovinlabs.com", "b@innovinlabs.com", "z@innovinlabs.com"]);
+      });
+    });
+
+    describe("time away", () => {
+      it("adds and lists newest first across leave and wfh", async () => {
+        await store.addAway(away({ type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07", createdAt: iso(0) }));
+        await store.addAway(away({ type: "leave", reason: "family trip", createdAt: iso(1000) }));
+        const rows = await store.listAway(10);
+        expect(rows.map((r) => r.type)).toEqual(["leave", "wfh"]);
+        expect(rows[0]).toMatchObject({ status: "pending", reason: "family trip", startDate: "2026-10-01", endDate: "2026-10-02" });
+      });
+
+      it("updates status and reports unknown ids", async () => {
+        const row = await store.addAway(away());
+        expect(await store.setAwayStatus(row.id, "approved")).toBe(true);
+        expect((await store.listAway(10))[0].status).toBe("approved");
+        expect(await store.setAwayStatus("missing", "rejected")).toBe(false);
+      });
+
+      it("lists only the device's own requests, newest first, with a limit", async () => {
+        await store.addAway(away({ reason: "one", createdAt: iso(0) }));
+        await store.addAway(away({ reason: "theirs", submitterRef: "ref-2", createdAt: iso(1000) }));
+        await store.addAway(away({ reason: "two", createdAt: iso(2000) }));
+        await store.addAway(away({ reason: "three", createdAt: iso(3000) }));
+        expect((await store.listAwayByRef("ref-1", 2)).map((r) => r.reason)).toEqual(["three", "two"]);
       });
     });
 

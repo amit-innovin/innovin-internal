@@ -75,6 +75,8 @@ orders      id · date · item_id · preference · instructions · submitter_ref
 grievances  id · body · display_name(nullable) · image(nullable) · submitter_ref · status · created_at
 wifi          id · quality · note · down_mbps · up_mbps · created_at
 announcements id · title · body · tag · created_at
+employees     email(pk) · name · picture · created_at · last_seen_at
+away          id · email · type(leave|wfh) · start_date · end_date · reason · status(pending|approved|rejected) · submitter_ref · created_at
 ```
 
 `submitter_ref` = hashed identifier stored server-side only, never returned to clients.
@@ -91,6 +93,11 @@ announcements id · title · body · tag · created_at
 - Who is the admin/"buyer" for consolidated snack orders?
 - Attendance: manual check-in only for the MVP; office-Wi-Fi detection can be evaluated after usage validation.
 
+## Post-v1 additions
+
+- **Time Away** (`/away`) — the first Request primitive. Leave and WFH requests in one lightweight flow: dates + optional reason → pending → approved/rejected by the admin. Employees track status on their own device; signed-in (Google) devices submit under their verified email. Deliberately minimal — no leave balances, no manager routing; Zoho remains the system of record.
+- **Google sign-in** — verified `@innovinlabs.com` identity; attendance and away requests submitted under the verified email can't be spoofed; admins see real names.
+
 ## Explicitly out of v1
 
-Leave/approvals, asset management, compliance tooling, notifications/alerts, Chrome extension, native apps, any integrations.
+Leave balances/HRIS sync, asset management, compliance tooling, notifications/alerts, Chrome extension, native apps, any integrations.

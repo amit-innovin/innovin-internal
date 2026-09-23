@@ -22,7 +22,7 @@ const noRef = (body: unknown) => expect(JSON.stringify(body)).not.toContain("sub
 test.describe("API: input validation", () => {
   test("malformed or non-object JSON bodies return 400, never 500", async () => {
     const ctx = await device();
-    for (const path of ["/api/attendance", "/api/snacks", "/api/grievances", "/api/wifi"]) {
+    for (const path of ["/api/attendance", "/api/snacks", "/api/grievances", "/api/wifi", "/api/away"]) {
       for (const body of ["{bad", "[1,2]", "null", '"text"']) {
         const res = await ctx.post(path, { data: body, headers: { "Content-Type": "application/json" } });
         expect(res.status(), `${path} ${body}`).toBe(400);
@@ -59,6 +59,21 @@ test.describe("API: input validation", () => {
     expect((await ctx.post("/api/grievances", { data: { body: "x", image: "data:text/html;base64,PGI+" } })).status()).toBe(400);
     expect((await ctx.post("/api/grievances", { data: { body: "x", image: "not-a-data-url" } })).status()).toBe(400);
     expect((await ctx.delete("/api/snacks")).status()).toBe(404);
+  });
+
+  test("time away validates email, domain, type and the date range", async () => {
+    const ctx = await device();
+    const who = email();
+    const cases: [unknown, number][] = [
+      [{ email: "nope", type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 400],
+      [{ email: "a@gmail.com", type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 403],
+      [{ email: who, type: "sabbatical", startDate: "2026-10-07", endDate: "2026-10-07" }, 400],
+      [{ email: who, type: "leave", startDate: "07/10/2026", endDate: "2026-10-08" }, 400],
+      [{ email: who, type: "leave", startDate: "2026-10-08", endDate: "2026-10-07" }, 400],
+      [{ email: who, type: "leave", startDate: "2026-01-01", endDate: "2026-12-31" }, 400],
+      [{ email: who, type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 200],
+    ];
+    for (const [data, status] of cases) expect((await ctx.post("/api/away", { data })).status(), JSON.stringify(data)).toBe(status);
   });
 
   test("long inputs are truncated server-side", async () => {
@@ -153,6 +168,10 @@ test.describe("API: behaviour", () => {
     await ctx.post("/api/attendance", { data: { email: "forged@innovinlabs.com", action: "in" } });
     const att = await (await ctx.get("/api/attendance")).json();
     expect(att.email).toBe(me.email);
+    const away = await (
+      await ctx.post("/api/away", { data: { email: "forged@innovinlabs.com", type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" } })
+    ).json();
+    expect(away.email).toBe(me.email);
   });
 
   test("a day's order can hold several items, is replaceable and cancellable", async () => {
@@ -171,6 +190,32 @@ test.describe("API: behaviour", () => {
 
     const other = await device();
     expect((await (await other.get("/api/snacks?scope=mine")).json()).items).toEqual([]);
+  });
+
+  test("time away: a request is visible to its device and admin, and approval flows through", async () => {
+    const ctx = await device();
+    const who = email();
+    const req = await (
+      await ctx.post("/api/away", { data: { email: who, type: "leave", startDate: "2026-11-02", endDate: "2026-11-03", reason: "trip" } })
+    ).json();
+    expect(req).toMatchObject({ email: who, type: "leave", status: "pending", reason: "trip" });
+    noRef(req);
+
+    const mine = await (await ctx.get("/api/away?scope=mine")).json();
+    expect(mine.map((r: { id: string }) => r.id)).toContain(req.id);
+    noRef(mine);
+    expect(await (await (await device()).get("/api/away?scope=mine")).json()).toEqual([]);
+
+    const adm = await admin();
+    const all = await (await adm.get("/api/away")).json();
+    expect(all.find((r: { id: string }) => r.id === req.id)).toMatchObject({ email: who, status: "pending" });
+    noRef(all);
+
+    expect((await adm.patch("/api/away", { data: { id: req.id, status: "pending" } })).status()).toBe(400);
+    expect((await adm.patch("/api/away", { data: { id: "missing", status: "approved" } })).status()).toBe(404);
+    expect((await adm.patch("/api/away", { data: { id: req.id, status: "approved" } })).status()).toBe(200);
+    const after = await (await ctx.get("/api/away?scope=mine")).json();
+    expect(after.find((r: { id: string }) => r.id === req.id).status).toBe("approved");
   });
 
   test("grievances accept a compressed photo and return it to the device and admin", async () => {
@@ -206,7 +251,9 @@ test.describe("API: privacy & auth", () => {
     const ctx = await device();
     expect((await ctx.get("/api/grievances")).status()).toBe(401);
     expect((await ctx.get("/api/snacks")).status()).toBe(401);
+    expect((await ctx.get("/api/away")).status()).toBe(401);
     expect((await ctx.patch("/api/grievances", { data: { id: "x", status: "resolved" } })).status()).toBe(401);
+    expect((await ctx.patch("/api/away", { data: { id: "x", status: "approved" } })).status()).toBe(401);
     expect((await ctx.post("/api/announcements", { form: { title: "hack" } })).status()).toBe(401);
     expect((await ctx.post("/api/announcements", { form: { _action: "delete", id: "x" } })).status()).toBe(401);
   });

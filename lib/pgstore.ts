@@ -3,6 +3,8 @@ import { pgConfig } from "./pgconfig";
 import type {
   AnnouncementRow,
   AttendanceRow,
+  AwayRow,
+  AwayStatus,
   EmployeeRow,
   GrievanceRow,
   GrievanceStatus,
@@ -64,6 +66,17 @@ CREATE TABLE IF NOT EXISTS employees (
   created_at timestamptz NOT NULL,
   last_seen_at timestamptz NOT NULL
 );
+CREATE TABLE IF NOT EXISTS away (
+  id text PRIMARY KEY,
+  email text NOT NULL,
+  type text NOT NULL,
+  start_date text NOT NULL,
+  end_date text NOT NULL,
+  reason text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT 'pending',
+  submitter_ref text NOT NULL,
+  created_at timestamptz NOT NULL
+);
 -- Migrations for databases created before sessions/multi-item orders/images existed:
 ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
@@ -80,7 +93,9 @@ CREATE INDEX IF NOT EXISTS orders_submitter_idx ON orders (submitter_ref, date D
 CREATE INDEX IF NOT EXISTS grievances_created_idx ON grievances (created_at DESC);
 CREATE INDEX IF NOT EXISTS grievances_submitter_idx ON grievances (submitter_ref, created_at DESC);
 CREATE INDEX IF NOT EXISTS wifi_created_idx ON wifi (created_at DESC);
-CREATE INDEX IF NOT EXISTS announcements_created_idx ON announcements (created_at DESC);`;
+CREATE INDEX IF NOT EXISTS announcements_created_idx ON announcements (created_at DESC);
+CREATE INDEX IF NOT EXISTS away_created_idx ON away (created_at DESC);
+CREATE INDEX IF NOT EXISTS away_submitter_idx ON away (submitter_ref, created_at DESC);`;
 
 // Arbitrary constant key for the schema-init advisory lock.
 const SCHEMA_LOCK = 727_071_704;
@@ -135,6 +150,17 @@ const employee = (r: any): EmployeeRow => ({
   picture: r.picture,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
+});
+const away = (r: any): AwayRow => ({
+  id: r.id,
+  email: r.email,
+  type: r.type,
+  startDate: r.start_date,
+  endDate: r.end_date,
+  reason: r.reason,
+  status: r.status,
+  submitterRef: r.submitter_ref,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 
 class PgStore implements Store {
@@ -310,6 +336,26 @@ class PgStore implements Store {
   async listEmployees() {
     const res = await this.q(`SELECT * FROM employees ORDER BY name, email`);
     return res.rows.map(employee);
+  }
+  async addAway(row: AwayRow) {
+    const res = await this.q(
+      `INSERT INTO away (id, email, type, start_date, end_date, reason, status, submitter_ref, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [row.id, row.email, row.type, row.startDate, row.endDate, row.reason, row.status, row.submitterRef, row.createdAt],
+    );
+    return away(res.rows[0]);
+  }
+  async setAwayStatus(id: string, status: AwayStatus) {
+    const res = await this.q(`UPDATE away SET status = $2 WHERE id = $1`, [id, status]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async listAway(limit: number) {
+    const res = await this.q(`SELECT * FROM away ORDER BY created_at DESC LIMIT $1`, [limit]);
+    return res.rows.map(away);
+  }
+  async listAwayByRef(ref: string, limit: number) {
+    const res = await this.q(`SELECT * FROM away WHERE submitter_ref = $1 ORDER BY created_at DESC LIMIT $2`, [ref, limit]);
+    return res.rows.map(away);
   }
 }
 

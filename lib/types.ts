@@ -28,6 +28,21 @@ export type OrderRow = {
   createdAt: string;
 };
 
+export type AwayType = "leave" | "wfh";
+export type AwayStatus = "pending" | "approved" | "rejected";
+
+export type AwayRow = {
+  id: string;
+  email: string;
+  type: AwayType;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;
+  reason: string;
+  status: AwayStatus;
+  submitterRef: string;
+  createdAt: string;
+};
+
 export type GrievanceStatus = "open" | "in_progress" | "resolved";
 
 export type GrievanceRow = {
@@ -80,6 +95,10 @@ export interface Store {
   addAnnouncement(row: AnnouncementRow): Promise<AnnouncementRow>;
   deleteAnnouncement(id: string): Promise<void>;
   listAnnouncements(limit: number): Promise<AnnouncementRow[]>;
+  addAway(row: AwayRow): Promise<AwayRow>;
+  setAwayStatus(id: string, status: AwayStatus): Promise<boolean>;
+  listAway(limit: number): Promise<AwayRow[]>;
+  listAwayByRef(ref: string, limit: number): Promise<AwayRow[]>;
   // Creates the employee on first sign-in; refreshes name/picture/lastSeenAt afterwards.
   upsertEmployee(row: EmployeeRow): Promise<EmployeeRow>;
   getEmployee(email: string): Promise<EmployeeRow | null>;

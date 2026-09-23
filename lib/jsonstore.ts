@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { AnnouncementRow, AttendanceRow, EmployeeRow, GrievanceRow, OrderRow, Store, WifiRow } from "./types";
+import type { AnnouncementRow, AttendanceRow, AwayRow, EmployeeRow, GrievanceRow, OrderRow, Store, WifiRow } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -13,9 +13,10 @@ type DB = {
   wifi: WifiRow[];
   announcements: AnnouncementRow[];
   employees: EmployeeRow[];
+  away: AwayRow[];
 };
 
-const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [] });
+const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -161,4 +162,24 @@ export const jsonStore: Store = {
   getEmployee: (email) => query((db) => db.employees.find((e) => e.email === email) ?? null),
   listEmployees: () =>
     query((db) => db.employees.slice().sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email))),
+
+  addAway: (row) =>
+    mutate((db) => {
+      db.away.unshift(row);
+      return { result: row, changed: true };
+    }),
+  setAwayStatus: (id, status) =>
+    mutate((db) => {
+      const row = db.away.find((r) => r.id === id);
+      if (row) row.status = status;
+      return { result: !!row, changed: !!row };
+    }),
+  listAway: (limit) => query((db) => db.away.sort(newestFirst).slice(0, limit)),
+  listAwayByRef: (ref, limit) =>
+    query((db) =>
+      db.away
+        .filter((r) => r.submitterRef === ref)
+        .sort(newestFirst)
+        .slice(0, limit),
+    ),
 };

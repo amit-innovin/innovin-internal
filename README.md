@@ -8,8 +8,9 @@ Simple tools for everyday needs. Built for our team. See [PRODUCT.md](PRODUCT.md
 - **Meals & Snacks** — pick any items (tea, snacks, lunch, dinner) once per device per day, changeable/cancellable all day (optional `ORDER_CUTOFF_HOUR` deadline); consolidated list for the coordinator
 - **Daily Grievances** — anonymous or named, with an optional photo; submitters track status on their own device; identity never exposed, not even to admins
 - **Wi-Fi Quality** — speed test + Good/Poor reports with notes and a recent feed
+- **Time Away** (`/away`) — leave and work-from-home requests: pick dates, submit, track approval status on your own device; admins approve/reject on the dashboard. Signed-in devices submit under their verified email.
 - **Announcements** — posted by admins, shown on everyone's home dashboard
-- **Admin** (`/admin`) — passcode-gated dashboard: attendance (with real names + location tags), orders, grievance inbox with statuses, Wi-Fi feed, announcements
+- **Admin** (`/admin`) — passcode-gated dashboard: attendance (with real names + location tags), orders, grievance inbox with statuses, Wi-Fi feed, time-away approvals, announcements
 - **Sign in with Google** — optional verified identity on `innovinlabs.com`; a signed-in device can't mark attendance for a different email, and admins see real names. Works without it too.
 
 ## Stack

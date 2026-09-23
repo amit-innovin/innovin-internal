@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, Coffee, MessageSquare, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarOff, Coffee, MessageSquare, Wifi } from "lucide-react";
 import { IconTile, PageHeader, stagger, type Tone } from "@/components/kit";
 import { Card } from "@/components/ui/card";
 import { orderCutoffHour } from "@/lib/config";
@@ -29,6 +29,12 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     tone: "ink",
     q: "Are grievances really anonymous?",
     a: "Yes. Anonymous submissions never show your name or email to anyone, including admins. You can track the status of your own submissions on this device.",
+  },
+  {
+    icon: CalendarOff,
+    tone: "amber",
+    q: "How do leave and WFH requests work?",
+    a: "Open Time Away, pick Leave or Work from home, choose your dates, and send — the coordinator approves or rejects it on the admin dashboard and you can watch the status under Your requests. Sign in with Google first so requests come from your verified identity.",
   },
   {
     icon: Wifi,

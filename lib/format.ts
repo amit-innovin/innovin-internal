@@ -21,6 +21,10 @@ export function fmtShortDate(iso: string) {
   return `${p.day} ${p.month}`;
 }
 
+// A YYYY-MM-DD span as "7 Oct" or "7 Oct – 9 Oct".
+export const fmtDateRange = (start: string, end: string) =>
+  start === end ? fmtShortDate(`${start}T00:00:00`) : `${fmtShortDate(`${start}T00:00:00`)} – ${fmtShortDate(`${end}T00:00:00`)}`;
+
 export function relativeDay(iso: string, now = Date.now()) {
   const days = Math.round((Date.parse(istDate(new Date(now))) - Date.parse(istDate(new Date(iso)))) / 86_400_000);
   return days <= 0 ? "Today" : days === 1 ? "Yesterday" : `${days} days ago`;

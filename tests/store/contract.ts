@@ -136,6 +136,28 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(rows.map((r) => r.email)).toEqual(["early@innovinlabs.com", "late@innovinlabs.com"]);
         expect(await store.listAttendanceByEmail("early@innovinlabs.com", "2026-09-22")).toHaveLength(0);
       });
+
+      it("lists one person's sessions across a date range, in day then time order", async () => {
+        await store.checkIn(attendance({ date: "2026-09-01", checkInAt: iso(1000) }));
+        // checkIn always opens a session (the Postgres adapter ignores checkOutAt on the input),
+        // so a second session the same day has to follow a real checkOut — as the route does.
+        await store.checkIn(attendance({ date: "2026-09-15", checkInAt: iso(2000) }));
+        await store.checkOut("a@innovinlabs.com", "2026-09-15", iso(3000));
+        await store.checkIn(attendance({ date: "2026-09-15", checkInAt: iso(5000) }));
+        await store.checkIn(attendance({ date: "2026-09-30", checkInAt: iso(9000) }));
+        await store.checkIn(attendance({ date: "2026-10-01", checkInAt: iso(9999) })); // outside
+        await store.checkIn(attendance({ email: "other@innovinlabs.com", date: "2026-09-15" })); // someone else
+
+        const rows = await store.listAttendanceRange("a@innovinlabs.com", "2026-09-01", "2026-09-30");
+        expect(rows.map((r) => r.date)).toEqual(["2026-09-01", "2026-09-15", "2026-09-15", "2026-09-30"]);
+        // Same-day sessions come back chronologically.
+        expect(rows[1].checkInAt).toBe(iso(2000));
+        expect(rows[2].checkInAt).toBe(iso(5000));
+        // The range is inclusive on both ends, and empty ranges are empty.
+        expect(await store.listAttendanceRange("a@innovinlabs.com", "2026-09-15", "2026-09-15")).toHaveLength(2);
+        expect(await store.listAttendanceRange("a@innovinlabs.com", "2026-08-01", "2026-08-31")).toEqual([]);
+        expect(await store.listAttendanceRange("nobody@innovinlabs.com", "2026-09-01", "2026-09-30")).toEqual([]);
+      });
     });
 
     describe("orders", () => {

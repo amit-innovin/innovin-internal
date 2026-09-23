@@ -5,19 +5,17 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { readError, send } from "@/lib/fetcher";
-import { LEAVE_LABELS, type LeaveType } from "@/lib/leave";
+import { fmtLeaveDays, LEAVE_LABELS, type LeaveType } from "@/lib/leave";
 
 type Ledger = { type: LeaveType; entitled: number; used: number; pending: number; remaining: number };
 type Person = { name: string; email: string | null; joinedOn: string | null; summary: { ledger: Ledger[]; imported: boolean } };
-
-const days = (n: number) => `${Number(n.toFixed(1))}`;
 
 function Balances({ ledger }: { ledger: Ledger[] }) {
   return (
     <div className="flex shrink-0 gap-3 text-right text-xs tabular-nums">
       {ledger.map((row) => (
         <div key={row.type} className="w-12">
-          <p className={`font-medium ${row.remaining < 0 ? "text-rose-600" : ""}`}>{days(row.remaining)}</p>
+          <p className={`font-medium ${row.remaining < 0 ? "text-rose-600" : ""}`}>{fmtLeaveDays(row.remaining)}</p>
           <p className="text-[10px] text-muted-foreground">{LEAVE_LABELS[row.type]}</p>
         </div>
       ))}

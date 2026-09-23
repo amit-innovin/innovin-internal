@@ -8,13 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON } from "@/lib/fetcher";
+import { LOCATION_LABEL, type LocationTag } from "@/lib/geo";
 import { fmtTime } from "@/lib/format";
 
 type Person = { name: string; email: string; picture: string; role: "owner" | "admin" | "member"; since: string };
-type Present = { name: string; since: string; where: string };
+type Present = { name: string; since: string; where: LocationTag };
 type Directory = { people: Person[]; inToday: Present[] };
 
-const WHERE_LABEL: Record<string, string> = { office: "In office", remote: "Remote", unknown: "Location not shared" };
 
 const nameInitials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
@@ -70,7 +70,7 @@ export default function People() {
                       <p className="text-xs text-muted-foreground">since {fmtTime(p.since)}</p>
                     </div>
                     <Badge variant="secondary" className="shrink-0">
-                      {WHERE_LABEL[p.where] ?? "Location not shared"}
+                      {LOCATION_LABEL[p.where] ?? LOCATION_LABEL.unknown}
                     </Badge>
                   </li>
                 ))}

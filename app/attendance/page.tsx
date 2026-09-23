@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { CalendarCheck, Clock, LogIn, LogOut, Mail, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { IconTile, PageHeader, SuccessCheck, stagger } from "@/components/kit";
+import AttendanceCalendar from "@/components/attendance-calendar";
+import { IconTile, PageHeader, Segmented, SuccessCheck, stagger } from "@/components/kit";
+import LeavePanel from "@/components/leave-panel";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { StatefulButton } from "@/components/motion/button/stateful";
 import { Input } from "@/components/motion/input";
@@ -13,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON, readError, send } from "@/lib/fetcher";
 import { useButtonState } from "@/lib/hooks/use-button-state";
 import { fmtDuration, fmtTime, sessionMinutes } from "@/lib/format";
-import type { LocationTag } from "@/lib/geo";
+import { LOCATION_LABEL, type LocationTag } from "@/lib/geo";
 
 type Session = { checkInAt: string; checkOutAt: string | null; location: LocationTag };
 type Status = {
@@ -26,12 +28,6 @@ type Status = {
     totalMinutes: number;
     sessions: Session[];
   } | null;
-};
-
-const LOCATION_LABEL: Record<LocationTag, string> = {
-  office: "In office",
-  remote: "Working remotely",
-  unknown: "Location not shared",
 };
 
 type Auth = { signedIn: boolean; googleEnabled: boolean; email?: string; name?: string };
@@ -48,6 +44,7 @@ export default function Attendance() {
   const [user, setUser] = useState<Auth | null>(null);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | false>(false);
+  const [tab, setTab] = useState<"today" | "calendar" | "leave">("today");
   const [buttonState, run] = useButtonState();
 
   const load = async () => {
@@ -231,7 +228,33 @@ export default function Attendance() {
         </Card>
       )}
 
-      {sessions.length > 0 && (
+      {/* One time surface: today's detail, the month calendar, and leave. The check-in action
+          above stays put and keeps working without a Google sign-in. */}
+      <div className="mt-4">
+        <Segmented
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "today", label: "Today" },
+            { value: "calendar", label: "Calendar" },
+            { value: "leave", label: "Leave" },
+          ]}
+        />
+      </div>
+
+      {tab === "calendar" && (
+        <Card className="mt-4 gap-0 p-5">
+          <AttendanceCalendar />
+        </Card>
+      )}
+
+      {tab === "leave" && (
+        <div className="mt-4">
+          <LeavePanel rememberedEmail={status?.email ?? null} />
+        </div>
+      )}
+
+      {tab === "today" && sessions.length > 0 && (
         <Card className="mt-4 gap-0 p-5">
           <div className="flex items-center justify-between">
             <h2 className="eyebrow">Today&apos;s sessions</h2>
@@ -255,7 +278,7 @@ export default function Attendance() {
         </Card>
       )}
 
-      {status && (
+      {tab === "today" && status && (
         <Card className="mt-4 flex-row items-center gap-4 p-5">
           <IconTile icon={CalendarCheck} tone="blue" />
           <div>

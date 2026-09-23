@@ -6,7 +6,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { AnimatedBadge, type AnimatedBadgeStatus } from "@/components/motion/animated-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { Badge } from "@/components/ui/badge";
-import type { GrievanceStatus } from "@/lib/types";
+import type { AwayStatus, AwayType, GrievanceStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 // innovinlabs.com palette: brand blue family for identity, green/amber/red only for semantics.
@@ -114,6 +114,14 @@ export const STATUS_META: Record<GrievanceStatus, { label: string; badge: Animat
   in_progress: { label: "In progress", badge: "warning", tone: "amber" },
   resolved: { label: "Resolved", badge: "success", tone: "green" },
 };
+
+export const AWAY_META: Record<AwayStatus, { label: string; badge: AnimatedBadgeStatus }> = {
+  pending: { label: "Pending", badge: "warning" },
+  approved: { label: "Approved", badge: "success" },
+  rejected: { label: "Rejected", badge: "danger" },
+};
+
+export const AWAY_TYPE_LABEL: Record<AwayType, string> = { leave: "Leave", wfh: "Work from home" };
 
 export function StatusPill({ status }: { status: GrievanceStatus }) {
   const meta = STATUS_META[status];

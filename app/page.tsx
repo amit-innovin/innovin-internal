@@ -94,7 +94,7 @@ async function YourDay({ email, deviceId }: { email: string | null; deviceId: st
       label: "Meals",
       value: items.length ? orderNames : ordersOpen ? "Not ordered yet" : "Closed for today",
     },
-    { href: "/away", icon: CalendarOff, tone: "amber", label: "Time away", value: awayLabel },
+    { href: "/attendance", icon: CalendarOff, tone: "amber", label: "Time away", value: awayLabel },
     { href: "/attendance", icon: Users, tone: "blue", label: "At Innovin", value: peopleLabel },
   ];
 

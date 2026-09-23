@@ -1,20 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CalendarOff, Mail, Palmtree, Send } from "lucide-react";
+import { CalendarOff, Info, Mail, Palmtree, Send } from "lucide-react";
 import { toast } from "sonner";
-import { Empty, IconTile, PageHeader, Segmented, stagger } from "@/components/kit";
+import { AWAY_META, AWAY_TYPE_LABEL, Empty, IconTile, SectionHeader, Segmented, stagger } from "@/components/kit";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { StatefulButton } from "@/components/motion/button/stateful";
 import { Input } from "@/components/motion/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { getJSON, readError, send } from "@/lib/fetcher";
+import { fmtDateRange, fmtShortDate, relativeTime } from "@/lib/format";
 import { useButtonState } from "@/lib/hooks/use-button-state";
-import { fmtShortDate, relativeTime } from "@/lib/format";
-import { LEAVE_LABELS, type LeaveType } from "@/lib/leave";
+import { fmtLeaveDays, LEAVE_LABELS, type LeaveType } from "@/lib/leave";
 import type { AwayStatus, AwayType } from "@/lib/types";
 
 type AwayRequest = {
@@ -28,24 +28,56 @@ type AwayRequest = {
   createdAt: string;
 };
 type Auth = { signedIn: boolean; googleEnabled: boolean; email?: string; name?: string };
+type Ledger = { type: LeaveType; entitled: number; used: number; pending: number; remaining: number };
 type LeaveSummary = {
   signedIn: boolean;
   year: number;
-  ledger?: { type: LeaveType; entitled: number; used: number; pending: number; remaining: number }[];
+  joinedOn?: string | null;
+  ledger?: Ledger[];
+  earned?: { accrued: number | null; canAvail: boolean; note: string | null };
 };
 
-const AWAY_META: Record<AwayStatus, { label: string; badge: "warning" | "success" | "danger" }> = {
-  pending: { label: "Pending", badge: "warning" },
-  approved: { label: "Approved", badge: "success" },
-  rejected: { label: "Rejected", badge: "danger" },
+const DESCRIPTION: Record<LeaveType, string> = {
+  cl: "Short personal breaks · half-days allowed",
+  sl: "Illness or health-related absence",
+  el: "Accrues 1.25 days a month · usable after a year",
+  fl: "For personal, cultural or religious observances",
+  ml: "Maternity leave",
 };
 
-const TYPE_LABEL: Record<AwayType, string> = { leave: "Leave", wfh: "Work from home" };
 
-const fmtRange = (start: string, end: string) =>
-  start === end ? fmtShortDate(`${start}T00:00:00`) : `${fmtShortDate(`${start}T00:00:00`)} – ${fmtShortDate(`${end}T00:00:00`)}`;
+function Balance({ row }: { row: Ledger }) {
+  const over = row.remaining < 0;
+  return (
+    <li className="py-3.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-sm font-medium">{LEAVE_LABELS[row.type]} Leave</p>
+        <p className={`shrink-0 text-sm font-medium tabular-nums ${over ? "text-rose-600" : ""}`}>
+          {fmtLeaveDays(row.remaining)} <span className="text-xs font-normal text-muted-foreground">of {fmtLeaveDays(row.entitled)} left</span>
+        </p>
+      </div>
+      <div className="mt-1 flex items-center gap-2">
+        <p className="flex-1 text-xs text-muted-foreground">{DESCRIPTION[row.type]}</p>
+        {row.pending > 0 && (
+          <Badge variant="secondary" className="shrink-0 text-[11px]">
+            {fmtLeaveDays(row.pending)} pending
+          </Badge>
+        )}
+        {over && (
+          <Badge variant="secondary" className="shrink-0 text-[11px] text-rose-600">
+            over by {fmtLeaveDays(-row.remaining)}
+          </Badge>
+        )}
+      </div>
+    </li>
+  );
+}
 
-export default function Away() {
+// Balances, the request form and your own request history. Lives inside the Attendance page so
+// "my time" is one surface; the holiday calendar sits in the Calendar tab next door.
+// `rememberedEmail` comes from the attendance status above, so nobody types their address twice
+// on this page — and it keeps the check-in card's email field the only one of its kind.
+export default function LeavePanel({ rememberedEmail }: { rememberedEmail: string | null }) {
   const [requests, setRequests] = useState<AwayRequest[] | null>(null);
   const [summary, setSummary] = useState<LeaveSummary | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
@@ -80,7 +112,7 @@ export default function Away() {
       const res = await send("/api/away", {
         method: "POST",
         json: {
-          email: auth?.email ?? email,
+          email: auth?.email ?? rememberedEmail ?? email,
           type,
           startDate,
           endDate,
@@ -89,11 +121,10 @@ export default function Away() {
         },
       });
       if (!res.ok) {
-        const message = await readError(res);
-        setError(message);
+        setError(await readError(res));
         return false;
       }
-      toast.success(`${TYPE_LABEL[type]} request sent for approval`);
+      toast.success(`${AWAY_TYPE_LABEL[type]} request sent for approval`);
       setStartDate("");
       setEndDate("");
       setReason("");
@@ -103,18 +134,50 @@ export default function Away() {
   };
 
   return (
-    <div className="mx-auto max-w-xl">
-      <PageHeader title="Time Away" subtitle="Leave and work-from-home requests" />
+    <>
+      <Card className="gap-0 p-5">
+        <SectionHeader
+          title={`Balance · ${summary?.year ?? "…"}`}
+          aside={summary?.joinedOn ? `Joined ${fmtShortDate(`${summary.joinedOn}T00:00:00`)}` : undefined}
+        />
+        {!summary ? (
+          <Skeleton className="mt-3 h-24 w-full" />
+        ) : !summary.signedIn ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {/* A plain anchor: a Next Link would prefetch the OAuth route and trip CSP. */}
+            <a href="/api/auth/google?next=/attendance" className="underline underline-offset-4">
+              Sign in with Google
+            </a>{" "}
+            to see your leave balances — they&apos;re tied to your identity, not this device. You can still request time away
+            below.
+          </p>
+        ) : (
+          <>
+            <ul className="mt-1 divide-y">
+              {summary.ledger?.map((row, i) => (
+                <div key={row.type} style={stagger(i)}>
+                  <Balance row={row} />
+                </div>
+              ))}
+            </ul>
+            {summary.earned?.note && (
+              <p className="mt-4 flex items-start gap-2 border-t pt-4 text-xs text-muted-foreground">
+                <Info className="mt-0.5 size-3.5 shrink-0" />
+                {summary.earned.note}
+              </p>
+            )}
+          </>
+        )}
+      </Card>
 
-      {!auth || !requests ? (
-        <Card className="gap-3 p-6">
+      {!auth ? (
+        <Card className="mt-4 gap-3 p-6">
           <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-10 w-full rounded-lg" />
           <Skeleton className="h-10 w-full rounded-lg" />
           <Skeleton className="h-24 w-full rounded-lg" />
         </Card>
       ) : (
-        <Card className="gap-0 p-6">
+        <Card className="mt-4 gap-0 p-6">
           <form onSubmit={submit}>
             <div className="flex items-center gap-3">
               <IconTile icon={Palmtree} tone="amber" size="lg" />
@@ -196,15 +259,15 @@ export default function Away() {
               </div>
             </div>
 
-            {auth.signedIn ? (
+            {auth.signedIn || rememberedEmail ? (
               <p className="mt-4 rounded-lg bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
-                Requesting as <span className="font-medium text-foreground">{auth.name}</span>{" "}
-                <span className="text-xs">({auth.email})</span>
+                Requesting as <span className="font-medium text-foreground">{auth.name ?? rememberedEmail}</span>
+                {auth.signedIn && <span className="text-xs"> ({auth.email})</span>}
               </p>
             ) : (
               <div className="mt-4">
                 <Input
-                  label="Your Innovin email"
+                  label="Email for this request"
                   type="email"
                   required
                   value={email}
@@ -251,37 +314,6 @@ export default function Away() {
       )}
 
       <Card className="mt-4 gap-0 p-5">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="eyebrow">Leave balance · {summary?.year ?? "…"}</h2>
-          <Link href="/leave" className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline">
-            Full tracker
-          </Link>
-        </div>
-        {!summary ? (
-          <Skeleton className="mt-3 h-10 w-full" />
-        ) : !summary.signedIn ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            {/* A plain anchor: a Next Link would prefetch the OAuth route and trip CSP. */}
-            <a href="/api/auth/google?next=/away" className="underline underline-offset-4">
-              Sign in
-            </a>{" "}
-            to see your balances — they&apos;re tied to your identity, not this device.
-          </p>
-        ) : (
-          <div className="mt-3 grid grid-cols-4 gap-3 text-center">
-            {summary.ledger?.map((row) => (
-              <div key={row.type}>
-                <p className={`text-xl font-medium tabular-nums ${row.remaining < 0 ? "text-rose-600" : ""}`}>
-                  {Number(row.remaining.toFixed(1))}
-                </p>
-                <p className="text-xs text-muted-foreground">{LEAVE_LABELS[row.type]}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      <Card className="mt-4 gap-0 p-5">
         <h2 className="eyebrow">Your requests</h2>
         {!requests ? (
           <div className="mt-3 space-y-3">
@@ -296,9 +328,9 @@ export default function Away() {
               <li key={r.id} className="flex items-center gap-3 py-3.5" style={stagger(i)}>
                 <IconTile icon={r.type === "leave" ? Palmtree : CalendarOff} tone={r.type === "leave" ? "amber" : "sky"} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{TYPE_LABEL[r.type]}</p>
+                  <p className="text-sm font-medium">{AWAY_TYPE_LABEL[r.type]}</p>
                   <p className="text-xs text-muted-foreground">
-                    {fmtRange(r.startDate, r.endDate)} • sent {relativeTime(r.createdAt)}
+                    {fmtDateRange(r.startDate, r.endDate)} • sent {relativeTime(r.createdAt)}
                   </p>
                   {r.reason && <p className="mt-0.5 truncate text-xs text-muted-foreground">{r.reason}</p>}
                 </div>
@@ -310,6 +342,6 @@ export default function Away() {
           </ul>
         )}
       </Card>
-    </div>
+    </>
   );
 }

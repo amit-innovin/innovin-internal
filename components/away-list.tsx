@@ -8,7 +8,7 @@ import { Empty, IconTile } from "@/components/kit";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { Button } from "@/components/ui/button";
 import { readError, send } from "@/lib/fetcher";
-import { fmtShortDate, relativeTime } from "@/lib/format";
+import { fmtDateRange, relativeTime } from "@/lib/format";
 import type { AwayStatus, AwayType } from "@/lib/types";
 
 type Item = {
@@ -29,8 +29,6 @@ const META: Record<AwayStatus, { label: string; badge: "warning" | "success" | "
   rejected: { label: "Rejected", badge: "danger" },
 };
 
-const fmtRange = (s: string, e: string) =>
-  s === e ? fmtShortDate(`${s}T00:00:00`) : `${fmtShortDate(`${s}T00:00:00`)} – ${fmtShortDate(`${e}T00:00:00`)}`;
 
 export default function AwayList({ items, names, now }: { items: Item[]; names: Record<string, string>; now?: number }) {
   const router = useRouter();
@@ -62,7 +60,7 @@ export default function AwayList({ items, names, now }: { items: Item[]; names: 
                 {names[r.email] ? `${names[r.email]} · ` : ""}{r.email}
               </p>
               <p className="text-xs text-muted-foreground">
-                {r.type === "leave" ? "Leave" : "WFH"} · {fmtRange(r.startDate, r.endDate)} · {relativeTime(r.createdAt, now)}
+                {r.type === "leave" ? "Leave" : "WFH"} · {fmtDateRange(r.startDate, r.endDate)} · {relativeTime(r.createdAt, now)}
               </p>
               {r.reason && <p className="mt-0.5 truncate text-xs text-muted-foreground">{r.reason}</p>}
               {status !== "pending" && r.decidedBy && (

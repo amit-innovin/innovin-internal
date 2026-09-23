@@ -8,6 +8,15 @@
   `E2E_DATABASE_URL=postgres://…` runs against Postgres; `CHROME_PATH=/path/to/chromium` avoids the Playwright browser download.
 - Full gate: `npm run test:all`
 
+## How much to verify, and when
+The full e2e matrix is ~150 tests × 2 browser projects × 2 storage backends and takes minutes.
+Don't run it after every edit. Instead:
+- While iterating: `npm run typecheck`, `npm test`, and only the affected spec
+  (`npx playwright test leave.spec.ts --project=desktop`).
+- Before merging: one full `npx playwright test`, plus a second run with `E2E_DATABASE_URL`
+  only when the change touched SQL or the store.
+- Don't re-run a suite that already passed unless the code under it changed.
+
 ## Local Postgres for tests (macOS/Homebrew)
 ```bash
 PG=/opt/homebrew/opt/postgresql@17/bin

@@ -94,6 +94,12 @@ export const jsonStore: Store = {
     query((db) =>
       db.attendance.filter((r) => r.email === email && r.date === date).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt)),
     ),
+  listAttendanceRange: (email, fromDate, toDate) =>
+    query((db) =>
+      db.attendance
+        .filter((r) => r.email === email && r.date >= fromDate && r.date <= toDate)
+        .sort((a, b) => a.date.localeCompare(b.date) || a.checkInAt.localeCompare(b.checkInAt)),
+    ),
   listAttendance: (date) =>
     query((db) => db.attendance.filter((r) => r.date === date).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt))),
 

@@ -24,6 +24,9 @@ export const LEAVE_LABELS: Record<LeaveType, string> = {
 
 export const isLeaveType = (v: unknown): v is LeaveType => LEAVE_TYPES.includes(v as LeaveType);
 
+// Leave is tracked in half days — render 2 rather than 2.0, but keep the .5 when there is one.
+export const fmtLeaveDays = (n: number) => `${Number(n.toFixed(1))}`;
+
 // Company-declared holidays per leave year, from the annual calendar.
 const HOLIDAYS: Record<number, Record<string, string>> = {
   2026: {

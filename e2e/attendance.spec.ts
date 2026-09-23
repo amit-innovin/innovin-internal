@@ -51,11 +51,11 @@ test.describe("Attendance", () => {
     await expect(page.locator("ul >> li", { hasText: "– now" })).toContainText("In office");
   });
 
-  test("check-in far from the office tags the session Working remotely", async ({ page, context }) => {
+  test("check-in far from the office tags the session Remote", async ({ page, context }) => {
     await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({ latitude: 13.05, longitude: 77.6, accuracy: 20 });
     await checkIn(page, uniqueEmail("remote"));
-    await expect(page.getByText("Working remotely • Innovin")).toBeVisible();
+    await expect(page.getByText("Remote • Innovin")).toBeVisible();
   });
 
   test("a remembered email offers one-tap check-in and 'Not you?' switches user", async ({ page, context, baseURL }) => {

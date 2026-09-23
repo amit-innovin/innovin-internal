@@ -60,7 +60,7 @@ test.describe("Navigation & shell", () => {
   });
 
   test("feature pages carry no redundant back button — the nav shell is always present", async ({ page }) => {
-    for (const path of ["/leave", "/away", "/events", "/people", "/settings", "/help", "/attendance"]) {
+    for (const path of ["/events", "/people", "/settings", "/help", "/attendance", "/snacks", "/wifi"]) {
       await page.goto(path);
       await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "Home" }).first()).toBeVisible();
@@ -74,10 +74,11 @@ test.describe("Navigation & shell", () => {
     await page.getByRole("button", { name: "Check In" }).click();
     await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
 
-    await page.goto("/away");
+    // Leave lives in the Attendance page's Leave tab now, and reuses the remembered email.
+    await page.getByRole("tab", { name: "Leave" }).click();
+    await expect(page.getByText(`Requesting as ${email}`)).toBeVisible();
     await page.locator("#away-start").fill("2026-10-07");
     await page.locator("#away-end").fill("2026-10-07");
-    await page.getByLabel("Your Innovin email").fill(email);
     await page.getByRole("button", { name: "Request Leave" }).click();
     await expect(page.getByText("Leave request sent")).toBeVisible();
 
@@ -103,7 +104,7 @@ test.describe("Navigation & shell", () => {
   });
 
   test("no page overflows horizontally", async ({ page }) => {
-    for (const path of ["/", "/attendance", "/snacks", "/grievances", "/wifi", "/away", "/leave", "/events", "/people", "/settings", "/help", "/admin"]) {
+    for (const path of ["/", "/attendance", "/snacks", "/grievances", "/wifi", "/events", "/people", "/settings", "/help", "/admin"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

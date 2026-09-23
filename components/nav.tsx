@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarDays, CalendarOff, CircleHelp, Coffee, House, MessageSquare, Plane, Settings, Users, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CircleHelp, Coffee, House, MessageSquare, Settings, Users, Wifi } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Logo, Wave } from "@/components/brand";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,8 @@ const PRIMARY: Item[] = [
   { href: "/wifi", label: "Wi-Fi Quality", short: "Wi-Fi", icon: Wifi },
 ];
 
+// Leave and Time Away live inside Attendance now — one surface for "my time".
 const SECONDARY: Item[] = [
-  { href: "/leave", label: "Leave tracker", short: "Leave", icon: Plane },
-  { href: "/away", label: "Time Away", short: "Away", icon: CalendarOff },
   { href: "/events", label: "Events", short: "Events", icon: CalendarDays },
   { href: "/people", label: "People", short: "People", icon: Users },
   { href: "/settings", label: "Settings", short: "Settings", icon: Settings },

@@ -283,6 +283,13 @@ class PgStore implements Store {
     const res = await this.q(`SELECT * FROM attendance WHERE email = $1 AND date = $2 ORDER BY check_in_at`, [email, date]);
     return res.rows.map(attendance);
   }
+  async listAttendanceRange(email: string, fromDate: string, toDate: string) {
+    const res = await this.q(
+      `SELECT * FROM attendance WHERE email = $1 AND date BETWEEN $2 AND $3 ORDER BY date, check_in_at`,
+      [email, fromDate, toDate],
+    );
+    return res.rows.map(attendance);
+  }
   async listAttendance(date: string) {
     const res = await this.q(`SELECT * FROM attendance WHERE date = $1 ORDER BY check_in_at`, [date]);
     return res.rows.map(attendance);

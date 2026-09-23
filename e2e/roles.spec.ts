@@ -65,10 +65,11 @@ test.describe("Roles & access", () => {
   test("approvals are attributed to the admin who made them", async ({ browser, page }) => {
     // An employee files a leave request.
     const reason = `attribution ${Date.now().toString(36)}`;
-    await page.goto("/away");
+    await page.goto("/attendance");
+    await page.getByRole("tab", { name: "Leave" }).click();
     await page.locator("#away-start").fill("2026-11-02");
     await page.locator("#away-end").fill("2026-11-03");
-    await page.getByLabel("Your Innovin email").fill(`att.${Date.now().toString(36)}@innovinlabs.com`);
+    await page.getByLabel("Email for this request").fill(`att.${Date.now().toString(36)}@innovinlabs.com`);
     await page.getByLabel("Reason").fill(reason);
     await page.getByRole("button", { name: "Request leave" }).click();
     await expect(page.locator("li", { hasText: reason })).toContainText("Pending");

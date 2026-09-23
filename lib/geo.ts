@@ -2,6 +2,13 @@
 // the radius in metres that still counts as "in office" (default 300m — GPS indoors is coarse).
 export type LocationTag = "office" | "remote" | "unknown";
 
+// One set of labels for every surface that shows where a session happened.
+export const LOCATION_LABEL: Record<LocationTag, string> = {
+  office: "In office",
+  remote: "Remote",
+  unknown: "Location not shared",
+};
+
 export function officeLocation() {
   const lat = Number(process.env.OFFICE_LAT);
   const lng = Number(process.env.OFFICE_LNG);

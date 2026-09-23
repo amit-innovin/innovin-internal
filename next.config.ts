@@ -37,6 +37,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // Leave and Time Away folded into Attendance. Redirect here rather than keeping stub pages,
+  // so there's no extra route to render. Not permanent — browsers cache 308s aggressively and
+  // these paths may be reused.
+  async redirects() {
+    return [
+      { source: "/leave", destination: "/attendance", permanent: false },
+      { source: "/away", destination: "/attendance", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

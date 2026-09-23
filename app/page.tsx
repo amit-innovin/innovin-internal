@@ -53,7 +53,7 @@ async function YourDay({ email, deviceId }: { email: string | null; deviceId: st
 
   const tomorrow = new Date(Date.parse(date) + 86_400_000).toISOString().slice(0, 10);
   const nextAway = myAway
-    .filter((r) => r.status !== "rejected" && r.endDate >= date)
+    .filter((r) => (r.status === "pending" || r.status === "approved") && r.endDate >= date)
     .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
   const awayLabel = !nextAway
     ? "Nothing scheduled"

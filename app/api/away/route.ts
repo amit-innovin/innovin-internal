@@ -6,6 +6,7 @@ import { DEVICE_COOKIE } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { fmtShortDate } from "@/lib/format";
 import { isLeaveType, leaveCost, nonWorkingReason } from "@/lib/leave";
+import { todayIST } from "@/lib/time";
 import { sendPush } from "@/lib/push";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
@@ -14,7 +15,6 @@ import type { AwayStatus, AwayType } from "@/lib/types";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const STATUSES: AwayStatus[] = ["pending", "approved", "rejected"];
 const MAX_SPAN_DAYS = 92;
 
 const strip = ({ submitterRef: _r, ...rest }: import("@/lib/types").AwayRow) => rest;
@@ -97,33 +97,73 @@ export async function POST(req: NextRequest) {
   return res;
 }
 
-// Admin approves/rejects a request.
-export async function PATCH(req: Request) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+const notify = (row: { id: string; type: AwayType; startDate: string; email: string }, title: string, email?: string) =>
+  sendPush(
+    { title, body: fmtShortDate(`${row.startDate}T00:00:00`), href: "/attendance", tag: `away-${row.id}` },
+    email ?? row.email,
+  ).catch(() => {});
+
+// Two kinds of update:
+//   approve/reject — admin only.
+//   cancel — the requester themselves (verified email, or the device that filed it) or an admin.
+//   Cancelling is allowed while pending *or* approved, but only before the dates have passed —
+//   past leave is history, and rewriting it would corrupt the balances.
+export async function PATCH(req: NextRequest) {
   const body = await readJSON(req);
   const rid = str(body?.id);
   const status = body?.status as AwayStatus;
-  if (!rid || !STATUSES.includes(status) || status === "pending") return badRequest("Invalid status update");
+  if (!rid || !["approved", "rejected", "cancelled"].includes(status)) return badRequest("Invalid status update");
+
+  // Decisions are admin-only and checked before the row exists — anonymous callers get the same
+  // 401 regardless of whether the id is real.
+  if (status !== "cancelled" && !(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const row = (await store.listAway(200)).find((r) => r.id === rid);
+  if (!row) return NextResponse.json({ error: "Request not found" }, { status: 404 });
+  const actor = await currentActor();
+
+  if (status === "cancelled") {
+    const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+    const identity = submitterIdentity(req);
+    const owns = session?.email === row.email || identity.ref === row.submitterRef;
+    if (!owns && !(await isAdmin())) {
+      return NextResponse.json({ error: "Not your request" }, { status: 403 });
+    }
+    if (row.status === "cancelled") return badRequest("Already cancelled");
+    if (row.status !== "pending" && row.status !== "approved") return badRequest("This request was already decided");
+    if (row.endDate < todayIST()) return badRequest("That time away has already passed");
+
+    // Attribution: self-cancels show plain "Cancelled"; an admin cancelling for someone is named.
+    const decidedBy = owns ? null : actor ? actor.name || actor.email : null;
+    await store.setAwayStatus(rid, "cancelled", decidedBy, new Date().toISOString());
+
+    const what = row.type === "wfh" ? "Work from home" : "Leave";
+    if (owns) {
+      // An admin approved this and now it's undone — tell the admins so nobody plans around it.
+      if (row.status === "approved") {
+        const who = session?.name ?? row.email;
+        const admins = (await store.listEmployees()).filter((e) => e.role === "admin" || e.role === "owner");
+        await Promise.all(admins.map((a) => notify(row, `${who} cancelled their approved ${what.toLowerCase()}`, a.email)));
+      }
+    } else {
+      await notify(row, `Your ${what.toLowerCase()} was cancelled${decidedBy ? ` by ${decidedBy}` : ""}`);
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  // Decisions only come out of pending — a rejected or cancelled request is history, and an
+  // approved one that needs undoing goes through cancel, not a re-decision.
+  if (row.status !== "pending") return badRequest("This request was already decided");
   // Attribute the decision when the admin is a verified identity; break-glass PIN sessions
   // have nobody to attribute it to.
-  const actor = await currentActor();
   const decidedBy = actor?.role === "admin" || actor?.role === "owner" ? actor.name || actor.email : null;
   const updated = await store.setAwayStatus(rid, status, decidedBy, new Date().toISOString());
   if (!updated) return NextResponse.json({ error: "Request not found" }, { status: 404 });
 
   // Tell just that person's devices. Best-effort — the decision is already saved.
-  const row = (await store.listAway(200)).find((r) => r.id === rid);
-  if (row) {
-    const what = row.type === "wfh" ? "Work from home" : "Leave";
-    await sendPush(
-      {
-        title: `${what} ${status}`,
-        body: `${fmtShortDate(`${row.startDate}T00:00:00`)}${decidedBy ? ` · by ${decidedBy}` : ""}`,
-        href: "/attendance",
-        tag: `away-${rid}`,
-      },
-      row.email,
-    ).catch(() => {});
-  }
+  const what = row.type === "wfh" ? "Work from home" : "Leave";
+  await notify(row, `${what} ${status}${decidedBy ? ` by ${decidedBy}` : ""}`);
   return NextResponse.json({ ok: true });
 }

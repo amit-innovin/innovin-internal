@@ -119,6 +119,7 @@ export const AWAY_META: Record<AwayStatus, { label: string; badge: AnimatedBadge
   pending: { label: "Pending", badge: "warning" },
   approved: { label: "Approved", badge: "success" },
   rejected: { label: "Rejected", badge: "danger" },
+  cancelled: { label: "Cancelled", badge: "neutral" },
 };
 
 export const AWAY_TYPE_LABEL: Record<AwayType, string> = { leave: "Leave", wfh: "Work from home" };

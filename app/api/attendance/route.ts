@@ -68,7 +68,7 @@ async function monthView(month: string, email: string | null, verified: boolean,
   const days = Array.from({ length: lastDay }, (_, i) => {
     const date = `${month}-${String(i + 1).padStart(2, "0")}`;
     const sessions = rows.filter((r) => r.date === date);
-    const away = leave.find((r) => r.status !== "rejected" && date >= r.startDate && date <= r.endDate);
+    const away = leave.find((r) => (r.status === "pending" || r.status === "approved") && date >= r.startDate && date <= r.endDate);
     return {
       date,
       minutes: sessions.length ? totalMinutes(sessions) : 0,

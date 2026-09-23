@@ -149,7 +149,7 @@ export type LeaveLedger = { type: LeaveType; entitled: number; used: number; pen
 export function leaveLedger(input: {
   entitlement: Partial<Record<LeaveType, number>>;
   opening?: Partial<Record<LeaveType, number>>;
-  requests: { type: LeaveType; days: number; status: "pending" | "approved" | "rejected" }[];
+  requests: { type: LeaveType; days: number; status: "pending" | "approved" | "rejected" | "cancelled" }[];
 }): LeaveLedger[] {
   return LEAVE_TYPES.filter((t) => t !== "ml").map((type) => {
     const entitled = input.entitlement[type] ?? 0;

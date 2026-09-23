@@ -40,7 +40,7 @@ export type OrderRow = {
 };
 
 export type AwayType = "leave" | "wfh";
-export type AwayStatus = "pending" | "approved" | "rejected";
+export type AwayStatus = "pending" | "approved" | "rejected" | "cancelled";
 
 export type AwayRow = {
   id: string;

@@ -54,8 +54,17 @@ test.describe("Navigation & shell", () => {
     await page.getByRole("link", { name: "Help" }).first().click();
     await expect(page.getByRole("heading", { name: "Are grievances really anonymous?" })).toBeVisible();
     await expect(page.getByText("submit anytime")).toBeVisible();
-    await page.getByRole("link", { name: "Back to home" }).click();
+    // Home is reached through the nav shell — the sidebar on desktop, the tab bar on mobile.
+    await page.getByRole("link", { name: "Home" }).first().click();
     await expect(page).toHaveURL(/\/$/);
+  });
+
+  test("feature pages carry no redundant back button — the nav shell is always present", async ({ page }) => {
+    for (const path of ["/leave", "/away", "/events", "/people", "/settings", "/help", "/attendance"]) {
+      await page.goto(path);
+      await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Home" }).first()).toBeVisible();
+    }
   });
 
   test("the Your Day strip reflects attendance, orders, and time away", async ({ page }) => {

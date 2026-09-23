@@ -1,12 +1,11 @@
 // Shared app building blocks, composed from shadcn/ui, beUI and transitions.dev.
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Coffee, Cookie, Leaf, Plus, Soup, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, Check, ChevronRight, Coffee, Cookie, Leaf, Plus, Soup, UtensilsCrossed } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { AnimatedBadge, type AnimatedBadgeStatus } from "@/components/motion/animated-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type { GrievanceStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -51,15 +50,13 @@ export function IconTile({
   );
 }
 
+// No back affordance here: every page renders inside the nav shell (sidebar on desktop, tab bar
+// and top bar on mobile), so Home is always one tap away — and a chevron that always went to "/"
+// regardless of history was promising back-navigation it didn't do.
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
     <header className="mb-6">
       <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="icon-lg" className="-ml-2 rounded-full text-muted-foreground">
-          <Link href="/" aria-label="Back to home">
-            <ChevronLeft className="size-5" />
-          </Link>
-        </Button>
         <h1 className="flex-1 text-2xl font-medium">{title}</h1>
         {action}
       </div>

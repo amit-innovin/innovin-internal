@@ -43,6 +43,26 @@ export type AwayRow = {
   createdAt: string;
 };
 
+export type EventCategory = "sports" | "arts" | "culture" | "learning" | "social" | "company";
+
+export type EventRow = {
+  id: string;
+  title: string;
+  body: string;
+  category: EventCategory;
+  startsAt: string; // ISO
+  location: string;
+  createdBy: string; // admin email or "admin"
+  createdAt: string;
+};
+
+export type RsvpRow = {
+  eventId: string;
+  submitterRef: string;
+  email: string | null; // verified Google email when signed in
+  createdAt: string;
+};
+
 export type GrievanceStatus = "open" | "in_progress" | "resolved";
 
 export type GrievanceRow = {
@@ -99,6 +119,16 @@ export interface Store {
   setAwayStatus(id: string, status: AwayStatus): Promise<boolean>;
   listAway(limit: number): Promise<AwayRow[]>;
   listAwayByRef(ref: string, limit: number): Promise<AwayRow[]>;
+  addEvent(row: EventRow): Promise<EventRow>;
+  getEvent(id: string): Promise<EventRow | null>;
+  deleteEvent(id: string): Promise<boolean>;
+  // Upcoming events (startsAt >= fromIso), soonest first.
+  listEvents(fromIso: string, limit: number): Promise<EventRow[]>;
+  // One RSVP per device per event; email recorded only for signed-in employees.
+  setRsvp(eventId: string, ref: string, email: string | null, going: boolean): Promise<void>;
+  listRsvps(eventId: string): Promise<RsvpRow[]>;
+  rsvpCounts(eventIds: string[]): Promise<Record<string, number>>;
+  myRsvpEventIds(ref: string): Promise<string[]>;
   // Creates the employee on first sign-in; refreshes name/picture/lastSeenAt afterwards.
   upsertEmployee(row: EmployeeRow): Promise<EmployeeRow>;
   getEmployee(email: string): Promise<EmployeeRow | null>;

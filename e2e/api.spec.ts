@@ -218,6 +218,53 @@ test.describe("API: behaviour", () => {
     expect(after.find((r: { id: string }) => r.id === req.id).status).toBe("approved");
   });
 
+  test("events: admin publishes, devices RSVP, nothing exposes internal refs", async () => {
+    const ctx = await device();
+    const adm = await admin();
+    const title = `E2E screening ${Date.now().toString(36)}`;
+
+    // Bad form payloads redirect back with a flash key — never a 500.
+    const bad = await adm.post("/api/events", { form: { title, category: "gala", startsAt: "not-a-date" }, maxRedirects: 0 });
+    expect(bad.status()).toBe(303);
+    expect(bad.headers().location).toBe("/admin?done=invalid-event#events");
+
+    const posted = await adm.post("/api/events", {
+      form: { title, category: "sports", startsAt: "2026-12-25T17:00", location: "Common area", body: "details" },
+      maxRedirects: 0,
+    });
+    expect(posted.headers().location).toBe("/admin?done=event-posted#events");
+
+    const list = await (await ctx.get("/api/events")).json();
+    const ev = list.find((e: { title: string }) => e.title === title);
+    expect(ev).toMatchObject({ title, category: "sports", location: "Common area", going: 0, mine: false });
+    expect(ev.startsAt).toBe("2026-12-25T11:30:00.000Z"); // 17:00 IST
+    noRef(ev);
+    expect(JSON.stringify(ev)).not.toContain("createdBy");
+
+    // RSVP validation and toggle semantics.
+    expect((await ctx.patch("/api/events", { data: "{bad", headers: { "Content-Type": "application/json" } })).status()).toBe(400);
+    expect((await ctx.patch("/api/events", { data: {} })).status()).toBe(400);
+    expect((await ctx.patch("/api/events", { data: { eventId: "missing", going: true } })).status()).toBe(404);
+
+    const on = await (await ctx.patch("/api/events", { data: { eventId: ev.id, going: true } })).json();
+    expect(on).toEqual({ going: true, count: 1 });
+    const other = await device();
+    const otherOn = await (await other.patch("/api/events", { data: { eventId: ev.id, going: true } })).json();
+    expect(otherOn).toEqual({ going: true, count: 2 });
+
+    const mine = (await (await ctx.get("/api/events")).json()).find((e: { id: string }) => e.id === ev.id);
+    expect(mine).toMatchObject({ going: 2, mine: true });
+    const theirs = await (await (await device()).get("/api/events")).json();
+    expect(theirs.find((e: { id: string }) => e.id === ev.id).mine).toBe(false);
+
+    const off = await (await ctx.patch("/api/events", { data: { eventId: ev.id, going: false } })).json();
+    expect(off).toEqual({ going: false, count: 1 });
+
+    const del = await adm.post("/api/events", { form: { _action: "delete", id: ev.id }, maxRedirects: 0 });
+    expect(del.headers().location).toBe("/admin?done=event-deleted#events");
+    expect((await (await ctx.get("/api/events")).json()).find((e: { id: string }) => e.id === ev.id)).toBeUndefined();
+  });
+
   test("grievances accept a compressed photo and return it to the device and admin", async () => {
     const ctx = await device();
     const img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
@@ -256,6 +303,8 @@ test.describe("API: privacy & auth", () => {
     expect((await ctx.patch("/api/away", { data: { id: "x", status: "approved" } })).status()).toBe(401);
     expect((await ctx.post("/api/announcements", { form: { title: "hack" } })).status()).toBe(401);
     expect((await ctx.post("/api/announcements", { form: { _action: "delete", id: "x" } })).status()).toBe(401);
+    expect((await ctx.post("/api/events", { form: { title: "hack", category: "social", startsAt: "2026-12-01T17:00" } })).status()).toBe(401);
+    expect((await ctx.post("/api/events", { form: { _action: "delete", id: "x" } })).status()).toBe(401);
   });
 
   test("anonymous grievances never expose submitter identity, to devices or admins", async () => {

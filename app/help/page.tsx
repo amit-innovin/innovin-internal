@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarOff, Coffee, MessageSquare, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CalendarOff, Coffee, MessageSquare, Wifi } from "lucide-react";
 import { IconTile, PageHeader, stagger, type Tone } from "@/components/kit";
 import { Card } from "@/components/ui/card";
 import { orderCutoffHour } from "@/lib/config";
@@ -35,6 +35,12 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     tone: "amber",
     q: "How do leave and WFH requests work?",
     a: "Open Time Away, pick Leave or Work from home, choose your dates, and send — the coordinator approves or rejects it on the admin dashboard and you can watch the status under Your requests. Sign in with Google first so requests come from your verified identity.",
+  },
+  {
+    icon: CalendarDays,
+    tone: "rose",
+    q: "How do events and RSVPs work?",
+    a: "The Events page lists what's coming up — matches, workshops, celebrations, town halls. Tap Join to RSVP so organizers know the headcount; tap again to drop out. Nobody sees who else is going, only the count.",
   },
   {
     icon: Wifi,

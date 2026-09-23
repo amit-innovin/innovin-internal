@@ -43,8 +43,11 @@ test.describe("Navigation & shell", () => {
     }
   });
 
-  test("settings and help are reachable and render", async ({ page }) => {
+  test("settings, events and help are reachable and render", async ({ page }) => {
     await page.goto("/");
+    await page.getByRole("link", { name: "Events" }).first().click();
+    await expect(page).toHaveURL(/\/events$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Events" })).toBeVisible();
     await page.getByRole("link", { name: "Settings" }).first().click();
     await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Admin dashboard/ })).toBeVisible();
@@ -91,7 +94,7 @@ test.describe("Navigation & shell", () => {
   });
 
   test("no page overflows horizontally", async ({ page }) => {
-    for (const path of ["/", "/attendance", "/snacks", "/grievances", "/wifi", "/away", "/settings", "/help", "/admin"]) {
+    for (const path of ["/", "/attendance", "/snacks", "/grievances", "/wifi", "/away", "/events", "/settings", "/help", "/admin"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

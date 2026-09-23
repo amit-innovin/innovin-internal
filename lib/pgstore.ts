@@ -6,6 +6,7 @@ import type {
   AwayRow,
   AwayStatus,
   EmployeeRow,
+  EventRow,
   GrievanceRow,
   GrievanceStatus,
   OrderRow,
@@ -77,6 +78,23 @@ CREATE TABLE IF NOT EXISTS away (
   submitter_ref text NOT NULL,
   created_at timestamptz NOT NULL
 );
+CREATE TABLE IF NOT EXISTS events (
+  id text PRIMARY KEY,
+  title text NOT NULL,
+  body text NOT NULL DEFAULT '',
+  category text NOT NULL,
+  starts_at timestamptz NOT NULL,
+  location text NOT NULL DEFAULT '',
+  created_by text NOT NULL DEFAULT 'admin',
+  created_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS event_rsvps (
+  event_id text NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  submitter_ref text NOT NULL,
+  email text,
+  created_at timestamptz NOT NULL,
+  PRIMARY KEY (event_id, submitter_ref)
+);
 -- Migrations for databases created before sessions/multi-item orders/images existed:
 ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
@@ -95,7 +113,9 @@ CREATE INDEX IF NOT EXISTS grievances_submitter_idx ON grievances (submitter_ref
 CREATE INDEX IF NOT EXISTS wifi_created_idx ON wifi (created_at DESC);
 CREATE INDEX IF NOT EXISTS announcements_created_idx ON announcements (created_at DESC);
 CREATE INDEX IF NOT EXISTS away_created_idx ON away (created_at DESC);
-CREATE INDEX IF NOT EXISTS away_submitter_idx ON away (submitter_ref, created_at DESC);`;
+CREATE INDEX IF NOT EXISTS away_submitter_idx ON away (submitter_ref, created_at DESC);
+CREATE INDEX IF NOT EXISTS events_starts_idx ON events (starts_at);
+CREATE INDEX IF NOT EXISTS event_rsvps_ref_idx ON event_rsvps (submitter_ref);`;
 
 // Arbitrary constant key for the schema-init advisory lock.
 const SCHEMA_LOCK = 727_071_704;
@@ -160,6 +180,16 @@ const away = (r: any): AwayRow => ({
   reason: r.reason,
   status: r.status,
   submitterRef: r.submitter_ref,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+});
+const event = (r: any): EventRow => ({
+  id: r.id,
+  title: r.title,
+  body: r.body,
+  category: r.category,
+  startsAt: r.starts_at?.toISOString?.() ?? r.starts_at,
+  location: r.location,
+  createdBy: r.created_by,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 
@@ -356,6 +386,58 @@ class PgStore implements Store {
   async listAwayByRef(ref: string, limit: number) {
     const res = await this.q(`SELECT * FROM away WHERE submitter_ref = $1 ORDER BY created_at DESC LIMIT $2`, [ref, limit]);
     return res.rows.map(away);
+  }
+  async addEvent(row: EventRow) {
+    const res = await this.q(
+      `INSERT INTO events (id, title, body, category, starts_at, location, created_by, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [row.id, row.title, row.body, row.category, row.startsAt, row.location, row.createdBy, row.createdAt],
+    );
+    return event(res.rows[0]);
+  }
+  async getEvent(rid: string) {
+    const res = await this.q(`SELECT * FROM events WHERE id = $1`, [rid]);
+    return res.rows[0] ? event(res.rows[0]) : null;
+  }
+  async deleteEvent(rid: string) {
+    const res = await this.q(`DELETE FROM events WHERE id = $1`, [rid]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async listEvents(fromIso: string, limit: number) {
+    const res = await this.q(`SELECT * FROM events WHERE starts_at >= $1 ORDER BY starts_at ASC LIMIT $2`, [fromIso, limit]);
+    return res.rows.map(event);
+  }
+  async setRsvp(eventId: string, ref: string, email: string | null, going: boolean) {
+    if (going) {
+      await this.q(
+        `INSERT INTO event_rsvps (event_id, submitter_ref, email, created_at) VALUES ($1,$2,$3,$4)
+         ON CONFLICT (event_id, submitter_ref) DO UPDATE SET email = EXCLUDED.email`,
+        [eventId, ref, email, new Date().toISOString()],
+      );
+    } else {
+      await this.q(`DELETE FROM event_rsvps WHERE event_id = $1 AND submitter_ref = $2`, [eventId, ref]);
+    }
+  }
+  async listRsvps(eventId: string) {
+    const res = await this.q(`SELECT * FROM event_rsvps WHERE event_id = $1 ORDER BY created_at`, [eventId]);
+    return res.rows.map((r: any) => ({
+      eventId: r.event_id,
+      submitterRef: r.submitter_ref,
+      email: r.email,
+      createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+    }));
+  }
+  async rsvpCounts(eventIds: string[]) {
+    if (eventIds.length === 0) return {};
+    const res = await this.q(
+      `SELECT event_id, COUNT(*)::int AS n FROM event_rsvps WHERE event_id = ANY($1) GROUP BY event_id`,
+      [eventIds],
+    );
+    return Object.fromEntries(res.rows.map((r: any) => [r.event_id, r.n]));
+  }
+  async myRsvpEventIds(ref: string) {
+    const res = await this.q(`SELECT event_id FROM event_rsvps WHERE submitter_ref = $1`, [ref]);
+    return res.rows.map((r: any) => r.event_id);
   }
 }
 

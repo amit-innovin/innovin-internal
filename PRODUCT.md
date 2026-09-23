@@ -97,6 +97,7 @@ away          id · email · type(leave|wfh) · start_date · end_date · reason
 
 - **Time Away** (`/away`) — the first Request primitive. Leave and WFH requests in one lightweight flow: dates + optional reason → pending → approved/rejected by the admin. Employees track status on their own device; signed-in (Google) devices submit under their verified email. Deliberately minimal — no leave balances, no manager routing; Zoho remains the system of record.
 - **Google sign-in** — verified `@innovinlabs.com` identity; attendance and away requests submitted under the verified email can't be spoofed; admins see real names.
+- **Events** (`/events`) — the second reusable primitive. One event model (title, category, start time, location, details) powers sports screenings, workshops, celebrations and town halls. Admins publish/delete from the dashboard; employees RSVP per device with a public going count only — the guest list is never exposed.
 
 ## Explicitly out of v1
 

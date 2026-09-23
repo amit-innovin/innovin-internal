@@ -27,6 +27,7 @@ export const LIMITS = {
   speedtestIp: { max: 150, windowMs: 10 * MIN },
   authIp: { max: 30, windowMs: 15 * MIN },
   awayDevice: { max: 15, windowMs: 60 * MIN },
+  rsvpDevice: { max: 60, windowMs: 60 * MIN },
   writeIp: { max: 120, windowMs: MIN },
 } as const;
 

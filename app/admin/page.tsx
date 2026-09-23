@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, Coffee, LogOut, Megaphone, MessageSquare, Trash2, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, Coffee, LogOut, Megaphone, MessageSquare, Trash2, Wifi } from "lucide-react";
 import AdminLogin from "@/components/admin-login";
 import { Flash } from "@/components/flash";
 import AwayList from "@/components/away-list";
@@ -51,7 +51,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   }
 
   const date = todayIST();
-  const [attendance, orders, grievances, wifi, announcements, employees, away] = await Promise.all([
+  const [attendance, orders, grievances, wifi, announcements, employees, away, events] = await Promise.all([
     store.listAttendance(date),
     store.listOrders(date),
     store.listGrievances(),
@@ -59,7 +59,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
     store.listAnnouncements(10),
     store.listEmployees(),
     store.listAway(50),
+    store.listEvents(new Date(Date.now() - 30 * 86_400_000).toISOString(), 30),
   ]);
+  const rsvpCounts = await store.rsvpCounts(events.map((e) => e.id));
   const names = new Map(employees.map((e) => [e.email, e.name]));
 
   const consolidated = MENU.map((m) => ({ ...m, count: orders.filter((o) => o.itemId === m.id).length }));
@@ -173,6 +175,82 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           aside={away.filter((r) => r.status === "pending").length ? `${away.filter((r) => r.status === "pending").length} pending` : undefined}
         />
         <AwayList items={away} names={Object.fromEntries(names)} />
+      </Card>
+
+      <Card id="events" className="mt-4 gap-0 p-5">
+        <SectionHeader title="Events" aside="Shown on the Events page" />
+        <form action="/api/events" method="post" className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Input name="title" required maxLength={80} placeholder="Title — e.g. IPL screening in the common area" aria-label="Event title" className="sm:col-span-2" />
+          <select
+            name="category"
+            aria-label="Category"
+            className="h-10 w-full min-w-0 rounded-lg border border-input bg-card px-3.5 py-1 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
+          >
+            <option value="sports">Sports</option>
+            <option value="arts">Arts</option>
+            <option value="culture">Culture</option>
+            <option value="learning">Learning</option>
+            <option value="social">Social</option>
+            <option value="company" selected>
+              Company
+            </option>
+          </select>
+          <Input name="startsAt" type="datetime-local" required aria-label="Starts at" />
+          <Input name="location" maxLength={60} placeholder="Location (optional)" aria-label="Location" />
+          <Textarea name="body" maxLength={500} placeholder="Details (optional)" aria-label="Details" className="resize-none" />
+          <Button type="submit" size="xl" className="sm:col-span-2">
+            <CalendarDays /> Publish event
+          </Button>
+        </form>
+        {events.length === 0 ? (
+          <Empty>No events yet.</Empty>
+        ) : (
+          <ul className="mt-4 divide-y">
+            {events.map((e) => (
+              <li key={e.id} className="flex items-start gap-3 py-3">
+                <IconTile icon={CalendarDays} tone="blue" size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">
+                    {e.title} <Badge variant="secondary" className="ml-1 align-middle">{e.category}</Badge>
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {fmtDay(new Date(e.startsAt))} · {fmtTime(e.startsAt)}
+                    {e.location && ` · ${e.location}`}
+                  </p>
+                  {e.body && <p className="mt-0.5 text-xs text-muted-foreground">{e.body}</p>}
+                  <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+                    {(rsvpCounts[e.id] ?? 0) === 0 ? "No RSVPs yet" : `${rsvpCounts[e.id]} going`}
+                  </p>
+                </div>
+                <form id={`event-delete-${e.id}`} action="/api/events" method="post">
+                  <input type="hidden" name="_action" value="delete" />
+                  <input type="hidden" name="id" value={e.id} />
+                </form>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label={`Delete ${e.title}`} className="rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                      <Trash2 />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete this event?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        &ldquo;{e.title}&rdquo; and its RSVPs will be removed.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction type="submit" form={`event-delete-${e.id}`} variant="destructive">
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Card id="announcements" className="mt-4 gap-0 p-5">

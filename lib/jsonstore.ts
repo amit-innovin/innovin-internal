@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { AnnouncementRow, AttendanceRow, AwayRow, EmployeeRow, GrievanceRow, OrderRow, Store, WifiRow } from "./types";
+import type { AnnouncementRow, AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, RsvpRow, Store, WifiRow } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -14,9 +14,11 @@ type DB = {
   announcements: AnnouncementRow[];
   employees: EmployeeRow[];
   away: AwayRow[];
+  events: EventRow[];
+  rsvps: RsvpRow[];
 };
 
-const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [] });
+const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -182,4 +184,53 @@ export const jsonStore: Store = {
         .sort(newestFirst)
         .slice(0, limit),
     ),
+
+  addEvent: (row) =>
+    mutate((db) => {
+      db.events.unshift(row);
+      return { result: row, changed: true };
+    }),
+  getEvent: (rid) => query((db) => db.events.find((e) => e.id === rid) ?? null),
+  deleteEvent: (rid) =>
+    mutate((db) => {
+      const before = db.events.length;
+      db.events = db.events.filter((e) => e.id !== rid);
+      const found = db.events.length !== before;
+      if (found) db.rsvps = db.rsvps.filter((r) => r.eventId !== rid);
+      return { result: found, changed: found };
+    }),
+  listEvents: (fromIso, limit) =>
+    query((db) =>
+      db.events
+        .filter((e) => e.startsAt >= fromIso)
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+        .slice(0, limit),
+    ),
+  setRsvp: (eventId, ref, email, going) =>
+    mutate((db) => {
+      if (going) {
+        const existing = db.rsvps.find((r) => r.eventId === eventId && r.submitterRef === ref);
+        if (existing) {
+          existing.email = email;
+        } else {
+          db.rsvps.push({ eventId, submitterRef: ref, email, createdAt: new Date().toISOString() });
+        }
+      } else {
+        db.rsvps = db.rsvps.filter((r) => !(r.eventId === eventId && r.submitterRef === ref));
+      }
+      return { result: undefined, changed: true };
+    }),
+  listRsvps: (eventId) =>
+    query((db) =>
+      db.rsvps
+        .filter((r) => r.eventId === eventId)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    ),
+  rsvpCounts: (eventIds) =>
+    query((db) => {
+      const counts: Record<string, number> = {};
+      for (const r of db.rsvps) if (eventIds.includes(r.eventId)) counts[r.eventId] = (counts[r.eventId] ?? 0) + 1;
+      return counts;
+    }),
+  myRsvpEventIds: (ref) => query((db) => db.rsvps.filter((r) => r.submitterRef === ref).map((r) => r.eventId)),
 };

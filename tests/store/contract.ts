@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AttendanceRow, AwayRow, EmployeeRow, GrievanceRow, OrderRow, Store, WifiRow } from "@/lib/types";
+import type { AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, Store, WifiRow } from "@/lib/types";
 
 // Behavioural contract every Store adapter must satisfy (JSON file + Postgres).
 export function storeContract(name: string, getStore: () => Promise<Store>, resetData: () => Promise<void>) {
@@ -72,6 +72,17 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       picture: "",
       createdAt: iso(),
       lastSeenAt: iso(),
+      ...p,
+    });
+    const event = (p: Partial<EventRow> = {}): EventRow => ({
+      id: uid(),
+      title: "Match screening",
+      body: "",
+      category: "sports",
+      startsAt: iso(86_400_000),
+      location: "",
+      createdBy: "admin",
+      createdAt: iso(),
       ...p,
     });
 
@@ -261,6 +272,52 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         await store.addAway(away({ reason: "two", createdAt: iso(2000) }));
         await store.addAway(away({ reason: "three", createdAt: iso(3000) }));
         expect((await store.listAwayByRef("ref-1", 2)).map((r) => r.reason)).toEqual(["three", "two"]);
+      });
+    });
+
+    describe("events & RSVPs", () => {
+      it("lists only events from `from` onwards, soonest first, with a limit", async () => {
+        await store.addEvent(event({ title: "past", startsAt: iso(-86_400_000) }));
+        await store.addEvent(event({ title: "later", startsAt: iso(2 * 86_400_000) }));
+        await store.addEvent(event({ title: "sooner", startsAt: iso(60_000) }));
+        const rows = await store.listEvents(iso(), 10);
+        expect(rows.map((e) => e.title)).toEqual(["sooner", "later"]);
+        expect(await store.listEvents(iso(), 1)).toHaveLength(1);
+      });
+
+      it("deletes an event and its RSVPs", async () => {
+        const e = await store.addEvent(event());
+        expect(await store.getEvent(e.id)).toMatchObject({ title: "Match screening", category: "sports" });
+        expect(await store.getEvent("missing")).toBeNull();
+        await store.setRsvp(e.id, "ref-1", null, true);
+        expect(await store.deleteEvent(e.id)).toBe(true);
+        expect(await store.deleteEvent(e.id)).toBe(false);
+        expect(await store.getEvent(e.id)).toBeNull();
+        expect(await store.listEvents(iso(-1), 10)).toHaveLength(0);
+        expect(await store.listRsvps(e.id)).toHaveLength(0);
+      });
+
+      it("tracks one RSVP per device per event, toggled on and off", async () => {
+        const e = await store.addEvent(event());
+        await store.setRsvp(e.id, "ref-1", "a@innovinlabs.com", true);
+        await store.setRsvp(e.id, "ref-2", null, true);
+        await store.setRsvp(e.id, "ref-1", "a@innovinlabs.com", true); // repeat = still one row
+        let counts = await store.rsvpCounts([e.id]);
+        expect(counts[e.id]).toBe(2);
+        expect((await store.listRsvps(e.id)).find((r) => r.submitterRef === "ref-1")?.email).toBe("a@innovinlabs.com");
+        expect(await store.myRsvpEventIds("ref-1")).toEqual([e.id]);
+
+        await store.setRsvp(e.id, "ref-1", null, false);
+        counts = await store.rsvpCounts([e.id]);
+        expect(counts[e.id]).toBe(1);
+        expect(await store.myRsvpEventIds("ref-1")).toHaveLength(0);
+      });
+
+      it("returns zero counts for events with no RSVPs", async () => {
+        const e = await store.addEvent(event());
+        const counts = await store.rsvpCounts([e.id, "unknown-event"]);
+        expect(counts[e.id] ?? 0).toBe(0);
+        expect(counts["unknown-event"] ?? 0).toBe(0);
       });
     });
 

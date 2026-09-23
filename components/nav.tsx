@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarOff, CircleHelp, Coffee, House, MessageSquare, Settings, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CalendarOff, CircleHelp, Coffee, House, MessageSquare, Settings, Wifi } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Logo, Wave } from "@/components/brand";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ const PRIMARY: Item[] = [
 
 const SECONDARY: Item[] = [
   { href: "/away", label: "Time Away", short: "Away", icon: CalendarOff },
+  { href: "/events", label: "Events", short: "Events", icon: CalendarDays },
   { href: "/settings", label: "Settings", short: "Settings", icon: Settings },
   { href: "/help", label: "Help", short: "Help", icon: CircleHelp },
 ];

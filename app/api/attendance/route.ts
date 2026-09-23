@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { allowedEmailDomains } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
-import { totalMinutes } from "@/lib/format";
 import { locationTag, officeLocation, onOfficeNetwork } from "@/lib/geo";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
@@ -16,7 +15,7 @@ const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : n
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-// Public: today's headcount + the caller's own sessions (identified by their remembered email).
+// Public: today's headcount + the caller's own status (identified by their remembered email).
 export async function GET(req: NextRequest) {
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
   const email = session?.email ?? req.cookies.get(EMAIL_COOKIE)?.value ?? null;
@@ -30,8 +29,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(await monthView(month, email, !!session, date));
   }
   const rows = await store.listAttendance(date);
-  const sessions = email ? await store.listAttendanceByEmail(email, date) : [];
-  const open = sessions.find((s) => !s.checkOutAt);
+  const day = email ? await store.getAttendance(email, date) : null;
   return NextResponse.json({
     count: new Set(rows.map((r) => r.email)).size,
     email,
@@ -39,17 +37,12 @@ export async function GET(req: NextRequest) {
     // geofence. The office's own coordinates aren't secret to the people who work there.
     onOfficeNetwork: onOfficeNetwork(clientIp(req)),
     office: officeLocation(),
-    me: sessions.length
+    me: day
       ? {
-          checkedIn: !!open,
-          currentInAt: open?.checkInAt ?? null,
-          location: locationTag(open?.lat, open?.lng),
-          totalMinutes: totalMinutes(sessions),
-          sessions: sessions.map(({ checkInAt, checkOutAt, lat, lng }) => ({
-            checkInAt,
-            checkOutAt,
-            location: locationTag(lat, lng),
-          })),
+          checkedIn: !day.checkOutAt,
+          checkInAt: day.checkInAt,
+          checkOutAt: day.checkOutAt,
+          location: locationTag(day.lat, day.lng),
         }
       : null,
   });
@@ -71,18 +64,16 @@ async function monthView(month: string, email: string | null, verified: boolean,
   const holidays = holidaysFor(year);
   const days = Array.from({ length: lastDay }, (_, i) => {
     const date = `${month}-${String(i + 1).padStart(2, "0")}`;
-    const sessions = rows.filter((r) => r.date === date);
+    const day = rows.find((r) => r.date === date);
     const away = leave.find((r) => (r.status === "pending" || r.status === "approved") && date >= r.startDate && date <= r.endDate);
     return {
       date,
-      minutes: sessions.length ? totalMinutes(sessions) : 0,
-      open: sessions.some((s) => !s.checkOutAt),
       // Raw coordinates never leave the server — only the office/remote classification.
-      sessions: sessions.map(({ checkInAt, checkOutAt, lat, lng }) => ({
-        checkInAt,
-        checkOutAt,
-        location: locationTag(lat, lng),
-      })),
+      present: !!day,
+      open: !!day && !day.checkOutAt,
+      location: day ? locationTag(day.lat, day.lng) : null,
+      checkInAt: day?.checkInAt ?? null,
+      checkOutAt: day?.checkOutAt ?? null,
       holiday: holidays[date] ?? null,
       working: isWorkingDay(date),
       off: nonWorkingReason(date),
@@ -144,15 +135,15 @@ export async function POST(req: NextRequest) {
 
   const date = todayIST();
   const now = new Date().toISOString();
-  const open = await store.getAttendance(email, date);
+  const day = await store.getAttendance(email, date);
 
   let row;
   if (action === "out") {
-    if (!open) return NextResponse.json({ error: "Check in first" }, { status: 404 });
+    if (!day || day.checkOutAt) return NextResponse.json({ error: "Check in first" }, { status: 404 });
     row = await store.checkOut(email, date, now);
   } else {
-    // Idempotent while a session is open; after checkout a new session starts.
-    row = open ?? (await store.checkIn({ id: id(), email, date, checkInAt: now, checkOutAt: null, lat, lng, accuracyM }));
+    // Idempotent while checked in; after checkout the same day-row reopens.
+    row = day && !day.checkOutAt ? day : await store.checkIn({ id: id(), email, date, checkInAt: now, checkOutAt: null, lat, lng, accuracyM });
   }
 
   const res = NextResponse.json(row);

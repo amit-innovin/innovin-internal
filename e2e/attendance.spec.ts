@@ -19,7 +19,7 @@ test.describe("Attendance", () => {
     await expect(page.getByRole("heading", { name: "Not checked in yet" })).toBeVisible();
   });
 
-  test("full day: check in, check out, check in again — sessions and total tracked", async ({ page }) => {
+  test("full day: check in, check out, check in again — one status, no time tracking", async ({ page }) => {
     const email = uniqueEmail("amit");
     await checkIn(page, email);
     await expect(page.getByText("Location not shared • Innovin")).toBeVisible();
@@ -30,13 +30,12 @@ test.describe("Attendance", () => {
 
     await page.getByRole("button", { name: "Check Out" }).click();
     await expect(page.getByRole("heading", { name: "You're checked out" })).toBeVisible();
-    await expect(page.getByText(/today across 1 session/)).toBeVisible();
+    await expect(page.getByText(/Out since/)).toBeVisible();
 
-    // Stepped out and back — a second session starts, and the list shows both.
+    // Stepped out and back — you're simply in again, no second session.
     await page.getByRole("button", { name: "Check In Again" }).click();
     await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
-    await expect(page.getByText("in progress")).toBeVisible();
-    await expect(page.locator("ul >> li", { hasText: "– now" })).toHaveCount(1);
+    await expect(page.getByText(/In since/)).toBeVisible();
 
     await page.goto("/");
     await expect(page.getByText("You're in")).toBeVisible();
@@ -48,7 +47,6 @@ test.describe("Attendance", () => {
     await context.setGeolocation({ latitude: 12.9352, longitude: 77.6241, accuracy: 15 });
     await checkIn(page, uniqueEmail("office"));
     await expect(page.getByText("In office • Innovin")).toBeVisible();
-    await expect(page.locator("ul >> li", { hasText: "– now" })).toContainText("In office");
   });
 
   test("check-in far from the office tags the session Remote", async ({ page, context }) => {

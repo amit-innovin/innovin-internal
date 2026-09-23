@@ -11,11 +11,11 @@ import type { Role } from "@/lib/types";
 // The office directory: everyone who's signed in, plus who's physically/virtually
 // in today. Presence shows a name and a broad tag — never raw coordinates or emails.
 export async function GET() {
-  const [employees, sessions] = await Promise.all([store.listEmployees(), store.listAttendance(todayIST())]);
+  const [employees, dayRows] = await Promise.all([store.listEmployees(), store.listAttendance(todayIST())]);
   const byEmail = new Map(employees.map((e) => [e.email, e]));
 
   const present = new Map<string, { name: string; since: string; where: string }>();
-  for (const s of sessions) {
+  for (const s of dayRows) {
     if (s.checkOutAt || present.has(s.email)) continue;
     present.set(s.email, {
       name: byEmail.get(s.email)?.name || firstName(s.email) || s.email,

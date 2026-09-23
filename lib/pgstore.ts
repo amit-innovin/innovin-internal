@@ -140,8 +140,18 @@ ALTER TABLE away ADD COLUMN IF NOT EXISTS days real NOT NULL DEFAULT 0;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lat double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lng double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS accuracy_m real;
--- At most one open (not-checked-out) session per person per day.
-CREATE UNIQUE INDEX IF NOT EXISTS attendance_open_session ON attendance (email, date) WHERE check_out_at IS NULL;
+-- Attendance is one row per person per day — a status, not session history. Fold any
+-- multi-session rows written before this into the earliest row (latest check-out kept).
+UPDATE attendance a SET check_out_at = s.final_out
+  FROM (SELECT email, date,
+          CASE WHEN COUNT(*) FILTER (WHERE check_out_at IS NULL) > 0 THEN NULL
+               ELSE MAX(check_out_at) END AS final_out
+        FROM attendance GROUP BY email, date) s
+  WHERE a.email = s.email AND a.date = s.date;
+DELETE FROM attendance a USING attendance b
+  WHERE a.email = b.email AND a.date = b.date AND a.check_in_at > b.check_in_at;
+DROP INDEX IF EXISTS attendance_open_session;
+ALTER TABLE attendance ADD CONSTRAINT attendance_email_date_key UNIQUE (email, date);
 CREATE UNIQUE INDEX IF NOT EXISTS orders_day_ref_item ON orders (date, submitter_ref, item_id);
 CREATE INDEX IF NOT EXISTS attendance_date_idx ON attendance (date);
 CREATE INDEX IF NOT EXISTS orders_date_idx ON orders (date);
@@ -298,15 +308,21 @@ class PgStore implements Store {
     return this.db().query(text, params);
   }
 
+  // One row per person per day: a fresh check-in reopens the day's row (back in = in again),
+  // so the row's check_in_at is always the most recent arrival.
   async checkIn(row: AttendanceRow) {
     const res = await this.q(
       `INSERT INTO attendance (id, email, date, check_in_at, lat, lng, accuracy_m)
        VALUES ($1,$2,$3,$4,$5,$6,$7)
-       ON CONFLICT (email, date) WHERE check_out_at IS NULL DO NOTHING RETURNING *`,
+       ON CONFLICT (email, date) DO UPDATE
+       SET check_out_at = NULL, check_in_at = EXCLUDED.check_in_at,
+           lat = EXCLUDED.lat, lng = EXCLUDED.lng, accuracy_m = EXCLUDED.accuracy_m
+       WHERE attendance.check_out_at IS NOT NULL
+       RETURNING *`,
       [row.id, row.email, row.date, row.checkInAt, row.lat, row.lng, row.accuracyM],
     );
-    if (res.rows[0]) return attendance(res.rows[0]);
-    return (await this.getAttendance(row.email, row.date))!;
+    // The WHERE makes a repeat check-in while still open a no-op — return the day's row.
+    return res.rows[0] ? attendance(res.rows[0]) : (await this.getAttendance(row.email, row.date))!;
   }
   async checkOut(email: string, date: string, at: string) {
     const res = await this.q(
@@ -316,15 +332,8 @@ class PgStore implements Store {
     return res.rows[0] ? attendance(res.rows[0]) : null;
   }
   async getAttendance(email: string, date: string) {
-    const res = await this.q(
-      `SELECT * FROM attendance WHERE email = $1 AND date = $2 AND check_out_at IS NULL ORDER BY check_in_at DESC LIMIT 1`,
-      [email, date],
-    );
+    const res = await this.q(`SELECT * FROM attendance WHERE email = $1 AND date = $2`, [email, date]);
     return res.rows[0] ? attendance(res.rows[0]) : null;
-  }
-  async listAttendanceByEmail(email: string, date: string) {
-    const res = await this.q(`SELECT * FROM attendance WHERE email = $1 AND date = $2 ORDER BY check_in_at`, [email, date]);
-    return res.rows.map(attendance);
   }
   async listAttendanceRange(email: string, fromDate: string, toDate: string) {
     const res = await this.q(

@@ -254,7 +254,7 @@ test.describe("Attendance calendar", () => {
     await expect(page.getByRole("button", { name: /^26 Aug.*Onam/ })).toBeVisible();
   });
 
-  test("a day's sessions expand with times, location and duration", async ({ page }) => {
+  test("a day expands to show where and when you checked in", async ({ page }) => {
     const email = uniqueEmail("cal");
     await page.goto("/attendance");
     await page.getByLabel("Your Innovin email").fill(email);
@@ -266,8 +266,7 @@ test.describe("Attendance calendar", () => {
     const parts = new Intl.DateTimeFormat("en-US", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })
       .formatToParts(new Date())
       .reduce<Record<string, string>>((acc, p) => ({ ...acc, [p.type]: p.value }), {});
-    await page.getByRole("button", { name: new RegExp(`^${parts.day} ${parts.month}.*session`) }).click();
-    await expect(page.getByText("in progress")).toBeVisible();
+    await page.getByRole("button", { name: new RegExp(`^${parts.day} ${parts.month}.*still in`) }).click();
     await expect(page.getByText(/Location not shared|In office|Remote/).first()).toBeVisible();
   });
 

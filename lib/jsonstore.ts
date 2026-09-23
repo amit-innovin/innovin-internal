@@ -90,10 +90,22 @@ const mutate = <T>(fn: (db: DB) => { result: T; changed: boolean }) =>
 const query = <T>(fn: (db: DB) => T) => locked(async () => fn(await read()));
 
 export const jsonStore: Store = {
+  // One row per person per day: a fresh check-in reopens the day's row (back in = in again),
+  // so the row's checkInAt is always the most recent arrival.
   checkIn: (row) =>
     mutate((db) => {
-      const open = db.attendance.find((r) => r.email === row.email && r.date === row.date && !r.checkOutAt);
-      if (open) return { result: open, changed: false };
+      const existing = db.attendance.find((r) => r.email === row.email && r.date === row.date);
+      if (existing) {
+        if (!existing.checkOutAt) return { result: existing, changed: false };
+        Object.assign(existing, {
+          checkInAt: row.checkInAt,
+          checkOutAt: null,
+          lat: row.lat,
+          lng: row.lng,
+          accuracyM: row.accuracyM,
+        });
+        return { result: existing, changed: true };
+      }
       db.attendance.unshift(row);
       return { result: row, changed: true };
     }),
@@ -104,10 +116,11 @@ export const jsonStore: Store = {
       return { result: open ?? null, changed: !!open };
     }),
   getAttendance: (email, date) =>
-    query((db) => db.attendance.find((r) => r.email === email && r.date === date && !r.checkOutAt) ?? null),
-  listAttendanceByEmail: (email, date) =>
-    query((db) =>
-      db.attendance.filter((r) => r.email === email && r.date === date).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt)),
+    query(
+      (db) =>
+        db.attendance
+          .filter((r) => r.email === email && r.date === date)
+          .sort((a, b) => Number(!a.checkOutAt) - Number(!b.checkOutAt) || b.checkInAt.localeCompare(a.checkInAt))[0] ?? null,
     ),
   listAttendanceRange: (email, fromDate, toDate) =>
     query((db) =>

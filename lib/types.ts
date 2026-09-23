@@ -147,8 +147,7 @@ export interface Store {
   checkOut(email: string, date: string, at: string): Promise<AttendanceRow | null>;
   // The currently open session, or null.
   getAttendance(email: string, date: string): Promise<AttendanceRow | null>;
-  listAttendanceByEmail(email: string, date: string): Promise<AttendanceRow[]>;
-  // One person's sessions across a date range (inclusive), for the attendance calendar.
+  // One person's day rows across a date range (inclusive), for the attendance calendar.
   listAttendanceRange(email: string, fromDate: string, toDate: string): Promise<AttendanceRow[]>;
   listAttendance(date: string): Promise<AttendanceRow[]>;
   // Replaces the device's selection for the day (atomically in Postgres).

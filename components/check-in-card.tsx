@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON, readError, send } from "@/lib/fetcher";
-import { fmtDuration, fmtTime } from "@/lib/format";
+import { fmtTime } from "@/lib/format";
 import { LOCATION_LABEL, type LocationTag } from "@/lib/geo";
 import { cn } from "@/lib/utils";
 
@@ -20,10 +20,9 @@ type Status = {
   office: { lat: number; lng: number; radiusM: number } | null;
   me: {
     checkedIn: boolean;
-    currentInAt: string | null;
+    checkInAt: string;
+    checkOutAt: string | null;
     location: LocationTag;
-    totalMinutes: number;
-    sessions: { checkInAt: string; checkOutAt: string | null; location: LocationTag }[];
   } | null;
 };
 
@@ -152,9 +151,9 @@ export default function CheckInCard({ nextAway }: { nextAway: string | null }) {
           </p>
           <p className="truncate text-xs text-muted-foreground">
             {checkedIn
-              ? `Since ${fmtTime(me!.currentInAt!)} · ${fmtDuration(me!.totalMinutes)} · ${LOCATION_LABEL[me!.location]}`
+              ? `In since ${fmtTime(me!.checkInAt)} · ${LOCATION_LABEL[me!.location]}`
               : me
-                ? `${fmtDuration(me.totalMinutes)} today`
+                ? `Out since ${me.checkOutAt ? fmtTime(me.checkOutAt) : ""} · ${LOCATION_LABEL[me.location]}`
                 : canAct
                   ? "One tap and you're marked"
                   : "Set yourself up on Attendance first"}

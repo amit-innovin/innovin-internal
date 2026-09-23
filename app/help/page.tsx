@@ -13,7 +13,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: CalendarCheck,
     tone: "blue",
     q: "How does attendance work?",
-    a: "Enter your Innovin email once and tap Check In — we remember it on this device. Check out whenever you step out and check in again when you're back; your total time for the day is tracked across sessions. Your browser will ask for your location once per check-in so we can tell office days from remote ones — you can decline and check in anyway.",
+    a: "Enter your Innovin email once and tap Check In — we remember it on this device. Check out when you leave — that's all there is to it, no time tracking. Your browser may ask for your location on check-in so we can tell office days from remote ones — you can decline and check in anyway.",
   },
   {
     icon: Coffee,
@@ -40,7 +40,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: Plane,
     tone: "sky",
     q: "How is my leave balance calculated?",
-    a: "The Leave tab in Attendance shows your remaining days for each type — Casual, Sick, Earned and Flexible — for the calendar year. Leave is counted in working days only: Sundays, the 2nd and 4th Saturday, and declared holidays are never charged, so a week off that contains a holiday costs less than five days. Casual Leave can be taken as a half day. Earned Leave builds up at 1.25 days per completed month and can be used after a year of service. Balances follow your verified Google identity, not the device, so sign in to see them. The Calendar tab plots your worked hours, leave, holidays and weekly offs on one month grid.",
+    a: "The Leave tab in Attendance shows your remaining days for each type — Casual, Sick, Earned and Flexible — for the calendar year. Leave is counted in working days only: Sundays, the 2nd and 4th Saturday, and declared holidays are never charged, so a week off that contains a holiday costs less than five days. Casual Leave can be taken as a half day. Earned Leave builds up at 1.25 days per completed month and can be used after a year of service. Balances follow your verified Google identity, not the device, so sign in to see them. The Calendar tab plots your days, leave, holidays and weekly offs on one month grid.",
   },
   {
     icon: CalendarDays,

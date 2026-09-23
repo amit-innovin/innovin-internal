@@ -95,7 +95,7 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
     });
 
     describe("attendance", () => {
-      it("returns the open session on repeat check-in, then starts a new session after checkout", async () => {
+      it("keeps one row per person per day: repeat check-in is a no-op, check-in after checkout reopens it", async () => {
         const first = await store.checkIn(attendance());
         const again = await store.checkIn(attendance({ checkInAt: iso(60_000) }));
         expect(again.id).toBe(first.id);
@@ -103,14 +103,15 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(await store.listAttendance("2026-09-23")).toHaveLength(1);
 
         await store.checkOut("a@innovinlabs.com", "2026-09-23", iso(3_600_000));
-        const second = await store.checkIn(attendance({ checkInAt: iso(4_000_000) }));
-        expect(second.id).not.toBe(first.id);
-        const sessions = await store.listAttendanceByEmail("a@innovinlabs.com", "2026-09-23");
-        expect(sessions).toHaveLength(2);
-        expect(sessions[1].checkInAt).toBe(iso(4_000_000));
+        const reopened = await store.checkIn(attendance({ checkInAt: iso(4_000_000) }));
+        // Same row — back in means in again, and the day still has exactly one record.
+        expect(reopened.id).toBe(first.id);
+        expect(reopened.checkInAt).toBe(iso(4_000_000));
+        expect(reopened.checkOutAt).toBeNull();
+        expect(await store.listAttendance("2026-09-23")).toHaveLength(1);
       });
 
-      it("getAttendance returns only the open session; checkOut closes it once", async () => {
+      it("getAttendance returns the day's row in either state; checkOut closes it once", async () => {
         const row = await store.checkIn(attendance());
         expect((await store.getAttendance("a@innovinlabs.com", "2026-09-23"))?.id).toBe(row.id);
         expect(await store.getAttendance("b@innovinlabs.com", "2026-09-23")).toBeNull();
@@ -118,7 +119,8 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(out?.checkOutAt).toBe(iso(3_600_000));
         expect(await store.checkOut("a@innovinlabs.com", "2026-09-23", iso(4_000_000))).toBeNull();
         expect(await store.checkOut("nobody@innovinlabs.com", "2026-09-23", iso())).toBeNull();
-        expect(await store.getAttendance("a@innovinlabs.com", "2026-09-23")).toBeNull();
+        // The row still exists — checked out, not gone.
+        expect((await store.getAttendance("a@innovinlabs.com", "2026-09-23"))?.checkOutAt).toBe(iso(3_600_000));
       });
 
       it("round-trips the check-in location, defaulting to null", async () => {
@@ -129,33 +131,32 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(rows.find((r) => r.email === "noloc@innovinlabs.com")).toMatchObject({ lat: null, lng: null, accuracyM: null });
       });
 
-      it("lists one day ordered by check-in time, with separate sessions per person", async () => {
+      it("lists one day ordered by check-in time, one row per person", async () => {
         await store.checkIn(attendance({ email: "late@innovinlabs.com", checkInAt: iso(120_000) }));
         await store.checkIn(attendance({ email: "early@innovinlabs.com", checkInAt: iso(0) }));
         await store.checkIn(attendance({ email: "other-day@innovinlabs.com", date: "2026-09-22" }));
         const rows = await store.listAttendance("2026-09-23");
         expect(rows.map((r) => r.email)).toEqual(["early@innovinlabs.com", "late@innovinlabs.com"]);
-        expect(await store.listAttendanceByEmail("early@innovinlabs.com", "2026-09-22")).toHaveLength(0);
+        expect(await store.getAttendance("early@innovinlabs.com", "2026-09-22")).toBeNull();
       });
 
-      it("lists one person's sessions across a date range, in day then time order", async () => {
+      it("lists one person's days across a date range, one row per day", async () => {
         await store.checkIn(attendance({ date: "2026-09-01", checkInAt: iso(1000) }));
-        // checkIn always opens a session (the Postgres adapter ignores checkOutAt on the input),
-        // so a second session the same day has to follow a real checkOut — as the route does.
         await store.checkIn(attendance({ date: "2026-09-15", checkInAt: iso(2000) }));
         await store.checkOut("a@innovinlabs.com", "2026-09-15", iso(3000));
+        // Re-checking in the same day folds into the same row, not a second one.
         await store.checkIn(attendance({ date: "2026-09-15", checkInAt: iso(5000) }));
         await store.checkIn(attendance({ date: "2026-09-30", checkInAt: iso(9000) }));
         await store.checkIn(attendance({ date: "2026-10-01", checkInAt: iso(9999) })); // outside
         await store.checkIn(attendance({ email: "other@innovinlabs.com", date: "2026-09-15" })); // someone else
 
         const rows = await store.listAttendanceRange("a@innovinlabs.com", "2026-09-01", "2026-09-30");
-        expect(rows.map((r) => r.date)).toEqual(["2026-09-01", "2026-09-15", "2026-09-15", "2026-09-30"]);
-        // Same-day sessions come back chronologically.
-        expect(rows[1].checkInAt).toBe(iso(2000));
-        expect(rows[2].checkInAt).toBe(iso(5000));
+        expect(rows.map((r) => r.date)).toEqual(["2026-09-01", "2026-09-15", "2026-09-30"]);
+        // The reopened day shows the latest check-in and is open again.
+        expect(rows[1].checkInAt).toBe(iso(5000));
+        expect(rows[1].checkOutAt).toBeNull();
         // The range is inclusive on both ends, and empty ranges are empty.
-        expect(await store.listAttendanceRange("a@innovinlabs.com", "2026-09-15", "2026-09-15")).toHaveLength(2);
+        expect(await store.listAttendanceRange("a@innovinlabs.com", "2026-09-15", "2026-09-15")).toHaveLength(1);
         expect(await store.listAttendanceRange("a@innovinlabs.com", "2026-08-01", "2026-08-31")).toEqual([]);
         expect(await store.listAttendanceRange("nobody@innovinlabs.com", "2026-09-01", "2026-09-30")).toEqual([]);
       });

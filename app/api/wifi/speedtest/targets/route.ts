@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { enforce } from "@/lib/guard";
 import { clientIp } from "@/lib/http";
-import { setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 
 export const dynamic = "force-dynamic";
+// Edge runtime, deliberately: api.fast.com picks CDN nodes near *whoever calls it* and ignores
+// X-Forwarded-For (verified). Our serverless functions are pinned to Seoul, which returned
+// Tokyo and Hong Kong nodes for a Kerala office. Edge functions run near the request instead,
+// so the nodes come back local. This also rules out the device-keyed rate limit and cookie
+// helpers, which need Node crypto — the per-IP limit is enough for one cheap upstream call.
+export const runtime = "edge";
 
 // Nearby Netflix CDN nodes to download from, courtesy of fast.com.
 //
@@ -25,18 +30,10 @@ const ALLOWED = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.nflxvideo\.net\/speedtest
 type FastTarget = { url?: unknown };
 
 export async function GET(req: NextRequest) {
-  const identity = submitterIdentity(req);
-  const limited = enforce([
-    ["speedtestDevice", identity.ref],
-    ["speedtestIp", clientIp(req)],
-  ]);
+  const limited = enforce([["speedtestIp", clientIp(req)]]);
   if (limited) return limited;
 
-  const empty = () => {
-    const res = NextResponse.json({ targets: [], city: null });
-    setSubmitterCookie(res, identity.deviceId);
-    return res;
-  };
+  const empty = () => NextResponse.json({ targets: [], city: null });
 
   if (process.env.SPEEDTEST_PROVIDER === "self") return empty();
 
@@ -52,9 +49,7 @@ export async function GET(req: NextRequest) {
       .filter((url) => ALLOWED.test(url))
       .slice(0, 3);
 
-    const res = NextResponse.json({ targets, city: data.client?.location?.city ?? null });
-    setSubmitterCookie(res, identity.deviceId);
-    return res;
+    return NextResponse.json({ targets, city: data.client?.location?.city ?? null });
   } catch {
     return empty();
   }

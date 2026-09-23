@@ -34,10 +34,12 @@ smoke-test production, and delete any test rows created by the smoke test.
 
 Git access: the remote uses the `github.com-innovin` SSH host alias (work account), so
 push/merge work. The `gh` CLI is authenticated as the *personal* `AmitJaison` account, which
-cannot resolve the private `amit-innovin/innovin-internal` — so `gh pr create` fails. Until
-`gh auth login` is run as the work account, "create the PR" means: push the branch, then open
-`https://github.com/amit-innovin/innovin-internal/compare/main...<branch>` to raise it in the
-browser. Never claim a PR exists or was merged unless a tool result actually says so.
+cannot resolve the private `amit-innovin/innovin-internal` — so `gh pr create` fails.
+
+Per the owner's instruction, don't try to work around that: push the branch and merge to `main`
+directly over SSH, keeping the one-branch-per-change discipline above. No PR object is created,
+so never describe the work as "opened a PR" or "merged a PR" — say the branch was merged.
+(If real PRs are wanted later, `gh auth login` as the work account is the one-time fix.)
 
 ## Conventions
 - UI: shadcn/ui primitives in `components/ui`, beUI motion components in `components/motion`, shared blocks in `components/kit.tsx`, transitions.dev CSS in `app/transitions.css`. Brand tokens (innovinlabs.com) live in `app/globals.css`.

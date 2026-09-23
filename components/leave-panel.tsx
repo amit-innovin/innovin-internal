@@ -33,6 +33,8 @@ type LeaveSummary = {
   signedIn: boolean;
   year: number;
   joinedOn?: string | null;
+  source?: "zoho-snapshot" | "app-only";
+  asOf?: string | null;
   ledger?: Ledger[];
   earned?: { accrued: number | null; canAvail: boolean; note: string | null };
 };
@@ -160,8 +162,16 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
                 </div>
               ))}
             </ul>
+            {/* Say where the numbers came from: Zoho People is the record, this is a snapshot
+                plus anything requested here since. Never let it look more authoritative. */}
+            <p className="mt-4 flex items-start gap-2 border-t pt-4 text-xs text-muted-foreground">
+              <Info className="mt-0.5 size-3.5 shrink-0" />
+              {summary.source === "zoho-snapshot" && summary.asOf
+                ? `From Zoho People as of ${fmtShortDate(summary.asOf)}, plus anything you've requested here since. Zoho is the official record.`
+                : "Showing your policy entitlement — an admin hasn't copied your Zoho balances in yet, so check Zoho People for the official numbers."}
+            </p>
             {summary.earned?.note && (
-              <p className="mt-4 flex items-start gap-2 border-t pt-4 text-xs text-muted-foreground">
+              <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
                 <Info className="mt-0.5 size-3.5 shrink-0" />
                 {summary.earned.note}
               </p>

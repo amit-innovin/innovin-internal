@@ -235,11 +235,12 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       </Card>
 
       <Card id="leave" className={`mt-4 gap-0 p-5 ${tab === "people" ? "" : "hidden"}`}>
-        <SectionHeader title={`Leave balances · ${year}`} aside={overview ? `${overview.signedIn.length + overview.unmatched.length} people` : undefined} />
+        <SectionHeader title={`Leave balances · ${year}`} aside={overview ? `${overview.people.length} people` : undefined} />
         <p className="mt-1 text-xs text-muted-foreground">
-          Remaining days per type. Joining dates drive Earned Leave accrual — set one for anyone showing “add joining date”.
+          Zoho People holds the real balances — copy each person’s “Available” figures in here and the app counts
+          anything requested through it on top. Joining dates drive Earned Leave accrual.
         </p>
-        {overview && <LeaveOverview signedIn={overview.signedIn} unmatched={overview.unmatched} />}
+        {overview && <LeaveOverview people={overview.people} />}
       </Card>
 
       {owner && (

@@ -69,9 +69,8 @@ test.describe("Admin", () => {
 
     await adminTab(page, "people");
     await expect(page.locator("#leave")).toBeVisible();
-    await expect(page.getByLabel("Search people")).toBeVisible();
-    // The imported-sheet group stays collapsed until asked for.
-    await expect(page.getByRole("button", { name: /not signed in yet/ })).toHaveAttribute("aria-expanded", "false");
+    // Balances are copied from Zoho, so the section says so rather than implying it's the record.
+    await expect(page.locator("#leave")).toContainText("Zoho People holds the real balances");
 
     await adminTab(page, "publish");
     await expect(page.locator("#events")).toBeVisible();

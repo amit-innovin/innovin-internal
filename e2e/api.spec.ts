@@ -295,14 +295,43 @@ test.describe("API: behaviour", () => {
     expect(other.ledger.find((l: { type: string }) => l.type === "cl")).toMatchObject({ used: 0, remaining: 4 });
   });
 
-  test("the admin leave overview is admin-only and includes people from the imported sheet", async () => {
+  test("an admin records Zoho balances, which then drive what the employee sees", async () => {
     expect((await (await device()).get("/api/leave?scope=overview")).status()).toBe(401);
-    const overview = await (await (await admin()).get("/api/leave?scope=overview")).json();
-    expect(Array.isArray(overview.signedIn)).toBe(true);
-    // The 2026 import carries people who have never signed in.
-    expect(overview.unmatched.length).toBeGreaterThan(0);
-    const sree = overview.unmatched.find((p: { name: string }) => p.name === "Sreeprabha");
-    expect(sree.summary.ledger.find((l: { type: string }) => l.type === "cl")).toMatchObject({ used: 6.5, remaining: 1.5 });
+
+    const who = `zoho.${Date.now().toString(36)}@innovinlabs.com`;
+    const ctx = await signedIn(who, "Zoho Person");
+    // Before any snapshot: the signed policy's entitlements, flagged as app-only.
+    const before = await (await ctx.get("/api/leave")).json();
+    expect(before).toMatchObject({ source: "app-only", asOf: null });
+    expect(before.ledger.find((l: { type: string }) => l.type === "cl")).toMatchObject({ entitled: 4, remaining: 4 });
+
+    // An admin copies the figures from Zoho's Leave Summary.
+    const adm = await admin();
+    const saved = await adm.patch("/api/leave", { data: { email: who, available: { cl: 3.5, sl: 5, el: 21, fl: 1 } } });
+    expect(saved.status()).toBe(200);
+
+    const after = await (await ctx.get("/api/leave")).json();
+    expect(after.source).toBe("zoho-snapshot");
+    expect(after.asOf).toBeTruthy();
+    const left = Object.fromEntries(after.ledger.map((l: { type: string; remaining: number }) => [l.type, l.remaining]));
+    expect(left).toMatchObject({ cl: 3.5, sl: 5, el: 21, fl: 1 });
+
+    // Requesting leave here comes off the snapshot.
+    await ctx.post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: "2026-11-02", endDate: "2026-11-02" } });
+    const adm2 = await admin();
+    const mine = await (await adm2.get("/api/away")).json();
+    const req = mine.find((r: { email: string }) => r.email === who);
+    await adm2.patch("/api/away", { data: { id: req.id, status: "approved" } });
+    const used = await (await ctx.get("/api/leave")).json();
+    expect(used.ledger.find((l: { type: string }) => l.type === "cl")).toMatchObject({ used: 1, remaining: 2.5 });
+
+    // Validation: halves only, and unknown people are rejected.
+    expect((await adm.patch("/api/leave", { data: { email: who, available: { cl: 1.25 } } })).status()).toBe(400);
+    expect((await adm.patch("/api/leave", { data: { email: who, available: { cl: -1 } } })).status()).toBe(400);
+    expect((await adm.patch("/api/leave", { data: { email: "ghost@innovinlabs.com", available: { cl: 1 } } })).status()).toBe(404);
+
+    const overview = await (await adm.get("/api/leave?scope=overview")).json();
+    expect(overview.people.find((p: { email: string }) => p.email === who).summary.source).toBe("zoho-snapshot");
     noRef(overview);
   });
 

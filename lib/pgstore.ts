@@ -9,6 +9,7 @@ import type {
   EventRow,
   GrievanceRow,
   GrievanceStatus,
+  LeaveBalanceRow,
   OrderRow,
   Role,
   Store,
@@ -103,6 +104,19 @@ ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
 -- Scrub device-linked refs written before hard anonymity: the DB must not be joinable
 -- against away/orders to de-anonymize a submission.
 UPDATE grievances SET submitter_ref = 'anon' WHERE submitter_ref <> 'anon';
+-- Leave balances copied from Zoho People (the system of record) by an admin. One row per
+-- person per leave year; as_of is what makes app-side requests countable on top.
+CREATE TABLE IF NOT EXISTS leave_balances (
+  email text NOT NULL,
+  year int NOT NULL,
+  cl real,
+  sl real,
+  el real,
+  fl real,
+  as_of timestamptz NOT NULL,
+  updated_by text,
+  PRIMARY KEY (email, year)
+);
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'member';
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS joined_on text;
 ALTER TABLE away ADD COLUMN IF NOT EXISTS decided_by text;
@@ -185,6 +199,16 @@ const employee = (r: any): EmployeeRow => ({
   joinedOn: r.joined_on ?? null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
+});
+const leaveBalance = (r: any): LeaveBalanceRow => ({
+  email: r.email,
+  year: Number(r.year),
+  // Columns are nullable so an admin can leave a type blank rather than assert a zero.
+  available: Object.fromEntries(
+    (["cl", "sl", "el", "fl"] as const).filter((k) => r[k] !== null && r[k] !== undefined).map((k) => [k, Number(r[k])]),
+  ),
+  asOf: r.as_of?.toISOString?.() ?? r.as_of,
+  updatedBy: r.updated_by ?? null,
 });
 const away = (r: any): AwayRow => ({
   id: r.id,
@@ -397,6 +421,19 @@ class PgStore implements Store {
   async setJoinedOn(email: string, joinedOn: string | null) {
     const res = await this.q(`UPDATE employees SET joined_on = $2 WHERE email = $1`, [email, joinedOn]);
     return (res.rowCount ?? 0) > 0;
+  }
+  async setLeaveBalance(row: LeaveBalanceRow) {
+    const a = row.available;
+    const res = await this.q(
+      `INSERT INTO leave_balances (email, year, cl, sl, el, fl, as_of, updated_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (email, year) DO UPDATE SET cl = $3, sl = $4, el = $5, fl = $6, as_of = $7, updated_by = $8 RETURNING *`,
+      [row.email, row.year, a.cl ?? null, a.sl ?? null, a.el ?? null, a.fl ?? null, row.asOf, row.updatedBy],
+    );
+    return leaveBalance(res.rows[0]);
+  }
+  async listLeaveBalances(year: number) {
+    const res = await this.q(`SELECT * FROM leave_balances WHERE year = $1`, [year]);
+    return res.rows.map(leaveBalance);
   }
   async getEmployee(email: string) {
     const res = await this.q(`SELECT * FROM employees WHERE email = $1`, [email]);

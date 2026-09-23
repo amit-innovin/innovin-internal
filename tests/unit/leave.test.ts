@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import seed from "@/data/leave-2026.json";
+import { summarize } from "@/lib/leave-data";
+import type { AwayRow } from "@/lib/types";
 import {
   canAvailEarned,
   completedMonths,
@@ -161,36 +162,75 @@ describe("ledger", () => {
   });
 });
 
-describe("imported 2026 tracker data", () => {
-  it("is a well-formed seed of 46 people", () => {
-    expect(seed.year).toBe(2026);
-    expect(seed.people).toHaveLength(46);
-    for (const p of seed.people) expect(p.name.trim()).toBe(p.name);
+describe("Zoho snapshot reconciliation", () => {
+  const employee = { name: "Amit Jaison", joinedOn: "2024-01-01" };
+  const away = (p: Partial<AwayRow>): AwayRow => ({
+    id: Math.random().toString(36),
+    email: "a@innovinlabs.com",
+    type: "leave",
+    leaveType: "cl",
+    halfDay: false,
+    days: 1,
+    startDate: "2026-11-02",
+    endDate: "2026-11-02",
+    reason: "",
+    status: "approved",
+    submitterRef: "ref",
+    decidedBy: null,
+    decidedAt: null,
+    createdAt: "2026-10-01T00:00:00.000Z",
+    ...p,
+  });
+  const snapshot = (available: Record<string, number>, asOf = "2026-09-23T00:00:00.000Z") => ({
+    email: "a@innovinlabs.com",
+    year: 2026,
+    available,
+    asOf,
+    updatedBy: "Admin",
   });
 
-  // entitlement = availed + balance held for every row in the sheet, which is why the
-  // import stores per-person entitlements instead of assuming one company-wide figure.
-  it("reproduces the balances shown in the spreadsheet", () => {
-    const amit = seed.people.find((p) => p.name === "Amit Jaison")!;
-    expect(amit.entitlement).toMatchObject({ cl: 8, fl: 2, sl: 6 });
-    const ledger = leaveLedger({ entitlement: amit.entitlement, opening: amit.used, requests: [] });
-    expect(ledger.find((l) => l.type === "cl")).toMatchObject({ used: 2.5, remaining: 5.5 });
-    expect(ledger.find((l) => l.type === "fl")).toMatchObject({ used: 1, remaining: 1 });
-    expect(ledger.find((l) => l.type === "sl")).toMatchObject({ used: 0, remaining: 6 });
-
-    // Sreeprabha is the overdrawn case under the new policy: 6.5 CL taken against 8.
-    const sree = seed.people.find((p) => p.name === "Sreeprabha")!;
-    const sreeLedger = leaveLedger({ entitlement: sree.entitlement, opening: sree.used, requests: [] });
-    expect(sreeLedger.find((l) => l.type === "cl")).toMatchObject({ used: 6.5, remaining: 1.5 });
+  // The figures from Zoho's Leave Summary screenshot.
+  it("reports the Zoho numbers verbatim when nothing has been requested since", () => {
+    const s = summarize(employee, [], 2026, "2026-09-23", snapshot({ cl: 3.5, sl: 5, el: 21, fl: 1 }));
+    expect(s.source).toBe("zoho-snapshot");
+    const left = Object.fromEntries(s.ledger.map((l) => [l.type, l.remaining]));
+    expect(left).toMatchObject({ cl: 3.5, sl: 5, el: 21, fl: 1 });
   });
 
-  it("carries the two entitlement cohorts: full-time staff and trainees", () => {
-    const cohorts = new Map<string, number>();
-    for (const p of seed.people) {
-      const key = JSON.stringify(p.entitlement);
-      cohorts.set(key, (cohorts.get(key) ?? 0) + 1);
-    }
-    expect(cohorts.get(JSON.stringify({ cl: 8, fl: 2, sl: 6 }))).toBe(24);
-    expect(cohorts.get(JSON.stringify({ cl: 2, fl: 1, sl: 3 }))).toBe(21);
+  it("subtracts only what was requested here after the snapshot", () => {
+    const s = summarize(
+      employee,
+      [
+        away({ createdAt: "2026-09-30T00:00:00.000Z", days: 1 }), // after → counts
+        away({ createdAt: "2026-09-01T00:00:00.000Z", days: 2 }), // before → already in Zoho's figure
+      ],
+      2026,
+      "2026-09-23",
+      snapshot({ cl: 3.5 }),
+    );
+    expect(s.ledger.find((l) => l.type === "cl")).toMatchObject({ used: 1, remaining: 2.5 });
+  });
+
+  it("keeps Earned Leave carry-forward above the annual grant", () => {
+    // Zoho shows 21 available against a 15-day annual entitlement; the display must not clamp.
+    const s = summarize(employee, [], 2026, "2026-09-23", snapshot({ el: 21 }));
+    const el = s.ledger.find((l) => l.type === "el")!;
+    expect(el.remaining).toBe(21);
+    expect(el.entitled).toBeGreaterThanOrEqual(21);
+  });
+
+  it("falls back to the policy entitlement for types Zoho wasn't recorded for", () => {
+    const s = summarize(employee, [], 2026, "2026-09-23", snapshot({ cl: 3.5 }));
+    // Only CL was entered; the rest show the signed policy's figures.
+    expect(s.ledger.find((l) => l.type === "sl")).toMatchObject({ entitled: 6, remaining: 6 });
+    expect(s.ledger.find((l) => l.type === "fl")).toMatchObject({ entitled: 2, remaining: 2 });
+  });
+
+  it("labels itself app-only when no admin has copied Zoho figures in", () => {
+    const s = summarize(employee, [away({ days: 1 })], 2026, "2026-09-23");
+    expect(s.source).toBe("app-only");
+    expect(s.asOf).toBeNull();
+    // Policy entitlement minus what this app knows about.
+    expect(s.ledger.find((l) => l.type === "cl")).toMatchObject({ entitled: 4, used: 1, remaining: 3 });
   });
 });

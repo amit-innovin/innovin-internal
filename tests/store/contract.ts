@@ -316,6 +316,29 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(again.joinedOn).toBe("2024-06-17");
       });
 
+      it("stores Zoho leave balances per person per year, upserting and keeping types optional", async () => {
+        const row = {
+          email: "a@innovinlabs.com",
+          year: 2026,
+          available: { cl: 3.5, sl: 5, el: 21, fl: 1 },
+          asOf: iso(),
+          updatedBy: "Asha",
+        };
+        expect(await store.setLeaveBalance(row)).toMatchObject({ available: { cl: 3.5, el: 21 }, updatedBy: "Asha" });
+
+        // Second write for the same person/year replaces the first.
+        await store.setLeaveBalance({ ...row, available: { cl: 2 }, asOf: iso(1000), updatedBy: "Bala" });
+        const [stored] = await store.listLeaveBalances(2026);
+        expect(stored).toMatchObject({ email: "a@innovinlabs.com", available: { cl: 2 }, updatedBy: "Bala" });
+        // Types left out are absent, not zero — an admin can decline to assert a number.
+        expect(stored.available.sl).toBeUndefined();
+        expect(stored.asOf).toBe(iso(1000));
+
+        await store.setLeaveBalance({ ...row, email: "b@innovinlabs.com", available: { sl: 4 } });
+        expect(await store.listLeaveBalances(2026)).toHaveLength(2);
+        expect(await store.listLeaveBalances(2027)).toEqual([]);
+      });
+
       it("lists employees sorted by name", async () => {
         await store.upsertEmployee(employee({ email: "z@innovinlabs.com", name: "Zara" }));
         await store.upsertEmployee(employee({ email: "a@innovinlabs.com", name: "Asha" }));

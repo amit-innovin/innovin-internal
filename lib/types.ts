@@ -64,6 +64,17 @@ export type AwayRow = {
   createdAt: string;
 };
 
+// A person's leave balances as recorded in Zoho People, typed in by an admin. Zoho is the
+// system of record; this is a snapshot, so `asOf` matters — anything requested through this app
+// after that moment is counted on top, and everything before it is already reflected.
+export type LeaveBalanceRow = {
+  email: string;
+  year: number;
+  available: Partial<Record<"cl" | "sl" | "el" | "fl", number>>;
+  asOf: string;
+  updatedBy: string | null;
+};
+
 export type EventCategory = "sports" | "arts" | "culture" | "learning" | "social" | "company";
 
 export type EventRow = {
@@ -161,4 +172,6 @@ export interface Store {
   listEmployees(): Promise<EmployeeRow[]>;
   setRole(email: string, role: Role): Promise<boolean>;
   setJoinedOn(email: string, joinedOn: string | null): Promise<boolean>;
+  setLeaveBalance(row: LeaveBalanceRow): Promise<LeaveBalanceRow>;
+  listLeaveBalances(year: number): Promise<LeaveBalanceRow[]>;
 }

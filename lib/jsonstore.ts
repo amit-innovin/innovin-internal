@@ -1,6 +1,18 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { AnnouncementRow, AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, RsvpRow, Store, WifiRow } from "./types";
+import type {
+  AnnouncementRow,
+  AttendanceRow,
+  AwayRow,
+  EmployeeRow,
+  EventRow,
+  GrievanceRow,
+  LeaveBalanceRow,
+  OrderRow,
+  RsvpRow,
+  Store,
+  WifiRow,
+} from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -16,9 +28,10 @@ type DB = {
   away: AwayRow[];
   events: EventRow[];
   rsvps: RsvpRow[];
+  leaveBalances: LeaveBalanceRow[];
 };
 
-const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [] });
+const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -193,6 +206,17 @@ export const jsonStore: Store = {
       if (row) row.joinedOn = joinedOn;
       return { result: !!row, changed: !!row };
     }),
+  setLeaveBalance: (row) =>
+    mutate((db) => {
+      const existing = db.leaveBalances.find((b) => b.email === row.email && b.year === row.year);
+      if (existing) {
+        Object.assign(existing, row);
+        return { result: existing, changed: true };
+      }
+      db.leaveBalances.unshift(row);
+      return { result: row, changed: true };
+    }),
+  listLeaveBalances: (year) => query((db) => db.leaveBalances.filter((b) => b.year === year)),
   listEmployees: () =>
     query((db) => db.employees.slice().sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email))),
 

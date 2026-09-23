@@ -10,7 +10,10 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  `connect-src 'self'${isDev ? " ws: wss:" : ""}`,
+  // The Wi-Fi speed test downloads from fast.com's nearest Netflix CDN node, which has to
+  // happen in the browser to measure the office's own connection (api.fast.com itself is
+  // called server-side). Downloads only — no credentials are ever sent to these hosts.
+  `connect-src 'self' https://*.nflxvideo.net${isDev ? " ws: wss:" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

@@ -14,6 +14,9 @@ const serverEnv = (name: string, cutoff: string) => ({
   ADMIN_PASSCODE: "1704",
   ORDER_CUTOFF_HOUR: cutoff,
   ALLOWED_EMAIL_DOMAINS: "innovinlabs.com",
+  // Never reach out to fast.com from tests — the speed test falls back to our own payload,
+  // and the fast.com path is exercised with a stubbed target instead.
+  SPEEDTEST_PROVIDER: "self",
   // Bootstrap owner for the role tests (e2e/roles.spec.ts).
   OWNER_EMAILS: "owner@innovinlabs.com",
   OFFICE_LAT: "12.935",

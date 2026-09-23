@@ -93,6 +93,31 @@ test.describe("Wi-Fi Quality", () => {
     await expect(page.getByText(/^Download/)).toContainText("Mbps", { timeout: 20_000 });
   });
 
+  test("falls back to our own payload when fast.com is unavailable", async ({ page }) => {
+    // SPEEDTEST_PROVIDER=self makes the lookup return no targets, as it would if fast.com
+    // changed or were unreachable. The test must still produce a number.
+    await page.goto("/wifi");
+    const targets = await (await page.request.get("/api/wifi/speedtest/targets")).json();
+    expect(targets).toMatchObject({ targets: [], city: null });
+
+    await page.getByRole("button", { name: "Check Speed" }).click();
+    await expect(page.getByText(/^Download/)).toContainText("Mbps", { timeout: 20_000 });
+    // No "via" attribution when it wasn't measured against fast.com.
+    await expect(page.getByText(/^Download/)).not.toContainText("via");
+  });
+
+  test("measures against a fast.com node and says where the number came from", async ({ page }) => {
+    // Stub the lookup with a same-origin target so the fast.com code path runs offline.
+    await page.route("**/api/wifi/speedtest/targets", (route) =>
+      route.fulfill({ json: { targets: [`${new URL(page.url() || "http://localhost:3210").origin}/api/wifi/speedtest`], city: "Chennai" } }),
+    );
+    await page.goto("/wifi");
+    await page.getByRole("button", { name: "Check Speed" }).click();
+    const reading = page.getByText(/^Download/);
+    await expect(reading).toContainText("Mbps", { timeout: 20_000 });
+    await expect(reading).toContainText("via fast.com · Chennai");
+  });
+
   test("reports with a note appear in the feed, update the status, and reset the speed", async ({ page }) => {
     const note = uniqueText("Slow near meeting room");
     await page.goto("/wifi");

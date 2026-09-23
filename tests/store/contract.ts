@@ -182,13 +182,20 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(rows[0].displayName).toBe("Amit");
       });
 
+      it("never stores a device-linked submitter ref — rows are always 'anon'", async () => {
+        await store.addGrievance(grievance({ submitterRef: "ref-1" }));
+        await store.addGrievance(grievance({ submitterRef: "sha256-of-device", displayName: "Amit" }));
+        const rows = await store.listGrievances();
+        expect(rows.every((g) => g.submitterRef === "anon")).toBe(true);
+      });
+
       it("round-trips an attached image, defaulting to null", async () => {
         await store.addGrievance(grievance({ body: "with photo", image: "data:image/jpeg;base64,abc" }));
         await store.addGrievance(grievance({ body: "no photo", createdAt: iso(1000) }));
         const rows = await store.listGrievances();
         expect(rows.find((g) => g.body === "with photo")?.image).toBe("data:image/jpeg;base64,abc");
         expect(rows.find((g) => g.body === "no photo")?.image).toBeNull();
-        const mine = await store.listGrievancesByRef("ref-1", 10);
+        const mine = await store.listGrievancesByIds(rows.map((g) => g.id), 10);
         expect(mine.find((g) => g.body === "with photo")?.image).toBe("data:image/jpeg;base64,abc");
       });
 
@@ -199,12 +206,14 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(await store.setGrievanceStatus("missing", "resolved")).toBe(false);
       });
 
-      it("lists only the device's own grievances, newest first, with a limit", async () => {
-        await store.addGrievance(grievance({ body: "mine-1", createdAt: iso(0) }));
-        await store.addGrievance(grievance({ body: "theirs", submitterRef: "ref-2", createdAt: iso(1000) }));
-        await store.addGrievance(grievance({ body: "mine-2", createdAt: iso(2000) }));
-        await store.addGrievance(grievance({ body: "mine-3", createdAt: iso(3000) }));
-        expect((await store.listGrievancesByRef("ref-1", 2)).map((g) => g.body)).toEqual(["mine-3", "mine-2"]);
+      it("looks grievances up by id list, newest first, with a limit", async () => {
+        const g1 = await store.addGrievance(grievance({ body: "one", createdAt: iso(0) }));
+        await store.addGrievance(grievance({ body: "not asked for", createdAt: iso(1000) }));
+        const g2 = await store.addGrievance(grievance({ body: "two", createdAt: iso(2000) }));
+        const g3 = await store.addGrievance(grievance({ body: "three", createdAt: iso(3000) }));
+        expect((await store.listGrievancesByIds([g1.id, g2.id, g3.id], 2)).map((g) => g.body)).toEqual(["three", "two"]);
+        expect(await store.listGrievancesByIds(["missing"], 10)).toEqual([]);
+        expect(await store.listGrievancesByIds([], 10)).toEqual([]);
       });
     });
 

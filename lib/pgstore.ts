@@ -99,6 +99,9 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
 ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
 ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
+-- Scrub device-linked refs written before hard anonymity: the DB must not be joinable
+-- against away/orders to de-anonymize a submission.
+UPDATE grievances SET submitter_ref = 'anon' WHERE submitter_ref <> 'anon';
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lat double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lng double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS accuracy_m real;
@@ -306,7 +309,8 @@ class PgStore implements Store {
     const res = await this.q(
       `INSERT INTO grievances (id, body, display_name, image, submitter_ref, status, created_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [row.id, row.body, row.displayName, row.image, row.submitterRef, row.status, row.createdAt],
+      // Never persist a device-linked ref — "anonymous" must survive a DB leak.
+      [row.id, row.body, row.displayName, row.image, "anon", row.status, row.createdAt],
     );
     return grievance(res.rows[0]);
   }
@@ -318,10 +322,11 @@ class PgStore implements Store {
     const res = await this.q(`SELECT * FROM grievances ORDER BY created_at DESC`);
     return res.rows.map(grievance);
   }
-  async listGrievancesByRef(ref: string, limit: number) {
+  async listGrievancesByIds(ids: string[], limit: number) {
+    if (ids.length === 0) return [];
     const res = await this.q(
-      `SELECT * FROM grievances WHERE submitter_ref = $1 ORDER BY created_at DESC LIMIT $2`,
-      [ref, limit],
+      `SELECT * FROM grievances WHERE id = ANY($1) ORDER BY created_at DESC LIMIT $2`,
+      [ids, limit],
     );
     return res.rows.map(grievance);
   }

@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
-import { DEVICE_COOKIE } from "@/lib/cookies";
+import { DEVICE_COOKIE, GRIEVANCE_IDS_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
-import { grievancesForDevice, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
+import { grievanceIdsFromCookie, grievancesFromIds, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 import type { GrievanceStatus } from "@/lib/types";
 
 const STATUSES: GrievanceStatus[] = ["open", "in_progress", "resolved"];
 
 export async function GET(req: NextRequest) {
   if (req.nextUrl.searchParams.get("scope") === "mine") {
-    return NextResponse.json(await grievancesForDevice(req.cookies.get(DEVICE_COOKIE)?.value, 20));
+    return NextResponse.json(await grievancesFromIds(grievanceIdsFromCookie(req.cookies.get(GRIEVANCE_IDS_COOKIE)?.value), 20));
   }
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -45,12 +45,16 @@ export async function POST(req: NextRequest) {
     body: text.slice(0, 2000),
     displayName: str(body.displayName).trim().slice(0, 100) || null,
     image: image || null,
-    submitterRef: identity.ref,
+    // "anon" — even if the caller passed a ref, the store forces this constant.
+    submitterRef: "anon",
     status: "open",
     createdAt: new Date().toISOString(),
   });
   const res = NextResponse.json(row);
   setSubmitterCookie(res, identity.deviceId);
+  // Remember this submission's id on the device itself — that's the only record of "mine".
+  const ids = [row.id, ...grievanceIdsFromCookie(req.cookies.get(GRIEVANCE_IDS_COOKIE)?.value)].slice(0, 50);
+  res.cookies.set(GRIEVANCE_IDS_COOKIE, JSON.stringify(ids), longLivedCookie);
   return res;
 }
 

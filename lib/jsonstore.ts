@@ -31,7 +31,18 @@ async function read(): Promise<DB> {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return empty();
     throw err;
   }
-  return { ...empty(), ...JSON.parse(raw) };
+  const db: DB = { ...empty(), ...JSON.parse(raw) };
+  // One-time migration: scrub any device-linked submitter refs ever written, so the
+  // file can't be joined against away/orders to de-anonymize old submissions.
+  let dirty = false;
+  for (const g of db.grievances) {
+    if (g.submitterRef !== "anon") {
+      g.submitterRef = "anon";
+      dirty = true;
+    }
+  }
+  if (dirty) await write(db);
+  return db;
 }
 
 // Atomic replace: write a temp file, then rename it over the original.
@@ -111,8 +122,10 @@ export const jsonStore: Store = {
 
   addGrievance: (row) =>
     mutate((db) => {
-      db.grievances.unshift(row);
-      return { result: row, changed: true };
+      // Never persist a device-linked ref — "anonymous" must survive a DB leak.
+      const safe = { ...row, submitterRef: "anon" };
+      db.grievances.unshift(safe);
+      return { result: safe, changed: true };
     }),
   setGrievanceStatus: (id, status) =>
     mutate((db) => {
@@ -121,10 +134,10 @@ export const jsonStore: Store = {
       return { result: !!row, changed: !!row };
     }),
   listGrievances: () => query((db) => db.grievances.sort(newestFirst)),
-  listGrievancesByRef: (ref, limit) =>
+  listGrievancesByIds: (ids, limit) =>
     query((db) =>
       db.grievances
-        .filter((r) => r.submitterRef === ref)
+        .filter((r) => ids.includes(r.id))
         .sort(newestFirst)
         .slice(0, limit),
     ),

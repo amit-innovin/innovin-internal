@@ -109,7 +109,8 @@ export interface Store {
   addGrievance(row: GrievanceRow): Promise<GrievanceRow>;
   setGrievanceStatus(id: string, status: GrievanceStatus): Promise<boolean>;
   listGrievances(): Promise<GrievanceRow[]>;
-  listGrievancesByRef(ref: string, limit: number): Promise<GrievanceRow[]>;
+  // "My submissions" lookup — ids come from the device's own cookie, never a stored ref.
+  listGrievancesByIds(ids: string[], limit: number): Promise<GrievanceRow[]>;
   addWifi(row: WifiRow): Promise<WifiRow>;
   listWifi(limit: number): Promise<WifiRow[]>;
   addAnnouncement(row: AnnouncementRow): Promise<AnnouncementRow>;

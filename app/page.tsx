@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { Suspense } from "react";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarOff, Check, Clock, Coffee, DoorOpen, Megaphone, MessageSquare, Users, Wifi } from "lucide-react";
+import { BadgeCheck, CalendarCheck, CalendarOff, Check, Clock, Coffee, DoorOpen, Megaphone, MessageSquare, Users, Wifi } from "lucide-react";
 import { CityArt, WifiArt } from "@/components/art";
 import { ArrowLink, Empty, IconTile, MENU_ICONS, QualityDot, SectionHeader, STATUS_META, StatusPill, stagger, type Tone } from "@/components/kit";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { DEVICE_COOKIE, EMAIL_COOKIE } from "@/lib/cookies";
 import { firstName, fmtDay, fmtDuration, fmtShortDate, fmtTime, greeting, relativeDay, relativeTime, totalMinutes } from "@/lib/format";
 import { locationTag } from "@/lib/geo";
+import { googleConfigured } from "@/lib/google";
 import { orderCutoffHour } from "@/lib/config";
 import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
@@ -347,6 +348,19 @@ export default async function Home() {
           Here&apos;s what&apos;s happening today at Innovin.
         </p>
       </div>
+
+      {!session && googleConfigured() && (
+        <Card className="mt-5 flex-row items-center gap-4 p-4">
+          <IconTile icon={BadgeCheck} tone="blue" size="sm" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Sign in with your Innovin Google account</p>
+            <p className="text-xs text-muted-foreground">Verified identity — one tap, no password.</p>
+          </div>
+          <Button asChild size="sm" className="shrink-0">
+            <a href="/api/auth/google?next=/">Sign in</a>
+          </Button>
+        </Card>
+      )}
 
       <Suspense fallback={<div className="mt-5"><CardSkeleton lines={3} /></div>}>
         <YourDay email={email} deviceId={deviceId} />

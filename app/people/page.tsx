@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON } from "@/lib/fetcher";
 import { fmtTime } from "@/lib/format";
 
-type Person = { name: string; email: string; picture: string; since: string };
+type Person = { name: string; email: string; picture: string; role: "owner" | "admin" | "member"; since: string };
 type Present = { name: string; since: string; where: string };
 type Directory = { people: Person[]; inToday: Present[] };
 
@@ -92,10 +92,15 @@ export default function People() {
                 {data.people.map((p, i) => (
                   <li key={p.email} className="flex items-center gap-3 py-3" style={stagger(i)}>
                     <PersonAvatar name={p.name} picture={p.picture} />
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{p.name}</p>
                       <p className="truncate text-xs text-muted-foreground">{p.email}</p>
                     </div>
+                    {p.role !== "member" && (
+                      <Badge variant="secondary" className="shrink-0 capitalize">
+                        {p.role}
+                      </Badge>
+                    )}
                   </li>
                 ))}
               </ul>

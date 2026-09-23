@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { CalendarCheck, CalendarDays, Coffee, LogOut, Megaphone, MessageSquare, Trash2, Wifi } from "lucide-react";
+import AccessList from "@/components/access-list";
 import AdminLogin from "@/components/admin-login";
 import { Flash } from "@/components/flash";
 import AwayList from "@/components/away-list";
@@ -22,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { isAdmin } from "@/lib/admin";
+import { currentActor, isAdmin, isOwner } from "@/lib/admin";
 import { leaveAllowanceDays } from "@/lib/config";
 import { fmtDay, fmtDuration, fmtShortDate, fmtTime, leaveDays, relativeDay, totalMinutes } from "@/lib/format";
 import { locationTag } from "@/lib/geo";
@@ -53,6 +54,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
   const date = todayIST();
   const now = Date.now(); // frozen for hydration — client lists must render the same labels as the server
+  const [actor, owner] = await Promise.all([currentActor(), isOwner()]);
   const [attendance, orders, grievances, wifi, announcements, employees, away, events] = await Promise.all([
     store.listAttendance(date),
     store.listOrders(date),
@@ -97,7 +99,10 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-medium tracking-tight">Admin dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{fmtDay()}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {fmtDay()}
+            {actor ? ` · ${actor.name || actor.email}` : " · signed in with the shared passcode"}
+          </p>
         </div>
         <form action="/api/admin/logout" method="post">
           <Button type="submit" variant="outline" size="lg">
@@ -207,6 +212,16 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           </>
         )}
       </Card>
+
+      {owner && (
+        <Card id="access" className="mt-4 gap-0 p-5">
+          <SectionHeader title="Access" aside="Owner only" />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Admins get this dashboard when they sign in with Google — their approvals are recorded against their name.
+          </p>
+          <AccessList people={employees.map((e) => ({ email: e.email, name: e.name, role: e.role }))} />
+        </Card>
+      )}
 
       <Card id="events" className="mt-4 gap-0 p-5">
         <SectionHeader title="Events" aside="Shown on the Events page" />

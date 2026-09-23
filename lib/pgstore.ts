@@ -10,6 +10,7 @@ import type {
   GrievanceRow,
   GrievanceStatus,
   OrderRow,
+  Role,
   Store,
   WifiRow,
 } from "./types";
@@ -102,6 +103,9 @@ ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
 -- Scrub device-linked refs written before hard anonymity: the DB must not be joinable
 -- against away/orders to de-anonymize a submission.
 UPDATE grievances SET submitter_ref = 'anon' WHERE submitter_ref <> 'anon';
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'member';
+ALTER TABLE away ADD COLUMN IF NOT EXISTS decided_by text;
+ALTER TABLE away ADD COLUMN IF NOT EXISTS decided_at timestamptz;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lat double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lng double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS accuracy_m real;
@@ -171,6 +175,7 @@ const employee = (r: any): EmployeeRow => ({
   email: r.email,
   name: r.name,
   picture: r.picture,
+  role: r.role ?? "member",
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
 });
@@ -183,6 +188,8 @@ const away = (r: any): AwayRow => ({
   reason: r.reason,
   status: r.status,
   submitterRef: r.submitter_ref,
+  decidedBy: r.decided_by ?? null,
+  decidedAt: r.decided_at?.toISOString?.() ?? r.decided_at ?? null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const event = (r: any): EventRow => ({
@@ -358,11 +365,16 @@ class PgStore implements Store {
   }
   async upsertEmployee(row: EmployeeRow) {
     const res = await this.q(
-      `INSERT INTO employees (email, name, picture, created_at, last_seen_at) VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (email) DO UPDATE SET name = $2, picture = $3, last_seen_at = $5 RETURNING *`,
-      [row.email, row.name, row.picture, row.createdAt, row.lastSeenAt],
+      // role is set only on insert — a re-sign-in must never reset someone's granted role.
+      `INSERT INTO employees (email, name, picture, role, created_at, last_seen_at) VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (email) DO UPDATE SET name = $2, picture = $3, last_seen_at = $6 RETURNING *`,
+      [row.email, row.name, row.picture, row.role, row.createdAt, row.lastSeenAt],
     );
     return employee(res.rows[0]);
+  }
+  async setRole(email: string, role: Role) {
+    const res = await this.q(`UPDATE employees SET role = $2 WHERE email = $1`, [email, role]);
+    return (res.rowCount ?? 0) > 0;
   }
   async getEmployee(email: string) {
     const res = await this.q(`SELECT * FROM employees WHERE email = $1`, [email]);
@@ -374,14 +386,20 @@ class PgStore implements Store {
   }
   async addAway(row: AwayRow) {
     const res = await this.q(
-      `INSERT INTO away (id, email, type, start_date, end_date, reason, status, submitter_ref, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [row.id, row.email, row.type, row.startDate, row.endDate, row.reason, row.status, row.submitterRef, row.createdAt],
+      `INSERT INTO away (id, email, type, start_date, end_date, reason, status, submitter_ref, decided_by, decided_at, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      // prettier-ignore
+      [row.id, row.email, row.type, row.startDate, row.endDate, row.reason, row.status, row.submitterRef, row.decidedBy, row.decidedAt, row.createdAt],
     );
     return away(res.rows[0]);
   }
-  async setAwayStatus(id: string, status: AwayStatus) {
-    const res = await this.q(`UPDATE away SET status = $2 WHERE id = $1`, [id, status]);
+  async setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string) {
+    const res = await this.q(`UPDATE away SET status = $2, decided_by = $3, decided_at = $4 WHERE id = $1`, [
+      id,
+      status,
+      decidedBy,
+      decidedAt,
+    ]);
     return (res.rowCount ?? 0) > 0;
   }
   async listAway(limit: number) {

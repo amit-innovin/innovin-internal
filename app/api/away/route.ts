@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin";
+import { currentActor, isAdmin } from "@/lib/admin";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { allowedEmailDomains, leaveAllowanceDays } from "@/lib/config";
 import { DEVICE_COOKIE } from "@/lib/cookies";
@@ -83,6 +83,8 @@ export async function POST(req: NextRequest) {
     reason,
     status: "pending",
     submitterRef: identity.ref,
+    decidedBy: null,
+    decidedAt: null,
     createdAt: new Date().toISOString(),
   });
   const res = NextResponse.json(row);
@@ -97,7 +99,11 @@ export async function PATCH(req: Request) {
   const rid = str(body?.id);
   const status = body?.status as AwayStatus;
   if (!rid || !STATUSES.includes(status) || status === "pending") return badRequest("Invalid status update");
-  const updated = await store.setAwayStatus(rid, status);
+  // Attribute the decision when the admin is a verified identity; break-glass PIN sessions
+  // have nobody to attribute it to.
+  const actor = await currentActor();
+  const decidedBy = actor?.role === "admin" || actor?.role === "owner" ? actor.name || actor.email : null;
+  const updated = await store.setAwayStatus(rid, status, decidedBy, new Date().toISOString());
   return updated
     ? NextResponse.json({ ok: true })
     : NextResponse.json({ error: "Request not found" }, { status: 404 });

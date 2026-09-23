@@ -14,6 +14,8 @@ const serverEnv = (name: string, cutoff: string) => ({
   ADMIN_PASSCODE: "1704",
   ORDER_CUTOFF_HOUR: cutoff,
   ALLOWED_EMAIL_DOMAINS: "innovinlabs.com",
+  // Bootstrap owner for the role tests (e2e/roles.spec.ts).
+  OWNER_EMAILS: "owner@innovinlabs.com",
   OFFICE_LAT: "12.935",
   OFFICE_LNG: "77.624",
   OFFICE_RADIUS_M: "1000",

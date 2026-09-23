@@ -63,6 +63,8 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       reason: "",
       status: "pending",
       submitterRef: "ref-1",
+      decidedBy: null,
+      decidedAt: null,
       createdAt: iso(),
       ...p,
     });
@@ -70,6 +72,7 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       email: "a@innovinlabs.com",
       name: "Asha",
       picture: "",
+      role: "member",
       createdAt: iso(),
       lastSeenAt: iso(),
       ...p,
@@ -250,6 +253,25 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(await store.getEmployee("nobody@innovinlabs.com")).toBeNull();
       });
 
+      it("defaults to member and grants/revokes roles", async () => {
+        const created = await store.upsertEmployee(employee());
+        expect(created.role).toBe("member");
+        expect(await store.setRole("a@innovinlabs.com", "admin")).toBe(true);
+        expect(await store.getEmployee("a@innovinlabs.com")).toMatchObject({ role: "admin" });
+        expect(await store.setRole("a@innovinlabs.com", "member")).toBe(true);
+        expect(await store.getEmployee("a@innovinlabs.com")).toMatchObject({ role: "member" });
+        expect(await store.setRole("nobody@innovinlabs.com", "admin")).toBe(false);
+      });
+
+      // Sign-in runs upsertEmployee on every visit — it must never silently demote an admin.
+      it("keeps a granted role when the person signs in again", async () => {
+        await store.upsertEmployee(employee());
+        await store.setRole("a@innovinlabs.com", "admin");
+        const again = await store.upsertEmployee(employee({ name: "Asha Raj", role: "member", lastSeenAt: iso(60_000) }));
+        expect(again.role).toBe("admin");
+        expect(again.name).toBe("Asha Raj");
+      });
+
       it("lists employees sorted by name", async () => {
         await store.upsertEmployee(employee({ email: "z@innovinlabs.com", name: "Zara" }));
         await store.upsertEmployee(employee({ email: "a@innovinlabs.com", name: "Asha" }));
@@ -270,9 +292,29 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
 
       it("updates status and reports unknown ids", async () => {
         const row = await store.addAway(away());
-        expect(await store.setAwayStatus(row.id, "approved")).toBe(true);
+        expect(await store.setAwayStatus(row.id, "approved", "Asha", iso(5000))).toBe(true);
         expect((await store.listAway(10))[0].status).toBe("approved");
-        expect(await store.setAwayStatus("missing", "rejected")).toBe(false);
+        expect(await store.setAwayStatus("missing", "rejected", null, iso())).toBe(false);
+      });
+
+      it("records who decided a request, and leaves it unattributed for passcode admins", async () => {
+        const named = await store.addAway(away({ reason: "named" }));
+        await store.setAwayStatus(named.id, "approved", "Asha", iso(5000));
+        expect(await store.listAway(10)).toContainEqual(
+          expect.objectContaining({ id: named.id, status: "approved", decidedBy: "Asha", decidedAt: iso(5000) }),
+        );
+
+        // Break-glass PIN sessions carry no identity, so the decision stays unattributed.
+        const anon = await store.addAway(away({ reason: "anon", submitterRef: "ref-9" }));
+        await store.setAwayStatus(anon.id, "rejected", null, iso(6000));
+        expect(await store.listAway(10)).toContainEqual(
+          expect.objectContaining({ id: anon.id, status: "rejected", decidedBy: null }),
+        );
+      });
+
+      it("starts requests unattributed", async () => {
+        const row = await store.addAway(away());
+        expect(row).toMatchObject({ decidedBy: null, decidedAt: null });
       });
 
       it("lists only the device's own requests, newest first, with a limit", async () => {

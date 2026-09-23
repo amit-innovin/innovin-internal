@@ -19,6 +19,7 @@ type Item = {
   endDate: string;
   reason: string;
   status: AwayStatus;
+  decidedBy: string | null;
   createdAt: string;
 };
 
@@ -64,6 +65,11 @@ export default function AwayList({ items, names, now }: { items: Item[]; names: 
                 {r.type === "leave" ? "Leave" : "WFH"} · {fmtRange(r.startDate, r.endDate)} · {relativeTime(r.createdAt, now)}
               </p>
               {r.reason && <p className="mt-0.5 truncate text-xs text-muted-foreground">{r.reason}</p>}
+              {status !== "pending" && r.decidedBy && (
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {META[status].label} by {r.decidedBy}
+                </p>
+              )}
             </div>
             {status === "pending" ? (
               <div className="flex shrink-0 gap-1.5">

@@ -1,6 +1,9 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { currentUser } from "./auth";
 import { ADMIN_SESSION_MS } from "./config";
+import { store } from "./store";
+import type { Role } from "./types";
 
 export const ADMIN_COOKIE = "innovin_admin";
 
@@ -33,6 +36,33 @@ export function verifyAdminSession(token: string | undefined, now = Date.now()) 
   return equal(mac, sign(passcode, issuedAt));
 }
 
-export async function isAdmin() {
+// Two ways to hold admin powers:
+//   1. A verified Google identity whose directory role is admin/owner — the everyday path,
+//      and the only one that can be attributed to a person or revoked individually.
+//   2. The shared ADMIN_PASSCODE ("break-glass") — kept for bootstrap and for when Google
+//      sign-in is unavailable. It carries no identity, so its actions can't be attributed.
+export type Actor = { email: string; name: string; role: Role };
+
+export async function currentActor(): Promise<Actor | null> {
+  const user = await currentUser();
+  if (!user) return null;
+  const row = await store.getEmployee(user.email);
+  return { email: user.email, name: user.name, role: row?.role ?? "member" };
+}
+
+async function hasPin() {
   return verifyAdminSession((await cookies()).get(ADMIN_COOKIE)?.value);
+}
+
+export async function isAdmin() {
+  if (await hasPin()) return true;
+  const role = (await currentActor())?.role;
+  return role === "admin" || role === "owner";
+}
+
+// Granting/revoking admin is owner-only. The break-glass PIN also qualifies, otherwise an
+// org with no owner yet (or a lost owner account) could never appoint one.
+export async function isOwner() {
+  if (await hasPin()) return true;
+  return (await currentActor())?.role === "owner";
 }

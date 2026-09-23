@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { allowedEmailDomains } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { totalMinutes } from "@/lib/format";
@@ -14,7 +15,8 @@ const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : n
 
 // Public: today's headcount + the caller's own sessions (identified by their remembered email).
 export async function GET(req: NextRequest) {
-  const email = req.cookies.get(EMAIL_COOKIE)?.value ?? null;
+  const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+  const email = session?.email ?? req.cookies.get(EMAIL_COOKIE)?.value ?? null;
   const date = todayIST();
   const rows = await store.listAttendance(date);
   const sessions = email ? await store.listAttendanceByEmail(email, date) : [];
@@ -44,7 +46,10 @@ export async function POST(req: NextRequest) {
 
   const body = await readJSON(req);
   if (!body) return badRequest();
-  const email = str(body.email).trim().toLowerCase().slice(0, 254);
+  // A verified Google sign-in wins over whatever email the client sent — attendance can't be
+  // marked for someone else on a signed-in device.
+  const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+  const email = session?.email ?? str(body.email).trim().toLowerCase().slice(0, 254);
   const action = body.action;
 
   if (!EMAIL.test(email)) return badRequest("Enter a valid email");
@@ -80,9 +85,11 @@ export async function POST(req: NextRequest) {
   return res;
 }
 
-// "Not you?" — forget the remembered email on this device.
+// "Not you?" — forget the remembered email on this device. Also ends a Google sign-in so a
+// shared device can't keep marking attendance as the signed-in person.
 export async function DELETE() {
   const res = NextResponse.json({ ok: true });
   res.cookies.set(EMAIL_COOKIE, "", { expires: new Date(0), path: "/" });
+  res.cookies.delete(USER_COOKIE);
   return res;
 }

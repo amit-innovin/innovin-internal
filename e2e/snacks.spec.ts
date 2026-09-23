@@ -33,7 +33,9 @@ test.describe("Meals & Snacks (orders open)", () => {
 
     await page.getByRole("tab", { name: "History" }).click();
     await expect(page.getByText("Today ·")).toBeVisible();
-    await expect(page.getByText("less sugar")).toBeVisible();
+    // The post-update reload may still be in flight — wait for it to settle to [lunch] only.
+    await expect(page.getByText("less sugar")).toHaveCount(1);
+    await expect(page.getByText("less sugar").first()).toBeVisible();
     await page.getByRole("tab", { name: "Today" }).click();
 
     await page.goto("/");

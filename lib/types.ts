@@ -1,3 +1,11 @@
+export type EmployeeRow = {
+  email: string;
+  name: string;
+  picture: string;
+  createdAt: string;
+  lastSeenAt: string;
+};
+
 export type AttendanceRow = {
   id: string;
   email: string;
@@ -72,4 +80,8 @@ export interface Store {
   addAnnouncement(row: AnnouncementRow): Promise<AnnouncementRow>;
   deleteAnnouncement(id: string): Promise<void>;
   listAnnouncements(limit: number): Promise<AnnouncementRow[]>;
+  // Creates the employee on first sign-in; refreshes name/picture/lastSeenAt afterwards.
+  upsertEmployee(row: EmployeeRow): Promise<EmployeeRow>;
+  getEmployee(email: string): Promise<EmployeeRow | null>;
+  listEmployees(): Promise<EmployeeRow[]>;
 }

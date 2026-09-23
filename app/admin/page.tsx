@@ -50,13 +50,15 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   }
 
   const date = todayIST();
-  const [attendance, orders, grievances, wifi, announcements] = await Promise.all([
+  const [attendance, orders, grievances, wifi, announcements, employees] = await Promise.all([
     store.listAttendance(date),
     store.listOrders(date),
     store.listGrievances(),
     store.listWifi(50),
     store.listAnnouncements(10),
+    store.listEmployees(),
   ]);
+  const names = new Map(employees.map((e) => [e.email, e.name]));
 
   const consolidated = MENU.map((m) => ({ ...m, count: orders.filter((o) => o.itemId === m.id).length }));
   const total = consolidated.reduce((sum, m) => sum + m.count * (m.price ?? 0), 0);
@@ -138,7 +140,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
               {people.map((p) => (
                 <li key={p.email} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
-                    <p className="truncate">{p.email}</p>
+                    <p className="truncate">{names.get(p.email) ? `${names.get(p.email)} · ` : ""}{p.email}</p>
                     <p className="text-xs tabular-nums text-muted-foreground">
                       {p.sessions.length} {p.sessions.length === 1 ? "session" : "sessions"} · {fmtDuration(p.total)}
                       {" · "}

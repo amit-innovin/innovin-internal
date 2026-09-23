@@ -78,7 +78,8 @@ test.describe("Attendance", () => {
     const email = uniqueEmail();
     await checkIn(page, email);
     await page.goto("/settings");
-    await expect(page.getByText(email)).toBeVisible();
+    await expect(page.getByText("Remembered email")).toBeVisible();
+    await expect(page.getByText(email).first()).toBeVisible();
     await page.getByRole("button", { name: "Forget me on this device" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Forget me" }).click();
     await expect(page.getByText("No email saved on this device")).toBeVisible();

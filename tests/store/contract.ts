@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AttendanceRow, GrievanceRow, OrderRow, Store, WifiRow } from "@/lib/types";
+import type { AttendanceRow, EmployeeRow, GrievanceRow, OrderRow, Store, WifiRow } from "@/lib/types";
 
 // Behavioural contract every Store adapter must satisfy (JSON file + Postgres).
 export function storeContract(name: string, getStore: () => Promise<Store>, resetData: () => Promise<void>) {
@@ -52,6 +52,14 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       downMbps: null,
       upMbps: null,
       createdAt: iso(),
+      ...p,
+    });
+    const employee = (p: Partial<EmployeeRow> = {}): EmployeeRow => ({
+      email: "a@innovinlabs.com",
+      name: "Asha",
+      picture: "",
+      createdAt: iso(),
+      lastSeenAt: iso(),
       ...p,
     });
 
@@ -194,6 +202,28 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         await store.deleteAnnouncement(a.id);
         await store.deleteAnnouncement("missing");
         expect((await store.listAnnouncements(10)).map((x) => x.title)).toEqual(["New"]);
+      });
+    });
+
+    describe("employees", () => {
+      it("creates on first sign-in, then refreshes name/picture/lastSeenAt but keeps createdAt", async () => {
+        const first = await store.upsertEmployee(employee({ name: "Asha R" }));
+        expect(first.createdAt).toBe(iso());
+        const again = await store.upsertEmployee(employee({ name: "Asha Raj", picture: "pic", lastSeenAt: iso(60_000) }));
+        expect(again.createdAt).toBe(iso());
+        expect(again.name).toBe("Asha Raj");
+        expect(again.picture).toBe("pic");
+        expect(again.lastSeenAt).toBe(iso(60_000));
+        expect(await store.getEmployee("a@innovinlabs.com")).toMatchObject({ name: "Asha Raj" });
+        expect(await store.getEmployee("nobody@innovinlabs.com")).toBeNull();
+      });
+
+      it("lists employees sorted by name", async () => {
+        await store.upsertEmployee(employee({ email: "z@innovinlabs.com", name: "Zara" }));
+        await store.upsertEmployee(employee({ email: "a@innovinlabs.com", name: "Asha" }));
+        await store.upsertEmployee(employee({ email: "b@innovinlabs.com", name: "Asha" }));
+        const list = await store.listEmployees();
+        expect(list.map((e) => e.email)).toEqual(["a@innovinlabs.com", "b@innovinlabs.com", "z@innovinlabs.com"]);
       });
     });
 

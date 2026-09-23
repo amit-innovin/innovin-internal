@@ -27,7 +27,7 @@ The MVP is successful when the team can use these four flows for one working wee
 ## Product decisions (from the discussion)
 
 - **Web app, mobile-friendly, PWA later** — lives as a pinned browser tab like Zoho. NOT a Chrome extension (store review + fee + not everyone uses Chrome) and NOT a native app (distribution hassle, especially iOS).
-- **No employee authentication in the MVP.** Attendance identifies a person by company email entry only. The admin dashboard is passcode-protected.
+- **Google sign-in (Workspace) verifies identity** — a signed-in device can't mark attendance for a different email, and admins see real names. Typed-email check-in still works for anyone who hasn't signed in. The admin dashboard is passcode-protected.
 - **Grievances are anonymous by design.** Identity is never exposed in the UI or admin dashboard; the backend keeps only a one-way browser reference for basic abuse tracing.
 - **Rollout discipline:** build quietly with a small team, reveal only in a common/demo meeting. Don't announce or gather big requirements upfront — past tools died that way.
 - **Scope discipline:** no integrations, no futuristic features. Day-to-day utilities only.

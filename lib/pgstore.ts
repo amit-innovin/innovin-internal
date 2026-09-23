@@ -3,6 +3,7 @@ import { pgConfig } from "./pgconfig";
 import type {
   AnnouncementRow,
   AttendanceRow,
+  EmployeeRow,
   GrievanceRow,
   GrievanceStatus,
   OrderRow,
@@ -55,6 +56,13 @@ CREATE TABLE IF NOT EXISTS announcements (
   body text NOT NULL DEFAULT '',
   tag text NOT NULL DEFAULT 'Office',
   created_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS employees (
+  email text PRIMARY KEY,
+  name text NOT NULL DEFAULT '',
+  picture text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL,
+  last_seen_at timestamptz NOT NULL
 );
 -- Migrations for databases created before sessions/multi-item orders/images existed:
 ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
@@ -120,6 +128,13 @@ const announcement = (r: any): AnnouncementRow => ({
   body: r.body,
   tag: r.tag,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+});
+const employee = (r: any): EmployeeRow => ({
+  email: r.email,
+  name: r.name,
+  picture: r.picture,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+  lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
 });
 
 class PgStore implements Store {
@@ -279,6 +294,22 @@ class PgStore implements Store {
   async listAnnouncements(limit: number) {
     const res = await this.q(`SELECT * FROM announcements ORDER BY created_at DESC LIMIT $1`, [limit]);
     return res.rows.map(announcement);
+  }
+  async upsertEmployee(row: EmployeeRow) {
+    const res = await this.q(
+      `INSERT INTO employees (email, name, picture, created_at, last_seen_at) VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (email) DO UPDATE SET name = $2, picture = $3, last_seen_at = $5 RETURNING *`,
+      [row.email, row.name, row.picture, row.createdAt, row.lastSeenAt],
+    );
+    return employee(res.rows[0]);
+  }
+  async getEmployee(email: string) {
+    const res = await this.q(`SELECT * FROM employees WHERE email = $1`, [email]);
+    return res.rows[0] ? employee(res.rows[0]) : null;
+  }
+  async listEmployees() {
+    const res = await this.q(`SELECT * FROM employees ORDER BY name, email`);
+    return res.rows.map(employee);
   }
 }
 

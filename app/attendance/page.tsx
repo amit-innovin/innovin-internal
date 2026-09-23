@@ -34,6 +34,8 @@ const LOCATION_LABEL: Record<LocationTag, string> = {
   unknown: "Location not shared",
 };
 
+type Auth = { signedIn: boolean; googleEnabled: boolean; email?: string; name?: string };
+
 // Best-effort geolocation — never blocks check-in. Denied/timed out → null.
 const position = () =>
   new Promise<GeolocationPosition | null>((resolve) => {
@@ -43,13 +45,18 @@ const position = () =>
 
 export default function Attendance() {
   const [status, setStatus] = useState<Status | null>(null);
+  const [user, setUser] = useState<Auth | null>(null);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | false>(false);
   const [buttonState, run] = useButtonState();
 
   const load = async () => {
-    const data = await getJSON<Status>("/api/attendance", "attendance");
+    const [data, auth] = await Promise.all([
+      getJSON<Status>("/api/attendance", "attendance"),
+      getJSON<Auth>("/api/auth/me", "your sign-in"),
+    ]);
     if (data) setStatus(data);
+    if (auth) setUser(auth);
   };
   useEffect(() => {
     load();
@@ -164,7 +171,15 @@ export default function Attendance() {
               </div>
             </div>
 
-            {status.email ? (
+            {user?.signedIn ? (
+              <p className="mt-5 rounded-lg bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
+                Checking in as <span className="font-medium text-foreground">{user.name}</span>{" "}
+                <span className="text-xs">({user.email})</span>
+                <Button type="button" variant="link" size="sm" onClick={forget} className="ml-1 h-auto p-0 text-accent-foreground">
+                  Not you?
+                </Button>
+              </p>
+            ) : status.email ? (
               <p className="mt-5 rounded-lg bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
                 Checking in as <span className="font-medium text-foreground">{status.email}</span>
                 <Button type="button" variant="link" size="sm" onClick={forget} className="ml-1 h-auto p-0 text-accent-foreground">
@@ -190,6 +205,15 @@ export default function Attendance() {
                 />
                 <p className="text-xs text-muted-foreground">We&apos;ll remember it on this device.</p>
               </div>
+            )}
+
+            {!user?.signedIn && user?.googleEnabled && (
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                or{" "}
+                <a href="/api/auth/google?next=/attendance" className="font-medium text-accent-foreground hover:underline">
+                  sign in with your Innovin Google account
+                </a>
+              </p>
             )}
 
             <StatefulButton

@@ -126,6 +126,35 @@ test.describe("API: behaviour", () => {
     expect((await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 12.9 } })).status()).toBe(400);
   });
 
+  test("Google auth: start redirects, callback rejects forged state, session overrides attendance email", async () => {
+    const ctx = await device();
+    expect(await (await ctx.get("/api/auth/me")).json()).toEqual({ signedIn: false, googleEnabled: true });
+
+    // A callback hit without the state cookie bounces to settings?auth=failed.
+    const bad = await ctx.get("/api/auth/callback?code=x&state=bogus.abc", { maxRedirects: 0 });
+    expect(bad.status()).toBe(307);
+    expect(bad.headers()["location"]).toContain("/settings?auth=failed");
+
+    // Full round-trip through the mock: google → mock auth → callback → session.
+    const start = await ctx.get("/api/auth/google?next=/attendance", { maxRedirects: 0 });
+    expect(start.status()).toBe(307);
+    expect(start.headers()["location"]).toContain("localhost:3999/auth");
+    const bounced = await ctx.get(start.headers()["location"], { maxRedirects: 0 });
+    expect(bounced.status()).toBe(302);
+    const done = await ctx.get(bounced.headers()["location"], { maxRedirects: 0 });
+    expect(done.headers()["location"]).toContain("/attendance");
+
+    const me = await (await ctx.get("/api/auth/me")).json();
+    expect(me.signedIn).toBe(true);
+    expect(me.email).toMatch(/^hinan\.\d+@innovinlabs\.com$/);
+    expect(me.name).toBe("Hinan E2E");
+
+    // The session email wins over a forged body.
+    await ctx.post("/api/attendance", { data: { email: "forged@innovinlabs.com", action: "in" } });
+    const att = await (await ctx.get("/api/attendance")).json();
+    expect(att.email).toBe(me.email);
+  });
+
   test("a day's order can hold several items, is replaceable and cancellable", async () => {
     const ctx = await device();
     const placed = await (await ctx.post("/api/snacks", { data: { items: ["tea", "lunch"], instructions: "i" } })).json();

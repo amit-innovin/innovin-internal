@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { AnnouncementRow, AttendanceRow, GrievanceRow, OrderRow, Store, WifiRow } from "./types";
+import type { AnnouncementRow, AttendanceRow, EmployeeRow, GrievanceRow, OrderRow, Store, WifiRow } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -12,9 +12,10 @@ type DB = {
   grievances: GrievanceRow[];
   wifi: WifiRow[];
   announcements: AnnouncementRow[];
+  employees: EmployeeRow[];
 };
 
-const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [] });
+const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -144,4 +145,20 @@ export const jsonStore: Store = {
       return { result: undefined, changed: db.announcements.length < before };
     }),
   listAnnouncements: (limit) => query((db) => db.announcements.sort(newestFirst).slice(0, limit)),
+
+  upsertEmployee: (row) =>
+    mutate((db) => {
+      const existing = db.employees.find((e) => e.email === row.email);
+      if (existing) {
+        existing.name = row.name;
+        existing.picture = row.picture;
+        existing.lastSeenAt = row.lastSeenAt;
+        return { result: existing, changed: true };
+      }
+      db.employees.unshift(row);
+      return { result: row, changed: true };
+    }),
+  getEmployee: (email) => query((db) => db.employees.find((e) => e.email === email) ?? null),
+  listEmployees: () =>
+    query((db) => db.employees.slice().sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email))),
 };

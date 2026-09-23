@@ -17,6 +17,13 @@ const serverEnv = (name: string, cutoff: string) => ({
   OFFICE_LAT: "12.935",
   OFFICE_LNG: "77.624",
   OFFICE_RADIUS_M: "1000",
+  // Google sign-in against the local OAuth mock (e2e/google-mock.ts, started in global-setup).
+  GOOGLE_CLIENT_ID: "e2e-client",
+  GOOGLE_CLIENT_SECRET: "e2e-secret",
+  GOOGLE_AUTH_URL: "http://localhost:3999/auth",
+  GOOGLE_TOKEN_URL: "http://localhost:3999/token",
+  GOOGLE_TOKENINFO_URL: "http://localhost:3999/tokeninfo",
+  SESSION_SECRET: "e2e-session-secret",
   ...(db ? { DATABASE_URL: db } : { DATA_FILE: `.test-data/${name}.json` }),
 });
 

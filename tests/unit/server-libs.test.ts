@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAdminSession, validAdminPasscode, verifyAdminSession } from "@/lib/admin";
+import { createOauthState, createUserSession, sanitizeNext, verifyOauthState, verifyUserSession } from "@/lib/auth";
 import { ADMIN_SESSION_MS, allowedEmailDomains, orderCutoffHour } from "@/lib/config";
 import { clientIp, readJSON } from "@/lib/http";
 import { distanceM, locationTag, officeLocation } from "@/lib/geo";
@@ -158,6 +159,53 @@ describe("admin auth", () => {
     const token = createAdminSession();
     vi.stubEnv("ADMIN_PASSCODE", "");
     expect(verifyAdminSession(token)).toBe(false);
+  });
+});
+
+describe("employee sessions & oauth state", () => {
+  beforeEach(() => {
+    vi.stubEnv("SESSION_SECRET", "test-secret");
+    vi.stubEnv("ADMIN_PASSCODE", "");
+  });
+
+  const me = { email: "asha@innovinlabs.com", name: "Asha" };
+
+  it("issues sessions that verify, expire after 30 days, and resist tampering", () => {
+    const now = Date.now();
+    const token = createUserSession(me, now)!;
+    expect(verifyUserSession(token, now)).toEqual(me);
+    expect(verifyUserSession(token, now + 30 * 24 * 3_600_000 - 1000)).toEqual(me);
+    expect(verifyUserSession(token, now + 30 * 24 * 3_600_000 + 1000)).toBeNull();
+
+    const dot = token.lastIndexOf(".");
+    expect(verifyUserSession(`${token.slice(0, dot)}.${"0".repeat(64)}`, now)).toBeNull();
+    expect(verifyUserSession("garbage")).toBeNull();
+    vi.stubEnv("SESSION_SECRET", "other-secret");
+    expect(verifyUserSession(token, now)).toBeNull();
+  });
+
+  it("returns null when no signing secret exists", () => {
+    vi.stubEnv("SESSION_SECRET", "");
+    vi.stubEnv("ADMIN_PASSCODE", "");
+    expect(createUserSession(me)).toBeNull();
+    expect(verifyUserSession("x.y")).toBeNull();
+  });
+
+  it("oauth state round-trips the next path and rejects mismatched or stale cookies", () => {
+    const now = Date.now();
+    const { cookie, state } = createOauthState("/attendance", now);
+    expect(verifyOauthState(cookie, state, now)).toBe("/attendance");
+    expect(verifyOauthState(cookie, state, now + 11 * 60_000)).toBeNull();
+    expect(verifyOauthState(cookie, "other-nonce.xyz", now)).toBeNull();
+    expect(verifyOauthState(`${Date.now()}.n.sig`, state, now)).toBeNull();
+    expect(verifyOauthState(undefined, state, now)).toBeNull();
+    expect(verifyOauthState(cookie, null, now)).toBeNull();
+
+    // next is sanitized: only same-origin paths survive.
+    expect(sanitizeNext("/settings")).toBe("/settings");
+    expect(sanitizeNext("https://evil.com")).toBe("/");
+    expect(sanitizeNext("//evil.com")).toBe("/");
+    expect(sanitizeNext(null)).toBe("/");
   });
 });
 

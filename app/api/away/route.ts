@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentActor, isAdmin } from "@/lib/admin";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
-import { allowedEmailDomains, leaveAllowanceDays } from "@/lib/config";
+import { allowedEmailDomains } from "@/lib/config";
 import { DEVICE_COOKIE } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
-import { leaveDays } from "@/lib/format";
+import { fmtShortDate } from "@/lib/format";
+import { isLeaveType, leaveCost, nonWorkingReason } from "@/lib/leave";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
 import { setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
-import { todayIST } from "@/lib/time";
 import type { AwayStatus, AwayType } from "@/lib/types";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -22,19 +22,6 @@ const dayDiff = (a: string, b: string) => (Date.parse(b) - Date.parse(a)) / 86_4
 
 export async function GET(req: NextRequest) {
   const scope = req.nextUrl.searchParams.get("scope");
-  // Leave balance for this year — signed-in users get their verified email's requests
-  // across all devices; everyone else sees this device's requests.
-  if (scope === "summary") {
-    const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
-    const rows = session
-      ? await store.listAwayByEmail(session.email, 100)
-      : await store.listAwayByRef(submitterIdentity(req).ref, 100);
-    const year = todayIST().slice(0, 4);
-    const leave = rows.filter((r) => r.type === "leave" && r.startDate.startsWith(year));
-    const usedDays = leave.filter((r) => r.status === "approved").reduce((n, r) => n + leaveDays(r.startDate, r.endDate), 0);
-    const pendingDays = leave.filter((r) => r.status === "pending").reduce((n, r) => n + leaveDays(r.startDate, r.endDate), 0);
-    return NextResponse.json({ year: Number(year), allowance: leaveAllowanceDays(), usedDays, pendingDays });
-  }
   if (scope === "mine") {
     const deviceId = req.cookies.get(DEVICE_COOKIE)?.value;
     if (!deviceId) return NextResponse.json([]);
@@ -64,20 +51,37 @@ export async function POST(req: NextRequest) {
   const startDate = str(body.startDate).trim();
   const endDate = str(body.endDate).trim();
   const reason = str(body.reason).trim().slice(0, 500);
+  const halfDay = body.halfDay === true;
+  // Leave draws from a specific bucket; WFH doesn't touch a balance at all.
+  const leaveType = isLeaveType(body.leaveType) ? body.leaveType : null;
 
   if (!EMAIL.test(email)) return badRequest("Enter a valid email");
   if (!allowedEmailDomains().includes(email.split("@")[1])) {
     return NextResponse.json({ error: "Use your Innovin email" }, { status: 403 });
   }
   if (type !== "leave" && type !== "wfh") return badRequest("Choose Leave or WFH");
+  if (type === "leave" && !leaveType) return badRequest("Choose a leave type");
   if (!DATE.test(startDate) || !DATE.test(endDate)) return badRequest("Pick valid dates");
   if (startDate > endDate) return badRequest("Start date can't be after the end date");
   if (dayDiff(startDate, endDate) > MAX_SPAN_DAYS) return badRequest("Requests can span at most 3 months");
+  if (halfDay && (startDate !== endDate || leaveType !== "cl")) {
+    return badRequest("Half days apply to a single day of Casual Leave");
+  }
+
+  // Working days only: Sundays, 2nd/4th Saturdays and declared holidays cost nothing.
+  const days = type === "leave" ? leaveCost(startDate, endDate, halfDay) : 0;
+  if (type === "leave" && days === 0) {
+    const reasonWhy = nonWorkingReason(startDate);
+    return badRequest(reasonWhy ? `${fmtShortDate(`${startDate}T00:00:00`)} is a non-working day (${reasonWhy})` : "That range has no working days");
+  }
 
   const { submitterRef: _r, ...row } = await store.addAway({
     id: id(),
     email,
     type,
+    leaveType,
+    halfDay,
+    days,
     startDate,
     endDate,
     reason,

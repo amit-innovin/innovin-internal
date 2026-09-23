@@ -181,6 +181,12 @@ export const jsonStore: Store = {
       if (row) row.role = role;
       return { result: !!row, changed: !!row };
     }),
+  setJoinedOn: (email, joinedOn) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.joinedOn = joinedOn;
+      return { result: !!row, changed: !!row };
+    }),
   listEmployees: () =>
     query((db) => db.employees.slice().sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email))),
 

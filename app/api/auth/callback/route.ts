@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
     name: identity.name,
     picture: identity.picture,
     role: owner ? "owner" : "member",
+    joinedOn: null,
     createdAt: now,
     lastSeenAt: now,
   });

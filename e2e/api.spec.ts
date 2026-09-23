@@ -19,6 +19,17 @@ async function admin(): Promise<APIRequestContext> {
 
 const noRef = (body: unknown) => expect(JSON.stringify(body)).not.toContain("submitterRef");
 
+// A context signed in through the Google OAuth mock as a specific person, so per-identity
+// features (leave balances) can be exercised. `/as` pins the mock's next identity.
+async function signedIn(who: string, name = who): Promise<APIRequestContext> {
+  const ctx = await device();
+  await ctx.get(`http://localhost:3999/as?email=${encodeURIComponent(who)}&name=${encodeURIComponent(name)}`);
+  const res = await ctx.get("/api/auth/google?next=/", { maxRedirects: 10 });
+  expect(res.ok()).toBe(true);
+  await ctx.get("http://localhost:3999/as?reset=1");
+  return ctx;
+}
+
 test.describe("API: input validation", () => {
   test("malformed or non-object JSON bodies return 400, never 500", async () => {
     const ctx = await device();
@@ -68,9 +79,10 @@ test.describe("API: input validation", () => {
       [{ email: "nope", type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 400],
       [{ email: "a@gmail.com", type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 403],
       [{ email: who, type: "sabbatical", startDate: "2026-10-07", endDate: "2026-10-07" }, 400],
-      [{ email: who, type: "leave", startDate: "07/10/2026", endDate: "2026-10-08" }, 400],
-      [{ email: who, type: "leave", startDate: "2026-10-08", endDate: "2026-10-07" }, 400],
-      [{ email: who, type: "leave", startDate: "2026-01-01", endDate: "2026-12-31" }, 400],
+      [{ email: who, type: "leave", leaveType: "cl", startDate: "07/10/2026", endDate: "2026-10-08" }, 400],
+      [{ email: who, type: "leave", leaveType: "cl", startDate: "2026-10-08", endDate: "2026-10-07" }, 400],
+      [{ email: who, type: "leave", leaveType: "cl", startDate: "2026-01-01", endDate: "2026-12-31" }, 400],
+      [{ email: who, type: "leave", leaveType: "holiday", startDate: "2026-10-07", endDate: "2026-10-07" }, 400], // unknown bucket
       [{ email: who, type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 200],
     ];
     for (const [data, status] of cases) expect((await ctx.post("/api/away", { data })).status(), JSON.stringify(data)).toBe(status);
@@ -196,7 +208,7 @@ test.describe("API: behaviour", () => {
     const ctx = await device();
     const who = email();
     const req = await (
-      await ctx.post("/api/away", { data: { email: who, type: "leave", startDate: "2026-11-02", endDate: "2026-11-03", reason: "trip" } })
+      await ctx.post("/api/away", { data: { email: who, type: "leave", leaveType: "cl", startDate: "2026-11-02", endDate: "2026-11-03", reason: "trip" } })
     ).json();
     expect(req).toMatchObject({ email: who, type: "leave", status: "pending", reason: "trip" });
     noRef(req);
@@ -218,30 +230,80 @@ test.describe("API: behaviour", () => {
     expect(after.find((r: { id: string }) => r.id === req.id).status).toBe("approved");
   });
 
-  test("leave summary counts this year's approved/pending leave days per device", async () => {
+  test("leave is charged in working days, skipping Sundays, 2nd/4th Saturdays and holidays", async () => {
     const ctx = await device();
     const who = email();
-    const y = new Date().getFullYear();
-    const mk = async (type: string, s: string, e: string) =>
-      (await ctx.post("/api/away", { data: { email: who, type, startDate: s, endDate: e } })).json();
-    const l1 = await mk("leave", `${y}-11-10`, `${y}-11-11`); // 2 days → approved
-    await mk("leave", `${y}-11-20`, `${y}-11-20`); // 1 day → pending
-    const l3 = await mk("leave", `${y}-11-25`, `${y}-11-28`); // 4 days → rejected
-    await mk("wfh", `${y}-11-12`, `${y}-11-12`); // WFH never counts
-    await mk("leave", `${y - 1}-11-10`, `${y - 1}-11-12`); // last year doesn't count
+    const mk = (data: Record<string, unknown>) => ctx.post("/api/away", { data: { email: who, ...data } });
+
+    // Mon 7 Sep 2026 → Mon 14 Sep spans 8 calendar days but only 6 working ones:
+    // Sat 12th is the 2nd Saturday and the 13th is a Sunday.
+    const span = await (await mk({ type: "leave", leaveType: "cl", startDate: "2026-09-07", endDate: "2026-09-14" })).json();
+    expect(span.days).toBe(6);
+
+    // A holiday inside the range is free: Ramzan falls on Fri 20 Mar 2026.
+    const holiday = await (await mk({ type: "leave", leaveType: "sl", startDate: "2026-03-19", endDate: "2026-03-23" })).json();
+    expect(holiday.days).toBe(3);
+
+    // A day that isn't a working day at all can't be booked as leave.
+    const sunday = await mk({ type: "leave", leaveType: "cl", startDate: "2026-09-06", endDate: "2026-09-06" });
+    expect(sunday.status()).toBe(400);
+    expect((await sunday.json()).error).toContain("Sunday");
+
+    // Half days are Casual Leave, single day only.
+    const half = await (await mk({ type: "leave", leaveType: "cl", startDate: "2026-09-07", endDate: "2026-09-07", halfDay: true })).json();
+    expect(half.days).toBe(0.5);
+    // Half days apply to Casual Leave only, and only to a single day.
+    expect((await mk({ type: "leave", leaveType: "el", startDate: "2026-09-07", endDate: "2026-09-07", halfDay: true })).status()).toBe(400);
+    expect((await mk({ type: "leave", leaveType: "cl", startDate: "2026-09-07", endDate: "2026-09-08", halfDay: true })).status()).toBe(400);
+
+    // A leave type is required, and WFH draws from no balance.
+    expect((await mk({ type: "leave", startDate: "2026-09-07", endDate: "2026-09-07" })).status()).toBe(400);
+    const wfh = await (await mk({ type: "wfh", startDate: "2026-09-07", endDate: "2026-09-08" })).json();
+    expect(wfh).toMatchObject({ leaveType: null, days: 0 });
+  });
+
+  test("leave balances are per identity and per type, and need a signed-in user", async () => {
+    // Without a verified identity there's no entitlement to apply.
+    const anon = await (await (await device()).get("/api/leave")).json();
+    expect(anon.signedIn).toBe(false);
+    expect(anon.ledger).toBeUndefined();
+
+    const who = `ledger.${Date.now().toString(36)}@innovinlabs.com`;
+    const ctx = await signedIn(who, "Ledger Person");
+    const mine = await (await ctx.get("/api/leave")).json();
+    expect(mine.signedIn).toBe(true);
+    noRef(mine);
+    // Not in the imported sheet, so the current policy applies: CL 4, SL 6, FL 2.
+    const entitled = Object.fromEntries(mine.ledger.map((l: { type: string; entitled: number }) => [l.type, l.entitled]));
+    expect(entitled).toMatchObject({ cl: 4, sl: 6, fl: 2 });
+    expect(mine.earned.note).toContain("joining date"); // no joining date yet
+    expect(mine.holidays).toHaveLength(9);
+
+    // Book 2 working days of Casual Leave: pending first, then used once approved.
+    const req = await (
+      await ctx.post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: "2026-09-07", endDate: "2026-09-08" } })
+    ).json();
+    const cl = async () => (await (await ctx.get("/api/leave")).json()).ledger.find((l: { type: string }) => l.type === "cl");
+    expect(await cl()).toMatchObject({ used: 0, pending: 2, remaining: 4 });
 
     const adm = await admin();
-    await adm.patch("/api/away", { data: { id: l1.id, status: "approved" } });
-    await adm.patch("/api/away", { data: { id: l3.id, status: "rejected" } });
+    await adm.patch("/api/away", { data: { id: req.id, status: "approved" } });
+    expect(await cl()).toMatchObject({ used: 2, pending: 0, remaining: 2 });
 
-    const sum = await (await ctx.get("/api/away?scope=summary")).json();
-    expect(sum).toMatchObject({ year: y, usedDays: 2, pendingDays: 1 });
-    expect(sum.allowance).toBeGreaterThan(0);
-    noRef(sum);
+    // Sick Leave is untouched by Casual Leave usage — the buckets are separate.
+    const other = await (await (await signedIn(`ledger2.${Date.now().toString(36)}@innovinlabs.com`, "Ledger Two")).get("/api/leave")).json();
+    expect(other.ledger.find((l: { type: string }) => l.type === "cl")).toMatchObject({ used: 0, remaining: 4 });
+  });
 
-    // Another device sees a clean slate — summaries never leak across devices.
-    const other = await (await (await device()).get("/api/away?scope=summary")).json();
-    expect(other).toMatchObject({ usedDays: 0, pendingDays: 0 });
+  test("the admin leave overview is admin-only and includes people from the imported sheet", async () => {
+    expect((await (await device()).get("/api/leave?scope=overview")).status()).toBe(401);
+    const overview = await (await (await admin()).get("/api/leave?scope=overview")).json();
+    expect(Array.isArray(overview.signedIn)).toBe(true);
+    // The 2026 import carries people who have never signed in.
+    expect(overview.unmatched.length).toBeGreaterThan(0);
+    const sree = overview.unmatched.find((p: { name: string }) => p.name === "Sreeprabha");
+    expect(sree.summary.ledger.find((l: { type: string }) => l.type === "cl")).toMatchObject({ used: 6.5, remaining: 1.5 });
+    noRef(overview);
   });
 
   test("people directory exposes names and presence tags — never coords, emails in presence, or refs", async () => {

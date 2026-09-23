@@ -104,8 +104,14 @@ ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
 -- against away/orders to de-anonymize a submission.
 UPDATE grievances SET submitter_ref = 'anon' WHERE submitter_ref <> 'anon';
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'member';
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS joined_on text;
 ALTER TABLE away ADD COLUMN IF NOT EXISTS decided_by text;
 ALTER TABLE away ADD COLUMN IF NOT EXISTS decided_at timestamptz;
+-- Leave types arrived with the policy engine; rows written before it have no bucket and are
+-- left NULL rather than guessed at, so they simply don't count against a balance.
+ALTER TABLE away ADD COLUMN IF NOT EXISTS leave_type text;
+ALTER TABLE away ADD COLUMN IF NOT EXISTS half_day boolean NOT NULL DEFAULT false;
+ALTER TABLE away ADD COLUMN IF NOT EXISTS days real NOT NULL DEFAULT 0;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lat double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lng double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS accuracy_m real;
@@ -176,6 +182,7 @@ const employee = (r: any): EmployeeRow => ({
   name: r.name,
   picture: r.picture,
   role: r.role ?? "member",
+  joinedOn: r.joined_on ?? null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
 });
@@ -183,6 +190,9 @@ const away = (r: any): AwayRow => ({
   id: r.id,
   email: r.email,
   type: r.type,
+  leaveType: r.leave_type ?? null,
+  halfDay: r.half_day ?? false,
+  days: Number(r.days ?? 0),
   startDate: r.start_date,
   endDate: r.end_date,
   reason: r.reason,
@@ -366,14 +376,19 @@ class PgStore implements Store {
   async upsertEmployee(row: EmployeeRow) {
     const res = await this.q(
       // role is set only on insert — a re-sign-in must never reset someone's granted role.
-      `INSERT INTO employees (email, name, picture, role, created_at, last_seen_at) VALUES ($1,$2,$3,$4,$5,$6)
-       ON CONFLICT (email) DO UPDATE SET name = $2, picture = $3, last_seen_at = $6 RETURNING *`,
-      [row.email, row.name, row.picture, row.role, row.createdAt, row.lastSeenAt],
+      // role and joined_on are set only on insert — a re-sign-in must never reset either.
+      `INSERT INTO employees (email, name, picture, role, joined_on, created_at, last_seen_at) VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (email) DO UPDATE SET name = $2, picture = $3, last_seen_at = $7 RETURNING *`,
+      [row.email, row.name, row.picture, row.role, row.joinedOn, row.createdAt, row.lastSeenAt],
     );
     return employee(res.rows[0]);
   }
   async setRole(email: string, role: Role) {
     const res = await this.q(`UPDATE employees SET role = $2 WHERE email = $1`, [email, role]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async setJoinedOn(email: string, joinedOn: string | null) {
+    const res = await this.q(`UPDATE employees SET joined_on = $2 WHERE email = $1`, [email, joinedOn]);
     return (res.rowCount ?? 0) > 0;
   }
   async getEmployee(email: string) {
@@ -386,10 +401,10 @@ class PgStore implements Store {
   }
   async addAway(row: AwayRow) {
     const res = await this.q(
-      `INSERT INTO away (id, email, type, start_date, end_date, reason, status, submitter_ref, decided_by, decided_at, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      `INSERT INTO away (id, email, type, leave_type, half_day, days, start_date, end_date, reason, status, submitter_ref, decided_by, decided_at, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
       // prettier-ignore
-      [row.id, row.email, row.type, row.startDate, row.endDate, row.reason, row.status, row.submitterRef, row.decidedBy, row.decidedAt, row.createdAt],
+      [row.id, row.email, row.type, row.leaveType, row.halfDay, row.days, row.startDate, row.endDate, row.reason, row.status, row.submitterRef, row.decidedBy, row.decidedAt, row.createdAt],
     );
     return away(res.rows[0]);
   }

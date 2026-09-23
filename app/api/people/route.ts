@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isOwner } from "@/lib/admin";
+import { isAdmin, isOwner } from "@/lib/admin";
 import { enforce } from "@/lib/guard";
 import { firstName } from "@/lib/format";
 import { locationTag } from "@/lib/geo";
@@ -30,20 +30,32 @@ export async function GET() {
   });
 }
 
-// Grant or revoke admin. Owner-only, and an owner's own role is immutable here — owners are
-// set through OWNER_EMAILS, so nobody can demote the owner (or promote themselves) via the API.
+// Admins can set a joining date. Changing roles is owner-only, and an owner's own role is
+// immutable here — owners are set through OWNER_EMAILS, so nobody can demote the owner (or
+// promote themselves) via the API.
 export async function PATCH(req: NextRequest) {
-  if (!(await isOwner())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const limited = enforce([["writeIp", clientIp(req)]]);
   if (limited) return limited;
 
   const body = await readJSON(req);
   const email = str(body?.email).trim().toLowerCase();
-  const role = body?.role as Role;
-  if (!email || (role !== "admin" && role !== "member")) return badRequest("Invalid role update");
+  if (!email) return badRequest("Invalid role update");
 
   const target = await store.getEmployee(email);
   if (!target) return NextResponse.json({ error: "Person not found" }, { status: 404 });
+
+  // Joining date drives Earned Leave accrual and Flexible Leave pro-rating; "" clears it.
+  if (body?.joinedOn !== undefined) {
+    const joinedOn = str(body.joinedOn).trim();
+    if (joinedOn && !/^\d{4}-\d{2}-\d{2}$/.test(joinedOn)) return badRequest("Pick a valid joining date");
+    await store.setJoinedOn(email, joinedOn || null);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!(await isOwner())) return NextResponse.json({ error: "Only the owner can change roles" }, { status: 403 });
+  const role = body?.role as Role;
+  if (role !== "admin" && role !== "member") return badRequest("Invalid role update");
   if (target.role === "owner") return NextResponse.json({ error: "The owner's role can't be changed" }, { status: 403 });
 
   await store.setRole(email, role);

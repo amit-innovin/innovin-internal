@@ -46,4 +46,10 @@ so never describe the work as "opened a PR" or "merged a PR" — say the branch 
 - Client network calls go through `lib/fetcher.ts` (`getJSON`, `send`, `readError`) — never raw `fetch` + `res.json().error`.
 - API routes parse bodies with `readJSON` (400 on bad input) and apply limits via `enforce` (`lib/guard.ts`).
 - Any Store change must be implemented in both `lib/jsonstore.ts` and `lib/pgstore.ts` and covered in `tests/store/contract.ts`.
+- Leave rules live in `lib/leave.ts` (pure, unit-tested against the company policy and the 2026
+  tracker's own working-day totals). Per-person 2026 entitlements and opening usage are imported
+  data in `data/leave-2026.json`, matched to employees by Google display name — don't replace
+  them with a single company-wide allowance, since staff and trainees carry different figures.
+- OAuth links must be plain `<a href>`, never `next/link` — a Link prefetches the route and the
+  redirect to Google trips the `connect-src 'self'` CSP.
 - New dependencies: pin exact versions published ≥ 7 days ago.

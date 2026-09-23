@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarOff, Mail, Palmtree, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON, readError, send } from "@/lib/fetcher";
 import { useButtonState } from "@/lib/hooks/use-button-state";
 import { fmtShortDate, relativeTime } from "@/lib/format";
+import { LEAVE_LABELS, type LeaveType } from "@/lib/leave";
 import type { AwayStatus, AwayType } from "@/lib/types";
 
 type AwayRequest = {
@@ -26,7 +28,11 @@ type AwayRequest = {
   createdAt: string;
 };
 type Auth = { signedIn: boolean; googleEnabled: boolean; email?: string; name?: string };
-type LeaveSummary = { year: number; allowance: number; usedDays: number; pendingDays: number };
+type LeaveSummary = {
+  signedIn: boolean;
+  year: number;
+  ledger?: { type: LeaveType; entitled: number; used: number; pending: number; remaining: number }[];
+};
 
 const AWAY_META: Record<AwayStatus, { label: string; badge: "warning" | "success" | "danger" }> = {
   pending: { label: "Pending", badge: "warning" },
@@ -44,6 +50,8 @@ export default function Away() {
   const [summary, setSummary] = useState<LeaveSummary | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
   const [type, setType] = useState<AwayType>("leave");
+  const [leaveType, setLeaveType] = useState<LeaveType>("cl");
+  const [halfDay, setHalfDay] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
@@ -55,7 +63,7 @@ export default function Away() {
     const [mine, me, sum] = await Promise.all([
       getJSON<AwayRequest[]>("/api/away?scope=mine", "your requests"),
       getJSON<Auth>("/api/auth/me", "your sign-in"),
-      getJSON<LeaveSummary>("/api/away?scope=summary", "your leave balance"),
+      getJSON<LeaveSummary>("/api/leave", "your leave balance"),
     ]);
     if (mine) setRequests(mine);
     if (me) setAuth(me);
@@ -71,7 +79,14 @@ export default function Away() {
       setError(false);
       const res = await send("/api/away", {
         method: "POST",
-        json: { email: auth?.email ?? email, type, startDate, endDate, reason },
+        json: {
+          email: auth?.email ?? email,
+          type,
+          startDate,
+          endDate,
+          reason,
+          ...(type === "leave" ? { leaveType, halfDay: halfDay && leaveType === "cl" } : {}),
+        },
       });
       if (!res.ok) {
         const message = await readError(res);
@@ -119,6 +134,37 @@ export default function Away() {
                 ]}
               />
             </div>
+
+            {type === "leave" && (
+              <div className="mt-4">
+                <label htmlFor="away-leave-type" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  Leave type
+                </label>
+                <select
+                  id="away-leave-type"
+                  value={leaveType}
+                  onChange={(e) => setLeaveType(e.target.value as LeaveType)}
+                  className="h-11 w-full min-w-0 rounded-lg border border-input bg-card px-3.5 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
+                >
+                  <option value="cl">Casual Leave</option>
+                  <option value="sl">Sick Leave</option>
+                  <option value="el">Earned Leave</option>
+                  <option value="fl">Flexible Leave</option>
+                  <option value="ml">Maternity Leave</option>
+                </select>
+                {leaveType === "cl" && (
+                  <label className="mt-2.5 flex items-center gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={halfDay}
+                      onChange={(e) => setHalfDay(e.target.checked)}
+                      className="size-4 rounded border-input accent-foreground"
+                    />
+                    Half day (single day only)
+                  </label>
+                )}
+              </div>
+            )}
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
@@ -205,25 +251,32 @@ export default function Away() {
       )}
 
       <Card className="mt-4 gap-0 p-5">
-        <h2 className="eyebrow">Leave balance · {summary?.year ?? "…"}</h2>
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="eyebrow">Leave balance · {summary?.year ?? "…"}</h2>
+          <Link href="/leave" className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline">
+            Full tracker
+          </Link>
+        </div>
         {!summary ? (
           <Skeleton className="mt-3 h-10 w-full" />
+        ) : !summary.signedIn ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {/* A plain anchor: a Next Link would prefetch the OAuth route and trip CSP. */}
+            <a href="/api/auth/google?next=/away" className="underline underline-offset-4">
+              Sign in
+            </a>{" "}
+            to see your balances — they&apos;re tied to your identity, not this device.
+          </p>
         ) : (
-          <div className="mt-3 grid grid-cols-3 gap-3 text-center">
-            <div>
-              <p className="text-xl font-medium tabular-nums">{summary.usedDays}</p>
-              <p className="text-xs text-muted-foreground">used</p>
-            </div>
-            <div>
-              <p className="text-xl font-medium tabular-nums">{summary.pendingDays}</p>
-              <p className="text-xs text-muted-foreground">pending</p>
-            </div>
-            <div>
-              <p className="text-xl font-medium tabular-nums text-emerald-600">
-                {Math.max(0, summary.allowance - summary.usedDays)}
-              </p>
-              <p className="text-xs text-muted-foreground">of {summary.allowance} left</p>
-            </div>
+          <div className="mt-3 grid grid-cols-4 gap-3 text-center">
+            {summary.ledger?.map((row) => (
+              <div key={row.type}>
+                <p className={`text-xl font-medium tabular-nums ${row.remaining < 0 ? "text-rose-600" : ""}`}>
+                  {Number(row.remaining.toFixed(1))}
+                </p>
+                <p className="text-xs text-muted-foreground">{LEAVE_LABELS[row.type]}</p>
+              </div>
+            ))}
           </div>
         )}
       </Card>

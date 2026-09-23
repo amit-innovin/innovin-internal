@@ -61,6 +61,9 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       startDate: "2026-10-01",
       endDate: "2026-10-02",
       reason: "",
+      leaveType: "cl",
+      halfDay: false,
+      days: 2,
       status: "pending",
       submitterRef: "ref-1",
       decidedBy: null,
@@ -73,6 +76,7 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       name: "Asha",
       picture: "",
       role: "member",
+      joinedOn: null,
       createdAt: iso(),
       lastSeenAt: iso(),
       ...p,
@@ -272,6 +276,24 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(again.name).toBe("Asha Raj");
       });
 
+      it("stores a joining date, clears it, and reports unknown emails", async () => {
+        await store.upsertEmployee(employee());
+        expect((await store.getEmployee("a@innovinlabs.com"))?.joinedOn).toBeNull();
+        expect(await store.setJoinedOn("a@innovinlabs.com", "2024-06-17")).toBe(true);
+        expect(await store.getEmployee("a@innovinlabs.com")).toMatchObject({ joinedOn: "2024-06-17" });
+        expect(await store.setJoinedOn("a@innovinlabs.com", null)).toBe(true);
+        expect((await store.getEmployee("a@innovinlabs.com"))?.joinedOn).toBeNull();
+        expect(await store.setJoinedOn("nobody@innovinlabs.com", "2024-06-17")).toBe(false);
+      });
+
+      // Sign-in upserts on every visit; it must not wipe an admin-entered joining date.
+      it("keeps the joining date when the person signs in again", async () => {
+        await store.upsertEmployee(employee());
+        await store.setJoinedOn("a@innovinlabs.com", "2024-06-17");
+        const again = await store.upsertEmployee(employee({ lastSeenAt: iso(60_000) }));
+        expect(again.joinedOn).toBe("2024-06-17");
+      });
+
       it("lists employees sorted by name", async () => {
         await store.upsertEmployee(employee({ email: "z@innovinlabs.com", name: "Zara" }));
         await store.upsertEmployee(employee({ email: "a@innovinlabs.com", name: "Asha" }));
@@ -315,6 +337,25 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       it("starts requests unattributed", async () => {
         const row = await store.addAway(away());
         expect(row).toMatchObject({ decidedBy: null, decidedAt: null });
+      });
+
+      it("round-trips the leave bucket, half-day flag and charged days", async () => {
+        const half = await store.addAway(away({ leaveType: "cl", halfDay: true, days: 0.5 }));
+        expect(half).toMatchObject({ leaveType: "cl", halfDay: true, days: 0.5 });
+        // WFH draws from no balance at all.
+        const wfh = await store.addAway(away({ type: "wfh", leaveType: null, halfDay: false, days: 0 }));
+        expect(wfh).toMatchObject({ type: "wfh", leaveType: null, days: 0 });
+        const stored = await store.listAway(10);
+        expect(stored.find((r) => r.id === half.id)).toMatchObject({ leaveType: "cl", days: 0.5 });
+        expect(stored.find((r) => r.id === wfh.id)?.leaveType).toBeNull();
+      });
+
+      it("keeps each leave type distinct", async () => {
+        for (const t of ["cl", "sl", "el", "fl", "ml"] as const) {
+          await store.addAway(away({ leaveType: t, days: 1, reason: t }));
+        }
+        const rows = await store.listAway(10);
+        expect(rows.map((r) => r.leaveType).sort()).toEqual(["cl", "el", "fl", "ml", "sl"]);
       });
 
       it("lists only the device's own requests, newest first, with a limit", async () => {

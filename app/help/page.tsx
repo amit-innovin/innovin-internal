@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarDays, CalendarOff, Coffee, MessageSquare, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CalendarOff, Coffee, MessageSquare, Plane, Wifi } from "lucide-react";
 import { IconTile, PageHeader, stagger, type Tone } from "@/components/kit";
 import { Card } from "@/components/ui/card";
 import { orderCutoffHour } from "@/lib/config";
@@ -34,7 +34,13 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: CalendarOff,
     tone: "amber",
     q: "How do leave and WFH requests work?",
-    a: "Open Time Away, pick Leave or Work from home, choose your dates, and send — the coordinator approves or rejects it on the admin dashboard and you can watch the status under Your requests. The Leave balance card tracks your used, pending and remaining leave days for the year. Sign in with Google first so requests come from your verified identity.",
+    a: "Open Time Away, pick Leave or Work from home, choose the leave type and your dates, and send — the coordinator approves or rejects it on the admin dashboard and you can watch the status under Your requests. Sign in with Google first so requests come from your verified identity.",
+  },
+  {
+    icon: Plane,
+    tone: "sky",
+    q: "How is my leave balance calculated?",
+    a: "The Leave tracker shows your remaining days for each type — Casual, Sick, Earned and Flexible — for the calendar year. Leave is counted in working days only: Sundays, the 2nd and 4th Saturday, and declared holidays are never charged, so a week off that contains a holiday costs less than five days. Casual Leave can be taken as a half day. Earned Leave builds up at 1.25 days per completed month and can be used after a year of service. Balances follow your verified Google identity, not the device, so sign in to see them.",
   },
   {
     icon: CalendarDays,

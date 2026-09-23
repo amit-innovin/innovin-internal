@@ -4,6 +4,7 @@ import AccessList from "@/components/access-list";
 import AdminLogin from "@/components/admin-login";
 import { Flash } from "@/components/flash";
 import AwayList from "@/components/away-list";
+import LeaveOverview from "@/components/leave-overview";
 import GrievanceList from "@/components/grievance-list";
 import { Empty, IconTile, MENU_ICONS, QualityDot, SectionHeader, stagger, type Tone } from "@/components/kit";
 import { AnimatedNumber } from "@/components/motion/animated-number";
@@ -24,8 +25,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { currentActor, isAdmin, isOwner } from "@/lib/admin";
-import { leaveAllowanceDays } from "@/lib/config";
-import { fmtDay, fmtDuration, fmtShortDate, fmtTime, leaveDays, relativeDay, totalMinutes } from "@/lib/format";
+import { leaveOverview } from "@/lib/leave-data";
+import { fmtDay, fmtDuration, fmtShortDate, fmtTime, relativeDay, totalMinutes } from "@/lib/format";
 import { locationTag } from "@/lib/geo";
 import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
@@ -74,17 +75,10 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const openGrievances = grievances.filter((g) => g.status !== "resolved").length;
   const poorToday = wifi.filter((w) => w.quality === "poor" && relativeDay(w.createdAt) === "Today").length;
 
-  // Leave usage this year per person — approved days count against the allowance; WFH doesn't count.
-  const year = date.slice(0, 4);
-  const allowance = leaveAllowanceDays();
-  const leaveByEmail = new Map<string, { used: number; pending: number }>();
-  for (const r of away) {
-    if (r.type !== "leave" || !r.startDate.startsWith(year) || r.status === "rejected") continue;
-    const e = leaveByEmail.get(r.email) ?? { used: 0, pending: 0 };
-    e[r.status === "approved" ? "used" : "pending"] += leaveDays(r.startDate, r.endDate);
-    leaveByEmail.set(r.email, e);
-  }
-  const leaveUsage = [...leaveByEmail.entries()].sort((a, b) => b[1].used - a[1].used);
+  // Per-person leave balances for the year, per type, including people who exist only in the
+  // imported 2026 sheet because they haven't signed in yet.
+  const year = Number(date.slice(0, 4));
+  const overview = await leaveOverview(year, date);
 
   // One row per employee: their sessions today, total time, and whether they're in right now.
   const people = [...new Set(attendance.map((a) => a.email))].map((email) => {
@@ -194,23 +188,14 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           aside={away.filter((r) => r.status === "pending").length ? `${away.filter((r) => r.status === "pending").length} pending` : undefined}
         />
         <AwayList items={away} names={Object.fromEntries(names)} now={now} />
-        {leaveUsage.length > 0 && (
-          <>
-            <p className="mt-5 border-t pt-4 text-xs font-medium text-muted-foreground">
-              Leave balance · {year} · {allowance} days each
-            </p>
-            <ul className="mt-1 divide-y">
-              {leaveUsage.map(([email, u]) => (
-                <li key={email} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                  <span className="min-w-0 truncate font-medium">{names.get(email) ?? email}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {u.used} used{u.pending ? ` · ${u.pending} pending` : ""} · {Math.max(0, allowance - u.used)} left
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+      </Card>
+
+      <Card id="leave" className="mt-4 gap-0 p-5">
+        <SectionHeader title={`Leave balances · ${year}`} aside={`${overview.signedIn.length + overview.unmatched.length} people`} />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Remaining days per type. Joining dates drive Earned Leave accrual — set one for anyone showing “add joining date”.
+        </p>
+        <LeaveOverview signedIn={overview.signedIn} unmatched={overview.unmatched} />
       </Card>
 
       {owner && (

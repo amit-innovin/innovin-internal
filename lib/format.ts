@@ -47,11 +47,6 @@ export function sessionMinutes(s: { checkInAt: string; checkOutAt: string | null
 export const totalMinutes = (sessions: { checkInAt: string; checkOutAt: string | null }[], now = Date.now()) =>
   Math.round(sessions.reduce((sum, s) => sum + sessionMinutes(s, now), 0));
 
-// Inclusive calendar days spanned by a leave range ("2026-10-01" → "2026-10-02" = 2).
-export function leaveDays(startDate: string, endDate: string) {
-  return Math.max(0, Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86_400_000) + 1);
-}
-
 export function relativeTime(iso: string, now = Date.now()) {
   const minutes = Math.floor((now - Date.parse(iso)) / 60_000);
   if (minutes < 1) return "Just now";

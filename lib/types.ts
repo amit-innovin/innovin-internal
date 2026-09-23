@@ -1,3 +1,5 @@
+import type { LeaveType } from "./leave";
+
 // owner  — can grant/revoke admin; cannot be demoted by anyone else
 // admin  — the dashboard powers (approvals, publishing, order lists)
 // member — the default on first sign-in
@@ -8,6 +10,9 @@ export type EmployeeRow = {
   name: string;
   picture: string;
   role: Role;
+  // Date of joining (YYYY-MM-DD), admin-entered. Drives Earned Leave accrual, the one-year
+  // availing gate, and Flexible Leave pro-rating. Null until someone fills it in.
+  joinedOn: string | null;
   createdAt: string;
   lastSeenAt: string;
 };
@@ -41,6 +46,12 @@ export type AwayRow = {
   id: string;
   email: string;
   type: AwayType;
+  // Which leave bucket this draws from (null for WFH, and for rows predating leave types).
+  leaveType: LeaveType | null;
+  halfDay: boolean;
+  // Working days charged, frozen at submission so a later holiday-calendar change can't
+  // retroactively alter someone's history.
+  days: number;
   startDate: string; // YYYY-MM-DD
   endDate: string;
   reason: string;
@@ -147,4 +158,5 @@ export interface Store {
   getEmployee(email: string): Promise<EmployeeRow | null>;
   listEmployees(): Promise<EmployeeRow[]>;
   setRole(email: string, role: Role): Promise<boolean>;
+  setJoinedOn(email: string, joinedOn: string | null): Promise<boolean>;
 }

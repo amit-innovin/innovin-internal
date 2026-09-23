@@ -15,3 +15,8 @@ next-env.d.ts
 
 # Local data store (v0 JSON persistence)
 data/
+
+# Test artifacts
+test-results/
+playwright-report/
+.test-data/

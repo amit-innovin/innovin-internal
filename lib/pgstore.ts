@@ -1,5 +1,7 @@
 import { Pool } from "pg";
+import { pgConfig } from "./pgconfig";
 import type {
+  AnnouncementRow,
   AttendanceRow,
   GrievanceRow,
   GrievanceStatus,
@@ -43,7 +45,24 @@ CREATE TABLE IF NOT EXISTS wifi (
   down_mbps real,
   up_mbps real,
   created_at timestamptz NOT NULL
-);`;
+);
+CREATE TABLE IF NOT EXISTS announcements (
+  id text PRIMARY KEY,
+  title text NOT NULL,
+  body text NOT NULL DEFAULT '',
+  tag text NOT NULL DEFAULT 'Office',
+  created_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS attendance_date_idx ON attendance (date);
+CREATE INDEX IF NOT EXISTS orders_date_idx ON orders (date);
+CREATE INDEX IF NOT EXISTS orders_submitter_idx ON orders (submitter_ref, date DESC);
+CREATE INDEX IF NOT EXISTS grievances_created_idx ON grievances (created_at DESC);
+CREATE INDEX IF NOT EXISTS grievances_submitter_idx ON grievances (submitter_ref, created_at DESC);
+CREATE INDEX IF NOT EXISTS wifi_created_idx ON wifi (created_at DESC);
+CREATE INDEX IF NOT EXISTS announcements_created_idx ON announcements (created_at DESC);`;
+
+// Arbitrary constant key for the schema-init advisory lock.
+const SCHEMA_LOCK = 727_071_704;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const attendance = (r: any): AttendanceRow => ({
@@ -78,21 +97,53 @@ const wifi = (r: any): WifiRow => ({
   upMbps: r.up_mbps,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
+const announcement = (r: any): AnnouncementRow => ({
+  id: r.id,
+  title: r.title,
+  body: r.body,
+  tag: r.tag,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+});
 
 class PgStore implements Store {
   private pool: Pool | null = null;
-  private ready: Promise<unknown> | null = null;
+  private ready: Promise<void> | null = null;
 
   private db() {
     if (!this.pool) {
-      this.pool = new Pool({ connectionString: process.env.DATABASE_URL });
-      this.ready = this.pool.query(SCHEMA);
+      this.pool = new Pool(pgConfig());
+      // An idle client dropping (e.g. pooler restart) must not crash the process.
+      this.pool.on("error", (err) => console.error("[pg] idle client error:", err.message));
     }
     return this.pool;
   }
 
+  // Creates tables once per instance. A transaction-scoped advisory lock stops concurrent cold
+  // starts racing on CREATE TABLE (and works through transaction-mode poolers). A failed init is
+  // not cached, so the next query retries instead of failing forever.
+  private init() {
+    this.ready ??= (async () => {
+      const client = await this.db().connect();
+      try {
+        await client.query("BEGIN");
+        await client.query("SELECT pg_advisory_xact_lock($1)", [SCHEMA_LOCK]);
+        await client.query(SCHEMA);
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw err;
+      } finally {
+        client.release();
+      }
+    })().catch((err) => {
+      this.ready = null;
+      throw err;
+    });
+    return this.ready;
+  }
+
   private async q(text: string, params: unknown[] = []) {
-    await this.ready;
+    await this.init();
     return this.db().query(text, params);
   }
 
@@ -135,6 +186,14 @@ class PgStore implements Store {
     const res = await this.q(`SELECT * FROM orders WHERE date = $1 ORDER BY created_at`, [date]);
     return res.rows.map(order);
   }
+  async deleteOrder(ref: string, date: string) {
+    const res = await this.q(`DELETE FROM orders WHERE submitter_ref = $1 AND date = $2`, [ref, date]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async listOrdersByRef(ref: string, limit: number) {
+    const res = await this.q(`SELECT * FROM orders WHERE submitter_ref = $1 ORDER BY date DESC LIMIT $2`, [ref, limit]);
+    return res.rows.map(order);
+  }
   async addGrievance(row: GrievanceRow) {
     const res = await this.q(
       `INSERT INTO grievances (id, body, display_name, submitter_ref, status, created_at)
@@ -144,10 +203,18 @@ class PgStore implements Store {
     return grievance(res.rows[0]);
   }
   async setGrievanceStatus(id: string, status: GrievanceStatus) {
-    await this.q(`UPDATE grievances SET status = $2 WHERE id = $1`, [id, status]);
+    const res = await this.q(`UPDATE grievances SET status = $2 WHERE id = $1`, [id, status]);
+    return (res.rowCount ?? 0) > 0;
   }
   async listGrievances() {
     const res = await this.q(`SELECT * FROM grievances ORDER BY created_at DESC`);
+    return res.rows.map(grievance);
+  }
+  async listGrievancesByRef(ref: string, limit: number) {
+    const res = await this.q(
+      `SELECT * FROM grievances WHERE submitter_ref = $1 ORDER BY created_at DESC LIMIT $2`,
+      [ref, limit],
+    );
     return res.rows.map(grievance);
   }
   async addWifi(row: WifiRow) {
@@ -161,6 +228,20 @@ class PgStore implements Store {
   async listWifi(limit: number) {
     const res = await this.q(`SELECT * FROM wifi ORDER BY created_at DESC LIMIT $1`, [limit]);
     return res.rows.map(wifi);
+  }
+  async addAnnouncement(row: AnnouncementRow) {
+    const res = await this.q(
+      `INSERT INTO announcements (id, title, body, tag, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [row.id, row.title, row.body, row.tag, row.createdAt],
+    );
+    return announcement(res.rows[0]);
+  }
+  async deleteAnnouncement(id: string) {
+    await this.q(`DELETE FROM announcements WHERE id = $1`, [id]);
+  }
+  async listAnnouncements(limit: number) {
+    const res = await this.q(`SELECT * FROM announcements ORDER BY created_at DESC LIMIT $1`, [limit]);
+    return res.rows.map(announcement);
   }
 }
 

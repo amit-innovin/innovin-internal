@@ -1,30 +1,228 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import type { LucideIcon } from "lucide-react";
+import { CalendarCheck, Check, Clock, Coffee, DoorOpen, Megaphone, MessageSquare, Wifi } from "lucide-react";
+import { CityArt, WifiArt } from "@/components/art";
+import { ArrowLink, Empty, IconTile, MENU_ICONS, QualityDot, SectionHeader, STATUS_META, StatusPill, stagger, type Tone } from "@/components/kit";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { DEVICE_COOKIE, EMAIL_COOKIE } from "@/lib/cookies";
+import { firstName, fmtShortDate, fmtTime, greeting, relativeDay, relativeTime } from "@/lib/format";
+import { orderCutoffHour } from "@/lib/config";
+import { MENU } from "@/lib/menu";
+import { store } from "@/lib/store";
+import { findOrderForDevice, grievancesForDevice } from "@/lib/submitter";
+import { istHour, todayIST } from "@/lib/time";
 
-const CARDS = [
-  { href: "/attendance", icon: "📅", title: "Attendance", desc: "Mark your attendance for today." },
-  { href: "/snacks", icon: "☕", title: "Snacks & Tea", desc: "Order your snacks and tea for the day." },
-  { href: "/grievances", icon: "💬", title: "Daily Grievances", desc: "Share any issues or suggestions." },
-  { href: "/wifi", icon: "📶", title: "Wi-Fi Quality", desc: "Report network issues or check quality." },
+export const dynamic = "force-dynamic";
+
+const QUICK_ACTIONS: { href: string; label: string; icon: LucideIcon; tone: Tone }[] = [
+  { href: "/attendance", label: "Attendance", icon: CalendarCheck, tone: "blue" },
+  { href: "/snacks", label: "Snacks & Tea", icon: Coffee, tone: "sky" },
+  { href: "/grievances", label: "Grievances", icon: MessageSquare, tone: "ink" },
+  { href: "/wifi", label: "Wi-Fi Quality", icon: Wifi, tone: "blue" },
 ];
 
-export default function Home() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold">Good day 👋</h1>
-      <p className="mt-1 text-sm text-slate-500">Here&apos;s what&apos;s available today.</p>
+const firstLine = (text: string) => text.split("\n")[0];
 
-      <div className="mt-8 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
-        {CARDS.map((c) => (
-          <Link
-            key={c.href}
-            href={c.href}
-            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+export default async function Home() {
+  const jar = await cookies();
+  const email = jar.get(EMAIL_COOKIE)?.value ?? null;
+  const deviceId = jar.get(DEVICE_COOKIE)?.value;
+  const date = todayIST();
+
+  const [me, order, announcements, grievances, wifi] = await Promise.all([
+    email ? store.getAttendance(email, date) : null,
+    findOrderForDevice(deviceId, date),
+    store.listAnnouncements(2),
+    grievancesForDevice(deviceId, 3),
+    store.listWifi(3),
+  ]);
+
+  const name = firstName(email);
+  const item = order ? MENU.find((m) => m.id === order.itemId) : undefined;
+  const ordersOpen = istHour() < orderCutoffHour();
+  const latestWifi = wifi[0];
+
+  return (
+    <div className="mx-auto max-w-7xl">
+      <div className="t-stagger">
+        <h1 className="text-2xl font-medium tracking-tight" style={stagger(0)}>
+          {greeting()}
+          {name ? `, ${name}` : ""}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground" style={stagger(1)}>
+          Here&apos;s what&apos;s happening today at Innovin.
+        </p>
+      </div>
+
+      <div className="t-stagger mt-6 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.85fr)]">
+        {/* Column 1 */}
+        <div className="flex min-w-0 flex-col gap-5" style={stagger(2)}>
+          <Card className="grid gap-0 p-0 sm:grid-cols-[1.1fr_1fr]">
+            <div className="relative z-10 p-5">
+              <div className="flex min-h-5 items-center gap-2">
+                <DoorOpen className="size-3.5 text-brand" />
+                <h2 className="eyebrow">Today&apos;s Attendance</h2>
+              </div>
+              <div className="mt-5 flex items-center gap-3">
+                <IconTile icon={me ? Check : Clock} tone={me ? "green" : "slate"} />
+                <div>
+                  <p className="text-lg font-medium">
+                    {me ? (
+                      <>
+                        Checked <span className="text-emerald-600">{me.checkOutAt ? "out" : "in"}</span>
+                      </>
+                    ) : (
+                      "Not checked in"
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {me
+                      ? `${fmtTime(me.checkInAt)}${me.checkOutAt ? ` – ${fmtTime(me.checkOutAt)}` : ""} • Office • Innovin`
+                      : "Mark your attendance for today"}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5">
+                <ArrowLink href="/attendance">{me ? "View details" : "Check in now"}</ArrowLink>
+              </div>
+            </div>
+            <div className="relative hidden min-h-44 sm:block">
+              <CityArt className="absolute inset-0" />
+              <p className="absolute right-5 top-1/2 max-w-[9rem] -translate-y-1/2 text-right text-sm font-medium leading-snug text-white drop-shadow">
+                Great teams build great things.
+              </p>
+            </div>
+          </Card>
+
+          <Card className="gap-0 p-5">
+            <SectionHeader title="Quick Actions" />
+            <div className="mt-4 grid grid-cols-4">
+              {QUICK_ACTIONS.map((a, i) => (
+                <div key={a.href} className="flex min-w-0">
+                  {i > 0 && <Separator orientation="vertical" className="my-2" />}
+                  <Link
+                    href={a.href}
+                    className="group flex min-w-0 flex-1 flex-col items-center gap-2 rounded-lg px-1 py-2 text-center transition-colors hover:bg-muted/60"
+                  >
+                    <IconTile icon={a.icon} tone={a.tone} className="transition-transform duration-300 group-hover:-translate-y-0.5 group-active:scale-95" />
+                    <span className="text-[11px] font-medium leading-tight sm:text-xs">{a.label}</span>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="gap-0 p-5">
+            <SectionHeader title="Today's Orders" href="/snacks" />
+            <div className="mt-4 flex items-center gap-3">
+              <IconTile icon={MENU_ICONS[item?.icon ?? "coffee"]} tone={item?.tone ?? "sky"} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{item ? item.name : "Snacks & Tea"}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {item
+                    ? `₹${item.price}${order?.instructions ? ` • ${order.instructions}` : ""}`
+                    : ordersOpen
+                      ? "Not ordered yet"
+                      : "Orders are closed for today"}
+                </p>
+              </div>
+              {ordersOpen && <ArrowLink href="/snacks">{item ? "Change" : "Order now"}</ArrowLink>}
+            </div>
+          </Card>
+        </div>
+
+        {/* Column 2 */}
+        <div className="flex min-w-0 flex-col gap-5" style={stagger(3)}>
+          <Card className="gap-0 p-5">
+            <SectionHeader
+              title="Announcements"
+              badge={announcements[0]?.tag}
+              aside={announcements[0] ? fmtShortDate(announcements[0].createdAt) : undefined}
+            />
+            {announcements.length === 0 ? (
+              <Empty>No announcements right now.</Empty>
+            ) : (
+              <ul className="mt-4 space-y-4">
+                {announcements.map((a) => (
+                  <li key={a.id} className="flex gap-3">
+                    <IconTile icon={Megaphone} tone="blue" size="sm" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{a.title}</p>
+                      {a.body && <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{a.body}</p>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          <Card className="flex-1 gap-0 p-5">
+            <SectionHeader title="Your Grievances" href="/grievances#mine" linkLabel="View all" />
+            {grievances.length === 0 ? (
+              <div className="py-5 text-center">
+                <p className="text-sm text-muted-foreground">Nothing submitted from this device yet.</p>
+                <Button asChild variant="link" size="sm" className="mt-1 text-accent-foreground">
+                  <Link href="/grievances">Share feedback</Link>
+                </Button>
+              </div>
+            ) : (
+              <ul className="mt-2 divide-y">
+                {grievances.map((g) => (
+                  <li key={g.id} className="flex items-center gap-3 py-3">
+                    <IconTile icon={MessageSquare} tone={STATUS_META[g.status].tone} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{firstLine(g.body)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {relativeTime(g.createdAt)} • {g.displayName ? "With name" : "Anonymous"}
+                      </p>
+                    </div>
+                    <StatusPill status={g.status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
+
+        {/* Column 3 */}
+        <Card className="gap-0 p-5 lg:col-span-2 xl:col-span-1" style={stagger(4)}>
+          <SectionHeader title="Wi-Fi Quality" />
+          <div className="mt-4">
+            <WifiArt quality={latestWifi?.quality ?? null} />
+          </div>
+          <p
+            className={`mt-3 text-center text-lg font-medium ${
+              !latestWifi ? "text-muted-foreground" : latestWifi.quality === "good" ? "text-emerald-600" : "text-rose-600"
+            }`}
           >
-            <div className="text-2xl">{c.icon}</div>
-            <div className="mt-3 font-semibold">{c.title}</div>
-            <div className="mt-1 text-sm text-slate-500">{c.desc}</div>
-          </Link>
-        ))}
+            {!latestWifi ? "No reports yet" : latestWifi.quality === "good" ? "Good" : "Poor"}
+          </p>
+          <p className="text-center text-xs text-muted-foreground">
+            {latestWifi ? `Reported ${relativeTime(latestWifi.createdAt).toLowerCase()}` : "Tell us how it's working"}
+          </p>
+          <Button asChild variant="secondary" size="xl" className="mt-4 w-full text-accent-foreground">
+            <Link href="/wifi?check=1">Check Speed</Link>
+          </Button>
+          <p className="mt-5 text-xs font-medium">Recent Reports</p>
+          {wifi.length === 0 ? (
+            <Empty>Nothing reported yet.</Empty>
+          ) : (
+            <ul className="mt-1 divide-y">
+              {wifi.map((w) => (
+                <li key={w.id} className="flex items-center justify-between py-2.5 text-xs text-muted-foreground">
+                  {relativeDay(w.createdAt)}
+                  <QualityDot quality={w.quality} />
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-auto pt-4">
+            <ArrowLink href="/wifi">View details</ArrowLink>
+          </div>
+        </Card>
       </div>
     </div>
   );

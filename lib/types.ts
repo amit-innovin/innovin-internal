@@ -36,6 +36,14 @@ export type WifiRow = {
   createdAt: string;
 };
 
+export type AnnouncementRow = {
+  id: string;
+  title: string;
+  body: string;
+  tag: string;
+  createdAt: string;
+};
+
 export interface Store {
   checkIn(row: AttendanceRow): Promise<AttendanceRow>;
   checkOut(email: string, date: string, at: string): Promise<AttendanceRow | null>;
@@ -43,9 +51,15 @@ export interface Store {
   listAttendance(date: string): Promise<AttendanceRow[]>;
   upsertOrder(row: OrderRow): Promise<OrderRow>;
   listOrders(date: string): Promise<OrderRow[]>;
+  listOrdersByRef(ref: string, limit: number): Promise<OrderRow[]>;
+  deleteOrder(ref: string, date: string): Promise<boolean>;
   addGrievance(row: GrievanceRow): Promise<GrievanceRow>;
-  setGrievanceStatus(id: string, status: GrievanceStatus): Promise<void>;
+  setGrievanceStatus(id: string, status: GrievanceStatus): Promise<boolean>;
   listGrievances(): Promise<GrievanceRow[]>;
+  listGrievancesByRef(ref: string, limit: number): Promise<GrievanceRow[]>;
   addWifi(row: WifiRow): Promise<WifiRow>;
   listWifi(limit: number): Promise<WifiRow[]>;
+  addAnnouncement(row: AnnouncementRow): Promise<AnnouncementRow>;
+  deleteAnnouncement(id: string): Promise<void>;
+  listAnnouncements(limit: number): Promise<AnnouncementRow[]>;
 }

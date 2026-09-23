@@ -1,65 +1,186 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CalendarCheck, Clock, LogOut, Mail, MapPin } from "lucide-react";
+import { toast } from "sonner";
+import { IconTile, PageHeader, SuccessCheck, stagger } from "@/components/kit";
+import { AnimatedNumber } from "@/components/motion/animated-number";
+import { StatefulButton } from "@/components/motion/button/stateful";
+import { Input } from "@/components/motion/input";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getJSON, readError, send } from "@/lib/fetcher";
+import { useButtonState } from "@/lib/hooks/use-button-state";
+import { fmtShortDate, fmtTime } from "@/lib/format";
 
-type Row = { id: string; email: string; checkInAt: string; checkOutAt: string | null };
+type Status = {
+  count: number;
+  email: string | null;
+  me: { checkInAt: string; checkOutAt: string | null } | null;
+};
 
 export default function Attendance() {
+  const [status, setStatus] = useState<Status | null>(null);
   const [email, setEmail] = useState("");
-  const [rows, setRows] = useState<Row[]>([]);
-  const [msg, setMsg] = useState("");
+  const [error, setError] = useState<string | false>(false);
+  const [buttonState, run] = useButtonState();
 
-  const refresh = () => fetch("/api/attendance").then((r) => r.json()).then(setRows);
-  useEffect(() => { refresh(); }, []);
+  const load = async () => {
+    const data = await getJSON<Status>("/api/attendance", "attendance");
+    if (data) setStatus(data);
+  };
+  useEffect(() => {
+    load();
+  }, []);
 
-  async function mark(action: "in" | "out") {
-    setMsg("");
-    const res = await fetch("/api/attendance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, action }),
+  const mark = (action: "in" | "out") =>
+    run(async () => {
+      setError(false);
+      const res = await send("/api/attendance", {
+        method: "POST",
+        json: { email: status?.email ?? email, action },
+      });
+      if (!res.ok) {
+        const message = await readError(res);
+        // The inline field only exists before an email is remembered; otherwise use a toast.
+        if (status?.email) toast.error(message);
+        else setError(message);
+        return false;
+      }
+      toast.success(action === "in" ? "You're checked in" : "Checked out — see you tomorrow");
+      await load();
+      return true;
     });
-    const data = await res.json();
-    setMsg(res.ok ? (action === "in" ? "Checked in ✓" : "Checked out ✓") : data.error);
-    refresh();
+
+  async function forget() {
+    const res = await send("/api/attendance", { method: "DELETE" });
+    if (!res.ok) return toast.error(await readError(res));
+    setEmail("");
+    await load();
   }
 
+  const me = status?.me;
+
   return (
-    <div className="max-w-lg">
-      <h1 className="text-xl font-bold">Attendance</h1>
+    <div className="mx-auto max-w-xl">
+      <PageHeader title="Attendance" />
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
-        <label className="text-sm font-medium">Your Innovin email</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@innovinlabs.com"
-          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        />
-        <div className="mt-4 flex gap-3">
-          <button onClick={() => mark("in")} className="flex-1 rounded-lg bg-indigo-900 py-2 text-sm font-medium text-white">
-            Check In
-          </button>
-          <button onClick={() => mark("out")} className="flex-1 rounded-lg border border-slate-300 py-2 text-sm font-medium">
-            Check Out
-          </button>
-        </div>
-        {msg && <p className="mt-3 text-sm text-slate-600">{msg}</p>}
-      </div>
-
-      <h2 className="mt-8 text-sm font-semibold text-slate-500">Today — {rows.length} checked in</h2>
-      <ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white text-sm">
-        {rows.map((r) => (
-          <li key={r.id} className="flex justify-between px-4 py-2.5">
-            <span>{r.email}</span>
-            <span className="text-slate-500">
-              {new Date(r.checkInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              {r.checkOutAt && ` → ${new Date(r.checkOutAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+      {!status ? (
+        <Card className="items-center gap-3 p-8">
+          <Skeleton className="size-20 rounded-full" />
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-56" />
+          <Skeleton className="mt-4 h-11 w-full rounded-lg" />
+        </Card>
+      ) : me ? (
+        <Card className="t-stagger items-center gap-0 p-8 text-center">
+          <span className="flex size-20 items-center justify-center rounded-full bg-emerald-50" style={stagger(0)}>
+            <span className="flex size-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lift">
+              <SuccessCheck className="size-7" />
             </span>
-          </li>
-        ))}
-      </ul>
+          </span>
+          <h2 className="mt-5 text-lg font-medium text-emerald-600" style={stagger(1)}>
+            {me.checkOutAt ? "You're checked out" : "You're checked in"}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground" style={stagger(2)}>
+            Today, {fmtShortDate(me.checkInAt)} • {fmtTime(me.checkInAt)}
+            {me.checkOutAt && ` – ${fmtTime(me.checkOutAt)}`}
+          </p>
+          <p className="mt-2 inline-flex items-center gap-1 text-sm text-muted-foreground" style={stagger(3)}>
+            <MapPin className="size-4" /> Office • Innovin
+          </p>
+          <div className="mt-6 w-full" style={stagger(4)}>
+            {me.checkOutAt ? (
+              <Button variant="secondary" size="xl" className="w-full" disabled>
+                Done for today — see you tomorrow
+              </Button>
+            ) : (
+              <StatefulButton
+                state={buttonState}
+                onClick={() => mark("out")}
+                loadingText="Checking out"
+                successText="Checked out"
+                errorText="Try again"
+                icon={<LogOut className="size-4" />}
+                className="h-11 w-full rounded-lg font-medium"
+              >
+                Check Out
+              </StatefulButton>
+            )}
+          </div>
+        </Card>
+      ) : (
+        <Card className="gap-0 p-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              mark("in");
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <IconTile icon={Clock} tone="blue" size="lg" />
+              <div>
+                <h2 className="font-medium">Not checked in yet</h2>
+                <p className="text-sm text-muted-foreground">Mark your attendance for today.</p>
+              </div>
+            </div>
+
+            {status.email ? (
+              <p className="mt-5 rounded-lg bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
+                Checking in as <span className="font-medium text-foreground">{status.email}</span>
+                <Button type="button" variant="link" size="sm" onClick={forget} className="ml-1 h-auto p-0 text-accent-foreground">
+                  Not you?
+                </Button>
+              </p>
+            ) : (
+              <div className="mt-5">
+                <Input
+                  label="Your Innovin email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(v) => {
+                    setEmail(v);
+                    setError(false);
+                  }}
+                  error={error}
+                  reserveErrorLine
+                  placeholder="you@innovinlabs.com"
+                  leftIcon={<Mail className="size-4" />}
+                  autoComplete="email"
+                />
+                <p className="text-xs text-muted-foreground">We&apos;ll remember it on this device.</p>
+              </div>
+            )}
+
+            <StatefulButton
+              type="submit"
+              state={buttonState}
+              loadingText="Checking in"
+              successText="Checked in"
+              errorText="Try again"
+              icon={<CalendarCheck className="size-4" />}
+              className="mt-5 h-11 w-full rounded-lg font-medium"
+            >
+              Check In
+            </StatefulButton>
+          </form>
+        </Card>
+      )}
+
+      {status && (
+        <Card className="mt-4 flex-row items-center gap-4 p-5">
+          <IconTile icon={CalendarCheck} tone="blue" />
+          <div>
+            <p className="text-sm font-medium">Today&apos;s summary</p>
+            <p className="text-xs text-muted-foreground">
+              <AnimatedNumber value={status.count} className="text-base font-medium text-foreground" />{" "}
+              {status.count === 1 ? "person" : "people"} checked in today
+            </p>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

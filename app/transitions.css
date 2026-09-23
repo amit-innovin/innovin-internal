@@ -1,0 +1,83 @@
+/* Adapted from transitions.dev (free tier) — https://transitions.dev
+   success-check, icon-swap, texts-reveal. Motion tokens kept as CSS variables. */
+
+:root {
+  --check-dur: 500ms;
+  --check-rotate-from: 80deg;
+  --check-y-amount: 24px;
+  --check-blur-from: 10px;
+  --check-path-delay: 80ms;
+  --check-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --check-ease-bob: cubic-bezier(0.34, 1.35, 0.64, 1);
+
+  --icon-swap-dur: 250ms;
+  --icon-swap-blur: 2px;
+  --icon-swap-start-scale: 0.25;
+
+  --stagger-dur: 500ms;
+  --stagger-distance: 12px;
+  --stagger-step: 60ms;
+  --stagger-blur: 3px;
+  --stagger-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Success check: fade + rotate + blur + Y-bob, SVG path draws on. */
+.t-success-check {
+  display: inline-block;
+  transform-origin: center;
+  opacity: 0;
+  will-change: transform, opacity, filter;
+}
+.t-success-check svg { display: block; overflow: visible; }
+.t-success-check svg path { stroke-dasharray: 24; stroke-dashoffset: 24; }
+.t-success-check[data-state="in"] {
+  animation:
+    t-check-fade var(--check-dur) var(--check-ease-out) forwards,
+    t-check-rotate var(--check-dur) var(--check-ease-out) forwards,
+    t-check-blur var(--check-dur) var(--check-ease-out) forwards,
+    t-check-bob var(--check-dur) var(--check-ease-bob) forwards;
+}
+.t-success-check[data-state="in"] svg path {
+  animation: t-check-draw var(--check-dur) var(--check-ease-out) var(--check-path-delay) forwards;
+}
+@keyframes t-check-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes t-check-rotate { from { transform: rotate(var(--check-rotate-from)); } to { transform: rotate(0deg); } }
+@keyframes t-check-blur { from { filter: blur(var(--check-blur-from)); } to { filter: blur(0); } }
+@keyframes t-check-bob { from { translate: 0 var(--check-y-amount); } to { translate: 0 0; } }
+@keyframes t-check-draw { to { stroke-dashoffset: 0; } }
+
+/* Icon swap: the active icon scales/un-blurs in, the other out. */
+.t-icon-swap { position: relative; display: inline-grid; }
+.t-icon-swap .t-icon {
+  grid-area: 1 / 1;
+  transition:
+    opacity var(--icon-swap-dur) ease-in-out,
+    filter var(--icon-swap-dur) ease-in-out,
+    transform var(--icon-swap-dur) ease-in-out;
+}
+.t-icon-swap[data-state="a"] .t-icon[data-icon="a"],
+.t-icon-swap[data-state="b"] .t-icon[data-icon="b"] { opacity: 1; filter: blur(0); transform: scale(1); }
+.t-icon-swap[data-state="a"] .t-icon[data-icon="b"],
+.t-icon-swap[data-state="b"] .t-icon[data-icon="a"] {
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
+}
+
+/* Texts reveal, generalised to a staggered entrance for any children:
+   <div class="t-stagger"> children rise in with blur, --i controls order. */
+.t-stagger > * {
+  animation: t-stagger-in var(--stagger-dur) var(--stagger-ease) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger-step));
+}
+@keyframes t-stagger-in {
+  from { opacity: 0; transform: translateY(var(--stagger-distance)); filter: blur(var(--stagger-blur)); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-success-check { animation: none !important; opacity: 1; }
+  .t-success-check svg path { animation: none !important; stroke-dashoffset: 0 !important; }
+  .t-icon-swap .t-icon { transition: none !important; }
+  .t-stagger > * { animation: none !important; }
+}

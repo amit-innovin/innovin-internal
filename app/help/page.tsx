@@ -1,0 +1,55 @@
+import type { LucideIcon } from "lucide-react";
+import { CalendarCheck, Coffee, MessageSquare, Wifi } from "lucide-react";
+import { IconTile, PageHeader, stagger, type Tone } from "@/components/kit";
+import { Card } from "@/components/ui/card";
+import { orderCutoffHour } from "@/lib/config";
+import { fmtHour } from "@/lib/format";
+
+// Rendered per request so the cutoff always matches the runtime ORDER_CUTOFF_HOUR the API enforces.
+export const dynamic = "force-dynamic";
+
+const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
+  {
+    icon: CalendarCheck,
+    tone: "blue",
+    q: "How does attendance work?",
+    a: "Enter your Innovin email once and tap Check In. We remember your email on this device, so next time it's one tap. Check out when you leave.",
+  },
+  {
+    icon: Coffee,
+    tone: "sky",
+    q: "How do I order snacks or tea?",
+    a: `Pick one item and submit before ${fmtHour(orderCutoffHour())}. You can change your order until the cutoff — the coordinator gets one consolidated list.`,
+  },
+  {
+    icon: MessageSquare,
+    tone: "ink",
+    q: "Are grievances really anonymous?",
+    a: "Yes. Anonymous submissions never show your name or email to anyone, including admins. You can track the status of your own submissions on this device.",
+  },
+  {
+    icon: Wifi,
+    tone: "blue",
+    q: "Why report Wi-Fi quality?",
+    a: "If nobody flags it, everyone assumes it's fine. Quick Good/Poor reports and speed checks make recurring problems visible so they get fixed.",
+  },
+];
+
+export default function Help() {
+  return (
+    <div className="mx-auto max-w-xl">
+      <PageHeader title="Help" subtitle="Quick answers about how Innovin Internal works." />
+      <div className="t-stagger space-y-3">
+        {faq().map((f, i) => (
+          <Card key={f.q} className="flex-row gap-4 p-5" style={stagger(i)}>
+            <IconTile icon={f.icon} tone={f.tone} size="sm" />
+            <div>
+              <h2 className="text-sm font-medium">{f.q}</h2>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -1,50 +1,63 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Empty, STATUS_META, StatusPill } from "@/components/kit";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { readError, send } from "@/lib/fetcher";
+import { fmtTime, relativeDay } from "@/lib/format";
 import type { GrievanceStatus } from "@/lib/types";
 
-const STATUSES: { value: GrievanceStatus; label: string }[] = [
-  { value: "open", label: "Open" },
-  { value: "in_progress", label: "In progress" },
-  { value: "resolved", label: "Resolved" },
-];
-
-type Item = { id: string; body: string; displayName: string | null; status: GrievanceStatus };
+type Item = { id: string; body: string; displayName: string | null; status: GrievanceStatus; createdAt: string };
 
 export default function GrievanceList({ items }: { items: Item[] }) {
   const router = useRouter();
+  const [statuses, setStatuses] = useState<Record<string, GrievanceStatus>>({});
 
   async function setStatus(id: string, status: GrievanceStatus) {
-    await fetch("/api/grievances", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
-    });
+    setStatuses((s) => ({ ...s, [id]: status }));
+    const res = await send("/api/grievances", { method: "PATCH", json: { id, status } });
+    if (res.ok) {
+      toast.success(`Marked as ${STATUS_META[status].label.toLowerCase()}`);
+    } else {
+      // Roll back the optimistic update.
+      setStatuses(({ [id]: _dropped, ...rest }) => rest);
+      toast.error(res.status === 401 ? "Your admin session expired — sign in again." : await readError(res));
+    }
     router.refresh();
   }
 
+  if (items.length === 0) return <Empty>Nothing reported yet.</Empty>;
+
   return (
-    <ul className="mt-3 space-y-3 text-sm">
-      {items.map((g) => (
-        <li key={g.id} className="rounded-lg bg-slate-50 p-3">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>{g.displayName ?? "Anonymous"}</span>
-            <select
-              value={g.status}
-              onChange={(e) => setStatus(g.id, e.target.value as GrievanceStatus)}
-              className="rounded border border-slate-200 bg-white px-2 py-0.5 text-xs"
-            >
-              {STATUSES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p className="mt-1 text-slate-700">{g.body}</p>
-        </li>
-      ))}
-      {items.length === 0 && <li className="text-slate-400">Nothing reported yet.</li>}
+    <ul className="mt-2 divide-y">
+      {items.map((g) => {
+        const status = statuses[g.id] ?? g.status;
+        return (
+          <li key={g.id} className="py-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">{g.displayName ?? "Anonymous"}</span> · {relativeDay(g.createdAt)},{" "}
+                {fmtTime(g.createdAt)}
+              </p>
+              <Select value={status} onValueChange={(v) => setStatus(g.id, v as GrievanceStatus)}>
+                <SelectTrigger size="sm" aria-label="Status" className="h-auto rounded-full border-0 bg-transparent p-0 shadow-none focus-visible:ring-2">
+                  <StatusPill status={status} />
+                </SelectTrigger>
+                <SelectContent position="popper" align="end">
+                  {(Object.keys(STATUS_META) as GrievanceStatus[]).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {STATUS_META[s].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="mt-2 whitespace-pre-wrap text-sm">{g.body}</p>
+          </li>
+        );
+      })}
     </ul>
   );
 }

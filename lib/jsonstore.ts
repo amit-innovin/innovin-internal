@@ -22,7 +22,7 @@ const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.cr
 async function read(): Promise<DB> {
   let raw: string;
   try {
-    raw = await fs.readFile(file(), "utf8");
+    raw = await fs.readFile(/* turbopackIgnore: true */ file(), "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return empty();
     throw err;
@@ -33,10 +33,10 @@ async function read(): Promise<DB> {
 // Atomic replace: write a temp file, then rename it over the original.
 async function write(db: DB) {
   const target = file();
-  await fs.mkdir(path.dirname(target), { recursive: true });
+  await fs.mkdir(/* turbopackIgnore: true */ path.dirname(target), { recursive: true });
   const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(db, null, 2));
-  await fs.rename(tmp, target);
+  await fs.writeFile(/* turbopackIgnore: true */ tmp, JSON.stringify(db, null, 2));
+  await fs.rename(/* turbopackIgnore: true */ tmp, target);
 }
 
 // Every operation runs through one queue so concurrent requests can't interleave

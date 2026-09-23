@@ -17,11 +17,11 @@ export function setSubmitterCookie(res: NextResponse, deviceId: string | null) {
   if (deviceId) res.cookies.set(DEVICE_COOKIE, deviceId, longLivedCookie);
 }
 
-export async function findOrderForDevice(deviceId: string | undefined, date: string) {
-  if (!deviceId) return null;
+// The device's item rows for one day — an order can hold several items (tea + lunch + ...).
+export async function ordersForDeviceOn(deviceId: string | undefined, date: string) {
+  if (!deviceId) return [];
   const ref = refFor(deviceId);
-  const row = (await store.listOrders(date)).find((o) => o.submitterRef === ref);
-  return row ? strip(row) : null;
+  return (await store.listOrders(date)).filter((o) => o.submitterRef === ref).map(strip);
 }
 
 export async function cancelOrderForDevice(deviceId: string | undefined, date: string) {
@@ -35,4 +35,9 @@ export async function ordersForDevice(deviceId: string | undefined, limit: numbe
 // A device only ever sees its own grievances — never anyone else's.
 export async function grievancesForDevice(deviceId: string | undefined, limit: number) {
   return deviceId ? (await store.listGrievancesByRef(refFor(deviceId), limit)).map(strip) : [];
+}
+
+// Same rule for leave/WFH requests.
+export async function awayForDevice(deviceId: string | undefined, limit: number) {
+  return deviceId ? (await store.listAwayByRef(refFor(deviceId), limit)).map(strip) : [];
 }

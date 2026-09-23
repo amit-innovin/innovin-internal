@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CircleHelp, Coffee, House, MessageSquare, Settings, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CalendarOff, CircleHelp, Coffee, House, MessageSquare, Settings, Wifi } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Logo, Wave } from "@/components/brand";
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,14 @@ type Item = { href: string; label: string; short: string; icon: LucideIcon };
 const PRIMARY: Item[] = [
   { href: "/", label: "Home", short: "Home", icon: House },
   { href: "/attendance", label: "Attendance", short: "Attendance", icon: CalendarCheck },
-  { href: "/snacks", label: "Snacks & Tea", short: "Snacks", icon: Coffee },
+  { href: "/snacks", label: "Meals & Snacks", short: "Meals", icon: Coffee },
   { href: "/grievances", label: "Grievances", short: "Grievances", icon: MessageSquare },
   { href: "/wifi", label: "Wi-Fi Quality", short: "Wi-Fi", icon: Wifi },
 ];
 
 const SECONDARY: Item[] = [
+  { href: "/away", label: "Time Away", short: "Away", icon: CalendarOff },
+  { href: "/events", label: "Events", short: "Events", icon: CalendarDays },
   { href: "/settings", label: "Settings", short: "Settings", icon: Settings },
   { href: "/help", label: "Help", short: "Help", icon: CircleHelp },
 ];

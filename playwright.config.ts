@@ -9,11 +9,24 @@ export const MAIN_URL = "http://localhost:3210";
 export const CLOSED_URL = "http://localhost:3211";
 
 const db = process.env.E2E_DATABASE_URL;
+// Fake office at 12.935,77.624 — e2e geolocation tests check in from inside/outside this geofence.
 const serverEnv = (name: string, cutoff: string) => ({
   ADMIN_PASSCODE: "1704",
   ORDER_CUTOFF_HOUR: cutoff,
   ALLOWED_EMAIL_DOMAINS: "innovinlabs.com",
-  ...(db ? { DATABASE_URL: db } : { DATA_FILE: `.test-data/${name}.json` }),
+  OFFICE_LAT: "12.935",
+  OFFICE_LNG: "77.624",
+  OFFICE_RADIUS_M: "1000",
+  // Google sign-in against the local OAuth mock (e2e/google-mock.ts, started in global-setup).
+  GOOGLE_CLIENT_ID: "e2e-client",
+  GOOGLE_CLIENT_SECRET: "e2e-secret",
+  GOOGLE_AUTH_URL: "http://localhost:3999/auth",
+  GOOGLE_TOKEN_URL: "http://localhost:3999/token",
+  GOOGLE_TOKENINFO_URL: "http://localhost:3999/tokeninfo",
+  SESSION_SECRET: "e2e-session-secret",
+  // DATABASE_URL must be blanked in JSON mode too — the built server loads .env at runtime,
+  // which carries the real production DATABASE_URL and would write test data to prod.
+  ...(db ? { DATABASE_URL: db } : { DATA_FILE: `.test-data/${name}.json`, DATABASE_URL: "" }),
 });
 
 const launchOptions = process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {};

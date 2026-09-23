@@ -8,8 +8,8 @@ import { MENU } from "@/lib/menu";
 import { id, store } from "@/lib/store";
 import {
   cancelOrderForDevice,
-  findOrderForDevice,
   ordersForDevice,
+  ordersForDeviceOn,
   setSubmitterCookie,
   submitterIdentity,
 } from "@/lib/submitter";
@@ -22,11 +22,11 @@ export async function GET(req: NextRequest) {
   const scope = req.nextUrl.searchParams.get("scope");
   const deviceId = req.cookies.get(DEVICE_COOKIE)?.value;
   if (scope === "mine") {
-    const order = await findOrderForDevice(deviceId, todayIST());
-    return NextResponse.json({ open: ordersOpen(), cutoffHour: orderCutoffHour(), order });
+    const items = await ordersForDeviceOn(deviceId, todayIST());
+    return NextResponse.json({ open: ordersOpen(), cutoffHour: orderCutoffHour(), items });
   }
   if (scope === "history") {
-    return NextResponse.json(await ordersForDevice(deviceId, 30));
+    return NextResponse.json(await ordersForDevice(deviceId, 90));
   }
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,23 +44,33 @@ export async function POST(req: NextRequest) {
 
   const body = await readJSON(req);
   if (!body) return badRequest();
-  const itemId = str(body.itemId);
+  const items = body.items;
   const preference = str(body.preference) || "anything";
-  if (!MENU.some((m) => m.id === itemId)) return badRequest("Pick a valid item");
+  if (!Array.isArray(items) || items.some((i) => typeof i !== "string")) return badRequest("Pick a valid item");
+  const itemIds = [...new Set(items)] as string[];
+  if (itemIds.length === 0) return badRequest("Pick at least one item");
+  if (itemIds.length > MENU.length || !itemIds.every((i) => MENU.some((m) => m.id === i))) {
+    return badRequest("Pick a valid item");
+  }
   if (!PREFERENCES.includes(preference)) return badRequest("Pick a valid preference");
 
   const identity = submitterIdentity(req);
-  // One order per browser per day — re-submitting changes your order.
-  const { submitterRef: _r, ...row } = await store.upsertOrder({
-    id: id(),
-    date: todayIST(),
-    itemId,
-    preference,
-    instructions: str(body.instructions).trim().slice(0, 500),
-    submitterRef: identity.ref,
-    createdAt: new Date().toISOString(),
-  });
-  const res = NextResponse.json(row);
+  const now = new Date().toISOString();
+  // One row per item — a day can hold tea + lunch + dinner. Saving replaces the day's selection.
+  const rows = await store.setDayOrders(
+    todayIST(),
+    identity.ref,
+    itemIds.map((itemId) => ({
+      id: id(),
+      date: todayIST(),
+      itemId,
+      preference: itemId === "healthy" ? "healthy" : preference,
+      instructions: str(body.instructions).trim().slice(0, 500),
+      submitterRef: identity.ref,
+      createdAt: now,
+    })),
+  );
+  const res = NextResponse.json({ items: rows.map(({ submitterRef: _r, ...rest }) => rest) });
   setSubmitterCookie(res, identity.deviceId);
   return res;
 }

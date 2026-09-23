@@ -1,29 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Info, MessageSquare, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ImagePlus, Info, MessageSquare, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { VoiceArt } from "@/components/art";
+import { ImagePreview } from "@/components/image-preview";
 import { IconTile, PageHeader, STATUS_META, Segmented, StatusPill, stagger } from "@/components/kit";
 import { StatefulButton } from "@/components/motion/button/stateful";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { getJSON, readError, send } from "@/lib/fetcher";
 import { useButtonState } from "@/lib/hooks/use-button-state";
 import { relativeTime } from "@/lib/format";
+import { compressImage } from "@/lib/image";
 import type { GrievanceStatus } from "@/lib/types";
 
 const MAX = 500;
 
-type Mine = { id: string; body: string; displayName: string | null; status: GrievanceStatus; createdAt: string };
+type Mine = { id: string; body: string; displayName: string | null; image: string | null; status: GrievanceStatus; createdAt: string };
 
 export default function Grievances() {
   const [mode, setMode] = useState<"anonymous" | "named">("anonymous");
   const [body, setBody] = useState("");
   const [name, setName] = useState("");
+  const [image, setImage] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState(false);
   const [mine, setMine] = useState<Mine[]>([]);
   const [buttonState, run] = useButtonState();
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     const data = await getJSON<Mine[]>("/api/grievances?scope=mine", "your submissions");
@@ -39,18 +45,33 @@ export default function Grievances() {
     });
   }, []);
 
+  async function attach(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("That file isn't a photo");
+    setCompressing(true);
+    try {
+      setImage(await compressImage(file));
+    } catch {
+      toast.error("Couldn't read that photo — try a different one");
+    } finally {
+      setCompressing(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     run(async () => {
       const res = await send("/api/grievances", {
         method: "POST",
-        json: { body, displayName: mode === "anonymous" ? null : name },
+        json: { body, displayName: mode === "anonymous" ? null : name, image },
       });
       if (!res.ok) {
         toast.error(await readError(res));
         return false;
       }
       setBody("");
+      setImage(null);
       toast.success("Thank you — we'll look into it and take action where needed.");
       await load();
       return true;
@@ -96,10 +117,48 @@ export default function Grievances() {
           {body.length}/{MAX}
         </div>
 
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/*"
+          aria-label="Attach a photo"
+          className="hidden"
+          onChange={(e) => attach(e.target.files?.[0])}
+        />
+        {image ? (
+          <div className="relative mt-3 inline-block">
+            <ImagePreview src={image} alt="Attached photo" className="size-20" />
+            <button
+              type="button"
+              onClick={() => setImage(null)}
+              aria-label="Remove photo"
+              className="absolute -right-2 -top-2 rounded-full border bg-card p-1 text-muted-foreground shadow-sm hover:text-destructive"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={compressing}
+            onClick={() => fileInput.current?.click()}
+            className="mt-3 text-muted-foreground"
+          >
+            <ImagePlus /> {compressing ? "Preparing photo…" : "Add a photo (optional)"}
+          </Button>
+        )}
+        {mode === "anonymous" && image && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Photos are part of the report — avoid faces or names if you want to stay anonymous.
+          </p>
+        )}
+
         <StatefulButton
           type="submit"
           state={buttonState}
-          disabled={!body.trim()}
+          disabled={!body.trim() || compressing}
           loadingText="Submitting"
           successText="Submitted"
           errorText="Try again"
@@ -135,6 +194,7 @@ export default function Grievances() {
                 <IconTile icon={MessageSquare} tone={STATUS_META[g.status].tone} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm">{g.body}</p>
+                  {g.image && <ImagePreview src={g.image} alt="Attached photo" className="mt-2" />}
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {relativeTime(g.createdAt)} • {g.displayName ? "With name" : "Anonymous"}
                   </p>

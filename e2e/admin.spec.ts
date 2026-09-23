@@ -11,7 +11,7 @@ test.describe("Admin", () => {
     await page.reload();
     await typePin(page, "1704");
     await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
-    for (const stat of ["Checked in today", "Snack orders today", "Open grievances", "Poor Wi-Fi reports today"]) {
+    for (const stat of ["Checked in today", "Orders today", "Open grievances", "Poor Wi-Fi reports today"]) {
       await expect(page.getByText(stat)).toBeVisible();
     }
   });
@@ -68,9 +68,9 @@ test.describe("Admin", () => {
   test("announcements: post → visible to employees → delete with confirmation", async ({ page, browser }) => {
     const title = uniqueText("Fire drill at 3 PM");
     await adminLogin(page);
-    await page.locator('input[name="title"]').fill(title);
-    await page.locator('input[name="tag"]').fill("Safety");
-    await page.locator('textarea[name="body"]').fill("Assemble at the parking lot.");
+    await page.locator('#announcements input[name="title"]').fill(title);
+    await page.locator('#announcements input[name="tag"]').fill("Safety");
+    await page.locator('#announcements textarea[name="body"]').fill("Assemble at the parking lot.");
     await page.getByRole("button", { name: "Post announcement" }).click();
     await expect(page.getByText("Announcement posted")).toBeVisible();
     await expect(page).not.toHaveURL(/done=/);

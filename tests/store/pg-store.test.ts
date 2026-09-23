@@ -23,7 +23,7 @@ if (!url) {
     async () => {
       const client = new Client({ connectionString: url });
       await client.connect();
-      await client.query("TRUNCATE attendance, orders, grievances, wifi, announcements");
+      await client.query("TRUNCATE attendance, orders, grievances, wifi, announcements, employees, away, events, event_rsvps");
       await client.end();
     },
   );

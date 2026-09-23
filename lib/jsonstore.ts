@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { AnnouncementRow, AttendanceRow, GrievanceRow, OrderRow, Store, WifiRow } from "./types";
+import type { AnnouncementRow, AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, RsvpRow, Store, WifiRow } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -12,9 +12,13 @@ type DB = {
   grievances: GrievanceRow[];
   wifi: WifiRow[];
   announcements: AnnouncementRow[];
+  employees: EmployeeRow[];
+  away: AwayRow[];
+  events: EventRow[];
+  rsvps: RsvpRow[];
 };
 
-const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [] });
+const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -22,7 +26,7 @@ const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.cr
 async function read(): Promise<DB> {
   let raw: string;
   try {
-    raw = await fs.readFile(file(), "utf8");
+    raw = await fs.readFile(/* turbopackIgnore: true */ file(), "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return empty();
     throw err;
@@ -33,10 +37,10 @@ async function read(): Promise<DB> {
 // Atomic replace: write a temp file, then rename it over the original.
 async function write(db: DB) {
   const target = file();
-  await fs.mkdir(path.dirname(target), { recursive: true });
+  await fs.mkdir(/* turbopackIgnore: true */ path.dirname(target), { recursive: true });
   const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(db, null, 2));
-  await fs.rename(tmp, target);
+  await fs.writeFile(/* turbopackIgnore: true */ tmp, JSON.stringify(db, null, 2));
+  await fs.rename(/* turbopackIgnore: true */ tmp, target);
 }
 
 // Every operation runs through one queue so concurrent requests can't interleave
@@ -62,30 +66,31 @@ const query = <T>(fn: (db: DB) => T) => locked(async () => fn(await read()));
 export const jsonStore: Store = {
   checkIn: (row) =>
     mutate((db) => {
-      const existing = db.attendance.find((r) => r.email === row.email && r.date === row.date);
-      if (existing) return { result: existing, changed: false };
+      const open = db.attendance.find((r) => r.email === row.email && r.date === row.date && !r.checkOutAt);
+      if (open) return { result: open, changed: false };
       db.attendance.unshift(row);
       return { result: row, changed: true };
     }),
   checkOut: (email, date, at) =>
     mutate((db) => {
-      const row = db.attendance.find((r) => r.email === email && r.date === date);
-      if (row) row.checkOutAt = at;
-      return { result: row ?? null, changed: !!row };
+      const open = db.attendance.find((r) => r.email === email && r.date === date && !r.checkOutAt);
+      if (open) open.checkOutAt = at;
+      return { result: open ?? null, changed: !!open };
     }),
-  getAttendance: (email, date) => query((db) => db.attendance.find((r) => r.email === email && r.date === date) ?? null),
+  getAttendance: (email, date) =>
+    query((db) => db.attendance.find((r) => r.email === email && r.date === date && !r.checkOutAt) ?? null),
+  listAttendanceByEmail: (email, date) =>
+    query((db) =>
+      db.attendance.filter((r) => r.email === email && r.date === date).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt)),
+    ),
   listAttendance: (date) =>
     query((db) => db.attendance.filter((r) => r.date === date).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt))),
 
-  upsertOrder: (row) =>
+  setDayOrders: (date, ref, rows) =>
     mutate((db) => {
-      const existing = db.orders.find((r) => r.date === row.date && r.submitterRef === row.submitterRef);
-      if (existing) {
-        Object.assign(existing, { itemId: row.itemId, preference: row.preference, instructions: row.instructions });
-        return { result: existing, changed: true };
-      }
-      db.orders.unshift(row);
-      return { result: row, changed: true };
+      db.orders = db.orders.filter((o) => !(o.date === date && o.submitterRef === ref));
+      db.orders.unshift(...rows);
+      return { result: rows, changed: true };
     }),
   listOrders: (date) =>
     query((db) => db.orders.filter((r) => r.date === date).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
@@ -143,4 +148,96 @@ export const jsonStore: Store = {
       return { result: undefined, changed: db.announcements.length < before };
     }),
   listAnnouncements: (limit) => query((db) => db.announcements.sort(newestFirst).slice(0, limit)),
+
+  upsertEmployee: (row) =>
+    mutate((db) => {
+      const existing = db.employees.find((e) => e.email === row.email);
+      if (existing) {
+        existing.name = row.name;
+        existing.picture = row.picture;
+        existing.lastSeenAt = row.lastSeenAt;
+        return { result: existing, changed: true };
+      }
+      db.employees.unshift(row);
+      return { result: row, changed: true };
+    }),
+  getEmployee: (email) => query((db) => db.employees.find((e) => e.email === email) ?? null),
+  listEmployees: () =>
+    query((db) => db.employees.slice().sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email))),
+
+  addAway: (row) =>
+    mutate((db) => {
+      db.away.unshift(row);
+      return { result: row, changed: true };
+    }),
+  setAwayStatus: (id, status) =>
+    mutate((db) => {
+      const row = db.away.find((r) => r.id === id);
+      if (row) row.status = status;
+      return { result: !!row, changed: !!row };
+    }),
+  listAway: (limit) => query((db) => db.away.sort(newestFirst).slice(0, limit)),
+  listAwayByRef: (ref, limit) =>
+    query((db) =>
+      db.away
+        .filter((r) => r.submitterRef === ref)
+        .sort(newestFirst)
+        .slice(0, limit),
+    ),
+  listAwayByEmail: (email, limit) =>
+    query((db) =>
+      db.away
+        .filter((r) => r.email === email)
+        .sort(newestFirst)
+        .slice(0, limit),
+    ),
+
+  addEvent: (row) =>
+    mutate((db) => {
+      db.events.unshift(row);
+      return { result: row, changed: true };
+    }),
+  getEvent: (rid) => query((db) => db.events.find((e) => e.id === rid) ?? null),
+  deleteEvent: (rid) =>
+    mutate((db) => {
+      const before = db.events.length;
+      db.events = db.events.filter((e) => e.id !== rid);
+      const found = db.events.length !== before;
+      if (found) db.rsvps = db.rsvps.filter((r) => r.eventId !== rid);
+      return { result: found, changed: found };
+    }),
+  listEvents: (fromIso, limit) =>
+    query((db) =>
+      db.events
+        .filter((e) => e.startsAt >= fromIso)
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+        .slice(0, limit),
+    ),
+  setRsvp: (eventId, ref, email, going) =>
+    mutate((db) => {
+      if (going) {
+        const existing = db.rsvps.find((r) => r.eventId === eventId && r.submitterRef === ref);
+        if (existing) {
+          existing.email = email;
+        } else {
+          db.rsvps.push({ eventId, submitterRef: ref, email, createdAt: new Date().toISOString() });
+        }
+      } else {
+        db.rsvps = db.rsvps.filter((r) => !(r.eventId === eventId && r.submitterRef === ref));
+      }
+      return { result: undefined, changed: true };
+    }),
+  listRsvps: (eventId) =>
+    query((db) =>
+      db.rsvps
+        .filter((r) => r.eventId === eventId)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    ),
+  rsvpCounts: (eventIds) =>
+    query((db) => {
+      const counts: Record<string, number> = {};
+      for (const r of db.rsvps) if (eventIds.includes(r.eventId)) counts[r.eventId] = (counts[r.eventId] ?? 0) + 1;
+      return counts;
+    }),
+  myRsvpEventIds: (ref) => query((db) => db.rsvps.filter((r) => r.submitterRef === ref).map((r) => r.eventId)),
 };

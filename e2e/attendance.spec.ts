@@ -19,10 +19,10 @@ test.describe("Attendance", () => {
     await expect(page.getByRole("heading", { name: "Not checked in yet" })).toBeVisible();
   });
 
-  test("full day: check in, remembered on reload, check out, done state, reflected on home", async ({ page }) => {
+  test("full day: check in, check out, check in again — sessions and total tracked", async ({ page }) => {
     const email = uniqueEmail("amit");
     await checkIn(page, email);
-    await expect(page.getByText("Office • Innovin")).toBeVisible();
+    await expect(page.getByText("Location not shared • Innovin")).toBeVisible();
     await expect(page.getByText(/person|people/)).toBeVisible();
 
     await page.reload();
@@ -30,11 +30,32 @@ test.describe("Attendance", () => {
 
     await page.getByRole("button", { name: "Check Out" }).click();
     await expect(page.getByRole("heading", { name: "You're checked out" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Done for today/ })).toBeDisabled();
+    await expect(page.getByText(/today across 1 session/)).toBeVisible();
+
+    // Stepped out and back — a second session starts, and the list shows both.
+    await page.getByRole("button", { name: "Check In Again" }).click();
+    await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
+    await expect(page.getByText("in progress")).toBeVisible();
+    await expect(page.locator("ul >> li", { hasText: "– now" })).toHaveCount(1);
 
     await page.goto("/");
-    await expect(page.getByText("Checked out")).toBeVisible();
+    await expect(page.getByText(/Checked in/)).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(", Amit");
+  });
+
+  test("check-in inside the office radius tags the session In office", async ({ page, context }) => {
+    await context.grantPermissions(["geolocation"]);
+    await context.setGeolocation({ latitude: 12.9352, longitude: 77.6241, accuracy: 15 });
+    await checkIn(page, uniqueEmail("office"));
+    await expect(page.getByText("In office • Innovin")).toBeVisible();
+    await expect(page.locator("ul >> li", { hasText: "– now" })).toContainText("In office");
+  });
+
+  test("check-in far from the office tags the session Working remotely", async ({ page, context }) => {
+    await context.grantPermissions(["geolocation"]);
+    await context.setGeolocation({ latitude: 13.05, longitude: 77.6, accuracy: 20 });
+    await checkIn(page, uniqueEmail("remote"));
+    await expect(page.getByText("Working remotely • Innovin")).toBeVisible();
   });
 
   test("a remembered email offers one-tap check-in and 'Not you?' switches user", async ({ page, context, baseURL }) => {
@@ -57,7 +78,8 @@ test.describe("Attendance", () => {
     const email = uniqueEmail();
     await checkIn(page, email);
     await page.goto("/settings");
-    await expect(page.getByText(email)).toBeVisible();
+    await expect(page.getByText("Remembered email")).toBeVisible();
+    await expect(page.getByText(email).first()).toBeVisible();
     await page.getByRole("button", { name: "Forget me on this device" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Forget me" }).click();
     await expect(page.getByText("No email saved on this device")).toBeVisible();

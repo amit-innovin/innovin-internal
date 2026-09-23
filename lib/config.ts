@@ -1,8 +1,15 @@
 // Runtime configuration read from environment variables (server-side only).
 
+// Orders are open all day by default (24); set ORDER_CUTOFF_HOUR to enforce a daily deadline.
 export function orderCutoffHour() {
-  const hour = Number(process.env.ORDER_CUTOFF_HOUR ?? 11);
-  return Number.isInteger(hour) && hour >= 0 && hour <= 24 ? hour : 11;
+  const hour = Number(process.env.ORDER_CUTOFF_HOUR ?? 24);
+  return Number.isInteger(hour) && hour >= 0 && hour <= 24 ? hour : 24;
+}
+
+// Annual paid-leave allowance per person, in days. Placeholder until real entitlement data lands.
+export function leaveAllowanceDays() {
+  const days = Number(process.env.LEAVE_ALLOWANCE_DAYS ?? 12);
+  return Number.isInteger(days) && days > 0 && days <= 365 ? days : 12;
 }
 
 export function allowedEmailDomains() {
@@ -24,6 +31,9 @@ export const LIMITS = {
   wifiIp: { max: 300, windowMs: 60 * MIN },
   speedtestDevice: { max: 10, windowMs: 10 * MIN },
   speedtestIp: { max: 150, windowMs: 10 * MIN },
+  authIp: { max: 30, windowMs: 15 * MIN },
+  awayDevice: { max: 15, windowMs: 60 * MIN },
+  rsvpDevice: { max: 60, windowMs: 60 * MIN },
   writeIp: { max: 120, windowMs: MIN },
 } as const;
 

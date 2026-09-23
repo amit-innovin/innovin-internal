@@ -41,6 +41,35 @@ test.describe("Daily Grievances", () => {
     await expect(page.locator("#mine li", { hasText: text })).toContainText("With name");
   });
 
+  test("a photo attaches, previews, can be removed, and lands in the submission", async ({ page }) => {
+    // 1×1 PNG — compression runs in the browser before upload.
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    const file = { name: "broken-ac.png", mimeType: "image/png", buffer: png };
+
+    const text = uniqueText("AC vent is dripping");
+    await page.goto("/grievances");
+    // Fill first — the counter updating proves React has hydrated before we set files.
+    await page.getByLabel("Your feedback").fill(text);
+    await expect(page.getByText(`${text.length}/500`)).toBeVisible();
+
+    const attach = page.getByLabel("Attach a photo");
+    await attach.setInputFiles(file);
+    await expect(page.getByRole("button", { name: "View Attached photo" })).toBeVisible();
+
+    // Remove, then attach again for real.
+    await page.getByRole("button", { name: "Remove photo" }).click();
+    await expect(page.getByRole("button", { name: "View Attached photo" })).toHaveCount(0);
+    await attach.setInputFiles(file);
+    await expect(page.getByRole("button", { name: "View Attached photo" })).toBeVisible();
+    await page.getByRole("button", { name: "Submit" }).click();
+    await expect(page.getByText("we'll look into it")).toBeVisible();
+    const mine = page.locator("#mine li", { hasText: text });
+    await expect(mine.getByRole("button", { name: "View Attached photo" })).toBeVisible();
+  });
+
   test("home 'View all' deep-links and scrolls to the submissions list", async ({ page }) => {
     const text = uniqueText("Deep link check");
     await page.goto("/grievances");

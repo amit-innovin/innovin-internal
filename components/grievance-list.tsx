@@ -3,13 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ImagePreview } from "@/components/image-preview";
 import { Empty, STATUS_META, StatusPill } from "@/components/kit";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { readError, send } from "@/lib/fetcher";
 import { fmtTime, relativeDay } from "@/lib/format";
 import type { GrievanceStatus } from "@/lib/types";
 
-type Item = { id: string; body: string; displayName: string | null; status: GrievanceStatus; createdAt: string };
+type Item = { id: string; body: string; displayName: string | null; image: string | null; status: GrievanceStatus; createdAt: string };
 
 export default function GrievanceList({ items }: { items: Item[] }) {
   const router = useRouter();
@@ -55,6 +56,7 @@ export default function GrievanceList({ items }: { items: Item[] }) {
               </Select>
             </div>
             <p className="mt-2 whitespace-pre-wrap text-sm">{g.body}</p>
+            {g.image && <ImagePreview src={g.image} alt="Attached photo" className="mt-2" />}
           </li>
         );
       })}

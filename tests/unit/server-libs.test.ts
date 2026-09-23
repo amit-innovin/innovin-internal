@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAdminSession, validAdminPasscode, verifyAdminSession } from "@/lib/admin";
+import { createOauthState, createUserSession, sanitizeNext, verifyOauthState, verifyUserSession } from "@/lib/auth";
 import { ADMIN_SESSION_MS, allowedEmailDomains, orderCutoffHour } from "@/lib/config";
 import { clientIp, readJSON } from "@/lib/http";
+import { distanceM, locationTag, officeLocation } from "@/lib/geo";
 import { pgConfig } from "@/lib/pgconfig";
 import { hit, peek, reset, resetAll } from "@/lib/rate-limit";
 import { istHour, todayIST } from "@/lib/time";
@@ -26,13 +28,13 @@ describe("IST time", () => {
 });
 
 describe("config", () => {
-  it("parses ORDER_CUTOFF_HOUR with a safe default", () => {
-    expect(orderCutoffHour()).toBe(11);
+  it("parses ORDER_CUTOFF_HOUR, defaulting to open all day", () => {
+    expect(orderCutoffHour()).toBe(24);
     vi.stubEnv("ORDER_CUTOFF_HOUR", "15");
     expect(orderCutoffHour()).toBe(15);
     for (const bad of ["abc", "-1", "25", "10.5"]) {
       vi.stubEnv("ORDER_CUTOFF_HOUR", bad);
-      expect(orderCutoffHour()).toBe(11);
+      expect(orderCutoffHour()).toBe(24);
     }
   });
 
@@ -40,6 +42,41 @@ describe("config", () => {
     expect(allowedEmailDomains()).toEqual(["innovinlabs.com"]);
     vi.stubEnv("ALLOWED_EMAIL_DOMAINS", " InnovinLabs.com , partner.io ,");
     expect(allowedEmailDomains()).toEqual(["innovinlabs.com", "partner.io"]);
+  });
+});
+
+describe("office geofence", () => {
+  it("is unset without OFFICE_LAT/OFFICE_LNG, so nothing is classified", () => {
+    expect(officeLocation()).toBeNull();
+    expect(locationTag(12.9, 77.6)).toBe("unknown");
+    expect(locationTag(null, null)).toBe("unknown");
+  });
+
+  it("classifies inside/outside the radius, rejects bad config", () => {
+    vi.stubEnv("OFFICE_LAT", "12.935");
+    vi.stubEnv("OFFICE_LNG", "77.624");
+    vi.stubEnv("OFFICE_RADIUS_M", "500");
+    expect(officeLocation()).toEqual({ lat: 12.935, lng: 77.624, radiusM: 500 });
+    expect(locationTag(12.935, 77.624)).toBe("office");
+    expect(locationTag(12.9365, 77.6245)).toBe("office"); // ~170m away
+    expect(locationTag(13.05, 77.6)).toBe("remote"); // ~13km away
+    expect(locationTag(null, null)).toBe("unknown");
+    expect(locationTag(12.935, null)).toBe("unknown");
+
+    vi.stubEnv("OFFICE_LAT", "not-a-number");
+    expect(officeLocation()).toBeNull();
+    expect(locationTag(12.935, 77.624)).toBe("unknown");
+
+    vi.stubEnv("OFFICE_RADIUS_M", "99999999"); // over the 50km sanity cap → default 300m
+    vi.stubEnv("OFFICE_LAT", "12.935");
+    expect(officeLocation()?.radiusM).toBe(300);
+  });
+
+  it("computes sane distances", () => {
+    expect(distanceM(12.935, 77.624, 12.935, 77.624)).toBe(0);
+    const d = distanceM(12.935, 77.624, 12.945, 77.634); // ~1.56km diagonal
+    expect(d).toBeGreaterThan(1400);
+    expect(d).toBeLessThan(1700);
   });
 });
 
@@ -122,6 +159,53 @@ describe("admin auth", () => {
     const token = createAdminSession();
     vi.stubEnv("ADMIN_PASSCODE", "");
     expect(verifyAdminSession(token)).toBe(false);
+  });
+});
+
+describe("employee sessions & oauth state", () => {
+  beforeEach(() => {
+    vi.stubEnv("SESSION_SECRET", "test-secret");
+    vi.stubEnv("ADMIN_PASSCODE", "");
+  });
+
+  const me = { email: "asha@innovinlabs.com", name: "Asha" };
+
+  it("issues sessions that verify, expire after 30 days, and resist tampering", () => {
+    const now = Date.now();
+    const token = createUserSession(me, now)!;
+    expect(verifyUserSession(token, now)).toEqual(me);
+    expect(verifyUserSession(token, now + 30 * 24 * 3_600_000 - 1000)).toEqual(me);
+    expect(verifyUserSession(token, now + 30 * 24 * 3_600_000 + 1000)).toBeNull();
+
+    const dot = token.lastIndexOf(".");
+    expect(verifyUserSession(`${token.slice(0, dot)}.${"0".repeat(64)}`, now)).toBeNull();
+    expect(verifyUserSession("garbage")).toBeNull();
+    vi.stubEnv("SESSION_SECRET", "other-secret");
+    expect(verifyUserSession(token, now)).toBeNull();
+  });
+
+  it("returns null when no signing secret exists", () => {
+    vi.stubEnv("SESSION_SECRET", "");
+    vi.stubEnv("ADMIN_PASSCODE", "");
+    expect(createUserSession(me)).toBeNull();
+    expect(verifyUserSession("x.y")).toBeNull();
+  });
+
+  it("oauth state round-trips the next path and rejects mismatched or stale cookies", () => {
+    const now = Date.now();
+    const { cookie, state } = createOauthState("/attendance", now);
+    expect(verifyOauthState(cookie, state, now)).toBe("/attendance");
+    expect(verifyOauthState(cookie, state, now + 11 * 60_000)).toBeNull();
+    expect(verifyOauthState(cookie, "other-nonce.xyz", now)).toBeNull();
+    expect(verifyOauthState(`${Date.now()}.n.sig`, state, now)).toBeNull();
+    expect(verifyOauthState(undefined, state, now)).toBeNull();
+    expect(verifyOauthState(cookie, null, now)).toBeNull();
+
+    // next is sanitized: only same-origin paths survive.
+    expect(sanitizeNext("/settings")).toBe("/settings");
+    expect(sanitizeNext("https://evil.com")).toBe("/");
+    expect(sanitizeNext("//evil.com")).toBe("/");
+    expect(sanitizeNext(null)).toBe("/");
   });
 });
 

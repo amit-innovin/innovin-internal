@@ -1,7 +1,7 @@
 // Shared app building blocks, composed from shadcn/ui, beUI and transitions.dev.
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Coffee, Cookie, Leaf, Plus } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Coffee, Cookie, Leaf, Plus, Soup, UtensilsCrossed } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { AnimatedBadge, type AnimatedBadgeStatus } from "@/components/motion/animated-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
@@ -23,7 +23,13 @@ export const TONES = {
 
 export type Tone = keyof typeof TONES;
 
-export const MENU_ICONS: Record<string, LucideIcon> = { coffee: Coffee, cookie: Cookie, leaf: Leaf };
+export const MENU_ICONS: Record<string, LucideIcon> = {
+  coffee: Coffee,
+  cookie: Cookie,
+  leaf: Leaf,
+  utensils: UtensilsCrossed,
+  soup: Soup,
+};
 
 const TILE = { sm: "size-9 [&_svg]:size-4", md: "size-11 [&_svg]:size-5", lg: "size-14 [&_svg]:size-6" };
 

@@ -3,6 +3,10 @@ import { pgConfig } from "./pgconfig";
 import type {
   AnnouncementRow,
   AttendanceRow,
+  AwayRow,
+  AwayStatus,
+  EmployeeRow,
+  EventRow,
   GrievanceRow,
   GrievanceStatus,
   OrderRow,
@@ -18,7 +22,9 @@ CREATE TABLE IF NOT EXISTS attendance (
   date text NOT NULL,
   check_in_at timestamptz NOT NULL,
   check_out_at timestamptz,
-  UNIQUE (email, date)
+  lat double precision,
+  lng double precision,
+  accuracy_m real
 );
 CREATE TABLE IF NOT EXISTS orders (
   id text PRIMARY KEY,
@@ -28,12 +34,13 @@ CREATE TABLE IF NOT EXISTS orders (
   instructions text NOT NULL DEFAULT '',
   submitter_ref text NOT NULL,
   created_at timestamptz NOT NULL,
-  UNIQUE (date, submitter_ref)
+  UNIQUE (date, submitter_ref, item_id)
 );
 CREATE TABLE IF NOT EXISTS grievances (
   id text PRIMARY KEY,
   body text NOT NULL,
   display_name text,
+  image text,
   submitter_ref text NOT NULL,
   status text NOT NULL DEFAULT 'open',
   created_at timestamptz NOT NULL
@@ -53,13 +60,62 @@ CREATE TABLE IF NOT EXISTS announcements (
   tag text NOT NULL DEFAULT 'Office',
   created_at timestamptz NOT NULL
 );
+CREATE TABLE IF NOT EXISTS employees (
+  email text PRIMARY KEY,
+  name text NOT NULL DEFAULT '',
+  picture text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL,
+  last_seen_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS away (
+  id text PRIMARY KEY,
+  email text NOT NULL,
+  type text NOT NULL,
+  start_date text NOT NULL,
+  end_date text NOT NULL,
+  reason text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT 'pending',
+  submitter_ref text NOT NULL,
+  created_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS events (
+  id text PRIMARY KEY,
+  title text NOT NULL,
+  body text NOT NULL DEFAULT '',
+  category text NOT NULL,
+  starts_at timestamptz NOT NULL,
+  location text NOT NULL DEFAULT '',
+  created_by text NOT NULL DEFAULT 'admin',
+  created_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS event_rsvps (
+  event_id text NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  submitter_ref text NOT NULL,
+  email text,
+  created_at timestamptz NOT NULL,
+  PRIMARY KEY (event_id, submitter_ref)
+);
+-- Migrations for databases created before sessions/multi-item orders/images existed:
+ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
+ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lat double precision;
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lng double precision;
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS accuracy_m real;
+-- At most one open (not-checked-out) session per person per day.
+CREATE UNIQUE INDEX IF NOT EXISTS attendance_open_session ON attendance (email, date) WHERE check_out_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_day_ref_item ON orders (date, submitter_ref, item_id);
 CREATE INDEX IF NOT EXISTS attendance_date_idx ON attendance (date);
 CREATE INDEX IF NOT EXISTS orders_date_idx ON orders (date);
 CREATE INDEX IF NOT EXISTS orders_submitter_idx ON orders (submitter_ref, date DESC);
 CREATE INDEX IF NOT EXISTS grievances_created_idx ON grievances (created_at DESC);
 CREATE INDEX IF NOT EXISTS grievances_submitter_idx ON grievances (submitter_ref, created_at DESC);
 CREATE INDEX IF NOT EXISTS wifi_created_idx ON wifi (created_at DESC);
-CREATE INDEX IF NOT EXISTS announcements_created_idx ON announcements (created_at DESC);`;
+CREATE INDEX IF NOT EXISTS announcements_created_idx ON announcements (created_at DESC);
+CREATE INDEX IF NOT EXISTS away_created_idx ON away (created_at DESC);
+CREATE INDEX IF NOT EXISTS away_submitter_idx ON away (submitter_ref, created_at DESC);
+CREATE INDEX IF NOT EXISTS events_starts_idx ON events (starts_at);
+CREATE INDEX IF NOT EXISTS event_rsvps_ref_idx ON event_rsvps (submitter_ref);`;
 
 // Arbitrary constant key for the schema-init advisory lock.
 const SCHEMA_LOCK = 727_071_704;
@@ -71,6 +127,9 @@ const attendance = (r: any): AttendanceRow => ({
   date: r.date,
   checkInAt: r.check_in_at?.toISOString?.() ?? r.check_in_at,
   checkOutAt: r.check_out_at ? r.check_out_at.toISOString?.() ?? r.check_out_at : null,
+  lat: r.lat ?? null,
+  lng: r.lng ?? null,
+  accuracyM: r.accuracy_m ?? null,
 });
 const order = (r: any): OrderRow => ({
   id: r.id,
@@ -85,6 +144,7 @@ const grievance = (r: any): GrievanceRow => ({
   id: r.id,
   body: r.body,
   displayName: r.display_name,
+  image: r.image ?? null,
   submitterRef: r.submitter_ref,
   status: r.status,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
@@ -102,6 +162,34 @@ const announcement = (r: any): AnnouncementRow => ({
   title: r.title,
   body: r.body,
   tag: r.tag,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+});
+const employee = (r: any): EmployeeRow => ({
+  email: r.email,
+  name: r.name,
+  picture: r.picture,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+  lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
+});
+const away = (r: any): AwayRow => ({
+  id: r.id,
+  email: r.email,
+  type: r.type,
+  startDate: r.start_date,
+  endDate: r.end_date,
+  reason: r.reason,
+  status: r.status,
+  submitterRef: r.submitter_ref,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+});
+const event = (r: any): EventRow => ({
+  id: r.id,
+  title: r.title,
+  body: r.body,
+  category: r.category,
+  startsAt: r.starts_at?.toISOString?.() ?? r.starts_at,
+  location: r.location,
+  createdBy: r.created_by,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 
@@ -149,38 +237,58 @@ class PgStore implements Store {
 
   async checkIn(row: AttendanceRow) {
     const res = await this.q(
-      `INSERT INTO attendance (id, email, date, check_in_at) VALUES ($1,$2,$3,$4)
-       ON CONFLICT (email, date) DO NOTHING RETURNING *`,
-      [row.id, row.email, row.date, row.checkInAt],
+      `INSERT INTO attendance (id, email, date, check_in_at, lat, lng, accuracy_m)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (email, date) WHERE check_out_at IS NULL DO NOTHING RETURNING *`,
+      [row.id, row.email, row.date, row.checkInAt, row.lat, row.lng, row.accuracyM],
     );
     if (res.rows[0]) return attendance(res.rows[0]);
     return (await this.getAttendance(row.email, row.date))!;
   }
   async checkOut(email: string, date: string, at: string) {
     const res = await this.q(
-      `UPDATE attendance SET check_out_at = $3 WHERE email = $1 AND date = $2 RETURNING *`,
+      `UPDATE attendance SET check_out_at = $3 WHERE email = $1 AND date = $2 AND check_out_at IS NULL RETURNING *`,
       [email, date, at],
     );
     return res.rows[0] ? attendance(res.rows[0]) : null;
   }
   async getAttendance(email: string, date: string) {
-    const res = await this.q(`SELECT * FROM attendance WHERE email = $1 AND date = $2`, [email, date]);
+    const res = await this.q(
+      `SELECT * FROM attendance WHERE email = $1 AND date = $2 AND check_out_at IS NULL ORDER BY check_in_at DESC LIMIT 1`,
+      [email, date],
+    );
     return res.rows[0] ? attendance(res.rows[0]) : null;
+  }
+  async listAttendanceByEmail(email: string, date: string) {
+    const res = await this.q(`SELECT * FROM attendance WHERE email = $1 AND date = $2 ORDER BY check_in_at`, [email, date]);
+    return res.rows.map(attendance);
   }
   async listAttendance(date: string) {
     const res = await this.q(`SELECT * FROM attendance WHERE date = $1 ORDER BY check_in_at`, [date]);
     return res.rows.map(attendance);
   }
-  async upsertOrder(row: OrderRow) {
-    const res = await this.q(
-      `INSERT INTO orders (id, date, item_id, preference, instructions, submitter_ref, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)
-       ON CONFLICT (date, submitter_ref)
-       DO UPDATE SET item_id = $3, preference = $4, instructions = $5
-       RETURNING *`,
-      [row.id, row.date, row.itemId, row.preference, row.instructions, row.submitterRef, row.createdAt],
-    );
-    return order(res.rows[0]);
+  async setDayOrders(date: string, ref: string, rows: OrderRow[]) {
+    await this.init();
+    const client = await this.db().connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(`DELETE FROM orders WHERE date = $1 AND submitter_ref = $2`, [date, ref]);
+      for (const row of rows) {
+        await client.query(
+          `INSERT INTO orders (id, date, item_id, preference, instructions, submitter_ref, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)
+           ON CONFLICT (date, submitter_ref, item_id) DO UPDATE SET preference = $4, instructions = $5`,
+          [row.id, row.date, row.itemId, row.preference, row.instructions, row.submitterRef, row.createdAt],
+        );
+      }
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw err;
+    } finally {
+      client.release();
+    }
+    return rows;
   }
   async listOrders(date: string) {
     const res = await this.q(`SELECT * FROM orders WHERE date = $1 ORDER BY created_at`, [date]);
@@ -196,9 +304,9 @@ class PgStore implements Store {
   }
   async addGrievance(row: GrievanceRow) {
     const res = await this.q(
-      `INSERT INTO grievances (id, body, display_name, submitter_ref, status, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [row.id, row.body, row.displayName, row.submitterRef, row.status, row.createdAt],
+      `INSERT INTO grievances (id, body, display_name, image, submitter_ref, status, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [row.id, row.body, row.displayName, row.image, row.submitterRef, row.status, row.createdAt],
     );
     return grievance(res.rows[0]);
   }
@@ -242,6 +350,98 @@ class PgStore implements Store {
   async listAnnouncements(limit: number) {
     const res = await this.q(`SELECT * FROM announcements ORDER BY created_at DESC LIMIT $1`, [limit]);
     return res.rows.map(announcement);
+  }
+  async upsertEmployee(row: EmployeeRow) {
+    const res = await this.q(
+      `INSERT INTO employees (email, name, picture, created_at, last_seen_at) VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (email) DO UPDATE SET name = $2, picture = $3, last_seen_at = $5 RETURNING *`,
+      [row.email, row.name, row.picture, row.createdAt, row.lastSeenAt],
+    );
+    return employee(res.rows[0]);
+  }
+  async getEmployee(email: string) {
+    const res = await this.q(`SELECT * FROM employees WHERE email = $1`, [email]);
+    return res.rows[0] ? employee(res.rows[0]) : null;
+  }
+  async listEmployees() {
+    const res = await this.q(`SELECT * FROM employees ORDER BY name, email`);
+    return res.rows.map(employee);
+  }
+  async addAway(row: AwayRow) {
+    const res = await this.q(
+      `INSERT INTO away (id, email, type, start_date, end_date, reason, status, submitter_ref, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [row.id, row.email, row.type, row.startDate, row.endDate, row.reason, row.status, row.submitterRef, row.createdAt],
+    );
+    return away(res.rows[0]);
+  }
+  async setAwayStatus(id: string, status: AwayStatus) {
+    const res = await this.q(`UPDATE away SET status = $2 WHERE id = $1`, [id, status]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async listAway(limit: number) {
+    const res = await this.q(`SELECT * FROM away ORDER BY created_at DESC LIMIT $1`, [limit]);
+    return res.rows.map(away);
+  }
+  async listAwayByRef(ref: string, limit: number) {
+    const res = await this.q(`SELECT * FROM away WHERE submitter_ref = $1 ORDER BY created_at DESC LIMIT $2`, [ref, limit]);
+    return res.rows.map(away);
+  }
+  async listAwayByEmail(email: string, limit: number) {
+    const res = await this.q(`SELECT * FROM away WHERE email = $1 ORDER BY created_at DESC LIMIT $2`, [email, limit]);
+    return res.rows.map(away);
+  }
+  async addEvent(row: EventRow) {
+    const res = await this.q(
+      `INSERT INTO events (id, title, body, category, starts_at, location, created_by, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [row.id, row.title, row.body, row.category, row.startsAt, row.location, row.createdBy, row.createdAt],
+    );
+    return event(res.rows[0]);
+  }
+  async getEvent(rid: string) {
+    const res = await this.q(`SELECT * FROM events WHERE id = $1`, [rid]);
+    return res.rows[0] ? event(res.rows[0]) : null;
+  }
+  async deleteEvent(rid: string) {
+    const res = await this.q(`DELETE FROM events WHERE id = $1`, [rid]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async listEvents(fromIso: string, limit: number) {
+    const res = await this.q(`SELECT * FROM events WHERE starts_at >= $1 ORDER BY starts_at ASC LIMIT $2`, [fromIso, limit]);
+    return res.rows.map(event);
+  }
+  async setRsvp(eventId: string, ref: string, email: string | null, going: boolean) {
+    if (going) {
+      await this.q(
+        `INSERT INTO event_rsvps (event_id, submitter_ref, email, created_at) VALUES ($1,$2,$3,$4)
+         ON CONFLICT (event_id, submitter_ref) DO UPDATE SET email = EXCLUDED.email`,
+        [eventId, ref, email, new Date().toISOString()],
+      );
+    } else {
+      await this.q(`DELETE FROM event_rsvps WHERE event_id = $1 AND submitter_ref = $2`, [eventId, ref]);
+    }
+  }
+  async listRsvps(eventId: string) {
+    const res = await this.q(`SELECT * FROM event_rsvps WHERE event_id = $1 ORDER BY created_at`, [eventId]);
+    return res.rows.map((r: any) => ({
+      eventId: r.event_id,
+      submitterRef: r.submitter_ref,
+      email: r.email,
+      createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+    }));
+  }
+  async rsvpCounts(eventIds: string[]) {
+    if (eventIds.length === 0) return {};
+    const res = await this.q(
+      `SELECT event_id, COUNT(*)::int AS n FROM event_rsvps WHERE event_id = ANY($1) GROUP BY event_id`,
+      [eventIds],
+    );
+    return Object.fromEntries(res.rows.map((r: any) => [r.event_id, r.n]));
+  }
+  async myRsvpEventIds(ref: string) {
+    const res = await this.q(`SELECT event_id FROM event_rsvps WHERE submitter_ref = $1`, [ref]);
+    return res.rows.map((r: any) => r.event_id);
   }
 }
 

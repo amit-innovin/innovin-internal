@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarDays, CircleHelp, Coffee, House, MessageSquare, Settings, Users, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CircleHelp, Coffee, House, MessageSquare, Settings, ShieldCheck, Users, Wifi } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Logo, Wave } from "@/components/brand";
 import Notifications from "@/components/notifications";
@@ -28,6 +28,10 @@ const SECONDARY: Item[] = [
   { href: "/settings", label: "Settings", short: "Settings", icon: Settings },
   { href: "/help", label: "Help", short: "Help", icon: CircleHelp },
 ];
+
+// Shown only to admins and owners — the layout decides from the session, so this stays a
+// render-only client component and the link never flashes in for members.
+const ADMIN_ITEM: Item = { href: "/admin", label: "Admin", short: "Admin", icon: ShieldCheck };
 
 const SPRING = { type: "spring", stiffness: 420, damping: 34, mass: 0.8 } as const;
 
@@ -57,7 +61,7 @@ function NavLink({ item, active }: { item: Item; active: boolean }) {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ showAdmin = false }: { showAdmin?: boolean }) {
   const pathname = usePathname();
   return (
     <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r bg-card px-4 py-6 md:flex">
@@ -73,6 +77,7 @@ export function Sidebar() {
         ))}
       </nav>
       <nav className="mt-8 flex flex-col gap-1 border-t pt-6">
+        {showAdmin && <NavLink item={ADMIN_ITEM} active={isActive(pathname, ADMIN_ITEM.href)} />}
         {SECONDARY.map((item) => (
           <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
         ))}
@@ -89,7 +94,7 @@ export function Sidebar() {
   );
 }
 
-export function MobileTopBar() {
+export function MobileTopBar({ showAdmin = false }: { showAdmin?: boolean }) {
   return (
     <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-card/90 px-4 py-3 backdrop-blur md:hidden">
       <Link href="/">
@@ -97,7 +102,7 @@ export function MobileTopBar() {
       </Link>
       <div className="flex items-center gap-1">
         <Notifications />
-        {SECONDARY.map((item) => (
+        {(showAdmin ? [ADMIN_ITEM, ...SECONDARY] : SECONDARY).map((item) => (
           <Tooltip key={item.href}>
             <TooltipTrigger asChild>
               <Button asChild variant="ghost" size="icon-lg" className="rounded-full text-muted-foreground">

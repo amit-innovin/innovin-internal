@@ -62,30 +62,31 @@ const query = <T>(fn: (db: DB) => T) => locked(async () => fn(await read()));
 export const jsonStore: Store = {
   checkIn: (row) =>
     mutate((db) => {
-      const existing = db.attendance.find((r) => r.email === row.email && r.date === row.date);
-      if (existing) return { result: existing, changed: false };
+      const open = db.attendance.find((r) => r.email === row.email && r.date === row.date && !r.checkOutAt);
+      if (open) return { result: open, changed: false };
       db.attendance.unshift(row);
       return { result: row, changed: true };
     }),
   checkOut: (email, date, at) =>
     mutate((db) => {
-      const row = db.attendance.find((r) => r.email === email && r.date === date);
-      if (row) row.checkOutAt = at;
-      return { result: row ?? null, changed: !!row };
+      const open = db.attendance.find((r) => r.email === email && r.date === date && !r.checkOutAt);
+      if (open) open.checkOutAt = at;
+      return { result: open ?? null, changed: !!open };
     }),
-  getAttendance: (email, date) => query((db) => db.attendance.find((r) => r.email === email && r.date === date) ?? null),
+  getAttendance: (email, date) =>
+    query((db) => db.attendance.find((r) => r.email === email && r.date === date && !r.checkOutAt) ?? null),
+  listAttendanceByEmail: (email, date) =>
+    query((db) =>
+      db.attendance.filter((r) => r.email === email && r.date === date).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt)),
+    ),
   listAttendance: (date) =>
     query((db) => db.attendance.filter((r) => r.date === date).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt))),
 
-  upsertOrder: (row) =>
+  setDayOrders: (date, ref, rows) =>
     mutate((db) => {
-      const existing = db.orders.find((r) => r.date === row.date && r.submitterRef === row.submitterRef);
-      if (existing) {
-        Object.assign(existing, { itemId: row.itemId, preference: row.preference, instructions: row.instructions });
-        return { result: existing, changed: true };
-      }
-      db.orders.unshift(row);
-      return { result: row, changed: true };
+      db.orders = db.orders.filter((o) => !(o.date === date && o.submitterRef === ref));
+      db.orders.unshift(...rows);
+      return { result: rows, changed: true };
     }),
   listOrders: (date) =>
     query((db) => db.orders.filter((r) => r.date === date).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),

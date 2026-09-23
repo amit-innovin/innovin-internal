@@ -47,13 +47,17 @@ test.describe("API: input validation", () => {
 
   test("snacks, wifi, and grievances reject invalid payloads", async () => {
     const ctx = await device();
-    expect((await ctx.post("/api/snacks", { data: { itemId: "caviar" } })).status()).toBe(400);
-    expect((await ctx.post("/api/snacks", { data: { itemId: "tea", preference: "spicy" } })).status()).toBe(400);
+    expect((await ctx.post("/api/snacks", { data: { items: ["caviar"] } })).status()).toBe(400);
+    expect((await ctx.post("/api/snacks", { data: { items: [] } })).status()).toBe(400);
+    expect((await ctx.post("/api/snacks", { data: { items: ["tea"], preference: "spicy" } })).status()).toBe(400);
+    expect((await ctx.post("/api/snacks", { data: { itemId: "tea" } })).status()).toBe(400);
     expect((await ctx.post("/api/wifi", { data: { quality: "meh" } })).status()).toBe(400);
     expect((await ctx.post("/api/wifi", { data: { quality: "good", downMbps: -1 } })).status()).toBe(400);
     expect((await ctx.post("/api/wifi", { data: { quality: "good", downMbps: "fast" } })).status()).toBe(400);
     expect((await ctx.post("/api/grievances", { data: { body: "   " } })).status()).toBe(400);
     expect((await ctx.post("/api/grievances", { data: { body: 123 } })).status()).toBe(400);
+    expect((await ctx.post("/api/grievances", { data: { body: "x", image: "data:text/html;base64,PGI+" } })).status()).toBe(400);
+    expect((await ctx.post("/api/grievances", { data: { body: "x", image: "not-a-data-url" } })).status()).toBe(400);
     expect((await ctx.delete("/api/snacks")).status()).toBe(404);
   });
 
@@ -62,22 +66,28 @@ test.describe("API: input validation", () => {
     const g = await (await ctx.post("/api/grievances", { data: { body: "x".repeat(5000), displayName: "n".repeat(500) } })).json();
     expect(g.body).toHaveLength(2000);
     expect(g.displayName).toHaveLength(100);
-    const o = await (await ctx.post("/api/snacks", { data: { itemId: "tea", instructions: "i".repeat(900) } })).json();
-    expect(o.instructions).toHaveLength(500);
+    const o = await (await ctx.post("/api/snacks", { data: { items: ["tea"], instructions: "i".repeat(900) } })).json();
+    expect(o.items[0].instructions).toHaveLength(500);
   });
 });
 
 test.describe("API: behaviour", () => {
-  test("check-in and check-out are idempotent", async () => {
+  test("check-in/out cycles: repeat check-in returns the open session, checkout starts a new one", async () => {
     const ctx = await device();
     const who = email();
     const first = await (await ctx.post("/api/attendance", { data: { email: who, action: "in" } })).json();
     const again = await (await ctx.post("/api/attendance", { data: { email: ` ${who.toUpperCase()} `, action: "in" } })).json();
     expect(again.id).toBe(first.id);
-    const out1 = await (await ctx.post("/api/attendance", { data: { email: who, action: "out" } })).json();
-    await new Promise((r) => setTimeout(r, 1100));
-    const out2 = await (await ctx.post("/api/attendance", { data: { email: who, action: "out" } })).json();
-    expect(out2.checkOutAt).toBe(out1.checkOutAt);
+    const out = await (await ctx.post("/api/attendance", { data: { email: who, action: "out" } })).json();
+    expect(out.id).toBe(first.id);
+    expect(out.checkOutAt).toBeTruthy();
+    // No open session now — a second checkout is refused, and a new check-in starts a new session.
+    expect((await ctx.post("/api/attendance", { data: { email: who, action: "out" } })).status()).toBe(404);
+    const second = await (await ctx.post("/api/attendance", { data: { email: who, action: "in" } })).json();
+    expect(second.id).not.toBe(first.id);
+    const mine = await (await ctx.get("/api/attendance")).json();
+    expect(mine.me.sessions).toHaveLength(2);
+    expect(mine.me.checkedIn).toBe(true);
   });
 
   test("attendance GET exposes only the count and the caller's own status", async () => {
@@ -86,34 +96,49 @@ test.describe("API: behaviour", () => {
     await ctx.post("/api/attendance", { data: { email: who, action: "in" } });
     const mine = await (await ctx.get("/api/attendance")).json();
     expect(mine.email).toBe(who);
-    expect(mine.me.checkInAt).toBeTruthy();
+    expect(mine.me.checkedIn).toBe(true);
+    expect(mine.me.sessions[0].checkInAt).toBeTruthy();
+    expect(mine.me.totalMinutes).toBeGreaterThanOrEqual(0);
     expect(Object.keys(mine).sort()).toEqual(["count", "email", "me"]);
 
     const stranger = await (await (await device()).get("/api/attendance")).json();
     expect(stranger).toEqual({ count: mine.count, email: null, me: null });
   });
 
-  test("orders are one per device per day, changeable and cancellable", async () => {
+  test("a day's order can hold several items, is replaceable and cancellable", async () => {
     const ctx = await device();
-    const a = await (await ctx.post("/api/snacks", { data: { itemId: "tea" } })).json();
-    const b = await (await ctx.post("/api/snacks", { data: { itemId: "healthy", preference: "healthy" } })).json();
-    expect(b.id).toBe(a.id);
-    noRef(a);
+    const placed = await (await ctx.post("/api/snacks", { data: { items: ["tea", "lunch"], instructions: "i" } })).json();
+    expect(placed.items).toHaveLength(2);
+    noRef(placed);
+    await ctx.post("/api/snacks", { data: { items: ["healthy"], preference: "healthy" } });
     const mine = await (await ctx.get("/api/snacks?scope=mine")).json();
-    expect(mine).toMatchObject({ open: true, cutoffHour: 24, order: { itemId: "healthy" } });
+    expect(mine).toMatchObject({ open: true, cutoffHour: 24 });
+    expect(mine.items.map((o: { itemId: string }) => o.itemId)).toEqual(["healthy"]);
     noRef(mine);
     expect(await (await ctx.get("/api/snacks?scope=history")).json()).toHaveLength(1);
     expect((await ctx.delete("/api/snacks")).status()).toBe(200);
-    expect((await (await ctx.get("/api/snacks?scope=mine")).json()).order).toBeNull();
+    expect((await (await ctx.get("/api/snacks?scope=mine")).json()).items).toEqual([]);
 
     const other = await device();
-    expect((await (await other.get("/api/snacks?scope=mine")).json()).order).toBeNull();
+    expect((await (await other.get("/api/snacks?scope=mine")).json()).items).toEqual([]);
+  });
+
+  test("grievances accept a compressed photo and return it to the device and admin", async () => {
+    const ctx = await device();
+    const img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const g = await (await ctx.post("/api/grievances", { data: { body: "with photo", image: img } })).json();
+    expect(g.image).toBe(img);
+    const mine = await (await ctx.get("/api/grievances?scope=mine")).json();
+    expect(mine.find((x: { id: string }) => x.id === g.id).image).toBe(img);
+    const adm = await admin();
+    const all = await (await adm.get("/api/grievances")).json();
+    expect(all.find((x: { id: string }) => x.id === g.id).image).toBe(img);
   });
 
   test("after the cutoff, ordering and cancelling are refused", async () => {
     const ctx = await device(CLOSED_URL);
     expect((await (await ctx.get("/api/snacks?scope=mine")).json()).open).toBe(false);
-    expect((await ctx.post("/api/snacks", { data: { itemId: "tea" } })).status()).toBe(403);
+    expect((await ctx.post("/api/snacks", { data: { items: ["tea"] } })).status()).toBe(403);
     expect((await ctx.delete("/api/snacks")).status()).toBe(403);
   });
 

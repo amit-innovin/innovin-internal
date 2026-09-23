@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { allowedEmailDomains } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
+import { totalMinutes } from "@/lib/format";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
@@ -8,15 +9,24 @@ import { todayIST } from "@/lib/time";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Public: today's count + the caller's own status (identified by their remembered email).
+// Public: today's headcount + the caller's own sessions (identified by their remembered email).
 export async function GET(req: NextRequest) {
   const email = req.cookies.get(EMAIL_COOKIE)?.value ?? null;
-  const rows = await store.listAttendance(todayIST());
-  const mine = email ? rows.find((r) => r.email === email) : undefined;
+  const date = todayIST();
+  const rows = await store.listAttendance(date);
+  const sessions = email ? await store.listAttendanceByEmail(email, date) : [];
+  const open = sessions.find((s) => !s.checkOutAt);
   return NextResponse.json({
-    count: rows.length,
+    count: new Set(rows.map((r) => r.email)).size,
     email,
-    me: mine ? { checkInAt: mine.checkInAt, checkOutAt: mine.checkOutAt } : null,
+    me: sessions.length
+      ? {
+          checkedIn: !!open,
+          currentInAt: open?.checkInAt ?? null,
+          totalMinutes: totalMinutes(sessions),
+          sessions: sessions.map(({ checkInAt, checkOutAt }) => ({ checkInAt, checkOutAt })),
+        }
+      : null,
   });
 }
 
@@ -37,15 +47,15 @@ export async function POST(req: NextRequest) {
 
   const date = todayIST();
   const now = new Date().toISOString();
-  const existing = await store.getAttendance(email, date);
+  const open = await store.getAttendance(email, date);
 
   let row;
   if (action === "out") {
-    if (!existing) return NextResponse.json({ error: "Check in first" }, { status: 404 });
-    // Idempotent: a repeated check-out keeps the original time.
-    row = existing.checkOutAt ? existing : await store.checkOut(email, date, now);
+    if (!open) return NextResponse.json({ error: "Check in first" }, { status: 404 });
+    row = await store.checkOut(email, date, now);
   } else {
-    row = existing ?? (await store.checkIn({ id: id(), email, date, checkInAt: now, checkOutAt: null }));
+    // Idempotent while a session is open; after checkout a new session starts.
+    row = open ?? (await store.checkIn({ id: id(), email, date, checkInAt: now, checkOutAt: null }));
   }
 
   const res = NextResponse.json(row);

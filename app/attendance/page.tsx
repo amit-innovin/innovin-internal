@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarCheck, Clock, LogOut, Mail, MapPin } from "lucide-react";
+import { CalendarCheck, Clock, LogIn, LogOut, Mail, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { IconTile, PageHeader, SuccessCheck, stagger } from "@/components/kit";
 import { AnimatedNumber } from "@/components/motion/animated-number";
@@ -12,12 +12,13 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON, readError, send } from "@/lib/fetcher";
 import { useButtonState } from "@/lib/hooks/use-button-state";
-import { fmtShortDate, fmtTime } from "@/lib/format";
+import { fmtDuration, fmtTime, sessionMinutes } from "@/lib/format";
 
+type Session = { checkInAt: string; checkOutAt: string | null };
 type Status = {
   count: number;
   email: string | null;
-  me: { checkInAt: string; checkOutAt: string | null } | null;
+  me: { checkedIn: boolean; currentInAt: string | null; totalMinutes: number; sessions: Session[] } | null;
 };
 
 export default function Attendance() {
@@ -48,7 +49,7 @@ export default function Attendance() {
         else setError(message);
         return false;
       }
-      toast.success(action === "in" ? "You're checked in" : "Checked out — see you tomorrow");
+      toast.success(action === "in" ? "You're checked in" : "Checked out — see you soon");
       await load();
       return true;
     });
@@ -61,6 +62,7 @@ export default function Attendance() {
   }
 
   const me = status?.me;
+  const sessions = me?.sessions ?? [];
 
   return (
     <div className="mx-auto max-w-xl">
@@ -81,21 +83,18 @@ export default function Attendance() {
             </span>
           </span>
           <h2 className="mt-5 text-lg font-medium text-emerald-600" style={stagger(1)}>
-            {me.checkOutAt ? "You're checked out" : "You're checked in"}
+            {me.checkedIn ? "You're checked in" : "You're checked out"}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground" style={stagger(2)}>
-            Today, {fmtShortDate(me.checkInAt)} • {fmtTime(me.checkInAt)}
-            {me.checkOutAt && ` – ${fmtTime(me.checkOutAt)}`}
+            {me.checkedIn
+              ? `In since ${fmtTime(me.currentInAt!)} • ${fmtDuration(me.totalMinutes)} today`
+              : `${fmtDuration(me.totalMinutes)} today across ${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`}
           </p>
           <p className="mt-2 inline-flex items-center gap-1 text-sm text-muted-foreground" style={stagger(3)}>
             <MapPin className="size-4" /> Office • Innovin
           </p>
           <div className="mt-6 w-full" style={stagger(4)}>
-            {me.checkOutAt ? (
-              <Button variant="secondary" size="xl" className="w-full" disabled>
-                Done for today — see you tomorrow
-              </Button>
-            ) : (
+            {me.checkedIn ? (
               <StatefulButton
                 state={buttonState}
                 onClick={() => mark("out")}
@@ -106,6 +105,18 @@ export default function Attendance() {
                 className="h-11 w-full rounded-lg font-medium"
               >
                 Check Out
+              </StatefulButton>
+            ) : (
+              <StatefulButton
+                state={buttonState}
+                onClick={() => mark("in")}
+                loadingText="Checking in"
+                successText="Checked in"
+                errorText="Try again"
+                icon={<LogIn className="size-4" />}
+                className="h-11 w-full rounded-lg font-medium"
+              >
+                Check In Again
               </StatefulButton>
             )}
           </div>
@@ -166,6 +177,29 @@ export default function Attendance() {
               Check In
             </StatefulButton>
           </form>
+        </Card>
+      )}
+
+      {sessions.length > 0 && (
+        <Card className="mt-4 gap-0 p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="eyebrow">Today&apos;s sessions</h2>
+            <p className="text-xs font-medium text-muted-foreground">
+              Total <span className="text-foreground">{fmtDuration(me!.totalMinutes)}</span>
+            </p>
+          </div>
+          <ul className="mt-3 divide-y">
+            {sessions.map((s, i) => (
+              <li key={s.checkInAt} className="flex items-center justify-between py-2.5 text-sm">
+                <span className="tabular-nums">
+                  {fmtTime(s.checkInAt)} – {s.checkOutAt ? fmtTime(s.checkOutAt) : "now"}
+                </span>
+                <span className={s.checkOutAt ? "text-muted-foreground" : "font-medium text-emerald-600"}>
+                  {s.checkOutAt ? fmtDuration(sessionMinutes(s)) : "in progress"}
+                </span>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 

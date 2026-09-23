@@ -17,8 +17,9 @@ The MVP is successful when the team can use these four flows for one working wee
 ## MVP acceptance criteria
 
 - Attendance accepts only configured company email domains and exposes only the daily count publicly.
-- Each browser can place, update, or cancel one snack order per day before the cutoff (default 11:00 AM IST).
-- Anyone can submit a named or anonymous grievance; only an authenticated admin can read and resolve it.
+- Each browser can place, update, or cancel one order (any mix of items) per day; ordering is open all day unless `ORDER_CUTOFF_HOUR` sets a deadline.
+- Anyone can submit a named or anonymous grievance with an optional photo; only an authenticated admin can read and resolve it.
+- Attendance supports multiple check-in/check-out sessions per day and reports total time.
 - Wi-Fi quality reports are immediately visible as a recent trend.
 - Data persists in Postgres when deployed; local development works without external services.
 - Admin and anonymous-device cookies are HTTP-only; private submitter references never appear in API responses.
@@ -34,19 +35,19 @@ The MVP is successful when the team can use these four flows for one working wee
 ## v1 modules
 
 ### 1. Attendance
-- Check in / check out with timestamp
-- Public daily count; individual details are restricted to the admin dashboard
+- Check in / check out with timestamp — repeatable through the day (out for lunch, back in)
+- Per-day session list and total time tracked; public daily headcount; details restricted to admin
 - Identity = company email field only — no passwords, no accounts
 - Optional later: auto-suggest check-in when on office Wi-Fi
 
-### 2. Snacks & Tea
-- Morning order flow: item (Tea / Snacks / Healthy option), preference, special instructions
-- Orders close at a cutoff (~11:00 AM); consolidated daily list for whoever buys
+### 2. Meals & Snacks
+- Order flow: pick any items (Tea / Snacks / Healthy / Lunch / Dinner), special instructions
+- Open all day by default; optional daily cutoff via `ORDER_CUTOFF_HOUR`; consolidated list for whoever buys
 - Admin manages items, prices, and availability from the backend based on nearby options
-- One order per browser per day using a private device reference (never shown); re-ordering updates the existing order
+- One selection per browser per day using a private device reference (never shown); saving replaces it
 
 ### 3. Daily Grievances
-- Free-text issues/suggestions; user picks **Anonymous** or **With name**
+- Free-text issues/suggestions with an optional photo (compressed on-device); user picks **Anonymous** or **With name**
 - Anonymous entries never display identity anywhere; backend stores a private submitter ref solely for abuse audit
 - Admin view: inbox, status (open / in progress / resolved), summary report
 
@@ -68,9 +69,9 @@ Single view: today's attendance, consolidated snack orders, grievance inbox, Wi-
 ## Data model (v1 sketch)
 
 ```
-attendance  id · email · date · check_in_at · check_out_at
-orders      id · date · item_id · preference · instructions · submitter_ref · created_at
-grievances  id · body · display_name(nullable) · submitter_ref · status · created_at
+attendance  id · email · date · check_in_at · check_out_at   (one row per session)
+orders      id · date · item_id · preference · instructions · submitter_ref · created_at  (one row per item)
+grievances  id · body · display_name(nullable) · image(nullable) · submitter_ref · status · created_at
 wifi          id · quality · note · down_mbps · up_mbps · created_at
 announcements id · title · body · tag · created_at
 ```
@@ -82,7 +83,7 @@ announcements id · title · body · tag · created_at
 - Dashboard layout: Option 3 (dashboard with insights), themed with the innovinlabs.com brand.
 - Announcements added (admin-posted, shown on the home dashboard).
 - "Your Grievances" on home shows only the device's own submissions, preserving anonymity.
-- Snack cutoff configurable via `ORDER_CUTOFF_HOUR` (default 11:00 AM IST).
+- Snack cutoff configurable via `ORDER_CUTOFF_HOUR` (default 24 = open all day).
 
 ## Open questions
 

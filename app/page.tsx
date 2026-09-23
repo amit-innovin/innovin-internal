@@ -8,18 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DEVICE_COOKIE, EMAIL_COOKIE } from "@/lib/cookies";
-import { firstName, fmtShortDate, fmtTime, greeting, relativeDay, relativeTime } from "@/lib/format";
+import { firstName, fmtDuration, fmtShortDate, fmtTime, greeting, relativeDay, relativeTime, totalMinutes } from "@/lib/format";
 import { orderCutoffHour } from "@/lib/config";
 import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
-import { findOrderForDevice, grievancesForDevice } from "@/lib/submitter";
+import { grievancesForDevice, ordersForDeviceOn } from "@/lib/submitter";
 import { istHour, todayIST } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
 const QUICK_ACTIONS: { href: string; label: string; icon: LucideIcon; tone: Tone }[] = [
   { href: "/attendance", label: "Attendance", icon: CalendarCheck, tone: "blue" },
-  { href: "/snacks", label: "Snacks & Tea", icon: Coffee, tone: "sky" },
+  { href: "/snacks", label: "Meals & Snacks", icon: Coffee, tone: "sky" },
   { href: "/grievances", label: "Grievances", icon: MessageSquare, tone: "ink" },
   { href: "/wifi", label: "Wi-Fi Quality", icon: Wifi, tone: "blue" },
 ];
@@ -32,16 +32,20 @@ export default async function Home() {
   const deviceId = jar.get(DEVICE_COOKIE)?.value;
   const date = todayIST();
 
-  const [me, order, announcements, grievances, wifi] = await Promise.all([
-    email ? store.getAttendance(email, date) : null,
-    findOrderForDevice(deviceId, date),
+  const [sessions, myOrders, announcements, grievances, wifi] = await Promise.all([
+    email ? store.listAttendanceByEmail(email, date) : Promise.resolve([]),
+    ordersForDeviceOn(deviceId, date),
     store.listAnnouncements(2),
     grievancesForDevice(deviceId, 3),
     store.listWifi(3),
   ]);
 
   const name = firstName(email);
-  const item = order ? MENU.find((m) => m.id === order.itemId) : undefined;
+  const checkedIn = sessions.some((s) => !s.checkOutAt);
+  const openSession = sessions.find((s) => !s.checkOutAt);
+  const items = myOrders.map((o) => MENU.find((m) => m.id === o.itemId)).filter((m) => m != null);
+  const orderNames = items.map((m) => m.name).join(" + ");
+  const orderTotal = items.reduce((sum, m) => sum + (m.price ?? 0), 0);
   const ordersOpen = istHour() < orderCutoffHour();
   const latestWifi = wifi[0];
 
@@ -67,26 +71,32 @@ export default async function Home() {
                 <h2 className="eyebrow">Today&apos;s Attendance</h2>
               </div>
               <div className="mt-5 flex items-center gap-3">
-                <IconTile icon={me ? Check : Clock} tone={me ? "green" : "slate"} />
+                <IconTile icon={sessions.length ? Check : Clock} tone={sessions.length ? "green" : "slate"} />
                 <div>
                   <p className="text-lg font-medium">
-                    {me ? (
+                    {sessions.length === 0 ? (
+                      "Not checked in"
+                    ) : checkedIn ? (
                       <>
-                        Checked <span className="text-emerald-600">{me.checkOutAt ? "out" : "in"}</span>
+                        Checked <span className="text-emerald-600">in</span>
                       </>
                     ) : (
-                      "Not checked in"
+                      <>
+                        Checked <span className="text-emerald-600">out</span>
+                      </>
                     )}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {me
-                      ? `${fmtTime(me.checkInAt)}${me.checkOutAt ? ` – ${fmtTime(me.checkOutAt)}` : ""} • Office • Innovin`
-                      : "Mark your attendance for today"}
+                    {sessions.length === 0
+                      ? "Mark your attendance for today"
+                      : checkedIn
+                        ? `In since ${fmtTime(openSession!.checkInAt)} • ${fmtDuration(totalMinutes(sessions))} today`
+                        : `${fmtDuration(totalMinutes(sessions))} today • Office • Innovin`}
                   </p>
                 </div>
               </div>
               <div className="mt-5">
-                <ArrowLink href="/attendance">{me ? "View details" : "Check in now"}</ArrowLink>
+                <ArrowLink href="/attendance">{sessions.length ? "View details" : "Check in now"}</ArrowLink>
               </div>
             </div>
             <div className="relative hidden min-h-44 sm:block">
@@ -118,18 +128,18 @@ export default async function Home() {
           <Card className="gap-0 p-5">
             <SectionHeader title="Today's Orders" href="/snacks" />
             <div className="mt-4 flex items-center gap-3">
-              <IconTile icon={MENU_ICONS[item?.icon ?? "coffee"]} tone={item?.tone ?? "sky"} />
+              <IconTile icon={MENU_ICONS[items[0]?.icon ?? "coffee"]} tone={items[0]?.tone ?? "sky"} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{item ? item.name : "Snacks & Tea"}</p>
+                <p className="text-sm font-medium">{orderNames || "Meals & Snacks"}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {item
-                    ? `₹${item.price}${order?.instructions ? ` • ${order.instructions}` : ""}`
+                  {items.length
+                    ? `${orderTotal ? `₹${orderTotal}` : "Ordered"}${myOrders[0]?.instructions ? ` • ${myOrders[0].instructions}` : ""}`
                     : ordersOpen
                       ? "Not ordered yet"
                       : "Orders are closed for today"}
                 </p>
               </div>
-              {ordersOpen && <ArrowLink href="/snacks">{item ? "Change" : "Order now"}</ArrowLink>}
+              {ordersOpen && <ArrowLink href="/snacks">{items.length ? "Change" : "Order now"}</ArrowLink>}
             </div>
           </Card>
         </div>

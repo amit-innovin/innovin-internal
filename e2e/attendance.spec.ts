@@ -19,7 +19,7 @@ test.describe("Attendance", () => {
     await expect(page.getByRole("heading", { name: "Not checked in yet" })).toBeVisible();
   });
 
-  test("full day: check in, remembered on reload, check out, done state, reflected on home", async ({ page }) => {
+  test("full day: check in, check out, check in again — sessions and total tracked", async ({ page }) => {
     const email = uniqueEmail("amit");
     await checkIn(page, email);
     await expect(page.getByText("Office • Innovin")).toBeVisible();
@@ -30,10 +30,16 @@ test.describe("Attendance", () => {
 
     await page.getByRole("button", { name: "Check Out" }).click();
     await expect(page.getByRole("heading", { name: "You're checked out" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Done for today/ })).toBeDisabled();
+    await expect(page.getByText(/today across 1 session/)).toBeVisible();
+
+    // Stepped out and back — a second session starts, and the list shows both.
+    await page.getByRole("button", { name: "Check In Again" }).click();
+    await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
+    await expect(page.getByText("in progress")).toBeVisible();
+    await expect(page.locator("ul >> li", { hasText: "– now" })).toHaveCount(1);
 
     await page.goto("/");
-    await expect(page.getByText("Checked out")).toBeVisible();
+    await expect(page.getByText(/Checked in/)).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(", Amit");
   });
 

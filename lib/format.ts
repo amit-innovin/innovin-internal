@@ -32,6 +32,21 @@ export function fmtHour(hour: number) {
   return `${hour % 12 === 0 ? 12 : hour % 12}:00 ${hour < 12 ? "AM" : "PM"}`;
 }
 
+// 247 → "4h 7m", 45 → "45m".
+export function fmtDuration(minutes: number) {
+  const m = Math.max(0, Math.round(minutes));
+  const h = Math.floor(m / 60);
+  return h ? `${h}h ${m % 60}m` : `${m}m`;
+}
+
+// Minutes covered by one attendance session; an open session counts up to `now`.
+export function sessionMinutes(s: { checkInAt: string; checkOutAt: string | null }, now = Date.now()) {
+  return Math.max(0, ((s.checkOutAt ? Date.parse(s.checkOutAt) : now) - Date.parse(s.checkInAt)) / 60_000);
+}
+
+export const totalMinutes = (sessions: { checkInAt: string; checkOutAt: string | null }[], now = Date.now()) =>
+  Math.round(sessions.reduce((sum, s) => sum + sessionMinutes(s, now), 0));
+
 export function relativeTime(iso: string) {
   const minutes = Math.floor((Date.now() - Date.parse(iso)) / 60_000);
   if (minutes < 1) return "Just now";

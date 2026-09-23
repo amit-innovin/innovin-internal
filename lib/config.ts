@@ -1,8 +1,9 @@
 // Runtime configuration read from environment variables (server-side only).
 
+// Orders are open all day by default (24); set ORDER_CUTOFF_HOUR to enforce a daily deadline.
 export function orderCutoffHour() {
-  const hour = Number(process.env.ORDER_CUTOFF_HOUR ?? 11);
-  return Number.isInteger(hour) && hour >= 0 && hour <= 24 ? hour : 11;
+  const hour = Number(process.env.ORDER_CUTOFF_HOUR ?? 24);
+  return Number.isInteger(hour) && hour >= 0 && hour <= 24 ? hour : 24;
 }
 
 export function allowedEmailDomains() {

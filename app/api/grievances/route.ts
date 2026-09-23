@@ -34,10 +34,17 @@ export async function POST(req: NextRequest) {
   const text = str(body.body).trim();
   if (!text) return badRequest("Tell us what's on your mind");
 
+  // Optional photo, stored as a data URL (browser already compressed it).
+  const image = str(body.image);
+  if (image && (!/^data:image\/(jpeg|png|webp);base64,/.test(image) || image.length > 700_000)) {
+    return badRequest("Attach a photo under ~500 KB");
+  }
+
   const { submitterRef: _r, ...row } = await store.addGrievance({
     id: id(),
     body: text.slice(0, 2000),
     displayName: str(body.displayName).trim().slice(0, 100) || null,
+    image: image || null,
     submitterRef: identity.ref,
     status: "open",
     createdAt: new Date().toISOString(),

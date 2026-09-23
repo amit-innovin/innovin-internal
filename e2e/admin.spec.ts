@@ -11,7 +11,7 @@ test.describe("Admin", () => {
     await page.reload();
     await typePin(page, "1704");
     await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
-    for (const stat of ["Checked in today", "Snack orders today", "Open grievances", "Poor Wi-Fi reports today"]) {
+    for (const stat of ["Checked in today", "Orders today", "Open grievances", "Poor Wi-Fi reports today"]) {
       await expect(page.getByText(stat)).toBeVisible();
     }
   });

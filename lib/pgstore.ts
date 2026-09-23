@@ -17,8 +17,7 @@ CREATE TABLE IF NOT EXISTS attendance (
   email text NOT NULL,
   date text NOT NULL,
   check_in_at timestamptz NOT NULL,
-  check_out_at timestamptz,
-  UNIQUE (email, date)
+  check_out_at timestamptz
 );
 CREATE TABLE IF NOT EXISTS orders (
   id text PRIMARY KEY,
@@ -28,12 +27,13 @@ CREATE TABLE IF NOT EXISTS orders (
   instructions text NOT NULL DEFAULT '',
   submitter_ref text NOT NULL,
   created_at timestamptz NOT NULL,
-  UNIQUE (date, submitter_ref)
+  UNIQUE (date, submitter_ref, item_id)
 );
 CREATE TABLE IF NOT EXISTS grievances (
   id text PRIMARY KEY,
   body text NOT NULL,
   display_name text,
+  image text,
   submitter_ref text NOT NULL,
   status text NOT NULL DEFAULT 'open',
   created_at timestamptz NOT NULL
@@ -53,6 +53,13 @@ CREATE TABLE IF NOT EXISTS announcements (
   tag text NOT NULL DEFAULT 'Office',
   created_at timestamptz NOT NULL
 );
+-- Migrations for databases created before sessions/multi-item orders/images existed:
+ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
+ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
+-- At most one open (not-checked-out) session per person per day.
+CREATE UNIQUE INDEX IF NOT EXISTS attendance_open_session ON attendance (email, date) WHERE check_out_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_day_ref_item ON orders (date, submitter_ref, item_id);
 CREATE INDEX IF NOT EXISTS attendance_date_idx ON attendance (date);
 CREATE INDEX IF NOT EXISTS orders_date_idx ON orders (date);
 CREATE INDEX IF NOT EXISTS orders_submitter_idx ON orders (submitter_ref, date DESC);
@@ -85,6 +92,7 @@ const grievance = (r: any): GrievanceRow => ({
   id: r.id,
   body: r.body,
   displayName: r.display_name,
+  image: r.image ?? null,
   submitterRef: r.submitter_ref,
   status: r.status,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
@@ -150,7 +158,7 @@ class PgStore implements Store {
   async checkIn(row: AttendanceRow) {
     const res = await this.q(
       `INSERT INTO attendance (id, email, date, check_in_at) VALUES ($1,$2,$3,$4)
-       ON CONFLICT (email, date) DO NOTHING RETURNING *`,
+       ON CONFLICT (email, date) WHERE check_out_at IS NULL DO NOTHING RETURNING *`,
       [row.id, row.email, row.date, row.checkInAt],
     );
     if (res.rows[0]) return attendance(res.rows[0]);
@@ -158,29 +166,48 @@ class PgStore implements Store {
   }
   async checkOut(email: string, date: string, at: string) {
     const res = await this.q(
-      `UPDATE attendance SET check_out_at = $3 WHERE email = $1 AND date = $2 RETURNING *`,
+      `UPDATE attendance SET check_out_at = $3 WHERE email = $1 AND date = $2 AND check_out_at IS NULL RETURNING *`,
       [email, date, at],
     );
     return res.rows[0] ? attendance(res.rows[0]) : null;
   }
   async getAttendance(email: string, date: string) {
-    const res = await this.q(`SELECT * FROM attendance WHERE email = $1 AND date = $2`, [email, date]);
+    const res = await this.q(
+      `SELECT * FROM attendance WHERE email = $1 AND date = $2 AND check_out_at IS NULL ORDER BY check_in_at DESC LIMIT 1`,
+      [email, date],
+    );
     return res.rows[0] ? attendance(res.rows[0]) : null;
+  }
+  async listAttendanceByEmail(email: string, date: string) {
+    const res = await this.q(`SELECT * FROM attendance WHERE email = $1 AND date = $2 ORDER BY check_in_at`, [email, date]);
+    return res.rows.map(attendance);
   }
   async listAttendance(date: string) {
     const res = await this.q(`SELECT * FROM attendance WHERE date = $1 ORDER BY check_in_at`, [date]);
     return res.rows.map(attendance);
   }
-  async upsertOrder(row: OrderRow) {
-    const res = await this.q(
-      `INSERT INTO orders (id, date, item_id, preference, instructions, submitter_ref, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)
-       ON CONFLICT (date, submitter_ref)
-       DO UPDATE SET item_id = $3, preference = $4, instructions = $5
-       RETURNING *`,
-      [row.id, row.date, row.itemId, row.preference, row.instructions, row.submitterRef, row.createdAt],
-    );
-    return order(res.rows[0]);
+  async setDayOrders(date: string, ref: string, rows: OrderRow[]) {
+    await this.init();
+    const client = await this.db().connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(`DELETE FROM orders WHERE date = $1 AND submitter_ref = $2`, [date, ref]);
+      for (const row of rows) {
+        await client.query(
+          `INSERT INTO orders (id, date, item_id, preference, instructions, submitter_ref, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)
+           ON CONFLICT (date, submitter_ref, item_id) DO UPDATE SET preference = $4, instructions = $5`,
+          [row.id, row.date, row.itemId, row.preference, row.instructions, row.submitterRef, row.createdAt],
+        );
+      }
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw err;
+    } finally {
+      client.release();
+    }
+    return rows;
   }
   async listOrders(date: string) {
     const res = await this.q(`SELECT * FROM orders WHERE date = $1 ORDER BY created_at`, [date]);
@@ -196,9 +223,9 @@ class PgStore implements Store {
   }
   async addGrievance(row: GrievanceRow) {
     const res = await this.q(
-      `INSERT INTO grievances (id, body, display_name, submitter_ref, status, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [row.id, row.body, row.displayName, row.submitterRef, row.status, row.createdAt],
+      `INSERT INTO grievances (id, body, display_name, image, submitter_ref, status, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [row.id, row.body, row.displayName, row.image, row.submitterRef, row.status, row.createdAt],
     );
     return grievance(res.rows[0]);
   }

@@ -26,13 +26,13 @@ describe("IST time", () => {
 });
 
 describe("config", () => {
-  it("parses ORDER_CUTOFF_HOUR with a safe default", () => {
-    expect(orderCutoffHour()).toBe(11);
+  it("parses ORDER_CUTOFF_HOUR, defaulting to open all day", () => {
+    expect(orderCutoffHour()).toBe(24);
     vi.stubEnv("ORDER_CUTOFF_HOUR", "15");
     expect(orderCutoffHour()).toBe(15);
     for (const bad of ["abc", "-1", "25", "10.5"]) {
       vi.stubEnv("ORDER_CUTOFF_HOUR", bad);
-      expect(orderCutoffHour()).toBe(11);
+      expect(orderCutoffHour()).toBe(24);
     }
   });
 

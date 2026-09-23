@@ -22,6 +22,7 @@ export type GrievanceRow = {
   id: string;
   body: string;
   displayName: string | null;
+  image: string | null;
   submitterRef: string;
   status: GrievanceStatus;
   createdAt: string;
@@ -45,11 +46,16 @@ export type AnnouncementRow = {
 };
 
 export interface Store {
+  // Returns the open session if one exists, otherwise inserts a new one.
   checkIn(row: AttendanceRow): Promise<AttendanceRow>;
+  // Closes the open session; null when there isn't one.
   checkOut(email: string, date: string, at: string): Promise<AttendanceRow | null>;
+  // The currently open session, or null.
   getAttendance(email: string, date: string): Promise<AttendanceRow | null>;
+  listAttendanceByEmail(email: string, date: string): Promise<AttendanceRow[]>;
   listAttendance(date: string): Promise<AttendanceRow[]>;
-  upsertOrder(row: OrderRow): Promise<OrderRow>;
+  // Replaces the device's selection for the day (atomically in Postgres).
+  setDayOrders(date: string, ref: string, rows: OrderRow[]): Promise<OrderRow[]>;
   listOrders(date: string): Promise<OrderRow[]>;
   listOrdersByRef(ref: string, limit: number): Promise<OrderRow[]>;
   deleteOrder(ref: string, date: string): Promise<boolean>;

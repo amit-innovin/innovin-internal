@@ -13,13 +13,16 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: CalendarCheck,
     tone: "blue",
     q: "How does attendance work?",
-    a: "Enter your Innovin email once and tap Check In. We remember your email on this device, so next time it's one tap. Check out when you leave.",
+    a: "Enter your Innovin email once and tap Check In — we remember it on this device. Check out whenever you step out and check in again when you're back; your total time for the day is tracked across sessions.",
   },
   {
     icon: Coffee,
     tone: "sky",
-    q: "How do I order snacks or tea?",
-    a: `Pick one item and submit before ${fmtHour(orderCutoffHour())}. You can change your order until the cutoff — the coordinator gets one consolidated list.`,
+    q: "How do I order food or tea?",
+    a:
+      orderCutoffHour() >= 24
+        ? "Pick what you'd like — tea, snacks, lunch or dinner — and submit anytime. You can change or cancel your order the same day; the coordinator gets one consolidated list."
+        : `Pick what you'd like and submit before ${fmtHour(orderCutoffHour())}. You can change your order until the cutoff — the coordinator gets one consolidated list.`,
   },
   {
     icon: MessageSquare,

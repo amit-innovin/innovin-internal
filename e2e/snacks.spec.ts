@@ -1,41 +1,48 @@
 import { CLOSED_URL } from "../playwright.config";
 import { expect, test } from "./fixtures";
 
-test.describe("Snacks & Tea (orders open)", () => {
-  test("place, change, view history, show on home, then cancel an order", async ({ page }) => {
+test.describe("Meals & Snacks (orders open)", () => {
+  test("place a multi-item order, change it, view history, see it on home, then cancel", async ({ page }) => {
     await page.goto("/snacks");
     await expect(page.getByText("No items selected")).toBeVisible();
-    await expect(page.getByText("Orders close by midnight")).toBeVisible();
+    await expect(page.getByText(/Order anytime today/)).toBeVisible();
     const submit = page.getByRole("button", { name: "Submit Order" });
     await expect(submit).toBeDisabled();
 
     await page.getByRole("button", { name: /^Tea/ }).click();
+    await page.getByRole("button", { name: /^Lunch/ }).click();
     await expect(page.getByRole("button", { name: /^Tea/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: /^Lunch/ })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText("1 × Tea")).toBeVisible();
+    await expect(page.getByText("1 × Lunch")).toBeVisible();
     await page.getByLabel("Special instructions").fill("  less sugar  ");
     await submit.click();
-    await expect(page.getByText("Order placed: Tea")).toBeVisible();
+    await expect(page.getByText("Order placed: Tea + Lunch")).toBeVisible();
     await expect(page.getByRole("button", { name: "Update Order" })).toBeVisible();
 
     await page.reload();
     await expect(page.getByLabel("Special instructions")).toHaveValue("less sugar");
     await expect(page.getByRole("button", { name: /^Tea/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: /^Lunch/ })).toHaveAttribute("aria-pressed", "true");
 
-    await page.getByRole("button", { name: /^Snacks/ }).click();
-    await expect(page.getByText("1 × Snacks")).toBeVisible();
+    // Drop tea, keep lunch — the day's selection is replaced.
+    await page.getByRole("button", { name: /^Tea/ }).click();
+    await expect(page.getByText("1 × Tea")).toHaveCount(0);
     await page.getByRole("button", { name: "Update Order" }).click();
-    await expect(page.getByText("Order updated: Snacks")).toBeVisible();
+    await expect(page.getByText("Order updated: Lunch")).toBeVisible();
 
     await page.getByRole("tab", { name: "History" }).click();
+    await expect(page.getByText("Today ·")).toBeVisible();
     await expect(page.getByText("less sugar")).toBeVisible();
     await page.getByRole("tab", { name: "Today" }).click();
 
     await page.goto("/");
-    await expect(page.getByText("₹40 • less sugar")).toBeVisible();
+    await expect(page.getByText("Lunch").first()).toBeVisible();
+    await expect(page.getByText("Ordered • less sugar")).toBeVisible();
 
     await page.goto("/snacks");
     await page.getByRole("button", { name: "Cancel today's order" }).click();
-    await expect(page.getByRole("alertdialog")).toContainText("Your Snacks will be removed");
+    await expect(page.getByRole("alertdialog")).toContainText("Lunch will be removed");
     await page.getByRole("alertdialog").getByRole("button", { name: "Cancel order" }).click();
     await expect(page.getByText("Order cancelled")).toBeVisible();
     await expect(page.getByText("No items selected")).toBeVisible();
@@ -70,7 +77,7 @@ test.describe("Snacks & Tea (orders open)", () => {
   });
 });
 
-test.describe("Snacks & Tea (after cutoff)", () => {
+test.describe("Meals & Snacks (after cutoff)", () => {
   test.use({ baseURL: CLOSED_URL });
 
   test("shows orders closed, disables ordering, and home says closed", async ({ page }) => {

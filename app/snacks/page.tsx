@@ -28,15 +28,16 @@ import { MENU } from "@/lib/menu";
 import { cn } from "@/lib/utils";
 
 type Order = { id: string; date: string; itemId: string; instructions: string; createdAt: string };
-type Mine = { open: boolean; cutoffHour: number; order: Order | null };
+type Mine = { open: boolean; cutoffHour: number; items: Order[] };
 
 const itemFor = (id: string) => MENU.find((m) => m.id === id);
+const names = (items: Order[]) => items.map((o) => itemFor(o.itemId)?.name ?? o.itemId).join(" + ");
 
 export default function Snacks() {
   const [tab, setTab] = useState<"today" | "history">("today");
   const [mine, setMine] = useState<Mine | null>(null);
   const [history, setHistory] = useState<Order[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
   const [instructions, setInstructions] = useState("");
   const [buttonState, run] = useButtonState();
 
@@ -48,8 +49,8 @@ export default function Snacks() {
     if (!today || !past) return;
     setMine(today);
     setHistory(past);
-    setSelected(today.order?.itemId ?? null);
-    setInstructions(today.order?.instructions ?? "");
+    setSelected(today.items.map((o) => o.itemId));
+    setInstructions(today.items[0]?.instructions ?? "");
   };
 
   async function cancelOrder() {
@@ -62,14 +63,17 @@ export default function Snacks() {
     load();
   }, []);
 
+  const toggle = (id: string) =>
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selected) return;
-    const updating = !!mine?.order;
+    if (!selected.length) return;
+    const updating = !!mine?.items.length;
     run(async () => {
       const res = await send("/api/snacks", {
         method: "POST",
-        json: { itemId: selected, preference: selected === "healthy" ? "healthy" : "anything", instructions },
+        json: { items: selected, instructions },
       });
       if (!res.ok) {
         toast.error(await readError(res));
@@ -77,18 +81,21 @@ export default function Snacks() {
         await load();
         return false;
       }
-      toast.success(`${updating ? "Order updated" : "Order placed"}: ${itemFor(selected)?.name}`);
+      const label = selected.map((i) => itemFor(i)?.name).join(" + ");
+      toast.success(`Order ${updating ? "updated" : "placed"}: ${label}`);
       await load();
       return true;
     });
   };
 
   const closed = mine ? !mine.open : false;
-  const chosen = selected ? itemFor(selected) : undefined;
+  const chosen = selected.map(itemFor).filter((m): m is (typeof MENU)[number] => !!m);
+  const total = chosen.reduce((sum, m) => sum + (m.price ?? 0), 0);
+  const historyDays = [...new Set((history ?? []).map((o) => o.date))];
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="Snacks & Tea" />
+      <PageHeader title="Meals & Snacks" />
 
       <Segmented
         value={tab}
@@ -116,14 +123,14 @@ export default function Snacks() {
         <form onSubmit={submit} className="t-stagger mt-5">
           <Card className="gap-0 p-0" style={stagger(0)}>
             {MENU.map((m, i) => {
-              const active = selected === m.id;
+              const active = selected.includes(m.id);
               return (
                 <div key={m.id}>
                   {i > 0 && <Separator />}
                   <button
                     type="button"
                     disabled={closed}
-                    onClick={() => setSelected(active ? null : m.id)}
+                    onClick={() => toggle(m.id)}
                     aria-pressed={active}
                     className={cn(
                       "flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
@@ -133,7 +140,7 @@ export default function Snacks() {
                     <IconTile icon={MENU_ICONS[m.icon]} tone={m.tone} />
                     <div className="flex-1">
                       <div className="text-sm font-medium">{m.name}</div>
-                      <div className="text-xs text-muted-foreground">₹{m.price}</div>
+                      <div className="text-xs text-muted-foreground">{m.price != null ? `₹${m.price}` : "Ask coordinator"}</div>
                     </div>
                     <span
                       className={cn(
@@ -151,10 +158,18 @@ export default function Snacks() {
 
           <Card className="mt-4 gap-0 p-4" style={stagger(1)}>
             <p className="text-sm font-medium">Order summary</p>
-            {chosen ? (
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">1 × {chosen.name}</span>
-                <span className="font-medium">₹{chosen.price}</span>
+            {chosen.length ? (
+              <div className="mt-2 space-y-1 text-sm">
+                {chosen.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between">
+                    <span className="text-muted-foreground">1 × {m.name}</span>
+                    <span className="font-medium">{m.price != null ? `₹${m.price}` : "—"}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between border-t pt-1.5 font-medium">
+                  <span>Total</span>
+                  <span>₹{total}</span>
+                </div>
               </div>
             ) : (
               <p className="mt-1 text-xs text-muted-foreground">No items selected</p>
@@ -170,7 +185,11 @@ export default function Snacks() {
             />
             <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
               <Clock className="size-3.5" />
-              {closed ? "Orders are closed for today" : `Orders close by ${fmtHour(mine.cutoffHour)}`}
+              {closed
+                ? "Orders are closed for today"
+                : mine.cutoffHour >= 24
+                  ? "Order anytime today — change it as often as you like"
+                  : `Orders close by ${fmtHour(mine.cutoffHour)}`}
             </p>
           </Card>
 
@@ -178,16 +197,16 @@ export default function Snacks() {
             <StatefulButton
               type="submit"
               state={buttonState}
-              disabled={!selected || closed}
+              disabled={!selected.length || closed}
               loadingText="Placing order"
               successText="Order placed"
               errorText="Try again"
               icon={<Send className="size-4" />}
               className="mt-5 h-11 w-full rounded-lg font-medium"
             >
-              {mine.order ? "Update Order" : "Submit Order"}
+              {mine.items.length ? "Update Order" : "Submit Order"}
             </StatefulButton>
-            {mine.order && !closed && (
+            {mine.items.length > 0 && !closed && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" variant="ghost" size="xl" className="mt-2 w-full text-muted-foreground hover:text-destructive">
@@ -198,8 +217,8 @@ export default function Snacks() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Cancel today&apos;s order?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Your {itemFor(mine.order.itemId)?.name} will be removed from today&apos;s list. You can order again
-                      until {fmtHour(mine.cutoffHour)}.
+                      {names(mine.items)} will be removed from today&apos;s list. You can order again
+                      {mine.cutoffHour >= 24 ? " anytime today." : ` until ${fmtHour(mine.cutoffHour)}.`}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -218,24 +237,31 @@ export default function Snacks() {
           {history.length === 0 ? (
             <Empty>No past orders from this device yet.</Empty>
           ) : (
-            <ul className="t-stagger divide-y">
-              {history.map((o, i) => {
-                const it = itemFor(o.itemId);
-                return (
-                  <li key={o.id} className="flex items-center gap-3 px-3 py-3" style={stagger(i)}>
-                    <IconTile icon={MENU_ICONS[it?.icon ?? "coffee"]} tone={it?.tone ?? "sky"} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{it?.name ?? o.itemId}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {relativeDay(o.createdAt)} · {fmtShortDate(o.createdAt)}
-                        {o.instructions && ` · ${o.instructions}`}
-                      </p>
-                    </div>
-                    <span className="text-sm font-medium">₹{it?.price}</span>
-                  </li>
-                );
-              })}
-            </ul>
+            historyDays.map((date) => {
+              const dayOrders = history.filter((o) => o.date === date);
+              return (
+                <div key={date}>
+                  <p className="px-3 pt-3 text-xs font-medium text-muted-foreground">
+                    {relativeDay(dayOrders[0].createdAt)} · {fmtShortDate(dayOrders[0].createdAt)}
+                  </p>
+                  <ul className="t-stagger divide-y">
+                    {dayOrders.map((o, i) => {
+                      const it = itemFor(o.itemId);
+                      return (
+                        <li key={o.id} className="flex items-center gap-3 px-3 py-3" style={stagger(i)}>
+                          <IconTile icon={MENU_ICONS[it?.icon ?? "coffee"]} tone={it?.tone ?? "sky"} size="sm" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">{it?.name ?? o.itemId}</p>
+                            {o.instructions && <p className="truncate text-xs text-muted-foreground">{o.instructions}</p>}
+                          </div>
+                          <span className="text-sm font-medium">{it?.price != null ? `₹${it.price}` : "—"}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })
           )}
         </Card>
       )}

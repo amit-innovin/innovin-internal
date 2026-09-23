@@ -17,7 +17,7 @@ test.describe("Navigation & shell", () => {
     const nav = isMobile(page) ? page.locator("nav.fixed") : page.locator("aside");
     const destinations: [string, RegExp, string][] = [
       ["Attendance", /\/attendance$/, "Attendance"],
-      [isMobile(page) ? "Snacks" : "Snacks & Tea", /\/snacks$/, "Snacks & Tea"],
+      [isMobile(page) ? "Meals" : "Meals & Snacks", /\/snacks$/, "Meals & Snacks"],
       ["Grievances", /\/grievances$/, "Daily Grievances"],
       [isMobile(page) ? "Wi-Fi" : "Wi-Fi Quality", /\/wifi$/, "Wi-Fi Quality"],
       ["Home", /\/$/, ""],
@@ -32,7 +32,7 @@ test.describe("Navigation & shell", () => {
 
     for (const [label, url] of [
       ["Attendance", /\/attendance$/],
-      ["Snacks & Tea", /\/snacks$/],
+      ["Meals & Snacks", /\/snacks$/],
       ["Grievances", /\/grievances$/],
       ["Wi-Fi Quality", /\/wifi$/],
     ] as const) {
@@ -50,7 +50,7 @@ test.describe("Navigation & shell", () => {
     await expect(page.getByRole("link", { name: /Admin dashboard/ })).toBeVisible();
     await page.getByRole("link", { name: "Help" }).first().click();
     await expect(page.getByRole("heading", { name: "Are grievances really anonymous?" })).toBeVisible();
-    await expect(page.getByText("submit before midnight")).toBeVisible();
+    await expect(page.getByText("submit anytime")).toBeVisible();
     await page.getByRole("link", { name: "Back to home" }).click();
     await expect(page).toHaveURL(/\/$/);
   });

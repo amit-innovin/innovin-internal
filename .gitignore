@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+client_secret_*.json
 
 # Vercel local project link
 .vercel

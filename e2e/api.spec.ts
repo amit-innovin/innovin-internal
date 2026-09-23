@@ -244,6 +244,22 @@ test.describe("API: behaviour", () => {
     expect(other).toMatchObject({ usedDays: 0, pendingDays: 0 });
   });
 
+  test("people directory exposes names and presence tags — never coords, emails in presence, or refs", async () => {
+    const ctx = await device();
+    const who = `presence.${Date.now().toString(36)}@innovinlabs.com`; // firstName → "Presence"
+    await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 12.9352, lng: 77.6241 } });
+
+    const res = await (await ctx.get("/api/people")).json();
+    const me = res.inToday.find((p: { name: string }) => p.name === "Presence");
+    expect(me).toMatchObject({ name: "Presence", where: "office" });
+    expect(me.since).toBeTruthy();
+    const raw = JSON.stringify(res.inToday);
+    expect(raw).not.toContain("77.62"); // raw coordinates never leave the server
+    expect(raw).not.toContain(who); // presence shows names, not emails
+    noRef(res);
+    expect(Array.isArray(res.people)).toBe(true);
+  });
+
   test("events: admin publishes, devices RSVP, nothing exposes internal refs", async () => {
     const ctx = await device();
     const adm = await admin();
@@ -335,7 +351,10 @@ test.describe("API: privacy & auth", () => {
 
   test("anonymous grievances never expose submitter identity, to devices or admins", async () => {
     const mine = await device();
-    const g = await (await mine.post("/api/grievances", { data: { body: "private thing" } })).json();
+    const posted = await mine.post("/api/grievances", { data: { body: "private thing" } });
+    // The device keeps the grievance id itself — the server stores no device link at all.
+    expect(posted.headers()["set-cookie"]).toContain("innovin_grv=");
+    const g = await posted.json();
     noRef(g);
     const list = await (await mine.get("/api/grievances?scope=mine")).json();
     expect(list.map((x: { id: string }) => x.id)).toContain(g.id);

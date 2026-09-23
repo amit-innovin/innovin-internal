@@ -85,7 +85,7 @@ away          id · email · type(leave|wfh) · start_date · end_date · reason
 
 - Dashboard layout: Option 3 (dashboard with insights), themed with the innovinlabs.com brand.
 - Announcements added (admin-posted, shown on the home dashboard).
-- "Your Grievances" on home shows only the device's own submissions, preserving anonymity.
+- "Your Grievances" shows only submissions whose ids the device carries in its cookie; the DB stores `submitter_ref = 'anon'` on every grievance (older rows scrubbed on migration) so anonymous feedback can't be traced even with direct database access.
 - Snack cutoff configurable via `ORDER_CUTOFF_HOUR` (default 24 = open all day).
 
 ## Open questions
@@ -99,6 +99,7 @@ away          id · email · type(leave|wfh) · start_date · end_date · reason
 - **Google sign-in** — verified `@innovinlabs.com` identity; attendance and away requests submitted under the verified email can't be spoofed; admins see real names.
 - **Leave tracker** — annual leave balance (`LEAVE_ALLOWANCE_DAYS`, default 12 days): employees see used/pending/remaining on `/away` (verified email when signed in, this device otherwise); admins see a per-person usage table under Time away. Counts calendar days; WFH doesn't count; rejected requests don't count.
 - **Events** (`/events`) — the second reusable primitive. One event model (title, category, start time, location, details) powers sports screenings, workshops, celebrations and town halls. Admins publish/delete from the dashboard; employees RSVP per device with a public going count only — the guest list is never exposed.
+- **People** (`/people`) — the office directory: signed-in employees (Google name, photo, email, joined date) plus an "In today" presence list showing who's checked in with an In office / Remote / Location not shared tag — names and tags only, never raw coordinates.
 
 ## Explicitly out of v1
 

@@ -94,7 +94,7 @@ test.describe("Navigation & shell", () => {
   });
 
   test("no page overflows horizontally", async ({ page }) => {
-    for (const path of ["/", "/attendance", "/snacks", "/grievances", "/wifi", "/away", "/events", "/settings", "/help", "/admin"]) {
+    for (const path of ["/", "/attendance", "/snacks", "/grievances", "/wifi", "/away", "/events", "/people", "/settings", "/help", "/admin"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

@@ -13,7 +13,8 @@ Simple tools for everyday needs. Built for our team. See [PRODUCT.md](PRODUCT.md
 - **Events** (`/events`) — upcoming internal events (matches, workshops, celebrations, town halls) published by admins; one-tap RSVP per device showing only a going count — never a guest list.
 - **People** (`/people`) — the office directory: everyone who's signed in (Google name/photo/email), plus "In today" — who's checked in right now with an In office / Remote tag.
 - **Announcements** — posted by admins, shown on everyone's home dashboard
-- **Admin** (`/admin`) — passcode-gated dashboard: attendance (with real names + location tags), orders, grievance inbox with statuses, Wi-Fi feed, time-away approvals, announcements
+- **Admin** (`/admin`) — dashboard: attendance (with real names + location tags), orders, grievance inbox with statuses, Wi-Fi feed, time-away approvals, announcements
+- **Roles** — `owner` > `admin` > `member`. Owners are set via `OWNER_EMAILS` and grant/revoke admin from the dashboard's Access card; admins reach the dashboard by signing in with Google, so approvals are recorded against their name. `ADMIN_PASSCODE` remains as break-glass access (bootstrap, or if Google sign-in is unavailable) and is deliberately unattributed.
 - **Sign in with Google** — optional verified identity on `innovinlabs.com`; a signed-in device can't mark attendance for a different email, and admins see real names. Works without it too.
 
 ## Stack
@@ -34,7 +35,8 @@ Without `DATABASE_URL`, data is stored in `data/store.json` (git-ignored).
 
 | Var | Purpose |
 |---|---|
-| `ADMIN_PASSCODE` | Enables `/admin`. 4–8 digits → PIN pad, otherwise password field. Unset → admin locked. **Use a long, unique value in production.** |
+| `ADMIN_PASSCODE` | Break-glass access to `/admin`. 4–8 digits → PIN pad, otherwise password field. Unset → passcode entry locked (role-based sign-in still works). **Use a long, unique value in production.** |
+| `OWNER_EMAILS` | Comma-separated emails granted the `owner` role on Google sign-in. Owners grant/revoke admin in-app; an owner's own role can only be changed here. |
 | `DATABASE_URL` | Postgres (Supabase/Neon/any). Required when deployed — the app refuses the file store on Vercel. |
 | `DATABASE_CA_CERT` / `DATABASE_SSL_VERIFY` | TLS verification for remote Postgres (default: encrypted, unverified — see `lib/pgconfig.ts`). |
 | `DATABASE_POOL_MAX` | Connections per serverless instance (default 5). |

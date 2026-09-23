@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUserSession, OAUTH_COOKIE, USER_COOKIE, USER_SESSION_MS, verifyOauthState } from "@/lib/auth";
+import { ownerEmails } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { clientIp } from "@/lib/http";
@@ -28,7 +29,18 @@ export async function GET(req: NextRequest) {
   if (!identity) return fail(req, "failed");
 
   const now = new Date().toISOString();
-  await store.upsertEmployee({ email: identity.email, name: identity.name, picture: identity.picture, createdAt: now, lastSeenAt: now });
+  // `role` applies to the insert only — upsert never overwrites a granted role. Bootstrap
+  // owners keep being promoted so a configured owner can't be locked out of their own org.
+  const owner = ownerEmails().includes(identity.email.toLowerCase());
+  await store.upsertEmployee({
+    email: identity.email,
+    name: identity.name,
+    picture: identity.picture,
+    role: owner ? "owner" : "member",
+    createdAt: now,
+    lastSeenAt: now,
+  });
+  if (owner) await store.setRole(identity.email, "owner");
 
   const res = NextResponse.redirect(new URL(next, req.nextUrl.origin));
   const token = createUserSession({ email: identity.email, name: identity.name });

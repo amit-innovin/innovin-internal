@@ -12,6 +12,15 @@ export function leaveAllowanceDays() {
   return Number.isInteger(days) && days > 0 && days <= 365 ? days : 12;
 }
 
+// Bootstrap owners. These emails are granted the owner role on sign-in, so the first
+// admin exists without anyone having to hand out the break-glass PIN.
+export function ownerEmails() {
+  return (process.env.OWNER_EMAILS || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export function allowedEmailDomains() {
   return (process.env.ALLOWED_EMAIL_DOMAINS || "innovinlabs.com")
     .split(",")

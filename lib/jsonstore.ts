@@ -175,6 +175,12 @@ export const jsonStore: Store = {
       return { result: row, changed: true };
     }),
   getEmployee: (email) => query((db) => db.employees.find((e) => e.email === email) ?? null),
+  setRole: (email, role) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.role = role;
+      return { result: !!row, changed: !!row };
+    }),
   listEmployees: () =>
     query((db) => db.employees.slice().sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email))),
 
@@ -183,10 +189,14 @@ export const jsonStore: Store = {
       db.away.unshift(row);
       return { result: row, changed: true };
     }),
-  setAwayStatus: (id, status) =>
+  setAwayStatus: (id, status, decidedBy, decidedAt) =>
     mutate((db) => {
       const row = db.away.find((r) => r.id === id);
-      if (row) row.status = status;
+      if (row) {
+        row.status = status;
+        row.decidedBy = decidedBy;
+        row.decidedAt = decidedAt;
+      }
       return { result: !!row, changed: !!row };
     }),
   listAway: (limit) => query((db) => db.away.sort(newestFirst).slice(0, limit)),

@@ -58,7 +58,9 @@ The MVP is successful when the team can use these four flows for one working wee
 
 ## Admin dashboard
 
-Single view: today's attendance, consolidated snack orders, grievance inbox, Wi-Fi report feed. v1 access via a protected route + env-configured passcode.
+Single view: today's attendance, consolidated snack orders, grievance inbox, Wi-Fi report feed.
+
+**Access model.** Three roles on the employee record: `owner` > `admin` > `member` (the default on first sign-in). Owners come from `OWNER_EMAILS` and grant/revoke admin from the Access card; admins open the dashboard by signing in with Google, which makes their actions attributable ("Approved by …") and individually revocable. The original shared passcode is retained as deliberate break-glass access — it carries no identity, so anything done through it is recorded unattributed. Titles/teams are intentionally *not* modelled yet: when they arrive they'll be directory metadata only and must never imply permissions.
 
 ## Suggested stack
 

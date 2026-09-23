@@ -1,7 +1,13 @@
+// owner  — can grant/revoke admin; cannot be demoted by anyone else
+// admin  — the dashboard powers (approvals, publishing, order lists)
+// member — the default on first sign-in
+export type Role = "owner" | "admin" | "member";
+
 export type EmployeeRow = {
   email: string;
   name: string;
   picture: string;
+  role: Role;
   createdAt: string;
   lastSeenAt: string;
 };
@@ -40,6 +46,10 @@ export type AwayRow = {
   reason: string;
   status: AwayStatus;
   submitterRef: string;
+  // Who approved/rejected it, for an audit trail. Null while pending, or when
+  // decided via the break-glass PIN (which carries no identity).
+  decidedBy: string | null;
+  decidedAt: string | null;
   createdAt: string;
 };
 
@@ -117,7 +127,7 @@ export interface Store {
   deleteAnnouncement(id: string): Promise<void>;
   listAnnouncements(limit: number): Promise<AnnouncementRow[]>;
   addAway(row: AwayRow): Promise<AwayRow>;
-  setAwayStatus(id: string, status: AwayStatus): Promise<boolean>;
+  setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string): Promise<boolean>;
   listAway(limit: number): Promise<AwayRow[]>;
   listAwayByRef(ref: string, limit: number): Promise<AwayRow[]>;
   // A verified employee's requests across all their devices.
@@ -136,4 +146,5 @@ export interface Store {
   upsertEmployee(row: EmployeeRow): Promise<EmployeeRow>;
   getEmployee(email: string): Promise<EmployeeRow | null>;
   listEmployees(): Promise<EmployeeRow[]>;
+  setRole(email: string, role: Role): Promise<boolean>;
 }

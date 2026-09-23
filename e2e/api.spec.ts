@@ -277,7 +277,7 @@ test.describe("API: behaviour", () => {
     const entitled = Object.fromEntries(mine.ledger.map((l: { type: string; entitled: number }) => [l.type, l.entitled]));
     expect(entitled).toMatchObject({ cl: 4, sl: 6, fl: 2 });
     expect(mine.earned.note).toContain("joining date"); // no joining date yet
-    expect(mine.holidays).toHaveLength(9);
+    expect(mine.holidays).toHaveLength(10); // the declared 2026 list
 
     // Book 2 working days of Casual Leave: pending first, then used once approved.
     const req = await (

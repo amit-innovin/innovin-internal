@@ -36,9 +36,31 @@ describe("working days", () => {
     expect(nonWorkingReason("2026-09-07")).toBeNull();
   });
 
-  it("lists the nine declared holidays for 2026 and nothing for unknown years", () => {
-    expect(Object.keys(holidaysFor(2026))).toHaveLength(9);
+  // The official Innovin Labs Holiday List 2026, dates and weekdays as published.
+  it("matches the declared holiday list for 2026 and has nothing for unknown years", () => {
+    expect(holidaysFor(2026)).toEqual({
+      "2026-01-26": "Republic Day",
+      "2026-03-20": "Ramzan",
+      "2026-04-15": "Vishu",
+      "2026-05-01": "May Day",
+      "2026-08-15": "Independence Day",
+      "2026-08-26": "Onam",
+      "2026-10-02": "Gandhi Jayanthi",
+      "2026-10-20": "Mahanavami",
+      "2026-11-08": "Deepavali",
+      "2026-12-25": "Christmas",
+    });
     expect(holidaysFor(2030)).toEqual({});
+  });
+
+  it("gives a day off for nine of the ten holidays — Deepavali 2026 is a Sunday", () => {
+    const dates = Object.keys(holidaysFor(2026));
+    expect(dates.filter((d) => nonWorkingReason(d) !== "Sunday" && nonWorkingReason(d) !== null)).toHaveLength(10);
+    // Deepavali is reported by name even though the Sunday would have been off anyway.
+    expect(nonWorkingReason("2026-11-08")).toBe("Deepavali");
+    // Independence Day is a 3rd Saturday, which is a working day — so it is a real day off.
+    expect(nonWorkingReason("2026-08-15")).toBe("Independence Day");
+    expect(workingDaysInMonth(2026, 11)).toBe(23); // unchanged by a Sunday holiday
   });
 
   // The 2026 tracker writes "Total working days- N" on each month sheet; these are those

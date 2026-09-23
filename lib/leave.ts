@@ -38,6 +38,9 @@ const HOLIDAYS: Record<number, Record<string, string>> = {
     "2026-08-26": "Onam",
     "2026-10-02": "Gandhi Jayanthi",
     "2026-10-20": "Mahanavami",
+    // Falls on a Sunday in 2026, so it's already a weekly off — listed for completeness, but
+    // it grants no extra day away. Nine of the ten declared holidays land on working days.
+    "2026-11-08": "Deepavali",
     "2026-12-25": "Christmas",
   },
 };

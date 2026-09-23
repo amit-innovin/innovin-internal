@@ -1,4 +1,4 @@
-import { adminLogin, expect, test, uniqueEmail, uniqueText } from "./fixtures";
+import { adminLogin, adminTab, expect, test, uniqueEmail, uniqueText } from "./fixtures";
 import type { Page } from "@playwright/test";
 
 // Leave, WFH requests and the month calendar all live inside Attendance now — one "my time"
@@ -82,7 +82,7 @@ test.describe("Leave & calendar", () => {
     await e.getByRole("button", { name: "Request Leave" }).click();
     await expect(e.getByText("Leave request sent")).toBeVisible();
 
-    await adminLogin(page);
+    await adminLogin(page, "approvals");
     await page.locator("li", { hasText: reason }).getByRole("button", { name: "Approve" }).click();
     await expect(page.getByText("Request approved")).toBeVisible();
 
@@ -116,9 +116,10 @@ test.describe("Leave & calendar", () => {
     await expect(casual).toContainText("2 pending");
     await expect(casual).toContainText("of 4 left"); // current policy entitlement
 
-    await adminLogin(page);
+    await adminLogin(page, "approvals");
     await page.locator("li", { hasText: reason }).getByRole("button", { name: "Approve" }).click();
     await expect(page.getByText("Request approved")).toBeVisible();
+    await adminTab(page, "people");
     await expect(page.locator("#leave")).toContainText("Leave balances");
 
     await leaveTab(e);

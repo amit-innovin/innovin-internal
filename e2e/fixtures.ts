@@ -42,8 +42,23 @@ export async function typePin(page: Page, pin: string) {
   await input.pressSequentially(pin);
 }
 
-export async function adminLogin(page: Page) {
+export type AdminTab = "today" | "approvals" | "people" | "publish";
+
+// The dashboard groups its sections into URL-driven tabs and only queries the open one, so
+// tests have to say which tab they need. Defaults to Today, same as the dashboard.
+export async function adminLogin(page: Page, tab: AdminTab = "today") {
   await page.goto("/admin");
   await typePin(page, "1704");
   await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
+  if (tab !== "today") await adminTab(page, tab);
+}
+
+export async function adminTab(page: Page, tab: AdminTab) {
+  const label = { today: "Today", approvals: "Approvals", people: "People", publish: "Publish" }[tab];
+  // Scoped to the dashboard's own nav — "People" also exists in the app sidebar.
+  await page
+    .getByRole("navigation", { name: "Dashboard sections" })
+    .getByRole("link", { name: new RegExp(`^${label}`) })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`tab=${tab}`));
 }

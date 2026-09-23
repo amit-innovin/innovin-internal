@@ -23,7 +23,7 @@ test.describe("Roles & access", () => {
     const { ctx, page } = await signInAs(browser, "owner@innovinlabs.com", "Owner E2E");
 
     // No passcode typed — the dashboard opens because the directory role says owner.
-    await page.goto("/admin");
+    await page.goto("/admin?tab=people");
     await expect(dashboard(page)).toBeVisible();
     await expect(page.getByText(/· Owner E2E/)).toBeVisible(); // attributed in the header, not "shared passcode"
     await expect(page.locator("#access")).toBeVisible();
@@ -41,7 +41,7 @@ test.describe("Roles & access", () => {
 
     // The owner grants admin from the Access card.
     const owner = await signInAs(browser, "owner@innovinlabs.com", "Owner E2E");
-    await owner.page.goto("/admin");
+    await owner.page.goto("/admin?tab=people");
     const row = owner.page.locator("#access li", { hasText: email });
     await row.getByRole("button", { name: "Make admin" }).click();
     await expect(row.getByRole("button", { name: "Revoke admin" })).toBeVisible();
@@ -52,7 +52,7 @@ test.describe("Roles & access", () => {
     await expect(member.page.locator("#access")).toHaveCount(0);
 
     // Revoking takes it away again.
-    await owner.page.goto("/admin");
+    await owner.page.goto("/admin?tab=people");
     await owner.page.locator("#access li", { hasText: email }).getByRole("button", { name: "Revoke admin" }).click();
     await expect(owner.page.getByText("Admin access revoked")).toBeVisible();
     await member.page.goto("/admin");
@@ -75,7 +75,7 @@ test.describe("Roles & access", () => {
     await expect(page.locator("li", { hasText: reason })).toContainText("Pending");
 
     const owner = await signInAs(browser, "owner@innovinlabs.com", "Owner E2E");
-    await owner.page.goto("/admin");
+    await owner.page.goto("/admin?tab=approvals");
     const request = owner.page.locator("li", { hasText: reason });
     await request.getByRole("button", { name: "Approve" }).click();
     await expect(request).toContainText("Approved by Owner E2E");

@@ -18,7 +18,12 @@ export function Flash({ done }: { done?: string }) {
     const message = done ? MESSAGES[done] : undefined;
     if (!message) return;
     toast[message.type](message.text, { id: `flash-${done}` });
-    window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+    // Drop only the flash keys — other params (e.g. the dashboard's ?tab=) must survive, or a
+    // later reload or router.refresh() would land on a different section.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("done");
+    url.searchParams.delete("error");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }, [done]);
   return null;
 }

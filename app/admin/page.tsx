@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { CalendarCheck, CalendarDays, Coffee, LogOut, Megaphone, MessageSquare, Trash2, Wifi } from "lucide-react";
 import AccessList from "@/components/access-list";
@@ -34,39 +35,84 @@ import { todayIST } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
-function Stat({ icon, tone, label, value }: { icon: LucideIcon; tone: Tone; label: string; value: number }) {
+// A stat tile doubles as navigation: tapping it opens the tab that can act on the number.
+function Stat({ icon, tone, label, value, href }: { icon: LucideIcon; tone: Tone; label: string; value: number; href: string }) {
   return (
-    <Card className="flex-row items-center gap-3 p-4">
-      <IconTile icon={icon} tone={tone} />
-      <div>
-        <AnimatedNumber value={value} className="text-xl font-medium tabular-nums" />
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
+    <Card className="p-0">
+      <Link href={href} className="flex flex-row items-center gap-3 rounded-xl p-4 transition-colors hover:bg-accent/40">
+        <IconTile icon={icon} tone={tone} />
+        <div>
+          <AnimatedNumber value={value} className="text-xl font-medium tabular-nums" />
+          <p className="text-xs text-muted-foreground">{label}</p>
+        </div>
+      </Link>
     </Card>
   );
 }
 
-export default async function Admin({ searchParams }: { searchParams: Promise<{ done?: string; error?: string }> }) {
+const TABS = [
+  { id: "today", label: "Today" },
+  { id: "approvals", label: "Approvals" },
+  { id: "people", label: "People" },
+  { id: "publish", label: "Publish" },
+] as const;
+type Tab = (typeof TABS)[number]["id"];
+
+// Tabs are URL state rather than client state: the dashboard stays a server component, each
+// tab is linkable, and only the open tab's data gets queried.
+function AdminTabs({ active, pending }: { active: Tab; pending: number }) {
+  return (
+    <nav aria-label="Dashboard sections" className="mt-4 flex gap-1 overflow-x-auto rounded-lg border bg-card p-1">
+      {TABS.map((t) => (
+        <Link
+          key={t.id}
+          href={`/admin?tab=${t.id}`}
+          aria-current={t.id === active ? "page" : undefined}
+          className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            t.id === active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t.label}
+          {t.id === "approvals" && pending > 0 && (
+            <span className="rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white tabular-nums">{pending}</span>
+          )}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+export default async function Admin({ searchParams }: { searchParams: Promise<{ done?: string; error?: string; tab?: string }> }) {
   const params = await searchParams;
   if (!(await isAdmin())) {
     const pass = process.env.ADMIN_PASSCODE ?? "";
     return <AdminLogin pinLength={/^\d{4,8}$/.test(pass) ? pass.length : null} initialError={params.error} />;
   }
 
+  const tab: Tab = (TABS.find((t) => t.id === params.tab)?.id ?? "today") as Tab;
   const date = todayIST();
+  const year = Number(date.slice(0, 4));
   const now = Date.now(); // frozen for hydration — client lists must render the same labels as the server
   const [actor, owner] = await Promise.all([currentActor(), isOwner()]);
-  const [attendance, orders, grievances, wifi, announcements, employees, away, events] = await Promise.all([
+
+  // Always needed: the stat row, and the pending badge on the Approvals tab.
+  const [attendance, orders, grievances, wifi, away, employees] = await Promise.all([
     store.listAttendance(date),
     store.listOrders(date),
     store.listGrievances(),
     store.listWifi(50),
-    store.listAnnouncements(10),
-    store.listEmployees(),
     store.listAway(50),
-    store.listEvents(new Date(Date.now() - 30 * 86_400_000).toISOString(), 30),
+    store.listEmployees(),
   ]);
-  const rsvpCounts = await store.rsvpCounts(events.map((e) => e.id));
+
+  // Per-tab work stays behind its tab — the leave overview in particular summarises every
+  // employee plus everyone in the imported sheet, which is far too much to do on every load.
+  const overview = tab === "people" ? await leaveOverview(year, date) : null;
+  const events = tab === "publish" ? await store.listEvents(new Date(now - 30 * 86_400_000).toISOString(), 30) : [];
+  const [rsvpCounts, announcements] = await Promise.all([
+    events.length ? store.rsvpCounts(events.map((e) => e.id)) : Promise.resolve({} as Record<string, number>),
+    tab === "publish" ? store.listAnnouncements(10) : Promise.resolve([]),
+  ]);
   const names = new Map(employees.map((e) => [e.email, e.name]));
 
   const consolidated = MENU.map((m) => ({ ...m, count: orders.filter((o) => o.itemId === m.id).length }));
@@ -74,11 +120,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const hasUnpriced = consolidated.some((m) => m.price == null && m.count > 0);
   const openGrievances = grievances.filter((g) => g.status !== "resolved").length;
   const poorToday = wifi.filter((w) => w.quality === "poor" && relativeDay(w.createdAt) === "Today").length;
-
-  // Per-person leave balances for the year, per type, including people who exist only in the
-  // imported 2026 sheet because they haven't signed in yet.
-  const year = Number(date.slice(0, 4));
-  const overview = await leaveOverview(year, date);
+  const pendingAway = away.filter((r) => r.status === "pending").length;
 
   // One row per employee: their sessions today, total time, and whether they're in right now.
   const people = [...new Set(attendance.map((a) => a.email))].map((email) => {
@@ -107,21 +149,23 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
       <div className="t-stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div style={stagger(0)}>
-          <Stat icon={CalendarCheck} tone="blue" label="Checked in today" value={people.length} />
+          <Stat icon={CalendarCheck} tone="blue" label="Checked in today" value={people.length} href="/admin?tab=today#attendance" />
         </div>
         <div style={stagger(1)}>
-          <Stat icon={Coffee} tone="sky" label="Orders today" value={orders.length} />
+          <Stat icon={Coffee} tone="sky" label="Orders today" value={orders.length} href="/admin?tab=today#orders" />
         </div>
         <div style={stagger(2)}>
-          <Stat icon={MessageSquare} tone="ink" label="Open grievances" value={openGrievances} />
+          <Stat icon={MessageSquare} tone="ink" label="Open grievances" value={openGrievances} href="/admin?tab=approvals#grievances" />
         </div>
         <div style={stagger(3)}>
-          <Stat icon={Wifi} tone="blue" label="Poor Wi-Fi reports today" value={poorToday} />
+          <Stat icon={Wifi} tone="blue" label="Poor Wi-Fi reports today" value={poorToday} href="/admin?tab=today#wifi" />
         </div>
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <Card className="gap-0 p-5">
+      <AdminTabs active={tab} pending={pendingAway} />
+
+      <div className={`mt-4 grid gap-4 md:grid-cols-2 ${tab === "today" ? "" : "hidden"}`}>
+        <Card id="orders" className="gap-0 p-5">
           <SectionHeader title="Today's orders" aside={`Total ₹${total}${hasUnpriced ? "+" : ""}`} />
           <ul className="mt-3 space-y-2">
             {consolidated.map((c) => (
@@ -182,7 +226,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         </Card>
       </div>
 
-      <Card className="mt-4 gap-0 p-5">
+      <Card id="away" className={`mt-4 gap-0 p-5 ${tab === "approvals" ? "" : "hidden"}`}>
         <SectionHeader
           title="Time away"
           aside={away.filter((r) => r.status === "pending").length ? `${away.filter((r) => r.status === "pending").length} pending` : undefined}
@@ -190,16 +234,16 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         <AwayList items={away} names={Object.fromEntries(names)} now={now} />
       </Card>
 
-      <Card id="leave" className="mt-4 gap-0 p-5">
-        <SectionHeader title={`Leave balances · ${year}`} aside={`${overview.signedIn.length + overview.unmatched.length} people`} />
+      <Card id="leave" className={`mt-4 gap-0 p-5 ${tab === "people" ? "" : "hidden"}`}>
+        <SectionHeader title={`Leave balances · ${year}`} aside={overview ? `${overview.signedIn.length + overview.unmatched.length} people` : undefined} />
         <p className="mt-1 text-xs text-muted-foreground">
           Remaining days per type. Joining dates drive Earned Leave accrual — set one for anyone showing “add joining date”.
         </p>
-        <LeaveOverview signedIn={overview.signedIn} unmatched={overview.unmatched} />
+        {overview && <LeaveOverview signedIn={overview.signedIn} unmatched={overview.unmatched} />}
       </Card>
 
       {owner && (
-        <Card id="access" className="mt-4 gap-0 p-5">
+        <Card id="access" className={`mt-4 gap-0 p-5 ${tab === "people" ? "" : "hidden"}`}>
           <SectionHeader title="Access" aside="Owner only" />
           <p className="mt-1 text-xs text-muted-foreground">
             Admins get this dashboard when they sign in with Google — their approvals are recorded against their name.
@@ -208,7 +252,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         </Card>
       )}
 
-      <Card id="events" className="mt-4 gap-0 p-5">
+      <Card id="events" className={`mt-4 gap-0 p-5 ${tab === "publish" ? "" : "hidden"}`}>
         <SectionHeader title="Events" aside="Shown on the Events page" />
         <form action="/api/events" method="post" className="mt-4 grid gap-3 sm:grid-cols-2">
           <Input name="title" required maxLength={80} placeholder="Title — e.g. IPL screening in the common area" aria-label="Event title" className="sm:col-span-2" />
@@ -284,7 +328,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         )}
       </Card>
 
-      <Card id="announcements" className="mt-4 gap-0 p-5">
+      <Card id="announcements" className={`mt-4 gap-0 p-5 ${tab === "publish" ? "" : "hidden"}`}>
         <SectionHeader title="Announcements" aside="Shown on everyone's home dashboard" />
         <form action="/api/announcements" method="post" className="mt-4 grid gap-3 sm:grid-cols-[1fr_8rem]">
           <Input name="title" required maxLength={120} placeholder="Title — e.g. Team Lunch on Friday" aria-label="Title" />
@@ -339,12 +383,12 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         )}
       </Card>
 
-      <Card className="mt-4 gap-0 p-5">
+      <Card id="grievances" className={`mt-4 gap-0 p-5 ${tab === "approvals" ? "" : "hidden"}`}>
         <SectionHeader title="Grievances" aside={`${openGrievances} need attention`} />
         <GrievanceList items={grievances.map(({ submitterRef: _r, ...g }) => g)} now={now} />
       </Card>
 
-      <Card className="mt-4 gap-0 p-5">
+      <Card id="wifi" className={`mt-4 gap-0 p-5 ${tab === "today" ? "" : "hidden"}`}>
         <SectionHeader title="Wi-Fi reports" />
         {wifi.length === 0 ? (
           <Empty>Nothing reported yet.</Empty>

@@ -16,7 +16,7 @@ const istToIso = (local: string) => {
 };
 
 const flash = (done: string) =>
-  new NextResponse(null, { status: 303, headers: { Location: `/admin?done=${done}#events` } });
+  new NextResponse(null, { status: 303, headers: { Location: `/admin?tab=publish&done=${done}#events` } });
 
 // Public: upcoming events with going counts + this device's RSVP state.
 export async function GET(req: NextRequest) {

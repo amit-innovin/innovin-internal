@@ -4,7 +4,7 @@ import { id, store } from "@/lib/store";
 
 // Redirect back to the admin section with a flash key the page turns into a toast.
 const back = (done: "posted" | "deleted" | "missing-title") =>
-  new NextResponse(null, { status: 303, headers: { Location: `/admin?done=${done}#announcements` } });
+  new NextResponse(null, { status: 303, headers: { Location: `/admin?tab=publish&done=${done}#announcements` } });
 
 export async function GET() {
   return NextResponse.json(await store.listAnnouncements(10));

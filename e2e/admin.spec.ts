@@ -1,4 +1,4 @@
-import { adminLogin, expect, test, typePin, uniqueEmail, uniqueText } from "./fixtures";
+import { adminLogin, adminTab, expect, test, typePin, uniqueEmail, uniqueText } from "./fixtures";
 
 test.describe("Admin", () => {
   test("wrong PIN is rejected with feedback; correct PIN opens the dashboard", async ({ page }) => {
@@ -37,6 +37,47 @@ test.describe("Admin", () => {
     await expect(page.getByText(`Tea: ${instructions}`)).toBeVisible();
   });
 
+  test("groups sections into tabs, badges pending work, and stats jump to their section", async ({ page, browser }) => {
+    // A pending request so the Approvals badge has something to count.
+    const employee = await browser.newContext();
+    const e = await employee.newPage();
+    await e.goto("/attendance");
+    await e.getByRole("tab", { name: "Leave" }).click();
+    await e.locator("#away-start").fill("2026-10-19");
+    await e.locator("#away-end").fill("2026-10-19");
+    await e.getByLabel("Email for this request").fill(uniqueEmail("badge"));
+    await e.getByRole("button", { name: "Request Leave" }).click();
+    await expect(e.getByText("Leave request sent")).toBeVisible();
+    await employee.close();
+
+    await adminLogin(page);
+    // Today is the default: orders and attendance are here, the rest is not.
+    await expect(page.locator("#orders")).toBeVisible();
+    await expect(page.locator("#away")).toBeHidden();
+    await expect(page.locator("#announcements")).toBeHidden();
+
+    // The Approvals tab carries a count so nothing waits unseen.
+    const approvals = page.getByRole("link", { name: /^Approvals/ });
+    await expect(approvals).toContainText(/[1-9]/);
+
+    // A stat tile is navigation: it opens the tab that can act on the number.
+    await page.getByRole("link", { name: /Open grievances/ }).click();
+    await expect(page).toHaveURL(/tab=approvals/);
+    await expect(page.locator("#grievances")).toBeVisible();
+    await expect(page.locator("#away")).toBeVisible();
+    await expect(page.locator("#orders")).toBeHidden();
+
+    await adminTab(page, "people");
+    await expect(page.locator("#leave")).toBeVisible();
+    await expect(page.getByLabel("Search people")).toBeVisible();
+    // The imported-sheet group stays collapsed until asked for.
+    await expect(page.getByRole("button", { name: /not signed in yet/ })).toHaveAttribute("aria-expanded", "false");
+
+    await adminTab(page, "publish");
+    await expect(page.locator("#events")).toBeVisible();
+    await expect(page.locator("#announcements")).toBeVisible();
+  });
+
   test("grievance lifecycle: employee submits → admin resolves → employee sees Resolved", async ({ page, browser }) => {
     const text = uniqueText("AC not working in meeting room");
     const employee = await browser.newContext();
@@ -46,7 +87,7 @@ test.describe("Admin", () => {
     await e.getByRole("button", { name: "Submit" }).click();
     await expect(e.locator("#mine li", { hasText: text })).toContainText("Open");
 
-    await adminLogin(page);
+    await adminLogin(page, "approvals");
     const item = page.locator("li", { hasText: text });
     await expect(item).toContainText("Anonymous");
     await item.getByRole("combobox", { name: "Status" }).click();
@@ -67,7 +108,7 @@ test.describe("Admin", () => {
 
   test("announcements: post → visible to employees → delete with confirmation", async ({ page, browser }) => {
     const title = uniqueText("Fire drill at 3 PM");
-    await adminLogin(page);
+    await adminLogin(page, "publish");
     await page.locator('#announcements input[name="title"]').fill(title);
     await page.locator('#announcements input[name="tag"]').fill("Safety");
     await page.locator('#announcements textarea[name="body"]').fill("Assemble at the parking lot.");

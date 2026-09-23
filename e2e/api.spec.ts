@@ -330,13 +330,13 @@ test.describe("API: behaviour", () => {
     // Bad form payloads redirect back with a flash key — never a 500.
     const bad = await adm.post("/api/events", { form: { title, category: "gala", startsAt: "not-a-date" }, maxRedirects: 0 });
     expect(bad.status()).toBe(303);
-    expect(bad.headers().location).toBe("/admin?done=invalid-event#events");
+    expect(bad.headers().location).toBe("/admin?tab=publish&done=invalid-event#events");
 
     const posted = await adm.post("/api/events", {
       form: { title, category: "sports", startsAt: "2026-12-25T17:00", location: "Common area", body: "details" },
       maxRedirects: 0,
     });
-    expect(posted.headers().location).toBe("/admin?done=event-posted#events");
+    expect(posted.headers().location).toBe("/admin?tab=publish&done=event-posted#events");
 
     const list = await (await ctx.get("/api/events")).json();
     const ev = list.find((e: { title: string }) => e.title === title);
@@ -365,7 +365,7 @@ test.describe("API: behaviour", () => {
     expect(off).toEqual({ going: false, count: 1 });
 
     const del = await adm.post("/api/events", { form: { _action: "delete", id: ev.id }, maxRedirects: 0 });
-    expect(del.headers().location).toBe("/admin?done=event-deleted#events");
+    expect(del.headers().location).toBe("/admin?tab=publish&done=event-deleted#events");
     expect((await (await ctx.get("/api/events")).json()).find((e: { id: string }) => e.id === ev.id)).toBeUndefined();
   });
 
@@ -443,14 +443,14 @@ test.describe("API: privacy & auth", () => {
     const adm = await admin();
     const empty = await adm.post("/api/announcements", { form: { title: "  " }, maxRedirects: 0 });
     expect(empty.status()).toBe(303);
-    expect(empty.headers().location).toBe("/admin?done=missing-title#announcements");
+    expect(empty.headers().location).toBe("/admin?tab=publish&done=missing-title#announcements");
     const posted = await adm.post("/api/announcements", { form: { title: "API notice" }, maxRedirects: 0 });
-    expect(posted.headers().location).toBe("/admin?done=posted#announcements");
+    expect(posted.headers().location).toBe("/admin?tab=publish&done=posted#announcements");
     const list = await (await adm.get("/api/announcements")).json();
     const created = list.find((a: { title: string }) => a.title === "API notice");
     expect(created).toMatchObject({ tag: "Office", body: "" });
     const del = await adm.post("/api/announcements", { form: { _action: "delete", id: created.id }, maxRedirects: 0 });
-    expect(del.headers().location).toBe("/admin?done=deleted#announcements");
+    expect(del.headers().location).toBe("/admin?tab=publish&done=deleted#announcements");
   });
 
   test("session cookie is HttpOnly, SameSite=Lax, 12h, and logout clears it", async () => {

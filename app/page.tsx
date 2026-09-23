@@ -10,14 +10,14 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
-import { DEVICE_COOKIE, EMAIL_COOKIE } from "@/lib/cookies";
+import { DEVICE_COOKIE, EMAIL_COOKIE, GRIEVANCE_IDS_COOKIE } from "@/lib/cookies";
 import { firstName, fmtDay, fmtDuration, fmtShortDate, fmtTime, greeting, relativeDay, relativeTime, totalMinutes } from "@/lib/format";
 import { locationTag } from "@/lib/geo";
 import { googleConfigured } from "@/lib/google";
 import { orderCutoffHour } from "@/lib/config";
 import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
-import { awayForDevice, grievancesForDevice, ordersForDeviceOn } from "@/lib/submitter";
+import { awayForDevice, grievanceIdsFromCookie, grievancesFromIds, ordersForDeviceOn } from "@/lib/submitter";
 import { istHour, todayIST } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -218,8 +218,8 @@ async function DayColumn({ email, deviceId }: { email: string | null; deviceId: 
   );
 }
 
-async function SocialColumn({ deviceId }: { deviceId: string | undefined }) {
-  const [announcements, grievances] = await Promise.all([store.listAnnouncements(2), grievancesForDevice(deviceId, 3)]);
+async function SocialColumn({ grievanceIds }: { grievanceIds: string[] }) {
+  const [announcements, grievances] = await Promise.all([store.listAnnouncements(2), grievancesFromIds(grievanceIds, 3)]);
 
   return (
     <div className="flex min-w-0 flex-col gap-5" style={stagger(3)}>
@@ -371,7 +371,7 @@ export default async function Home() {
           <DayColumn email={email} deviceId={deviceId} />
         </Suspense>
         <Suspense fallback={<div className="flex min-w-0 flex-col gap-5"><CardSkeleton lines={2} /><CardSkeleton lines={2} /></div>}>
-          <SocialColumn deviceId={deviceId} />
+          <SocialColumn grievanceIds={grievanceIdsFromCookie(jar.get(GRIEVANCE_IDS_COOKIE)?.value)} />
         </Suspense>
         <Suspense fallback={<CardSkeleton lines={4} />}>
           <WifiColumn />

@@ -31,7 +31,7 @@ const META: Record<AwayStatus, { label: string; badge: "warning" | "success" | "
 const fmtRange = (s: string, e: string) =>
   s === e ? fmtShortDate(`${s}T00:00:00`) : `${fmtShortDate(`${s}T00:00:00`)} – ${fmtShortDate(`${e}T00:00:00`)}`;
 
-export default function AwayList({ items, names }: { items: Item[]; names: Record<string, string> }) {
+export default function AwayList({ items, names, now }: { items: Item[]; names: Record<string, string>; now?: number }) {
   const router = useRouter();
   const [statuses, setStatuses] = useState<Record<string, AwayStatus>>({});
 
@@ -61,7 +61,7 @@ export default function AwayList({ items, names }: { items: Item[]; names: Recor
                 {names[r.email] ? `${names[r.email]} · ` : ""}{r.email}
               </p>
               <p className="text-xs text-muted-foreground">
-                {r.type === "leave" ? "Leave" : "WFH"} · {fmtRange(r.startDate, r.endDate)} · {relativeTime(r.createdAt)}
+                {r.type === "leave" ? "Leave" : "WFH"} · {fmtRange(r.startDate, r.endDate)} · {relativeTime(r.createdAt, now)}
               </p>
               {r.reason && <p className="mt-0.5 truncate text-xs text-muted-foreground">{r.reason}</p>}
             </div>

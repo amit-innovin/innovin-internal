@@ -12,7 +12,7 @@ import type { GrievanceStatus } from "@/lib/types";
 
 type Item = { id: string; body: string; displayName: string | null; image: string | null; status: GrievanceStatus; createdAt: string };
 
-export default function GrievanceList({ items }: { items: Item[] }) {
+export default function GrievanceList({ items, now }: { items: Item[]; now?: number }) {
   const router = useRouter();
   const [statuses, setStatuses] = useState<Record<string, GrievanceStatus>>({});
 
@@ -39,7 +39,7 @@ export default function GrievanceList({ items }: { items: Item[] }) {
           <li key={g.id} className="py-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">{g.displayName ?? "Anonymous"}</span> · {relativeDay(g.createdAt)},{" "}
+                <span className="font-medium text-foreground">{g.displayName ?? "Anonymous"}</span> · {relativeDay(g.createdAt, now)},{" "}
                 {fmtTime(g.createdAt)}
               </p>
               <Select value={status} onValueChange={(v) => setStatus(g.id, v as GrievanceStatus)}>

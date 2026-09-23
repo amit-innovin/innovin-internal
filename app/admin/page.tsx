@@ -52,6 +52,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   }
 
   const date = todayIST();
+  const now = Date.now(); // frozen for hydration — client lists must render the same labels as the server
   const [attendance, orders, grievances, wifi, announcements, employees, away, events] = await Promise.all([
     store.listAttendance(date),
     store.listOrders(date),
@@ -187,7 +188,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           title="Time away"
           aside={away.filter((r) => r.status === "pending").length ? `${away.filter((r) => r.status === "pending").length} pending` : undefined}
         />
-        <AwayList items={away} names={Object.fromEntries(names)} />
+        <AwayList items={away} names={Object.fromEntries(names)} now={now} />
         {leaveUsage.length > 0 && (
           <>
             <p className="mt-5 border-t pt-4 text-xs font-medium text-muted-foreground">
@@ -340,7 +341,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
       <Card className="mt-4 gap-0 p-5">
         <SectionHeader title="Grievances" aside={`${openGrievances} need attention`} />
-        <GrievanceList items={grievances.map(({ submitterRef: _r, ...g }) => g)} />
+        <GrievanceList items={grievances.map(({ submitterRef: _r, ...g }) => g)} now={now} />
       </Card>
 
       <Card className="mt-4 gap-0 p-5">

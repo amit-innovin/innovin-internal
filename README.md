@@ -6,11 +6,12 @@ Simple tools for everyday needs. Built for our team. See [PRODUCT.md](PRODUCT.md
 
 - **Attendance** — check in/out with your company email as often as you step out and back; sessions and total time tracked per day; one-time browser location on check-in tags each session In office / Working remotely / Location not shared (configurable `OFFICE_*` geofence); email remembered per device
 - **Meals & Snacks** — pick any items (tea, snacks, lunch, dinner) once per device per day, changeable/cancellable all day (optional `ORDER_CUTOFF_HOUR` deadline); consolidated list for the coordinator
-- **Daily Grievances** — anonymous or named, with an optional photo; submitters track status on their own device; identity never exposed, not even to admins
+- **Daily Grievances** — anonymous or named, with an optional photo; submitters track status via ids held on their own device; the database stores no device link at all, so anonymous submissions can't be traced even with direct DB access
 - **Wi-Fi Quality** — speed test + Good/Poor reports with notes and a recent feed
 - **Time Away** (`/away`) — leave and work-from-home requests: pick dates, submit, track approval status on your own device; admins approve/reject on the dashboard. Signed-in devices submit under their verified email.
 - **Leave tracker** — per-person leave balance: days used, pending and remaining against an annual allowance (`LEAVE_ALLOWANCE_DAYS`, default 12). Employees see their own on `/away`; admins see everyone's under Time away. WFH never counts.
 - **Events** (`/events`) — upcoming internal events (matches, workshops, celebrations, town halls) published by admins; one-tap RSVP per device showing only a going count — never a guest list.
+- **People** (`/people`) — the office directory: everyone who's signed in (Google name/photo/email), plus "In today" — who's checked in right now with an In office / Remote tag.
 - **Announcements** — posted by admins, shown on everyone's home dashboard
 - **Admin** (`/admin`) — passcode-gated dashboard: attendance (with real names + location tags), orders, grievance inbox with statuses, Wi-Fi feed, time-away approvals, announcements
 - **Sign in with Google** — optional verified identity on `innovinlabs.com`; a signed-in device can't mark attendance for a different email, and admins see real names. Works without it too.

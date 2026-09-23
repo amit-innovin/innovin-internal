@@ -32,9 +32,19 @@ export async function ordersForDevice(deviceId: string | undefined, limit: numbe
   return deviceId ? (await store.listOrdersByRef(refFor(deviceId), limit)).map(strip) : [];
 }
 
-// A device only ever sees its own grievances — never anyone else's.
-export async function grievancesForDevice(deviceId: string | undefined, limit: number) {
-  return deviceId ? (await store.listGrievancesByRef(refFor(deviceId), limit)).map(strip) : [];
+// Grievance ids live only in the device's own cookie — the DB stores no link at all.
+export function grievanceIdsFromCookie(value: string | undefined): string[] {
+  try {
+    const ids = JSON.parse(value ?? "[]");
+    return Array.isArray(ids) ? ids.filter((x): x is string => typeof x === "string").slice(0, 50) : [];
+  } catch {
+    return [];
+  }
+}
+
+// A device only ever sees grievances whose ids it carries — never anyone else's.
+export async function grievancesFromIds(ids: string[], limit: number) {
+  return ids.length ? (await store.listGrievancesByIds(ids, limit)).map(strip) : [];
 }
 
 // Same rule for leave/WFH requests.

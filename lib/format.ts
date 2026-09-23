@@ -21,8 +21,8 @@ export function fmtShortDate(iso: string) {
   return `${p.day} ${p.month}`;
 }
 
-export function relativeDay(iso: string) {
-  const days = Math.round((Date.parse(istDate(new Date())) - Date.parse(istDate(new Date(iso)))) / 86_400_000);
+export function relativeDay(iso: string, now = Date.now()) {
+  const days = Math.round((Date.parse(istDate(new Date(now))) - Date.parse(istDate(new Date(iso)))) / 86_400_000);
   return days <= 0 ? "Today" : days === 1 ? "Yesterday" : `${days} days ago`;
 }
 
@@ -52,13 +52,13 @@ export function leaveDays(startDate: string, endDate: string) {
   return Math.max(0, Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86_400_000) + 1);
 }
 
-export function relativeTime(iso: string) {
-  const minutes = Math.floor((Date.now() - Date.parse(iso)) / 60_000);
+export function relativeTime(iso: string, now = Date.now()) {
+  const minutes = Math.floor((now - Date.parse(iso)) / 60_000);
   if (minutes < 1) return "Just now";
   if (minutes < 60) return `${minutes} min ago`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  return relativeDay(iso);
+  return relativeDay(iso, now);
 }
 
 export function greeting(date = new Date()) {

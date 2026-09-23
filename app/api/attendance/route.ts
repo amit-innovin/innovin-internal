@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { allowedEmailDomains } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { totalMinutes } from "@/lib/format";
+import { locationTag } from "@/lib/geo";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
 // Public: today's headcount + the caller's own sessions (identified by their remembered email).
 export async function GET(req: NextRequest) {
@@ -23,8 +26,13 @@ export async function GET(req: NextRequest) {
       ? {
           checkedIn: !!open,
           currentInAt: open?.checkInAt ?? null,
+          location: locationTag(open?.lat, open?.lng),
           totalMinutes: totalMinutes(sessions),
-          sessions: sessions.map(({ checkInAt, checkOutAt }) => ({ checkInAt, checkOutAt })),
+          sessions: sessions.map(({ checkInAt, checkOutAt, lat, lng }) => ({
+            checkInAt,
+            checkOutAt,
+            location: locationTag(lat, lng),
+          })),
         }
       : null,
   });
@@ -45,6 +53,15 @@ export async function POST(req: NextRequest) {
   }
   if (action !== "in" && action !== "out") return badRequest("Invalid attendance action");
 
+  // Optional browser geolocation — present on check-in when the employee shared it.
+  const lat = num(body.lat);
+  const lng = num(body.lng);
+  const accuracyM = num(body.accuracyM);
+  if ((lat === null) !== (lng === null)) return badRequest("Invalid coordinates");
+  if (lat != null && (Math.abs(lat) > 90 || Math.abs(lng!) > 180 || (accuracyM != null && accuracyM < 0))) {
+    return badRequest("Invalid coordinates");
+  }
+
   const date = todayIST();
   const now = new Date().toISOString();
   const open = await store.getAttendance(email, date);
@@ -55,7 +72,7 @@ export async function POST(req: NextRequest) {
     row = await store.checkOut(email, date, now);
   } else {
     // Idempotent while a session is open; after checkout a new session starts.
-    row = open ?? (await store.checkIn({ id: id(), email, date, checkInAt: now, checkOutAt: null }));
+    row = open ?? (await store.checkIn({ id: id(), email, date, checkInAt: now, checkOutAt: null, lat, lng, accuracyM }));
   }
 
   const res = NextResponse.json(row);

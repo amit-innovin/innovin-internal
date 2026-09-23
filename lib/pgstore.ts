@@ -17,7 +17,10 @@ CREATE TABLE IF NOT EXISTS attendance (
   email text NOT NULL,
   date text NOT NULL,
   check_in_at timestamptz NOT NULL,
-  check_out_at timestamptz
+  check_out_at timestamptz,
+  lat double precision,
+  lng double precision,
+  accuracy_m real
 );
 CREATE TABLE IF NOT EXISTS orders (
   id text PRIMARY KEY,
@@ -57,6 +60,9 @@ CREATE TABLE IF NOT EXISTS announcements (
 ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
 ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lat double precision;
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lng double precision;
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS accuracy_m real;
 -- At most one open (not-checked-out) session per person per day.
 CREATE UNIQUE INDEX IF NOT EXISTS attendance_open_session ON attendance (email, date) WHERE check_out_at IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS orders_day_ref_item ON orders (date, submitter_ref, item_id);
@@ -78,6 +84,9 @@ const attendance = (r: any): AttendanceRow => ({
   date: r.date,
   checkInAt: r.check_in_at?.toISOString?.() ?? r.check_in_at,
   checkOutAt: r.check_out_at ? r.check_out_at.toISOString?.() ?? r.check_out_at : null,
+  lat: r.lat ?? null,
+  lng: r.lng ?? null,
+  accuracyM: r.accuracy_m ?? null,
 });
 const order = (r: any): OrderRow => ({
   id: r.id,
@@ -157,9 +166,10 @@ class PgStore implements Store {
 
   async checkIn(row: AttendanceRow) {
     const res = await this.q(
-      `INSERT INTO attendance (id, email, date, check_in_at) VALUES ($1,$2,$3,$4)
+      `INSERT INTO attendance (id, email, date, check_in_at, lat, lng, accuracy_m)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
        ON CONFLICT (email, date) WHERE check_out_at IS NULL DO NOTHING RETURNING *`,
-      [row.id, row.email, row.date, row.checkInAt],
+      [row.id, row.email, row.date, row.checkInAt, row.lat, row.lng, row.accuracyM],
     );
     if (res.rows[0]) return attendance(res.rows[0]);
     return (await this.getAttendance(row.email, row.date))!;

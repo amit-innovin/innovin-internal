@@ -9,10 +9,14 @@ export const MAIN_URL = "http://localhost:3210";
 export const CLOSED_URL = "http://localhost:3211";
 
 const db = process.env.E2E_DATABASE_URL;
+// Fake office at 12.935,77.624 — e2e geolocation tests check in from inside/outside this geofence.
 const serverEnv = (name: string, cutoff: string) => ({
   ADMIN_PASSCODE: "1704",
   ORDER_CUTOFF_HOUR: cutoff,
   ALLOWED_EMAIL_DOMAINS: "innovinlabs.com",
+  OFFICE_LAT: "12.935",
+  OFFICE_LNG: "77.624",
+  OFFICE_RADIUS_M: "1000",
   ...(db ? { DATABASE_URL: db } : { DATA_FILE: `.test-data/${name}.json` }),
 });
 

@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { isAdmin } from "@/lib/admin";
 import { fmtDay, fmtDuration, fmtShortDate, fmtTime, relativeDay, totalMinutes } from "@/lib/format";
+import { locationTag } from "@/lib/geo";
 import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
@@ -66,7 +67,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   // One row per employee: their sessions today, total time, and whether they're in right now.
   const people = [...new Set(attendance.map((a) => a.email))].map((email) => {
     const sessions = attendance.filter((a) => a.email === email);
-    return { email, sessions, total: totalMinutes(sessions), in: sessions.some((s) => !s.checkOutAt) };
+    const open = sessions.find((s) => !s.checkOutAt);
+    return { email, sessions, total: totalMinutes(sessions), in: !!open, where: open ? locationTag(open.lat, open.lng) : null };
   });
 
   return (
@@ -144,7 +146,13 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                     </p>
                   </div>
                   {p.in ? (
-                    <Badge className="shrink-0 bg-emerald-50 text-emerald-700 hover:bg-emerald-50">In office</Badge>
+                    p.where === "remote" ? (
+                      <Badge className="shrink-0 bg-amber-50 text-amber-700 hover:bg-amber-50">Remote</Badge>
+                    ) : p.where === "office" ? (
+                      <Badge className="shrink-0 bg-emerald-50 text-emerald-700 hover:bg-emerald-50">In office</Badge>
+                    ) : (
+                      <Badge className="shrink-0 bg-sky-50 text-sky-700 hover:bg-sky-50">In · no location</Badge>
+                    )
                   ) : (
                     <Badge variant="secondary" className="shrink-0">Out</Badge>
                   )}

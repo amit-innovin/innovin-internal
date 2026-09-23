@@ -37,6 +37,7 @@ The MVP is successful when the team can use these four flows for one working wee
 ### 1. Attendance
 - Check in / check out with timestamp — repeatable through the day (out for lunch, back in)
 - Per-day session list and total time tracked; public daily headcount; details restricted to admin
+- One-time geolocation on check-in tags each session In office / Working remotely / Location not shared (env-configured `OFFICE_*` geofence; denied permission never blocks check-in; raw coordinates are stored but never exposed via the API)
 - Identity = company email field only — no passwords, no accounts
 - Optional later: auto-suggest check-in when on office Wi-Fi
 
@@ -69,7 +70,7 @@ Single view: today's attendance, consolidated snack orders, grievance inbox, Wi-
 ## Data model (v1 sketch)
 
 ```
-attendance  id · email · date · check_in_at · check_out_at   (one row per session)
+attendance  id · email · date · check_in_at · check_out_at · lat · lng · accuracy_m   (one row per session)
 orders      id · date · item_id · preference · instructions · submitter_ref · created_at  (one row per item)
 grievances  id · body · display_name(nullable) · image(nullable) · submitter_ref · status · created_at
 wifi          id · quality · note · down_mbps · up_mbps · created_at

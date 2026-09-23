@@ -13,13 +13,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON, readError, send } from "@/lib/fetcher";
 import { useButtonState } from "@/lib/hooks/use-button-state";
 import { fmtDuration, fmtTime, sessionMinutes } from "@/lib/format";
+import type { LocationTag } from "@/lib/geo";
 
-type Session = { checkInAt: string; checkOutAt: string | null };
+type Session = { checkInAt: string; checkOutAt: string | null; location: LocationTag };
 type Status = {
   count: number;
   email: string | null;
-  me: { checkedIn: boolean; currentInAt: string | null; totalMinutes: number; sessions: Session[] } | null;
+  me: {
+    checkedIn: boolean;
+    currentInAt: string | null;
+    location: LocationTag;
+    totalMinutes: number;
+    sessions: Session[];
+  } | null;
 };
+
+const LOCATION_LABEL: Record<LocationTag, string> = {
+  office: "In office",
+  remote: "Working remotely",
+  unknown: "Location not shared",
+};
+
+// Best-effort geolocation — never blocks check-in. Denied/timed out → null.
+const position = () =>
+  new Promise<GeolocationPosition | null>((resolve) => {
+    if (!("geolocation" in navigator)) return resolve(null);
+    navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { timeout: 7000, maximumAge: 60_000 });
+  });
 
 export default function Attendance() {
   const [status, setStatus] = useState<Status | null>(null);
@@ -38,9 +58,16 @@ export default function Attendance() {
   const mark = (action: "in" | "out") =>
     run(async () => {
       setError(false);
+      const pos = action === "in" ? await position() : null;
       const res = await send("/api/attendance", {
         method: "POST",
-        json: { email: status?.email ?? email, action },
+        json: {
+          email: status?.email ?? email,
+          action,
+          lat: pos?.coords.latitude ?? null,
+          lng: pos?.coords.longitude ?? null,
+          accuracyM: pos ? Math.round(pos.coords.accuracy) : null,
+        },
       });
       if (!res.ok) {
         const message = await readError(res);
@@ -91,7 +118,7 @@ export default function Attendance() {
               : `${fmtDuration(me.totalMinutes)} today across ${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`}
           </p>
           <p className="mt-2 inline-flex items-center gap-1 text-sm text-muted-foreground" style={stagger(3)}>
-            <MapPin className="size-4" /> Office • Innovin
+            <MapPin className="size-4" /> {LOCATION_LABEL[me.checkedIn ? me.location : (sessions.at(-1)?.location ?? "unknown")]} • Innovin
           </p>
           <div className="mt-6 w-full" style={stagger(4)}>
             {me.checkedIn ? (
@@ -110,7 +137,7 @@ export default function Attendance() {
               <StatefulButton
                 state={buttonState}
                 onClick={() => mark("in")}
-                loadingText="Checking in"
+                loadingText="Locating & checking in"
                 successText="Checked in"
                 errorText="Try again"
                 icon={<LogIn className="size-4" />}
@@ -168,7 +195,7 @@ export default function Attendance() {
             <StatefulButton
               type="submit"
               state={buttonState}
-              loadingText="Checking in"
+              loadingText="Locating & checking in"
               successText="Checked in"
               errorText="Try again"
               icon={<CalendarCheck className="size-4" />}
@@ -190,11 +217,12 @@ export default function Attendance() {
           </div>
           <ul className="mt-3 divide-y">
             {sessions.map((s, i) => (
-              <li key={s.checkInAt} className="flex items-center justify-between py-2.5 text-sm">
+              <li key={s.checkInAt} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                 <span className="tabular-nums">
                   {fmtTime(s.checkInAt)} – {s.checkOutAt ? fmtTime(s.checkOutAt) : "now"}
                 </span>
-                <span className={s.checkOutAt ? "text-muted-foreground" : "font-medium text-emerald-600"}>
+                <span className="text-xs text-muted-foreground">{LOCATION_LABEL[s.location]}</span>
+                <span className={s.checkOutAt ? "shrink-0 text-muted-foreground" : "shrink-0 font-medium text-emerald-600"}>
                   {s.checkOutAt ? fmtDuration(sessionMinutes(s)) : "in progress"}
                 </span>
               </li>

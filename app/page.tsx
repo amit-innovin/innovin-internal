@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DEVICE_COOKIE, EMAIL_COOKIE } from "@/lib/cookies";
 import { firstName, fmtDuration, fmtShortDate, fmtTime, greeting, relativeDay, relativeTime, totalMinutes } from "@/lib/format";
+import { locationTag } from "@/lib/geo";
 import { orderCutoffHour } from "@/lib/config";
 import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
@@ -43,6 +44,8 @@ export default async function Home() {
   const name = firstName(email);
   const checkedIn = sessions.some((s) => !s.checkOutAt);
   const openSession = sessions.find((s) => !s.checkOutAt);
+  const where = checkedIn ? locationTag(openSession?.lat, openSession?.lng) : null;
+  const whereLabel = where === "office" ? "In office" : where === "remote" ? "Remote" : where ? "Location not shared" : null;
   const items = myOrders.map((o) => MENU.find((m) => m.id === o.itemId)).filter((m) => m != null);
   const orderNames = items.map((m) => m.name).join(" + ");
   const orderTotal = items.reduce((sum, m) => sum + (m.price ?? 0), 0);
@@ -90,8 +93,8 @@ export default async function Home() {
                     {sessions.length === 0
                       ? "Mark your attendance for today"
                       : checkedIn
-                        ? `In since ${fmtTime(openSession!.checkInAt)} • ${fmtDuration(totalMinutes(sessions))} today`
-                        : `${fmtDuration(totalMinutes(sessions))} today • Office • Innovin`}
+                        ? `In since ${fmtTime(openSession!.checkInAt)} • ${fmtDuration(totalMinutes(sessions))} today • ${whereLabel}`
+                        : `${fmtDuration(totalMinutes(sessions))} today • Innovin`}
                   </p>
                 </div>
               </div>

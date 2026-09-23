@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAdminSession, validAdminPasscode, verifyAdminSession } from "@/lib/admin";
 import { ADMIN_SESSION_MS, allowedEmailDomains, orderCutoffHour } from "@/lib/config";
 import { clientIp, readJSON } from "@/lib/http";
+import { distanceM, locationTag, officeLocation } from "@/lib/geo";
 import { pgConfig } from "@/lib/pgconfig";
 import { hit, peek, reset, resetAll } from "@/lib/rate-limit";
 import { istHour, todayIST } from "@/lib/time";
@@ -40,6 +41,41 @@ describe("config", () => {
     expect(allowedEmailDomains()).toEqual(["innovinlabs.com"]);
     vi.stubEnv("ALLOWED_EMAIL_DOMAINS", " InnovinLabs.com , partner.io ,");
     expect(allowedEmailDomains()).toEqual(["innovinlabs.com", "partner.io"]);
+  });
+});
+
+describe("office geofence", () => {
+  it("is unset without OFFICE_LAT/OFFICE_LNG, so nothing is classified", () => {
+    expect(officeLocation()).toBeNull();
+    expect(locationTag(12.9, 77.6)).toBe("unknown");
+    expect(locationTag(null, null)).toBe("unknown");
+  });
+
+  it("classifies inside/outside the radius, rejects bad config", () => {
+    vi.stubEnv("OFFICE_LAT", "12.935");
+    vi.stubEnv("OFFICE_LNG", "77.624");
+    vi.stubEnv("OFFICE_RADIUS_M", "500");
+    expect(officeLocation()).toEqual({ lat: 12.935, lng: 77.624, radiusM: 500 });
+    expect(locationTag(12.935, 77.624)).toBe("office");
+    expect(locationTag(12.9365, 77.6245)).toBe("office"); // ~170m away
+    expect(locationTag(13.05, 77.6)).toBe("remote"); // ~13km away
+    expect(locationTag(null, null)).toBe("unknown");
+    expect(locationTag(12.935, null)).toBe("unknown");
+
+    vi.stubEnv("OFFICE_LAT", "not-a-number");
+    expect(officeLocation()).toBeNull();
+    expect(locationTag(12.935, 77.624)).toBe("unknown");
+
+    vi.stubEnv("OFFICE_RADIUS_M", "99999999"); // over the 50km sanity cap → default 300m
+    vi.stubEnv("OFFICE_LAT", "12.935");
+    expect(officeLocation()?.radiusM).toBe(300);
+  });
+
+  it("computes sane distances", () => {
+    expect(distanceM(12.935, 77.624, 12.935, 77.624)).toBe(0);
+    const d = distanceM(12.935, 77.624, 12.945, 77.634); // ~1.56km diagonal
+    expect(d).toBeGreaterThan(1400);
+    expect(d).toBeLessThan(1700);
   });
 });
 

@@ -20,6 +20,9 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       date: "2026-09-23",
       checkInAt: iso(),
       checkOutAt: null,
+      lat: null,
+      lng: null,
+      accuracyM: null,
       ...p,
     });
     const order = (p: Partial<OrderRow> = {}): OrderRow => ({
@@ -77,6 +80,14 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(await store.checkOut("a@innovinlabs.com", "2026-09-23", iso(4_000_000))).toBeNull();
         expect(await store.checkOut("nobody@innovinlabs.com", "2026-09-23", iso())).toBeNull();
         expect(await store.getAttendance("a@innovinlabs.com", "2026-09-23")).toBeNull();
+      });
+
+      it("round-trips the check-in location, defaulting to null", async () => {
+        await store.checkIn(attendance({ email: "loc@innovinlabs.com", lat: 12.935, lng: 77.624, accuracyM: 18 }));
+        await store.checkIn(attendance({ email: "noloc@innovinlabs.com" }));
+        const rows = await store.listAttendance("2026-09-23");
+        expect(rows.find((r) => r.email === "loc@innovinlabs.com")).toMatchObject({ lat: 12.935, lng: 77.624, accuracyM: 18 });
+        expect(rows.find((r) => r.email === "noloc@innovinlabs.com")).toMatchObject({ lat: null, lng: null, accuracyM: null });
       });
 
       it("lists one day ordered by check-in time, with separate sessions per person", async () => {

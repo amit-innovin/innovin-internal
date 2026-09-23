@@ -4,6 +4,10 @@ export type AttendanceRow = {
   date: string;
   checkInAt: string;
   checkOutAt: string | null;
+  // Where the check-in happened, if the device shared it.
+  lat: number | null;
+  lng: number | null;
+  accuracyM: number | null;
 };
 
 export type OrderRow = {

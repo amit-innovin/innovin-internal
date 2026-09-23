@@ -105,6 +105,27 @@ test.describe("API: behaviour", () => {
     expect(stranger).toEqual({ count: mine.count, email: null, me: null });
   });
 
+  test("check-in coordinates are classified against the office geofence, raw coords never returned", async () => {
+    const ctx = await device();
+    const who = email();
+    // Inside the configured fake office (12.935,77.624 ±1km).
+    await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 12.9352, lng: 77.6241, accuracyM: 15 } });
+    let mine = await (await ctx.get("/api/attendance")).json();
+    expect(mine.me.location).toBe("office");
+    expect(mine.me.sessions[0].location).toBe("office");
+    expect(JSON.stringify(mine)).not.toContain("77.62");
+
+    // A new session from far away is remote; invalid coords are rejected.
+    await ctx.post("/api/attendance", { data: { email: who, action: "out" } });
+    await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 13.05, lng: 77.6 } });
+    mine = await (await ctx.get("/api/attendance")).json();
+    expect(mine.me.location).toBe("remote");
+    expect(mine.me.sessions[0].location).toBe("office");
+    expect(mine.me.sessions[1].location).toBe("remote");
+    expect((await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 200, lng: 0 } })).status()).toBe(400);
+    expect((await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 12.9 } })).status()).toBe(400);
+  });
+
   test("a day's order can hold several items, is replaceable and cancellable", async () => {
     const ctx = await device();
     const placed = await (await ctx.post("/api/snacks", { data: { items: ["tea", "lunch"], instructions: "i" } })).json();

@@ -24,7 +24,9 @@ const serverEnv = (name: string, cutoff: string) => ({
   GOOGLE_TOKEN_URL: "http://localhost:3999/token",
   GOOGLE_TOKENINFO_URL: "http://localhost:3999/tokeninfo",
   SESSION_SECRET: "e2e-session-secret",
-  ...(db ? { DATABASE_URL: db } : { DATA_FILE: `.test-data/${name}.json` }),
+  // DATABASE_URL must be blanked in JSON mode too — the built server loads .env at runtime,
+  // which carries the real production DATABASE_URL and would write test data to prod.
+  ...(db ? { DATABASE_URL: db } : { DATA_FILE: `.test-data/${name}.json`, DATABASE_URL: "" }),
 });
 
 const launchOptions = process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {};

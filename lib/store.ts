@@ -23,6 +23,14 @@ const lazyJsonStore = new Proxy({} as Store, {
 });
 
 // Postgres when DATABASE_URL is set; JSON file for local development otherwise.
-export const store: Store = process.env.DATABASE_URL ? pgStore : process.env.VERCEL ? misconfigured : lazyJsonStore;
+// DATA_FILE wins: e2e servers run the production build, which loads .env (with DATABASE_URL)
+// at runtime — an explicit DATA_FILE must force the JSON store so tests never touch prod.
+export const store: Store = process.env.DATA_FILE
+  ? lazyJsonStore
+  : process.env.DATABASE_URL
+    ? pgStore
+    : process.env.VERCEL
+      ? misconfigured
+      : lazyJsonStore;
 
 export const id = () => crypto.randomUUID();

@@ -46,8 +46,9 @@ const withinOffice = (office: Status["office"], lat: number, lng: number) => {
 
 // Home's one attendance surface: status, the action itself, and auto check-in when enabled.
 // History, the calendar and leave stay on /attendance — today happens here.
-export default function CheckInCard({ nextAway }: { nextAway: string | null }) {
-  const [status, setStatus] = useState<Status | null>(null);
+// `initial` is the server-rendered status, so the first paint is already real data.
+export default function CheckInCard({ nextAway, initial }: { nextAway: string | null; initial?: Status | null }) {
+  const [status, setStatus] = useState<Status | null>(initial ?? null);
   const [busy, setBusy] = useState(false);
   const autoTried = useRef(false);
 
@@ -94,7 +95,8 @@ export default function CheckInCard({ nextAway }: { nextAway: string | null }) {
   };
 
   useEffect(() => {
-    load().then(async (data) => {
+    const start = status ? Promise.resolve(status) : load();
+    start.then(async (data) => {
       // Auto check-in: once per page load, only when the device opted in and we're sure the
       // person is at the office — either the request came from the office network, or the
       // browser's own fix lands inside the geofence.

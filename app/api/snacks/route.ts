@@ -9,10 +9,10 @@ import { id, store } from "@/lib/store";
 import {
   cancelOrderForDevice,
   ordersForDevice,
-  ordersForDeviceOn,
   setSubmitterCookie,
   submitterIdentity,
 } from "@/lib/submitter";
+import { snacksMine } from "@/lib/today";
 import { istHour, todayIST } from "@/lib/time";
 
 const PREFERENCES = ["anything", "healthy", "unhealthy"];
@@ -22,8 +22,7 @@ export async function GET(req: NextRequest) {
   const scope = req.nextUrl.searchParams.get("scope");
   const deviceId = req.cookies.get(DEVICE_COOKIE)?.value;
   if (scope === "mine") {
-    const items = await ordersForDeviceOn(deviceId, todayIST());
-    return NextResponse.json({ open: ordersOpen(), cutoffHour: orderCutoffHour(), items });
+    return NextResponse.json(await snacksMine(deviceId));
   }
   if (scope === "history") {
     return NextResponse.json(await ordersForDevice(deviceId, 90));

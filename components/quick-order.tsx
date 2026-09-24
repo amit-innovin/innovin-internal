@@ -16,9 +16,9 @@ type Mine = { open: boolean; cutoffHour: number; items: { itemId: string }[] };
 
 // Today's food order, right on home: tap what you want, done. The full page keeps the
 // summary, instructions field, order history and cancellation — ordering itself is one tap.
-export default function QuickOrder() {
-  const [mine, setMine] = useState<Mine | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
+export default function QuickOrder({ initial }: { initial?: Mine | null }) {
+  const [mine, setMine] = useState<Mine | null>(initial ?? null);
+  const [selected, setSelected] = useState<string[]>(initial?.items.map((o) => o.itemId) ?? []);
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
@@ -29,7 +29,7 @@ export default function QuickOrder() {
     }
   };
   useEffect(() => {
-    load();
+    if (!initial) load();
   }, []);
 
   const toggle = async (id: string) => {

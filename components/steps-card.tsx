@@ -19,8 +19,8 @@ type StepsData = {
 };
 
 // The day's third action: did you hit 10K? One tap, or add the count. The board lives on /steps.
-export default function StepsCard() {
-  const [data, setData] = useState<StepsData | null>(null);
+export default function StepsCard({ initial }: { initial?: StepsData | null }) {
+  const [data, setData] = useState<StepsData | null>(initial ?? null);
   const [busy, setBusy] = useState(false);
   const [showCount, setShowCount] = useState(false);
   const [count, setCount] = useState("");
@@ -30,7 +30,7 @@ export default function StepsCard() {
     if (d) setData(d);
   };
   useEffect(() => {
-    load();
+    if (!initial) load();
   }, []);
 
   const log = async (steps: number | null) => {

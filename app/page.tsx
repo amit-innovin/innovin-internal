@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Suspense } from "react";
 import { BadgeCheck, CalendarDays, Megaphone, Wifi } from "lucide-react";
 import { WifiArt } from "@/components/art";
@@ -18,6 +18,7 @@ import { googleConfigured } from "@/lib/google";
 import { store } from "@/lib/store";
 import { awayForDevice } from "@/lib/submitter";
 import { todayIST } from "@/lib/time";
+import { attendanceStatus, snacksMine, stepsBoard } from "@/lib/today";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +28,26 @@ const firstLine = (text: string) => text.split("\n")[0];
 // Everything historical (calendar, order history, submission list) lives one tap away.
 
 // The only attendance surface on this page — the card itself does check-in/check-out.
-async function TodayColumn({ deviceId }: { deviceId: string | undefined }) {
+// The action cards get their data server-side too, so the streamed HTML already shows real
+// status instead of every card skeletoning through a second fetch after hydration.
+async function TodayColumn({
+  deviceId,
+  email,
+  session,
+  ip,
+}: {
+  deviceId: string | undefined;
+  email: string | null;
+  session: { email: string; name: string } | null;
+  ip: string | null;
+}) {
   const date = todayIST();
-  const myAway = await awayForDevice(deviceId, 10);
+  const [myAway, attendance, snacks, steps] = await Promise.all([
+    awayForDevice(deviceId, 10),
+    attendanceStatus(email, ip),
+    snacksMine(deviceId),
+    stepsBoard(session),
+  ]);
   const tomorrow = new Date(Date.parse(date) + 86_400_000).toISOString().slice(0, 10);
   const nextAway = myAway
     .filter((r) => (r.status === "pending" || r.status === "approved") && r.endDate >= date)
@@ -48,9 +66,9 @@ async function TodayColumn({ deviceId }: { deviceId: string | undefined }) {
 
   return (
     <div className="flex min-w-0 flex-col gap-5" style={stagger(1)}>
-      <CheckInCard nextAway={awayLabel} />
-      <QuickOrder />
-      <StepsCard />
+      <CheckInCard nextAway={awayLabel} initial={attendance} />
+      <QuickOrder initial={snacks} />
+      <StepsCard initial={steps} />
       <SpeakUpCard />
     </div>
   );
@@ -168,6 +186,10 @@ export default async function Home() {
   const deviceId = jar.get(DEVICE_COOKIE)?.value;
   const session = verifyUserSession(jar.get(USER_COOKIE)?.value);
   const name = session?.name.split(" ")[0] ?? firstName(jar.get(EMAIL_COOKIE)?.value ?? null);
+  const email = session?.email ?? jar.get(EMAIL_COOKIE)?.value ?? null;
+  // Same header the API route's clientIp() reads — used only for the office-network check.
+  const hdrs = await headers();
+  const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? hdrs.get("x-real-ip");
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -196,7 +218,7 @@ export default async function Home() {
 
       <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
         <Suspense fallback={<div className="flex min-w-0 flex-col gap-5"><CardSkeleton lines={4} /><CardSkeleton lines={3} /><CardSkeleton lines={2} /></div>}>
-          <TodayColumn deviceId={deviceId} />
+          <TodayColumn deviceId={deviceId} email={email} session={session} ip={ip} />
         </Suspense>
         <Suspense fallback={<div className="flex min-w-0 flex-col gap-5"><CardSkeleton lines={3} /><CardSkeleton lines={2} /></div>}>
           <HappeningColumn />

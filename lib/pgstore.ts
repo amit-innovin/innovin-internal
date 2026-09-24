@@ -169,15 +169,19 @@ ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lng double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS accuracy_m real;
 -- Attendance is one row per person per day — a status, not session history. Fold any
 -- multi-session rows written before this into the earliest row (latest check-out kept).
+-- The old one-open-session-per-day index must go first: folding sets check_out_at on every
+-- row of a group, which momentarily creates multiple "open" rows for that day.
+DROP INDEX IF EXISTS attendance_open_session;
 UPDATE attendance a SET check_out_at = s.final_out
   FROM (SELECT email, date,
           CASE WHEN COUNT(*) FILTER (WHERE check_out_at IS NULL) > 0 THEN NULL
                ELSE MAX(check_out_at) END AS final_out
         FROM attendance GROUP BY email, date) s
   WHERE a.email = s.email AND a.date = s.date;
+-- Ties on identical check_in_at (double-tap retries) fall back to ctid so exactly one survives.
 DELETE FROM attendance a USING attendance b
-  WHERE a.email = b.email AND a.date = b.date AND a.check_in_at > b.check_in_at;
-DROP INDEX IF EXISTS attendance_open_session;
+  WHERE a.email = b.email AND a.date = b.date
+    AND (a.check_in_at > b.check_in_at OR (a.check_in_at = b.check_in_at AND a.ctid > b.ctid));
 ALTER TABLE attendance ADD CONSTRAINT attendance_email_date_key UNIQUE (email, date);
 CREATE UNIQUE INDEX IF NOT EXISTS orders_day_ref_item ON orders (date, submitter_ref, item_id);
 CREATE INDEX IF NOT EXISTS attendance_date_idx ON attendance (date);

@@ -23,7 +23,9 @@ export function PingSheet({ target, onClose }: { target: PingTarget; onClose: ()
   const bottom = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
-    const data = await getJSON<Thread>(`/api/pings?with=${encodeURIComponent(target.email)}`, "the conversation");
+    const data = await getJSON<Thread>(`/api/pings?with=${encodeURIComponent(target.email)}`, "the conversation", {
+      fresh: true,
+    });
     if (data) {
       setThread(data);
       // Opening the thread acknowledges it — clears unread on the inbox and the bell.

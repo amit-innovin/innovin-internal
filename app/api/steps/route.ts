@@ -2,36 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON } from "@/lib/http";
-import { STEP_GOAL, stepBoard, stepStreak } from "@/lib/steps";
+import { STEP_GOAL } from "@/lib/steps";
 import { id, store } from "@/lib/store";
+import { stepsBoard } from "@/lib/today";
 import { todayIST } from "@/lib/time";
 
 // The 10K challenge. The board is public inside the app (names are already visible in the
 // directory); logging needs a verified Google identity so the count can't be stuffed.
 export async function GET(req: NextRequest) {
-  const today = todayIST();
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
-
-  const [employees, rows] = await Promise.all([store.listEmployees(), store.listSteps()]);
-  const board = stepBoard(employees, rows, today);
-
-  let me = null;
-  if (session) {
-    const mine = rows.filter((r) => r.email === session.email);
-    const todayRow = mine.find((r) => r.date === today);
-    const entry = board.find((b) => b.email === session.email);
-    me = {
-      email: session.email,
-      name: session.name,
-      days: entry?.days ?? 0,
-      streak: entry?.streak ?? stepStreak(mine.filter((r) => r.hit).map((r) => r.date), today),
-      rank: entry ? board.indexOf(entry) + 1 : null,
-      today: todayRow ? { hit: todayRow.hit, steps: todayRow.steps } : null,
-      recent: mine.slice(0, 14).map((r) => ({ date: r.date, hit: r.hit, steps: r.steps })),
-    };
-  }
-
-  return NextResponse.json({ goal: STEP_GOAL, today, signedIn: !!session, board, me });
+  return NextResponse.json(await stepsBoard(session));
 }
 
 // Log today — and only today. Yesterday's walk is history; the sheet never allowed rewriting

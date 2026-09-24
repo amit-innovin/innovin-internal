@@ -1,15 +1,46 @@
 import { toast } from "sonner";
 
-// Client-side GET that surfaces failures instead of leaving a page on its skeleton forever.
-export async function getJSON<T>(url: string, what: string): Promise<T | null> {
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error(String(res.status));
-    return (await res.json()) as T;
-  } catch {
-    toast.error(`Couldn't load ${what}. Check your connection and try again.`, { id: `load-${url}` });
-    return null;
+// A tiny client-side cache so revisiting a tab paints instantly instead of re-skeletoning.
+// Entries serve for TTL_MS; anything older refetches. In-flight requests are shared so the
+// two mounted notification bells (desktop + mobile) and back-to-back mounts fetch once.
+const TTL_MS = 15_000;
+const cache = new Map<string, { data: unknown; at: number }>();
+const pending = new Map<string, Promise<unknown>>();
+
+const pathOf = (url: string) => url.split("?")[0];
+
+// Drop cached GETs whose path matches (query variants included — /api/snacks clears
+// scope=mine and scope=history). send() calls this after every successful mutation.
+export function invalidate(urlPrefix: string) {
+  for (const key of cache.keys()) if (pathOf(key).startsWith(urlPrefix) || key.startsWith(urlPrefix)) cache.delete(key);
+}
+
+async function request<T>(url: string, what: string): Promise<T | null> {
+  let p = pending.get(url) as Promise<T | null> | undefined;
+  if (!p) {
+    p = fetch(url, { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        return (await res.json()) as T;
+      })
+      .catch(() => {
+        toast.error(`Couldn't load ${what}. Check your connection and try again.`, { id: `load-${url}` });
+        return null;
+      })
+      .finally(() => pending.delete(url));
+    pending.set(url, p);
   }
+  return p;
+}
+
+// Client-side GET that surfaces failures instead of leaving a page on its skeleton forever.
+// Serves the cached copy when it's fresh; pass { fresh: true } to force a refetch.
+export async function getJSON<T>(url: string, what: string, opts: { fresh?: boolean } = {}): Promise<T | null> {
+  const hit = cache.get(url);
+  if (!opts.fresh && hit && Date.now() - hit.at < TTL_MS) return hit.data as T;
+  const data = await request<T>(url, what);
+  if (data !== null) cache.set(url, { data, at: Date.now() });
+  return data;
 }
 
 // Human-readable error for a failed response, even when the body isn't JSON (e.g. a 502 page).
@@ -24,16 +55,23 @@ export async function readError(res: Response) {
 }
 
 // fetch that never throws: network failures come back as a synthetic 503 response.
+// Successful mutations invalidate their own GET cache — and the notification feed, since
+// pings, leave, grievances and announcements all surface there.
 export async function send(url: string, init: RequestInit & { json?: unknown } = {}) {
   const { json, ...rest } = init;
   try {
-    return await fetch(url, {
+    const res = await fetch(url, {
       ...rest,
       ...(json !== undefined && {
         headers: { "Content-Type": "application/json", ...rest.headers },
         body: JSON.stringify(json),
       }),
     });
+    if (res.ok && (rest.method ?? "GET").toUpperCase() !== "GET") {
+      invalidate(pathOf(url));
+      invalidate("/api/notifications");
+    }
+    return res;
   } catch {
     return new Response(JSON.stringify({ error: "You appear to be offline. Check your connection." }), {
       status: 503,

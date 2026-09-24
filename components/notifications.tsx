@@ -23,15 +23,7 @@ function urlBase64ToUint8Array(base64: string) {
 
 // The bell is mounted twice — once in the desktop sidebar, once in the mobile top bar — since
 // each is hidden at the other breakpoint and there's no shared header. Only one is ever visible,
-// but both mount, so the feed request is shared briefly to avoid fetching it twice per load.
-let inflight: { at: number; promise: Promise<Feed | null> } | null = null;
-const loadFeed = () => {
-  if (!inflight || Date.now() - inflight.at > 3000) {
-    inflight = { at: Date.now(), promise: getJSON<Feed>("/api/notifications", "your notifications") };
-  }
-  return inflight.promise;
-};
-
+// but both mount; the fetcher dedupes in-flight GETs and caches briefly, so that's one request.
 export default function Notifications() {
   const [feed, setFeed] = useState<Feed | null>(null);
   const [open, setOpen] = useState(false);
@@ -39,7 +31,7 @@ export default function Notifications() {
   const panel = useRef<HTMLDivElement>(null);
 
   const load = async () => {
-    const data = await loadFeed();
+    const data = await getJSON<Feed>("/api/notifications", "your notifications");
     if (data) setFeed(data);
   };
 

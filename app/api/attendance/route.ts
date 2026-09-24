@@ -7,6 +7,7 @@ import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { holidaysFor, isWorkingDay, nonWorkingReason, workingDaysInMonth } from "@/lib/leave";
 import { id, store } from "@/lib/store";
+import { attendanceStatus } from "@/lib/today";
 import { todayIST } from "@/lib/time";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,24 +29,7 @@ export async function GET(req: NextRequest) {
     if (!MONTH.test(month)) return badRequest("Invalid month");
     return NextResponse.json(await monthView(month, email, !!session, date));
   }
-  const rows = await store.listAttendance(date);
-  const day = email ? await store.getAttendance(email, date) : null;
-  return NextResponse.json({
-    count: new Set(rows.map((r) => r.email)).size,
-    email,
-    // Lets the client do confident auto check-in: on office Wi-Fi (IP match) or inside the
-    // geofence. The office's own coordinates aren't secret to the people who work there.
-    onOfficeNetwork: onOfficeNetwork(clientIp(req)),
-    office: officeLocation(),
-    me: day
-      ? {
-          checkedIn: !day.checkOutAt,
-          checkInAt: day.checkInAt,
-          checkOutAt: day.checkOutAt,
-          location: locationTag(day.lat, day.lng),
-        }
-      : null,
-  });
+  return NextResponse.json(await attendanceStatus(email, clientIp(req)));
 }
 
 // A day in the calendar: what was worked, and why it was off if nothing was.

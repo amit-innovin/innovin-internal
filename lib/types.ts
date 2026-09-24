@@ -13,8 +13,21 @@ export type EmployeeRow = {
   // Date of joining (YYYY-MM-DD), admin-entered. Drives Earned Leave accrual, the one-year
   // availing gate, and Flexible Leave pro-rating. Null until someone fills it in.
   joinedOn: string | null;
+  // Days hit before the app took over the 10K challenge — copied from the sheet by an admin.
+  stepsOffset: number;
   createdAt: string;
   lastSeenAt: string;
+};
+
+// 10K steps challenge: one row per person per day. `hit` is the toggle; `steps` is the
+// optional actual count for people who want to share it.
+export type StepsRow = {
+  id: string;
+  email: string;
+  date: string;
+  hit: boolean;
+  steps: number | null;
+  createdAt: string;
 };
 
 export type AttendanceRow = {
@@ -150,6 +163,10 @@ export interface Store {
   // One person's day rows across a date range (inclusive), for the attendance calendar.
   listAttendanceRange(email: string, fromDate: string, toDate: string): Promise<AttendanceRow[]>;
   listAttendance(date: string): Promise<AttendanceRow[]>;
+  // 10K challenge: one row per person per day — today is the only writable day.
+  setSteps(row: StepsRow): Promise<StepsRow>;
+  listSteps(): Promise<StepsRow[]>;
+  listStepsByEmail(email: string, limit: number): Promise<StepsRow[]>;
   // Replaces the device's selection for the day (atomically in Postgres).
   setDayOrders(date: string, ref: string, rows: OrderRow[]): Promise<OrderRow[]>;
   listOrders(date: string): Promise<OrderRow[]>;
@@ -187,6 +204,8 @@ export interface Store {
   listEmployees(): Promise<EmployeeRow[]>;
   setRole(email: string, role: Role): Promise<boolean>;
   setJoinedOn(email: string, joinedOn: string | null): Promise<boolean>;
+  // Days hit before the app took over tracking — admin-entered from the old sheet.
+  setStepsOffset(email: string, days: number): Promise<boolean>;
   setLeaveBalance(row: LeaveBalanceRow): Promise<LeaveBalanceRow>;
   listLeaveBalances(year: number): Promise<LeaveBalanceRow[]>;
   savePushSubscription(row: PushSubscriptionRow): Promise<PushSubscriptionRow>;

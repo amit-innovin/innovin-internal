@@ -7,6 +7,7 @@ import CheckInCard from "@/components/check-in-card";
 import { ArrowLink, Empty, IconTile, QualityDot, SectionHeader, stagger } from "@/components/kit";
 import QuickOrder from "@/components/quick-order";
 import SpeakUpCard from "@/components/speak-up-card";
+import StepsCard from "@/components/steps-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,6 +50,7 @@ async function TodayColumn({ deviceId }: { deviceId: string | undefined }) {
     <div className="flex min-w-0 flex-col gap-5" style={stagger(1)}>
       <CheckInCard nextAway={awayLabel} />
       <QuickOrder />
+      <StepsCard />
       <SpeakUpCard />
     </div>
   );

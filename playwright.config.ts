@@ -29,6 +29,9 @@ const serverEnv = (name: string, cutoff: string) => ({
   GOOGLE_TOKEN_URL: "http://localhost:3999/token",
   GOOGLE_TOKENINFO_URL: "http://localhost:3999/tokeninfo",
   SESSION_SECRET: "e2e-session-secret",
+  // The suite signs in far more than 30 times per run (desktop + mobile share one server),
+  // so the per-IP auth ceiling needs headroom it wouldn't need in production.
+  AUTH_IP_LIMIT: "500",
   // DATABASE_URL must be blanked in JSON mode too — the built server loads .env at runtime,
   // which carries the real production DATABASE_URL and would write test data to prod.
   ...(db ? { DATABASE_URL: db } : { DATA_FILE: `.test-data/${name}.json`, DATABASE_URL: "" }),

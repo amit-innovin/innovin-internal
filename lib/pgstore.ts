@@ -11,6 +11,7 @@ import type {
   GrievanceStatus,
   LeaveBalanceRow,
   PushSubscriptionRow,
+  StepsRow,
   OrderRow,
   Role,
   Store,
@@ -117,6 +118,18 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS push_email_idx ON push_subscriptions (email);
+-- 10K steps challenge: one row per person per day, today is the only writable day.
+CREATE TABLE IF NOT EXISTS steps (
+  id text PRIMARY KEY,
+  email text NOT NULL,
+  date text NOT NULL,
+  hit boolean NOT NULL DEFAULT false,
+  steps int,
+  created_at timestamptz NOT NULL,
+  UNIQUE (email, date)
+);
+-- Days banked in the old spreadsheet before the app took over.
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS steps_offset int NOT NULL DEFAULT 0;
 CREATE TABLE IF NOT EXISTS leave_balances (
   email text NOT NULL,
   year int NOT NULL,
@@ -162,6 +175,7 @@ CREATE INDEX IF NOT EXISTS wifi_created_idx ON wifi (created_at DESC);
 CREATE INDEX IF NOT EXISTS announcements_created_idx ON announcements (created_at DESC);
 CREATE INDEX IF NOT EXISTS away_created_idx ON away (created_at DESC);
 CREATE INDEX IF NOT EXISTS away_submitter_idx ON away (submitter_ref, created_at DESC);
+CREATE INDEX IF NOT EXISTS steps_date_idx ON steps (date);
 CREATE INDEX IF NOT EXISTS events_starts_idx ON events (starts_at);
 CREATE INDEX IF NOT EXISTS event_rsvps_ref_idx ON event_rsvps (submitter_ref);`;
 
@@ -219,6 +233,7 @@ const employee = (r: any): EmployeeRow => ({
   picture: r.picture,
   role: r.role ?? "member",
   joinedOn: r.joined_on ?? null,
+  stepsOffset: r.steps_offset ?? 0,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
 });
@@ -227,6 +242,14 @@ const pushSubscription = (r: any): PushSubscriptionRow => ({
   p256dh: r.p256dh,
   auth: r.auth,
   email: r.email ?? null,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+});
+const steps = (r: any): StepsRow => ({
+  id: r.id,
+  email: r.email,
+  date: r.date,
+  hit: r.hit === true,
+  steps: r.steps ?? null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const leaveBalance = (r: any): LeaveBalanceRow => ({
@@ -449,6 +472,26 @@ class PgStore implements Store {
   async setJoinedOn(email: string, joinedOn: string | null) {
     const res = await this.q(`UPDATE employees SET joined_on = $2 WHERE email = $1`, [email, joinedOn]);
     return (res.rowCount ?? 0) > 0;
+  }
+  async setStepsOffset(email: string, days: number) {
+    const res = await this.q(`UPDATE employees SET steps_offset = $2 WHERE email = $1`, [email, days]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async setSteps(row: StepsRow) {
+    const res = await this.q(
+      `INSERT INTO steps (id, email, date, hit, steps, created_at) VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (email, date) DO UPDATE SET hit = $4, steps = $5 RETURNING *`,
+      [row.id, row.email, row.date, row.hit, row.steps, row.createdAt],
+    );
+    return steps(res.rows[0]);
+  }
+  async listSteps() {
+    const res = await this.q(`SELECT * FROM steps ORDER BY date DESC`);
+    return res.rows.map(steps);
+  }
+  async listStepsByEmail(email: string, limit: number) {
+    const res = await this.q(`SELECT * FROM steps WHERE email = $1 ORDER BY date DESC LIMIT $2`, [email, limit]);
+    return res.rows.map(steps);
   }
   async setLeaveBalance(row: LeaveBalanceRow) {
     const a = row.available;

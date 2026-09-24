@@ -11,6 +11,7 @@ import type {
   PushSubscriptionRow,
   OrderRow,
   RsvpRow,
+  StepsRow,
   Store,
   WifiRow,
 } from "./types";
@@ -31,9 +32,10 @@ type DB = {
   rsvps: RsvpRow[];
   leaveBalances: LeaveBalanceRow[];
   pushSubscriptions: PushSubscriptionRow[];
+  steps: StepsRow[];
 };
 
-const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [] });
+const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -210,7 +212,11 @@ export const jsonStore: Store = {
       db.employees.unshift(row);
       return { result: row, changed: true };
     }),
-  getEmployee: (email) => query((db) => db.employees.find((e) => e.email === email) ?? null),
+  getEmployee: (email) =>
+    query((db) => {
+      const e = db.employees.find((e) => e.email === email);
+      return e ? { ...e, stepsOffset: e.stepsOffset ?? 0 } : null;
+    }),
   setRole: (email, role) =>
     mutate((db) => {
       const row = db.employees.find((e) => e.email === email);
@@ -223,6 +229,32 @@ export const jsonStore: Store = {
       if (row) row.joinedOn = joinedOn;
       return { result: !!row, changed: !!row };
     }),
+  setStepsOffset: (email, days) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.stepsOffset = days;
+      return { result: !!row, changed: !!row };
+    }),
+  setSteps: (row) =>
+    mutate((db) => {
+      const existing = db.steps.find((s) => s.email === row.email && s.date === row.date);
+      if (existing) {
+        existing.hit = row.hit;
+        existing.steps = row.steps;
+        return { result: existing, changed: true };
+      }
+      db.steps.unshift(row);
+      return { result: row, changed: true };
+    }),
+  listSteps: () =>
+    query((db) => db.steps.slice().sort((a, b) => b.date.localeCompare(a.date))),
+  listStepsByEmail: (email, limit) =>
+    query((db) =>
+      db.steps
+        .filter((s) => s.email === email)
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, limit),
+    ),
   setLeaveBalance: (row) =>
     mutate((db) => {
       const existing = db.leaveBalances.find((b) => b.email === row.email && b.year === row.year);
@@ -253,7 +285,11 @@ export const jsonStore: Store = {
   listPushSubscriptions: (email) =>
     query((db) => (email ? db.pushSubscriptions.filter((s) => s.email === email) : db.pushSubscriptions)),
   listEmployees: () =>
-    query((db) => db.employees.slice().sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email))),
+    query((db) =>
+      db.employees
+        .map((e) => ({ ...e, stepsOffset: e.stepsOffset ?? 0 }))
+        .sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email)),
+    ),
 
   addAway: (row) =>
     mutate((db) => {

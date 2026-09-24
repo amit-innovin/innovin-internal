@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarDays, CircleHelp, Coffee, House, MessageSquare, Settings, ShieldCheck, Users, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CircleHelp, Coffee, Footprints, House, MessageSquare, Settings, ShieldCheck, Users, Wifi } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Logo, Wave } from "@/components/brand";
 import Notifications from "@/components/notifications";
@@ -23,6 +23,7 @@ const PRIMARY: Item[] = [
 
 // Leave and Time Away live inside Attendance now — one surface for "my time".
 const SECONDARY: Item[] = [
+  { href: "/steps", label: "10K Steps", short: "Steps", icon: Footprints },
   { href: "/events", label: "Events", short: "Events", icon: CalendarDays },
   { href: "/people", label: "People", short: "People", icon: Users },
   { href: "/settings", label: "Settings", short: "Settings", icon: Settings },

@@ -104,6 +104,7 @@ export async function leaveOverview(year: number, today: string) {
       name: e.name || e.email,
       email: e.email,
       joinedOn: e.joinedOn,
+      stepsOffset: e.stepsOffset,
       summary: summarize(e, byEmail.get(e.email) ?? [], year, today, balanceFor.get(e.email)),
     })),
   };

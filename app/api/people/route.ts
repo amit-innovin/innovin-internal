@@ -45,6 +45,14 @@ export async function PATCH(req: NextRequest) {
   const target = await store.getEmployee(email);
   if (!target) return NextResponse.json({ error: "Person not found" }, { status: 404 });
 
+  // Days hit in the pre-app spreadsheet — an admin copies the Total Days column over.
+  if (body?.stepsOffset !== undefined) {
+    const days = Number(body.stepsOffset);
+    if (!Number.isInteger(days) || days < 0 || days > 10_000) return badRequest("Enter whole days");
+    await store.setStepsOffset(email, days);
+    return NextResponse.json({ ok: true });
+  }
+
   // Joining date drives Earned Leave accrual and Flexible Leave pro-rating; "" clears it.
   if (body?.joinedOn !== undefined) {
     const joinedOn = str(body.joinedOn).trim();

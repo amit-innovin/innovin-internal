@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, Store, WifiRow } from "@/lib/types";
+import type { AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, StepsRow, Store, WifiRow } from "@/lib/types";
 
 // Behavioural contract every Store adapter must satisfy (JSON file + Postgres).
 export function storeContract(name: string, getStore: () => Promise<Store>, resetData: () => Promise<void>) {
@@ -78,6 +78,7 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       picture: "",
       role: "member",
       joinedOn: null,
+      stepsOffset: 0,
       createdAt: iso(),
       lastSeenAt: iso(),
       ...p,
@@ -159,6 +160,50 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(await store.listAttendanceRange("a@innovinlabs.com", "2026-09-15", "2026-09-15")).toHaveLength(1);
         expect(await store.listAttendanceRange("a@innovinlabs.com", "2026-08-01", "2026-08-31")).toEqual([]);
         expect(await store.listAttendanceRange("nobody@innovinlabs.com", "2026-09-01", "2026-09-30")).toEqual([]);
+      });
+    });
+
+    describe("steps", () => {
+      const steps = (p: Partial<StepsRow> = {}): StepsRow => ({
+        id: uid(),
+        email: "a@innovinlabs.com",
+        date: "2026-09-23",
+        hit: true,
+        steps: null,
+        createdAt: iso(),
+        ...p,
+      });
+
+      it("upserts one row per person per day", async () => {
+        await store.setSteps(steps({ steps: 9_500, hit: false }));
+        const again = await store.setSteps(steps({ steps: 12_400, hit: true }));
+        expect(again.steps).toBe(12_400);
+        expect(again.hit).toBe(true);
+        const all = await store.listSteps();
+        expect(all).toHaveLength(1);
+        expect(all[0].steps).toBe(12_400);
+      });
+
+      it("lists everyone newest day first, and one person's history with a limit", async () => {
+        await store.setSteps(steps({ date: "2026-09-22" }));
+        await store.setSteps(steps({ date: "2026-09-23", createdAt: iso(1000) }));
+        await store.setSteps(steps({ email: "b@innovinlabs.com", date: "2026-09-23", hit: false }));
+        const all = (await store.listSteps()).map((s) => `${s.email}:${s.date}`);
+        // Same-date order between people is unspecified; the day ordering is not.
+        expect(all.slice(0, 2).sort()).toEqual(["a@innovinlabs.com:2026-09-23", "b@innovinlabs.com:2026-09-23"]);
+        expect(all[2]).toBe("a@innovinlabs.com:2026-09-22");
+        const mine = await store.listStepsByEmail("a@innovinlabs.com", 1);
+        expect(mine.map((s) => s.date)).toEqual(["2026-09-23"]);
+      });
+
+      it("keeps a steps offset on the employee", async () => {
+        expect(await store.setStepsOffset("ghost@innovinlabs.com", 10)).toBe(false);
+        await store.upsertEmployee(employee());
+        expect(await store.setStepsOffset("a@innovinlabs.com", 45)).toBe(true);
+        expect((await store.getEmployee("a@innovinlabs.com"))?.stepsOffset).toBe(45);
+        // A re-sign-in (upsert) must not wipe the admin-entered offset.
+        await store.upsertEmployee(employee({ name: "Asha Renamed" }));
+        expect((await store.getEmployee("a@innovinlabs.com"))?.stepsOffset).toBe(45);
       });
     });
 

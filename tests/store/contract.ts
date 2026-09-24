@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, StepsRow, Store, WifiRow } from "@/lib/types";
+import type { AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, PingRow, StepsRow, Store, WifiRow } from "@/lib/types";
+import { PING_TTL_MS } from "@/lib/pings";
 
 // Behavioural contract every Store adapter must satisfy (JSON file + Postgres).
 export function storeContract(name: string, getStore: () => Promise<Store>, resetData: () => Promise<void>) {
@@ -204,6 +205,57 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         // A re-sign-in (upsert) must not wipe the admin-entered offset.
         await store.upsertEmployee(employee({ name: "Asha Renamed" }));
         expect((await store.getEmployee("a@innovinlabs.com"))?.stepsOffset).toBe(45);
+      });
+    });
+
+    describe("pings", () => {
+      // Real timestamps — pings expire on wall-clock age, so fixed future dates would
+      // behave differently once the calendar passes them.
+      const nowIso = (offsetMs = 0) => new Date(Date.now() + offsetMs).toISOString();
+      const ping = (p: Partial<PingRow> = {}): PingRow => ({
+        id: uid(),
+        fromEmail: "a@innovinlabs.com",
+        toEmail: "b@innovinlabs.com",
+        body: "chai?",
+        readAt: null,
+        createdAt: nowIso(),
+        ...p,
+      });
+
+      it("lists both sides of a conversation, newest first, with a limit", async () => {
+        await store.addPing(ping({ createdAt: nowIso(-3000) }));
+        await store.addPing(ping({ fromEmail: "b@innovinlabs.com", toEmail: "a@innovinlabs.com", body: "yes!", createdAt: nowIso(-2000) }));
+        await store.addPing(ping({ toEmail: "c@innovinlabs.com", createdAt: nowIso(-1000) }));
+        const mine = await store.listPingsFor("a@innovinlabs.com", 10);
+        // The a→c ping is newest, then b→a, then a→b.
+        expect(mine.map((p) => `${p.fromEmail}>${p.toEmail}`)).toEqual([
+          "a@innovinlabs.com>c@innovinlabs.com",
+          "b@innovinlabs.com>a@innovinlabs.com",
+          "a@innovinlabs.com>b@innovinlabs.com",
+        ]);
+        expect(await store.listPingsFor("a@innovinlabs.com", 1)).toHaveLength(1);
+        // A bystander sees none of it.
+        expect(await store.listPingsFor("stranger@innovinlabs.com", 10)).toEqual([]);
+      });
+
+      it("marks only incoming pings from one person as read", async () => {
+        await store.addPing(ping({ fromEmail: "b@innovinlabs.com", toEmail: "a@innovinlabs.com" }));
+        await store.addPing(ping({ fromEmail: "c@innovinlabs.com", toEmail: "a@innovinlabs.com" }));
+        await store.addPing(ping({ fromEmail: "a@innovinlabs.com", toEmail: "b@innovinlabs.com" }));
+        await store.markPingsRead("a@innovinlabs.com", "b@innovinlabs.com");
+        const mine = await store.listPingsFor("a@innovinlabs.com", 10);
+        const byFrom = Object.fromEntries(mine.map((p) => [`${p.fromEmail}->${p.toEmail}`, p.readAt]));
+        expect(byFrom["b@innovinlabs.com->a@innovinlabs.com"]).toBeTruthy();
+        expect(byFrom["c@innovinlabs.com->a@innovinlabs.com"]).toBeNull();
+        expect(byFrom["a@innovinlabs.com->b@innovinlabs.com"]).toBeNull();
+      });
+
+      it("purges pings older than a day — no history survives", async () => {
+        const stale = new Date(Date.now() - PING_TTL_MS - 60_000).toISOString();
+        await store.addPing(ping({ body: "yesterday", createdAt: stale }));
+        await store.addPing(ping({ body: "fresh" }));
+        const mine = await store.listPingsFor("a@innovinlabs.com", 10);
+        expect(mine.map((p) => p.body)).toEqual(["fresh"]);
       });
     });
 

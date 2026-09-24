@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Bell, BellRing, CalendarDays, CalendarOff, Megaphone, MessageSquare } from "lucide-react";
+import { Bell, BellRing, CalendarDays, CalendarOff, Megaphone, MessageCircle, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Empty } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { getJSON, send } from "@/lib/fetcher";
 import { relativeTime } from "@/lib/format";
 
-type Item = { id: string; kind: "announcement" | "event" | "away" | "grievance"; title: string; body: string; at: string; href: string };
+type Item = { id: string; kind: "announcement" | "event" | "away" | "grievance" | "ping"; title: string; body: string; at: string; href: string };
 type Feed = { items: Item[]; unread: number };
 
-const ICON = { announcement: Megaphone, event: CalendarDays, away: CalendarOff, grievance: MessageSquare };
+const ICON = { announcement: Megaphone, event: CalendarDays, away: CalendarOff, grievance: MessageSquare, ping: MessageCircle };
 
 // base64url → Uint8Array, the form PushManager wants for the VAPID key.
 function urlBase64ToUint8Array(base64: string) {

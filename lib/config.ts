@@ -37,6 +37,7 @@ export const LIMITS = {
   // AUTH_IP_LIMIT overrides the sign-in ceiling — a whole office shares one public IP, so
   // onboarding days (and e2e, which signs in dozens of times from one address) need headroom.
   authIp: { max: Number(process.env.AUTH_IP_LIMIT ?? 30) || 30, windowMs: 15 * MIN },
+  pingSender: { max: 60, windowMs: 60 * MIN },
   awayDevice: { max: 15, windowMs: 60 * MIN },
   rsvpDevice: { max: 60, windowMs: 60 * MIN },
   writeIp: { max: 120, windowMs: MIN },

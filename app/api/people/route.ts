@@ -14,11 +14,14 @@ export async function GET() {
   const [employees, dayRows] = await Promise.all([store.listEmployees(), store.listAttendance(todayIST())]);
   const byEmail = new Map(employees.map((e) => [e.email, e]));
 
-  const present = new Map<string, { name: string; since: string; where: string }>();
+  const present = new Map<string, { name: string; email?: string; since: string; where: string }>();
   for (const s of dayRows) {
     if (s.checkOutAt || present.has(s.email)) continue;
     present.set(s.email, {
       name: byEmail.get(s.email)?.name || firstName(s.email) || s.email,
+      // The email is attached only when it's already public via the directory — a check-in
+      // from someone who never signed in must not expose it through presence.
+      email: byEmail.has(s.email) ? s.email : undefined,
       since: s.checkInAt,
       where: locationTag(s.lat, s.lng),
     });

@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { pgConfig } from "./pgconfig";
+import { PING_TTL_MS } from "./pings";
 import type {
   AnnouncementRow,
   AttendanceRow,
@@ -10,6 +11,7 @@ import type {
   GrievanceRow,
   GrievanceStatus,
   LeaveBalanceRow,
+  PingRow,
   PushSubscriptionRow,
   StepsRow,
   OrderRow,
@@ -130,6 +132,18 @@ CREATE TABLE IF NOT EXISTS steps (
 );
 -- Days banked in the old spreadsheet before the app took over.
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS steps_offset int NOT NULL DEFAULT 0;
+-- One-line pings between people. Ephemeral by design — rows past the TTL are deleted
+-- lazily on every access (see listPingsFor), so there is no history to keep.
+CREATE TABLE IF NOT EXISTS pings (
+  id text PRIMARY KEY,
+  from_email text NOT NULL,
+  to_email text NOT NULL,
+  body text NOT NULL,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS pings_to_idx ON pings (to_email, created_at DESC);
+CREATE INDEX IF NOT EXISTS pings_from_idx ON pings (from_email, created_at DESC);
 CREATE TABLE IF NOT EXISTS leave_balances (
   email text NOT NULL,
   year int NOT NULL,
@@ -242,6 +256,14 @@ const pushSubscription = (r: any): PushSubscriptionRow => ({
   p256dh: r.p256dh,
   auth: r.auth,
   email: r.email ?? null,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+});
+const ping = (r: any): PingRow => ({
+  id: r.id,
+  fromEmail: r.from_email,
+  toEmail: r.to_email,
+  body: r.body,
+  readAt: r.read_at ? r.read_at.toISOString?.() ?? r.read_at : null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const steps = (r: any): StepsRow => ({
@@ -492,6 +514,32 @@ class PgStore implements Store {
   async listStepsByEmail(email: string, limit: number) {
     const res = await this.q(`SELECT * FROM steps WHERE email = $1 ORDER BY date DESC LIMIT $2`, [email, limit]);
     return res.rows.map(steps);
+  }
+  // Pings expire after PING_TTL_MS — swept before every access so nothing stale survives.
+  private async sweepPings() {
+    await this.q(`DELETE FROM pings WHERE created_at < $1`, [new Date(Date.now() - PING_TTL_MS).toISOString()]);
+  }
+  async addPing(row: PingRow) {
+    await this.sweepPings();
+    const res = await this.q(
+      `INSERT INTO pings (id, from_email, to_email, body, read_at, created_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [row.id, row.fromEmail, row.toEmail, row.body, row.readAt, row.createdAt],
+    );
+    return ping(res.rows[0]);
+  }
+  async listPingsFor(email: string, limit: number) {
+    await this.sweepPings();
+    const res = await this.q(
+      `SELECT * FROM pings WHERE from_email = $1 OR to_email = $1 ORDER BY created_at DESC LIMIT $2`,
+      [email, limit],
+    );
+    return res.rows.map(ping);
+  }
+  async markPingsRead(email: string, fromEmail: string) {
+    await this.q(
+      `UPDATE pings SET read_at = now() WHERE to_email = $1 AND from_email = $2 AND read_at IS NULL`,
+      [email, fromEmail],
+    );
   }
   async setLeaveBalance(row: LeaveBalanceRow) {
     const a = row.available;

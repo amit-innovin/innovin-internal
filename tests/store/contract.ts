@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, Store, WifiRow } from "@/lib/types";
+import type { AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, PingRow, StepsRow, Store, WifiRow } from "@/lib/types";
+import { PING_TTL_MS } from "@/lib/pings";
 
 // Behavioural contract every Store adapter must satisfy (JSON file + Postgres).
 export function storeContract(name: string, getStore: () => Promise<Store>, resetData: () => Promise<void>) {
@@ -40,6 +41,7 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       body: "Issue",
       displayName: null,
       image: null,
+      urgent: false,
       submitterRef: "ref-1",
       status: "open",
       createdAt: iso(),
@@ -77,6 +79,7 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       picture: "",
       role: "member",
       joinedOn: null,
+      stepsOffset: 0,
       createdAt: iso(),
       lastSeenAt: iso(),
       ...p,
@@ -94,7 +97,7 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
     });
 
     describe("attendance", () => {
-      it("returns the open session on repeat check-in, then starts a new session after checkout", async () => {
+      it("keeps one row per person per day: repeat check-in is a no-op, check-in after checkout reopens it", async () => {
         const first = await store.checkIn(attendance());
         const again = await store.checkIn(attendance({ checkInAt: iso(60_000) }));
         expect(again.id).toBe(first.id);
@@ -102,14 +105,15 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(await store.listAttendance("2026-09-23")).toHaveLength(1);
 
         await store.checkOut("a@innovinlabs.com", "2026-09-23", iso(3_600_000));
-        const second = await store.checkIn(attendance({ checkInAt: iso(4_000_000) }));
-        expect(second.id).not.toBe(first.id);
-        const sessions = await store.listAttendanceByEmail("a@innovinlabs.com", "2026-09-23");
-        expect(sessions).toHaveLength(2);
-        expect(sessions[1].checkInAt).toBe(iso(4_000_000));
+        const reopened = await store.checkIn(attendance({ checkInAt: iso(4_000_000) }));
+        // Same row — back in means in again, and the day still has exactly one record.
+        expect(reopened.id).toBe(first.id);
+        expect(reopened.checkInAt).toBe(iso(4_000_000));
+        expect(reopened.checkOutAt).toBeNull();
+        expect(await store.listAttendance("2026-09-23")).toHaveLength(1);
       });
 
-      it("getAttendance returns only the open session; checkOut closes it once", async () => {
+      it("getAttendance returns the day's row in either state; checkOut closes it once", async () => {
         const row = await store.checkIn(attendance());
         expect((await store.getAttendance("a@innovinlabs.com", "2026-09-23"))?.id).toBe(row.id);
         expect(await store.getAttendance("b@innovinlabs.com", "2026-09-23")).toBeNull();
@@ -117,7 +121,8 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(out?.checkOutAt).toBe(iso(3_600_000));
         expect(await store.checkOut("a@innovinlabs.com", "2026-09-23", iso(4_000_000))).toBeNull();
         expect(await store.checkOut("nobody@innovinlabs.com", "2026-09-23", iso())).toBeNull();
-        expect(await store.getAttendance("a@innovinlabs.com", "2026-09-23")).toBeNull();
+        // The row still exists — checked out, not gone.
+        expect((await store.getAttendance("a@innovinlabs.com", "2026-09-23"))?.checkOutAt).toBe(iso(3_600_000));
       });
 
       it("round-trips the check-in location, defaulting to null", async () => {
@@ -128,35 +133,129 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(rows.find((r) => r.email === "noloc@innovinlabs.com")).toMatchObject({ lat: null, lng: null, accuracyM: null });
       });
 
-      it("lists one day ordered by check-in time, with separate sessions per person", async () => {
+      it("lists one day ordered by check-in time, one row per person", async () => {
         await store.checkIn(attendance({ email: "late@innovinlabs.com", checkInAt: iso(120_000) }));
         await store.checkIn(attendance({ email: "early@innovinlabs.com", checkInAt: iso(0) }));
         await store.checkIn(attendance({ email: "other-day@innovinlabs.com", date: "2026-09-22" }));
         const rows = await store.listAttendance("2026-09-23");
         expect(rows.map((r) => r.email)).toEqual(["early@innovinlabs.com", "late@innovinlabs.com"]);
-        expect(await store.listAttendanceByEmail("early@innovinlabs.com", "2026-09-22")).toHaveLength(0);
+        expect(await store.getAttendance("early@innovinlabs.com", "2026-09-22")).toBeNull();
       });
 
-      it("lists one person's sessions across a date range, in day then time order", async () => {
+      it("lists one person's days across a date range, one row per day", async () => {
         await store.checkIn(attendance({ date: "2026-09-01", checkInAt: iso(1000) }));
-        // checkIn always opens a session (the Postgres adapter ignores checkOutAt on the input),
-        // so a second session the same day has to follow a real checkOut — as the route does.
         await store.checkIn(attendance({ date: "2026-09-15", checkInAt: iso(2000) }));
         await store.checkOut("a@innovinlabs.com", "2026-09-15", iso(3000));
+        // Re-checking in the same day folds into the same row, not a second one.
         await store.checkIn(attendance({ date: "2026-09-15", checkInAt: iso(5000) }));
         await store.checkIn(attendance({ date: "2026-09-30", checkInAt: iso(9000) }));
         await store.checkIn(attendance({ date: "2026-10-01", checkInAt: iso(9999) })); // outside
         await store.checkIn(attendance({ email: "other@innovinlabs.com", date: "2026-09-15" })); // someone else
 
         const rows = await store.listAttendanceRange("a@innovinlabs.com", "2026-09-01", "2026-09-30");
-        expect(rows.map((r) => r.date)).toEqual(["2026-09-01", "2026-09-15", "2026-09-15", "2026-09-30"]);
-        // Same-day sessions come back chronologically.
-        expect(rows[1].checkInAt).toBe(iso(2000));
-        expect(rows[2].checkInAt).toBe(iso(5000));
+        expect(rows.map((r) => r.date)).toEqual(["2026-09-01", "2026-09-15", "2026-09-30"]);
+        // The reopened day shows the latest check-in and is open again.
+        expect(rows[1].checkInAt).toBe(iso(5000));
+        expect(rows[1].checkOutAt).toBeNull();
         // The range is inclusive on both ends, and empty ranges are empty.
-        expect(await store.listAttendanceRange("a@innovinlabs.com", "2026-09-15", "2026-09-15")).toHaveLength(2);
+        expect(await store.listAttendanceRange("a@innovinlabs.com", "2026-09-15", "2026-09-15")).toHaveLength(1);
         expect(await store.listAttendanceRange("a@innovinlabs.com", "2026-08-01", "2026-08-31")).toEqual([]);
         expect(await store.listAttendanceRange("nobody@innovinlabs.com", "2026-09-01", "2026-09-30")).toEqual([]);
+      });
+    });
+
+    describe("steps", () => {
+      const steps = (p: Partial<StepsRow> = {}): StepsRow => ({
+        id: uid(),
+        email: "a@innovinlabs.com",
+        date: "2026-09-23",
+        hit: true,
+        steps: null,
+        createdAt: iso(),
+        ...p,
+      });
+
+      it("upserts one row per person per day", async () => {
+        await store.setSteps(steps({ steps: 9_500, hit: false }));
+        const again = await store.setSteps(steps({ steps: 12_400, hit: true }));
+        expect(again.steps).toBe(12_400);
+        expect(again.hit).toBe(true);
+        const all = await store.listSteps();
+        expect(all).toHaveLength(1);
+        expect(all[0].steps).toBe(12_400);
+      });
+
+      it("lists everyone newest day first, and one person's history with a limit", async () => {
+        await store.setSteps(steps({ date: "2026-09-22" }));
+        await store.setSteps(steps({ date: "2026-09-23", createdAt: iso(1000) }));
+        await store.setSteps(steps({ email: "b@innovinlabs.com", date: "2026-09-23", hit: false }));
+        const all = (await store.listSteps()).map((s) => `${s.email}:${s.date}`);
+        // Same-date order between people is unspecified; the day ordering is not.
+        expect(all.slice(0, 2).sort()).toEqual(["a@innovinlabs.com:2026-09-23", "b@innovinlabs.com:2026-09-23"]);
+        expect(all[2]).toBe("a@innovinlabs.com:2026-09-22");
+        const mine = await store.listStepsByEmail("a@innovinlabs.com", 1);
+        expect(mine.map((s) => s.date)).toEqual(["2026-09-23"]);
+      });
+
+      it("keeps a steps offset on the employee", async () => {
+        expect(await store.setStepsOffset("ghost@innovinlabs.com", 10)).toBe(false);
+        await store.upsertEmployee(employee());
+        expect(await store.setStepsOffset("a@innovinlabs.com", 45)).toBe(true);
+        expect((await store.getEmployee("a@innovinlabs.com"))?.stepsOffset).toBe(45);
+        // A re-sign-in (upsert) must not wipe the admin-entered offset.
+        await store.upsertEmployee(employee({ name: "Asha Renamed" }));
+        expect((await store.getEmployee("a@innovinlabs.com"))?.stepsOffset).toBe(45);
+      });
+    });
+
+    describe("pings", () => {
+      // Real timestamps — pings expire on wall-clock age, so fixed future dates would
+      // behave differently once the calendar passes them.
+      const nowIso = (offsetMs = 0) => new Date(Date.now() + offsetMs).toISOString();
+      const ping = (p: Partial<PingRow> = {}): PingRow => ({
+        id: uid(),
+        fromEmail: "a@innovinlabs.com",
+        toEmail: "b@innovinlabs.com",
+        body: "chai?",
+        readAt: null,
+        createdAt: nowIso(),
+        ...p,
+      });
+
+      it("lists both sides of a conversation, newest first, with a limit", async () => {
+        await store.addPing(ping({ createdAt: nowIso(-3000) }));
+        await store.addPing(ping({ fromEmail: "b@innovinlabs.com", toEmail: "a@innovinlabs.com", body: "yes!", createdAt: nowIso(-2000) }));
+        await store.addPing(ping({ toEmail: "c@innovinlabs.com", createdAt: nowIso(-1000) }));
+        const mine = await store.listPingsFor("a@innovinlabs.com", 10);
+        // The a→c ping is newest, then b→a, then a→b.
+        expect(mine.map((p) => `${p.fromEmail}>${p.toEmail}`)).toEqual([
+          "a@innovinlabs.com>c@innovinlabs.com",
+          "b@innovinlabs.com>a@innovinlabs.com",
+          "a@innovinlabs.com>b@innovinlabs.com",
+        ]);
+        expect(await store.listPingsFor("a@innovinlabs.com", 1)).toHaveLength(1);
+        // A bystander sees none of it.
+        expect(await store.listPingsFor("stranger@innovinlabs.com", 10)).toEqual([]);
+      });
+
+      it("marks only incoming pings from one person as read", async () => {
+        await store.addPing(ping({ fromEmail: "b@innovinlabs.com", toEmail: "a@innovinlabs.com" }));
+        await store.addPing(ping({ fromEmail: "c@innovinlabs.com", toEmail: "a@innovinlabs.com" }));
+        await store.addPing(ping({ fromEmail: "a@innovinlabs.com", toEmail: "b@innovinlabs.com" }));
+        await store.markPingsRead("a@innovinlabs.com", "b@innovinlabs.com");
+        const mine = await store.listPingsFor("a@innovinlabs.com", 10);
+        const byFrom = Object.fromEntries(mine.map((p) => [`${p.fromEmail}->${p.toEmail}`, p.readAt]));
+        expect(byFrom["b@innovinlabs.com->a@innovinlabs.com"]).toBeTruthy();
+        expect(byFrom["c@innovinlabs.com->a@innovinlabs.com"]).toBeNull();
+        expect(byFrom["a@innovinlabs.com->b@innovinlabs.com"]).toBeNull();
+      });
+
+      it("purges pings older than a day — no history survives", async () => {
+        const stale = new Date(Date.now() - PING_TTL_MS - 60_000).toISOString();
+        await store.addPing(ping({ body: "yesterday", createdAt: stale }));
+        await store.addPing(ping({ body: "fresh" }));
+        const mine = await store.listPingsFor("a@innovinlabs.com", 10);
+        expect(mine.map((p) => p.body)).toEqual(["fresh"]);
       });
     });
 
@@ -209,6 +308,19 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(rows.map((g) => g.body)).toEqual(["newer", "older"]);
         expect(rows[1].displayName).toBeNull();
         expect(rows[0].displayName).toBe("Amit");
+      });
+
+      it("sorts urgent above normal, then newest first", async () => {
+        await store.addGrievance(grievance({ body: "old normal", createdAt: iso(0) }));
+        await store.addGrievance(grievance({ body: "urgent but oldest", urgent: true, createdAt: iso(500) }));
+        await store.addGrievance(grievance({ body: "new normal", createdAt: iso(3000) }));
+        await store.addGrievance(grievance({ body: "urgent newest", urgent: true, createdAt: iso(2000) }));
+        expect((await store.listGrievances()).map((g) => g.body)).toEqual([
+          "urgent newest",
+          "urgent but oldest",
+          "new normal",
+          "old normal",
+        ]);
       });
 
       it("never stores a device-linked submitter ref — rows are always 'anon'", async () => {

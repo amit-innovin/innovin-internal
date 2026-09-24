@@ -11,9 +11,9 @@ export default async function globalSetup() {
   if (url) {
     const client = new Client({ connectionString: url });
     await client.connect();
-    const { rows } = await client.query(
-      "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('attendance','orders','grievances','wifi','announcements','employees')",
-    );
+    // Truncate every app table — a hardcoded list drifts as tables are added, and stale rows
+    // leak across runs (the desktop and mobile projects share one database).
+    const { rows } = await client.query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
     if (rows.length) await client.query(`TRUNCATE ${rows.map((r) => r.tablename).join(", ")}`);
     await client.end();
   }

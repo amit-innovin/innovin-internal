@@ -68,7 +68,7 @@ export default function Events() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="Events" subtitle="What's happening at Innovin — tap Join to RSVP" />
+      <PageHeader title="Events" subtitle="What's coming up — tap Join and you're in." />
 
       {!events ? (
         <div className="space-y-3">
@@ -83,7 +83,7 @@ export default function Events() {
         </div>
       ) : events.length === 0 ? (
         <Card className="p-6">
-          <Empty>Nothing scheduled right now — new events show up here.</Empty>
+          <Empty>Nothing on the calendar yet — good things land here first.</Empty>
         </Card>
       ) : (
         <ul className="space-y-3">

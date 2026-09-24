@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { pgConfig } from "./pgconfig";
+import { PING_TTL_MS } from "./pings";
 import type {
   AnnouncementRow,
   AttendanceRow,
@@ -10,7 +11,9 @@ import type {
   GrievanceRow,
   GrievanceStatus,
   LeaveBalanceRow,
+  PingRow,
   PushSubscriptionRow,
+  StepsRow,
   OrderRow,
   Role,
   Store,
@@ -44,6 +47,7 @@ CREATE TABLE IF NOT EXISTS grievances (
   body text NOT NULL,
   display_name text,
   image text,
+  urgent boolean NOT NULL DEFAULT false,
   submitter_ref text NOT NULL,
   status text NOT NULL DEFAULT 'open',
   created_at timestamptz NOT NULL
@@ -102,6 +106,7 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
 ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
 ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
+ALTER TABLE grievances ADD COLUMN IF NOT EXISTS urgent boolean NOT NULL DEFAULT false;
 -- Scrub device-linked refs written before hard anonymity: the DB must not be joinable
 -- against away/orders to de-anonymize a submission.
 UPDATE grievances SET submitter_ref = 'anon' WHERE submitter_ref <> 'anon';
@@ -115,6 +120,30 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS push_email_idx ON push_subscriptions (email);
+-- 10K steps challenge: one row per person per day, today is the only writable day.
+CREATE TABLE IF NOT EXISTS steps (
+  id text PRIMARY KEY,
+  email text NOT NULL,
+  date text NOT NULL,
+  hit boolean NOT NULL DEFAULT false,
+  steps int,
+  created_at timestamptz NOT NULL,
+  UNIQUE (email, date)
+);
+-- Days banked in the old spreadsheet before the app took over.
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS steps_offset int NOT NULL DEFAULT 0;
+-- One-line pings between people. Ephemeral by design — rows past the TTL are deleted
+-- lazily on every access (see listPingsFor), so there is no history to keep.
+CREATE TABLE IF NOT EXISTS pings (
+  id text PRIMARY KEY,
+  from_email text NOT NULL,
+  to_email text NOT NULL,
+  body text NOT NULL,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS pings_to_idx ON pings (to_email, created_at DESC);
+CREATE INDEX IF NOT EXISTS pings_from_idx ON pings (from_email, created_at DESC);
 CREATE TABLE IF NOT EXISTS leave_balances (
   email text NOT NULL,
   year int NOT NULL,
@@ -138,8 +167,18 @@ ALTER TABLE away ADD COLUMN IF NOT EXISTS days real NOT NULL DEFAULT 0;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lat double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lng double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS accuracy_m real;
--- At most one open (not-checked-out) session per person per day.
-CREATE UNIQUE INDEX IF NOT EXISTS attendance_open_session ON attendance (email, date) WHERE check_out_at IS NULL;
+-- Attendance is one row per person per day — a status, not session history. Fold any
+-- multi-session rows written before this into the earliest row (latest check-out kept).
+UPDATE attendance a SET check_out_at = s.final_out
+  FROM (SELECT email, date,
+          CASE WHEN COUNT(*) FILTER (WHERE check_out_at IS NULL) > 0 THEN NULL
+               ELSE MAX(check_out_at) END AS final_out
+        FROM attendance GROUP BY email, date) s
+  WHERE a.email = s.email AND a.date = s.date;
+DELETE FROM attendance a USING attendance b
+  WHERE a.email = b.email AND a.date = b.date AND a.check_in_at > b.check_in_at;
+DROP INDEX IF EXISTS attendance_open_session;
+ALTER TABLE attendance ADD CONSTRAINT attendance_email_date_key UNIQUE (email, date);
 CREATE UNIQUE INDEX IF NOT EXISTS orders_day_ref_item ON orders (date, submitter_ref, item_id);
 CREATE INDEX IF NOT EXISTS attendance_date_idx ON attendance (date);
 CREATE INDEX IF NOT EXISTS orders_date_idx ON orders (date);
@@ -150,6 +189,7 @@ CREATE INDEX IF NOT EXISTS wifi_created_idx ON wifi (created_at DESC);
 CREATE INDEX IF NOT EXISTS announcements_created_idx ON announcements (created_at DESC);
 CREATE INDEX IF NOT EXISTS away_created_idx ON away (created_at DESC);
 CREATE INDEX IF NOT EXISTS away_submitter_idx ON away (submitter_ref, created_at DESC);
+CREATE INDEX IF NOT EXISTS steps_date_idx ON steps (date);
 CREATE INDEX IF NOT EXISTS events_starts_idx ON events (starts_at);
 CREATE INDEX IF NOT EXISTS event_rsvps_ref_idx ON event_rsvps (submitter_ref);`;
 
@@ -181,6 +221,7 @@ const grievance = (r: any): GrievanceRow => ({
   body: r.body,
   displayName: r.display_name,
   image: r.image ?? null,
+  urgent: r.urgent === true,
   submitterRef: r.submitter_ref,
   status: r.status,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
@@ -206,6 +247,7 @@ const employee = (r: any): EmployeeRow => ({
   picture: r.picture,
   role: r.role ?? "member",
   joinedOn: r.joined_on ?? null,
+  stepsOffset: r.steps_offset ?? 0,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
 });
@@ -214,6 +256,22 @@ const pushSubscription = (r: any): PushSubscriptionRow => ({
   p256dh: r.p256dh,
   auth: r.auth,
   email: r.email ?? null,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+});
+const ping = (r: any): PingRow => ({
+  id: r.id,
+  fromEmail: r.from_email,
+  toEmail: r.to_email,
+  body: r.body,
+  readAt: r.read_at ? r.read_at.toISOString?.() ?? r.read_at : null,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+});
+const steps = (r: any): StepsRow => ({
+  id: r.id,
+  email: r.email,
+  date: r.date,
+  hit: r.hit === true,
+  steps: r.steps ?? null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const leaveBalance = (r: any): LeaveBalanceRow => ({
@@ -295,15 +353,21 @@ class PgStore implements Store {
     return this.db().query(text, params);
   }
 
+  // One row per person per day: a fresh check-in reopens the day's row (back in = in again),
+  // so the row's check_in_at is always the most recent arrival.
   async checkIn(row: AttendanceRow) {
     const res = await this.q(
       `INSERT INTO attendance (id, email, date, check_in_at, lat, lng, accuracy_m)
        VALUES ($1,$2,$3,$4,$5,$6,$7)
-       ON CONFLICT (email, date) WHERE check_out_at IS NULL DO NOTHING RETURNING *`,
+       ON CONFLICT (email, date) DO UPDATE
+       SET check_out_at = NULL, check_in_at = EXCLUDED.check_in_at,
+           lat = EXCLUDED.lat, lng = EXCLUDED.lng, accuracy_m = EXCLUDED.accuracy_m
+       WHERE attendance.check_out_at IS NOT NULL
+       RETURNING *`,
       [row.id, row.email, row.date, row.checkInAt, row.lat, row.lng, row.accuracyM],
     );
-    if (res.rows[0]) return attendance(res.rows[0]);
-    return (await this.getAttendance(row.email, row.date))!;
+    // The WHERE makes a repeat check-in while still open a no-op — return the day's row.
+    return res.rows[0] ? attendance(res.rows[0]) : (await this.getAttendance(row.email, row.date))!;
   }
   async checkOut(email: string, date: string, at: string) {
     const res = await this.q(
@@ -313,15 +377,8 @@ class PgStore implements Store {
     return res.rows[0] ? attendance(res.rows[0]) : null;
   }
   async getAttendance(email: string, date: string) {
-    const res = await this.q(
-      `SELECT * FROM attendance WHERE email = $1 AND date = $2 AND check_out_at IS NULL ORDER BY check_in_at DESC LIMIT 1`,
-      [email, date],
-    );
+    const res = await this.q(`SELECT * FROM attendance WHERE email = $1 AND date = $2`, [email, date]);
     return res.rows[0] ? attendance(res.rows[0]) : null;
-  }
-  async listAttendanceByEmail(email: string, date: string) {
-    const res = await this.q(`SELECT * FROM attendance WHERE email = $1 AND date = $2 ORDER BY check_in_at`, [email, date]);
-    return res.rows.map(attendance);
   }
   async listAttendanceRange(email: string, fromDate: string, toDate: string) {
     const res = await this.q(
@@ -371,10 +428,10 @@ class PgStore implements Store {
   }
   async addGrievance(row: GrievanceRow) {
     const res = await this.q(
-      `INSERT INTO grievances (id, body, display_name, image, submitter_ref, status, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      `INSERT INTO grievances (id, body, display_name, image, urgent, submitter_ref, status, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
       // Never persist a device-linked ref — "anonymous" must survive a DB leak.
-      [row.id, row.body, row.displayName, row.image, "anon", row.status, row.createdAt],
+      [row.id, row.body, row.displayName, row.image, row.urgent, "anon", row.status, row.createdAt],
     );
     return grievance(res.rows[0]);
   }
@@ -383,7 +440,7 @@ class PgStore implements Store {
     return (res.rowCount ?? 0) > 0;
   }
   async listGrievances() {
-    const res = await this.q(`SELECT * FROM grievances ORDER BY created_at DESC`);
+    const res = await this.q(`SELECT * FROM grievances ORDER BY urgent DESC, created_at DESC`);
     return res.rows.map(grievance);
   }
   async listGrievancesByIds(ids: string[], limit: number) {
@@ -437,6 +494,52 @@ class PgStore implements Store {
   async setJoinedOn(email: string, joinedOn: string | null) {
     const res = await this.q(`UPDATE employees SET joined_on = $2 WHERE email = $1`, [email, joinedOn]);
     return (res.rowCount ?? 0) > 0;
+  }
+  async setStepsOffset(email: string, days: number) {
+    const res = await this.q(`UPDATE employees SET steps_offset = $2 WHERE email = $1`, [email, days]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async setSteps(row: StepsRow) {
+    const res = await this.q(
+      `INSERT INTO steps (id, email, date, hit, steps, created_at) VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (email, date) DO UPDATE SET hit = $4, steps = $5 RETURNING *`,
+      [row.id, row.email, row.date, row.hit, row.steps, row.createdAt],
+    );
+    return steps(res.rows[0]);
+  }
+  async listSteps() {
+    const res = await this.q(`SELECT * FROM steps ORDER BY date DESC`);
+    return res.rows.map(steps);
+  }
+  async listStepsByEmail(email: string, limit: number) {
+    const res = await this.q(`SELECT * FROM steps WHERE email = $1 ORDER BY date DESC LIMIT $2`, [email, limit]);
+    return res.rows.map(steps);
+  }
+  // Pings expire after PING_TTL_MS — swept before every access so nothing stale survives.
+  private async sweepPings() {
+    await this.q(`DELETE FROM pings WHERE created_at < $1`, [new Date(Date.now() - PING_TTL_MS).toISOString()]);
+  }
+  async addPing(row: PingRow) {
+    await this.sweepPings();
+    const res = await this.q(
+      `INSERT INTO pings (id, from_email, to_email, body, read_at, created_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [row.id, row.fromEmail, row.toEmail, row.body, row.readAt, row.createdAt],
+    );
+    return ping(res.rows[0]);
+  }
+  async listPingsFor(email: string, limit: number) {
+    await this.sweepPings();
+    const res = await this.q(
+      `SELECT * FROM pings WHERE from_email = $1 OR to_email = $1 ORDER BY created_at DESC LIMIT $2`,
+      [email, limit],
+    );
+    return res.rows.map(ping);
+  }
+  async markPingsRead(email: string, fromEmail: string) {
+    await this.q(
+      `UPDATE pings SET read_at = now() WHERE to_email = $1 AND from_email = $2 AND read_at IS NULL`,
+      [email, fromEmail],
+    );
   }
   async setLeaveBalance(row: LeaveBalanceRow) {
     const a = row.available;

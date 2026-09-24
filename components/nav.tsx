@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarDays, CircleHelp, Coffee, House, MessageSquare, Settings, ShieldCheck, Users, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CircleHelp, Coffee, Footprints, House, MessageSquare, Settings, ShieldCheck, Users, Wifi } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Logo, Wave } from "@/components/brand";
 import Notifications from "@/components/notifications";
@@ -17,12 +17,13 @@ const PRIMARY: Item[] = [
   { href: "/", label: "Home", short: "Home", icon: House },
   { href: "/attendance", label: "Attendance", short: "Attendance", icon: CalendarCheck },
   { href: "/snacks", label: "Meals & Snacks", short: "Meals", icon: Coffee },
-  { href: "/grievances", label: "Grievances", short: "Grievances", icon: MessageSquare },
+  { href: "/grievances", label: "Speak Up", short: "Speak Up", icon: MessageSquare },
   { href: "/wifi", label: "Wi-Fi Quality", short: "Wi-Fi", icon: Wifi },
 ];
 
 // Leave and Time Away live inside Attendance now — one surface for "my time".
 const SECONDARY: Item[] = [
+  { href: "/steps", label: "10K Steps", short: "Steps", icon: Footprints },
   { href: "/events", label: "Events", short: "Events", icon: CalendarDays },
   { href: "/people", label: "People", short: "People", icon: Users },
   { href: "/settings", label: "Settings", short: "Settings", icon: Settings },
@@ -96,7 +97,7 @@ export function Sidebar({ showAdmin = false }: { showAdmin?: boolean }) {
 
 export function MobileTopBar({ showAdmin = false }: { showAdmin?: boolean }) {
   return (
-    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-card/90 px-4 py-3 backdrop-blur md:hidden">
+    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-card/90 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] backdrop-blur md:hidden">
       <Link href="/">
         <Logo />
       </Link>

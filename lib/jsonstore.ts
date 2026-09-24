@@ -8,12 +8,15 @@ import type {
   EventRow,
   GrievanceRow,
   LeaveBalanceRow,
+  PingRow,
   PushSubscriptionRow,
   OrderRow,
   RsvpRow,
+  StepsRow,
   Store,
   WifiRow,
 } from "./types";
+import { pingExpired } from "./pings";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -31,9 +34,11 @@ type DB = {
   rsvps: RsvpRow[];
   leaveBalances: LeaveBalanceRow[];
   pushSubscriptions: PushSubscriptionRow[];
+  steps: StepsRow[];
+  pings: PingRow[];
 };
 
-const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [] });
+const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], pings: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -55,6 +60,12 @@ async function read(): Promise<DB> {
       g.submitterRef = "anon";
       dirty = true;
     }
+  }
+  // Pings keep no history — drop anything past the TTL on every read.
+  const live = db.pings.filter((p) => !pingExpired(p.createdAt));
+  if (live.length !== db.pings.length) {
+    db.pings = live;
+    dirty = true;
   }
   if (dirty) await write(db);
   return db;
@@ -90,10 +101,22 @@ const mutate = <T>(fn: (db: DB) => { result: T; changed: boolean }) =>
 const query = <T>(fn: (db: DB) => T) => locked(async () => fn(await read()));
 
 export const jsonStore: Store = {
+  // One row per person per day: a fresh check-in reopens the day's row (back in = in again),
+  // so the row's checkInAt is always the most recent arrival.
   checkIn: (row) =>
     mutate((db) => {
-      const open = db.attendance.find((r) => r.email === row.email && r.date === row.date && !r.checkOutAt);
-      if (open) return { result: open, changed: false };
+      const existing = db.attendance.find((r) => r.email === row.email && r.date === row.date);
+      if (existing) {
+        if (!existing.checkOutAt) return { result: existing, changed: false };
+        Object.assign(existing, {
+          checkInAt: row.checkInAt,
+          checkOutAt: null,
+          lat: row.lat,
+          lng: row.lng,
+          accuracyM: row.accuracyM,
+        });
+        return { result: existing, changed: true };
+      }
       db.attendance.unshift(row);
       return { result: row, changed: true };
     }),
@@ -104,10 +127,11 @@ export const jsonStore: Store = {
       return { result: open ?? null, changed: !!open };
     }),
   getAttendance: (email, date) =>
-    query((db) => db.attendance.find((r) => r.email === email && r.date === date && !r.checkOutAt) ?? null),
-  listAttendanceByEmail: (email, date) =>
-    query((db) =>
-      db.attendance.filter((r) => r.email === email && r.date === date).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt)),
+    query(
+      (db) =>
+        db.attendance
+          .filter((r) => r.email === email && r.date === date)
+          .sort((a, b) => Number(!a.checkOutAt) - Number(!b.checkOutAt) || b.checkInAt.localeCompare(a.checkInAt))[0] ?? null,
     ),
   listAttendanceRange: (email, fromDate, toDate) =>
     query((db) =>
@@ -154,7 +178,9 @@ export const jsonStore: Store = {
       if (row) row.status = status;
       return { result: !!row, changed: !!row };
     }),
-  listGrievances: () => query((db) => db.grievances.sort(newestFirst)),
+  listGrievances: () =>
+    // Urgent floats above everything else, then newest first.
+    query((db) => db.grievances.sort((a, b) => Number(b.urgent) - Number(a.urgent) || newestFirst(a, b))),
   listGrievancesByIds: (ids, limit) =>
     query((db) =>
       db.grievances
@@ -195,7 +221,11 @@ export const jsonStore: Store = {
       db.employees.unshift(row);
       return { result: row, changed: true };
     }),
-  getEmployee: (email) => query((db) => db.employees.find((e) => e.email === email) ?? null),
+  getEmployee: (email) =>
+    query((db) => {
+      const e = db.employees.find((e) => e.email === email);
+      return e ? { ...e, stepsOffset: e.stepsOffset ?? 0 } : null;
+    }),
   setRole: (email, role) =>
     mutate((db) => {
       const row = db.employees.find((e) => e.email === email);
@@ -207,6 +237,56 @@ export const jsonStore: Store = {
       const row = db.employees.find((e) => e.email === email);
       if (row) row.joinedOn = joinedOn;
       return { result: !!row, changed: !!row };
+    }),
+  setStepsOffset: (email, days) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.stepsOffset = days;
+      return { result: !!row, changed: !!row };
+    }),
+  setSteps: (row) =>
+    mutate((db) => {
+      const existing = db.steps.find((s) => s.email === row.email && s.date === row.date);
+      if (existing) {
+        existing.hit = row.hit;
+        existing.steps = row.steps;
+        return { result: existing, changed: true };
+      }
+      db.steps.unshift(row);
+      return { result: row, changed: true };
+    }),
+  listSteps: () =>
+    query((db) => db.steps.slice().sort((a, b) => b.date.localeCompare(a.date))),
+  listStepsByEmail: (email, limit) =>
+    query((db) =>
+      db.steps
+        .filter((s) => s.email === email)
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, limit),
+    ),
+  addPing: (row) =>
+    mutate((db) => {
+      db.pings.unshift(row);
+      return { result: row, changed: true };
+    }),
+  listPingsFor: (email, limit) =>
+    query((db) =>
+      db.pings
+        .filter((p) => p.fromEmail === email || p.toEmail === email)
+        .sort(newestFirst)
+        .slice(0, limit),
+    ),
+  markPingsRead: (email, fromEmail) =>
+    mutate((db) => {
+      let changed = false;
+      const at = new Date().toISOString();
+      for (const p of db.pings) {
+        if (p.toEmail === email && p.fromEmail === fromEmail && !p.readAt) {
+          p.readAt = at;
+          changed = true;
+        }
+      }
+      return { result: undefined, changed };
     }),
   setLeaveBalance: (row) =>
     mutate((db) => {
@@ -238,7 +318,11 @@ export const jsonStore: Store = {
   listPushSubscriptions: (email) =>
     query((db) => (email ? db.pushSubscriptions.filter((s) => s.email === email) : db.pushSubscriptions)),
   listEmployees: () =>
-    query((db) => db.employees.slice().sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email))),
+    query((db) =>
+      db.employees
+        .map((e) => ({ ...e, stepsOffset: e.stepsOffset ?? 0 }))
+        .sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email)),
+    ),
 
   addAway: (row) =>
     mutate((db) => {

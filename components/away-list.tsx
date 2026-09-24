@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CalendarOff, Palmtree } from "lucide-react";
 import { toast } from "sonner";
-import { Empty, IconTile } from "@/components/kit";
+import { AWAY_META, Empty, IconTile } from "@/components/kit";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { Button } from "@/components/ui/button";
 import { readError, send } from "@/lib/fetcher";
@@ -21,12 +21,6 @@ type Item = {
   status: AwayStatus;
   decidedBy: string | null;
   createdAt: string;
-};
-
-const META: Record<AwayStatus, { label: string; badge: "warning" | "success" | "danger" }> = {
-  pending: { label: "Pending", badge: "warning" },
-  approved: { label: "Approved", badge: "success" },
-  rejected: { label: "Rejected", badge: "danger" },
 };
 
 
@@ -65,7 +59,7 @@ export default function AwayList({ items, names, now }: { items: Item[]; names: 
               {r.reason && <p className="mt-0.5 truncate text-xs text-muted-foreground">{r.reason}</p>}
               {status !== "pending" && r.decidedBy && (
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  {META[status].label} by {r.decidedBy}
+                  {AWAY_META[status].label} by {r.decidedBy}
                 </p>
               )}
             </div>
@@ -79,8 +73,8 @@ export default function AwayList({ items, names, now }: { items: Item[]; names: 
                 </Button>
               </div>
             ) : (
-              <AnimatedBadge status={META[status].badge} size="sm" contentKey={status} className="shrink-0">
-                {META[status].label}
+              <AnimatedBadge status={AWAY_META[status].badge} size="sm" contentKey={status} className="shrink-0">
+                {AWAY_META[status].label}
               </AnimatedBadge>
             )}
           </li>

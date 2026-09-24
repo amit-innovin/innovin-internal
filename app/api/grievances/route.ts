@@ -3,6 +3,7 @@ import { isAdmin } from "@/lib/admin";
 import { DEVICE_COOKIE, GRIEVANCE_IDS_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
+import { sendPush } from "@/lib/push";
 import { id, store } from "@/lib/store";
 import { grievanceIdsFromCookie, grievancesFromIds, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 import type { GrievanceStatus } from "@/lib/types";
@@ -40,16 +41,29 @@ export async function POST(req: NextRequest) {
     return badRequest("Attach a photo under ~500 KB");
   }
 
+  const urgent = body.urgent === true;
   const { submitterRef: _r, ...row } = await store.addGrievance({
     id: id(),
     body: text.slice(0, 2000),
     displayName: str(body.displayName).trim().slice(0, 100) || null,
     image: image || null,
+    urgent,
     // "anon" — even if the caller passed a ref, the store forces this constant.
     submitterRef: "anon",
     status: "open",
     createdAt: new Date().toISOString(),
   });
+
+  // Urgent goes straight to admins' devices — that's the whole point of the flag. The push
+  // carries no id or link to the submitter, so this doesn't touch anonymity.
+  if (urgent) {
+    const admins = (await store.listEmployees()).filter((e) => e.role === "admin" || e.role === "owner");
+    await Promise.all(
+      admins.map((a) =>
+        sendPush({ title: "Urgent report just came in", body: "Someone marked a report urgent — worth a look.", href: "/admin?tab=approvals", tag: "urgent-report" }, a.email).catch(() => {}),
+      ),
+    );
+  }
   const res = NextResponse.json(row);
   setSubmitterCookie(res, identity.deviceId);
   // Remember this submission's id on the device itself — that's the only record of "mine".

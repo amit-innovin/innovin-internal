@@ -8,15 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON } from "@/lib/fetcher";
 import { LOCATION_LABEL, type LocationTag } from "@/lib/geo";
-import { fmtDuration, fmtShortDate, fmtTime, sessionMinutes } from "@/lib/format";
+import { fmtShortDate, fmtTime } from "@/lib/format";
 import { LEAVE_LABELS, type LeaveType } from "@/lib/leave";
 
-type Session = { checkInAt: string; checkOutAt: string | null; location: LocationTag };
 type Day = {
   date: string;
-  minutes: number;
+  present: boolean;
   open: boolean;
-  sessions: Session[];
+  location: LocationTag | null;
+  checkInAt: string | null;
+  checkOutAt: string | null;
   holiday: string | null;
   working: boolean;
   off: string | null;
@@ -42,9 +43,9 @@ const monthLabel = (key: string) =>
 const leadingBlanks = (key: string) => (new Date(`${key}-01T00:00:00Z`).getUTCDay() + 6) % 7;
 
 // What the dot under each date means. Present wins over everything: if you worked, you worked.
-// Keyed on sessions rather than minutes — a check-in a moment ago still counts as present.
+// Amber while still checked in, green once the day is closed out.
 function dotClass(day: Day) {
-  if (day.sessions.length > 0) return day.open ? "bg-amber-500" : "bg-emerald-500";
+  if (day.present) return day.open ? "bg-amber-500" : "bg-emerald-500";
   if (day.leave) return day.leave.kind === "wfh" ? "bg-sky-500" : "bg-violet-500";
   if (day.holiday) return "bg-rose-400";
   if (!day.working) return "bg-muted-foreground/25";
@@ -52,8 +53,12 @@ function dotClass(day: Day) {
 }
 
 function dayHeadline(day: Day) {
-  if (day.sessions.length > 0) {
-    return `${fmtDuration(day.minutes)}${day.open ? " so far — still checked in" : ""} across ${day.sessions.length} ${day.sessions.length === 1 ? "session" : "sessions"}`;
+  if (day.present) {
+    const where = day.location ? LOCATION_LABEL[day.location] : "Location not shared";
+    const times = day.checkInAt
+      ? ` · in ${fmtTime(day.checkInAt)}${day.checkOutAt ? `, out ${fmtTime(day.checkOutAt)}` : " — still in"}`
+      : "";
+    return `${where}${times}`;
   }
   if (day.leave) {
     const label = day.leave.kind === "wfh" ? "Work from home" : `${day.leave.type ? LEAVE_LABELS[day.leave.type] : ""} Leave`.trim();
@@ -155,30 +160,16 @@ export default function AttendanceCalendar() {
             <div className="mt-4 border-t pt-4">
               <SectionHeader title={fmtShortDate(`${day.date}T00:00:00`)} aside={day.working ? undefined : (day.off ?? undefined)} />
               <p className="mt-1 text-sm text-muted-foreground">{dayHeadline(day)}</p>
-              {day.sessions.length > 0 && (
-                <ul className="mt-3 divide-y">
-                  {day.sessions.map((s) => (
-                    <li key={s.checkInAt} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                      <span className="tabular-nums">
-                        {fmtTime(s.checkInAt)} – {s.checkOutAt ? fmtTime(s.checkOutAt) : "now"}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[10px]">
-                          {LOCATION_LABEL[s.location]}
-                        </Badge>
-                        <span className="w-16 text-right text-xs text-muted-foreground tabular-nums">
-                          {s.checkOutAt ? fmtDuration(sessionMinutes(s)) : "in progress"}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+              {day.present && day.location && (
+                <Badge variant="secondary" className="mt-3 text-[10px]">
+                  {LOCATION_LABEL[day.location]}
+                </Badge>
               )}
             </div>
           ) : (
             <p className="mt-4 border-t pt-4 text-xs text-muted-foreground">
               {data.email
-                ? `Tap a day for its sessions. ${data.workingDays} working days this month.`
+                ? `Tap a day to see it. ${data.workingDays} working days this month.`
                 : "Check in once and your days will show up here."}
             </p>
           )}

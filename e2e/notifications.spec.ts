@@ -32,16 +32,27 @@ test.describe("Notifications", () => {
     await adminLogin(a, "publish");
     await a.getByRole("tab", { name: "Event" }).click();
     await a.getByLabel("Event title").fill(title);
-    await a.getByLabel("Starts at").fill("2026-12-24T16:00");
+    // Tomorrow, so it always outranks other specs' fixed-date leftovers on the persistent
+    // e2e database — home's "What's on" card shows only the two soonest events.
+    const soon = new Date(Date.now() + 86_400_000);
+    const startsAt = `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, "0")}-${String(soon.getDate()).padStart(2, "0")}T10:00`;
+    await a.getByLabel("Starts at").fill(startsAt);
     await a.getByRole("button", { name: "Publish event" }).click();
     await expect(a.getByText("Event published")).toBeVisible();
-    await admin.close();
 
     await page.goto("/");
     // Events used to be invisible on home; they now have their own card.
     await expect(page.locator("[data-slot=card]").filter({ hasText: "What's on" })).toContainText(title);
     await page.getByRole("button", { name: /Notifications/ }).filter({ visible: true }).click();
     await expect(page.getByRole("region", { name: "Notifications" }).filter({ visible: true }).filter({ visible: true })).toContainText(title);
+
+    // Clean up after ourselves — leftover rows would crowd tomorrow's run off the card.
+    await a.goto("/admin?tab=publish");
+    const item = a.locator("li", { hasText: title });
+    await item.getByLabel(`Delete ${title}`).click();
+    await a.getByRole("button", { name: "Delete" }).click();
+    await expect(a.getByText("Event deleted")).toBeVisible();
+    await admin.close();
   });
 
   test("a leave decision notifies the person who asked", async ({ page, browser }) => {

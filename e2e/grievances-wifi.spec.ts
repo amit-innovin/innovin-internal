@@ -1,6 +1,6 @@
 import { expect, test, uniqueText } from "./fixtures";
 
-test.describe("Daily Grievances", () => {
+test.describe("Speak Up", () => {
   test("anonymous submission is confirmed and tracked on this device only", async ({ page, browser }) => {
     const text = uniqueText("Projector flickers in room 2");
     await page.goto("/grievances");
@@ -70,18 +70,26 @@ test.describe("Daily Grievances", () => {
     await expect(mine.getByRole("button", { name: "View Attached photo" })).toBeVisible();
   });
 
-  test("home 'View all' deep-links and scrolls to the submissions list", async ({ page }) => {
+  test("home's Speak Up box submits anonymously and lands in your list", async ({ page }) => {
     const text = uniqueText("Deep link check");
+    await page.goto("/");
+    await page.getByLabel("Speak up anonymously").fill(text);
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(page.getByText("Heard. Thank you.")).toBeVisible();
+
+    await page.goto("/grievances#mine");
+    await expect(page.locator("#mine")).toContainText(text);
+    await expect(page.locator("#mine li", { hasText: text })).toContainText("Anonymous");
+  });
+
+  test("the urgent toggle marks the report and floats it to the top for admins", async ({ page }) => {
+    const text = uniqueText("Flooded bathroom");
     await page.goto("/grievances");
     await page.getByLabel("Your feedback").fill(text);
+    await page.getByRole("button", { name: /This is urgent/ }).click();
     await page.getByRole("button", { name: "Submit" }).click();
-    await expect(page.locator("#mine")).toContainText(text);
-
-    await page.goto("/");
-    await expect(page.getByText(text)).toBeVisible();
-    await page.getByRole("link", { name: "View all" }).click();
-    await expect(page).toHaveURL(/\/grievances#mine$/);
-    await expect(page.locator("#mine")).toBeInViewport();
+    await expect(page.getByText("admins get pinged")).toBeVisible();
+    await expect(page.locator("#mine li", { hasText: text })).toContainText("Urgent");
   });
 });
 

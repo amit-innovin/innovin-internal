@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { currentActor, isAdmin, isOwner } from "@/lib/admin";
 import { leaveOverview } from "@/lib/leave-data";
-import { fmtDay, fmtDuration, fmtShortDate, fmtTime, relativeDay, totalMinutes } from "@/lib/format";
+import { fmtDay, fmtShortDate, fmtTime, relativeDay } from "@/lib/format";
 import { locationTag } from "@/lib/geo";
 import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
@@ -121,12 +121,14 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const poorToday = wifi.filter((w) => w.quality === "poor" && relativeDay(w.createdAt) === "Today").length;
   const pendingAway = away.filter((r) => r.status === "pending").length;
 
-  // One row per employee: their sessions today, total time, and whether they're in right now.
-  const people = [...new Set(attendance.map((a) => a.email))].map((email) => {
-    const sessions = attendance.filter((a) => a.email === email);
-    const open = sessions.find((s) => !s.checkOutAt);
-    return { email, sessions, total: totalMinutes(sessions), in: !!open, where: open ? locationTag(open.lat, open.lng) : null };
-  });
+  // One row per employee: in or out today, where, and when they last came in.
+  const people = attendance.map((a) => ({
+    email: a.email,
+    in: !a.checkOutAt,
+    where: locationTag(a.lat, a.lng),
+    inAt: a.checkInAt,
+    outAt: a.checkOutAt,
+  }));
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -154,7 +156,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           <Stat icon={Coffee} tone="sky" label="Orders today" value={orders.length} href="/admin?tab=today#orders" />
         </div>
         <div style={stagger(2)}>
-          <Stat icon={MessageSquare} tone="ink" label="Open grievances" value={openGrievances} href="/admin?tab=approvals#grievances" />
+          <Stat icon={MessageSquare} tone="ink" label="Open reports" value={openGrievances} href="/admin?tab=approvals#grievances" />
         </div>
         <div style={stagger(3)}>
           <Stat icon={Wifi} tone="blue" label="Poor Wi-Fi reports today" value={poorToday} href="/admin?tab=today#wifi" />
@@ -202,9 +204,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                   <div className="min-w-0">
                     <p className="truncate">{names.get(p.email) ? `${names.get(p.email)} · ` : ""}{p.email}</p>
                     <p className="text-xs tabular-nums text-muted-foreground">
-                      {p.sessions.length} {p.sessions.length === 1 ? "session" : "sessions"} · {fmtDuration(p.total)}
-                      {" · "}
-                      {fmtTime(p.sessions[0].checkInAt)} first in
+                      in {fmtTime(p.inAt)}
+                      {p.outAt ? ` · out ${fmtTime(p.outAt)}` : ""}
                     </p>
                   </div>
                   {p.in ? (
@@ -357,7 +358,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       </Card>
 
       <Card id="grievances" className={`mt-4 gap-0 p-5 ${tab === "approvals" ? "" : "hidden"}`}>
-        <SectionHeader title="Grievances" aside={`${openGrievances} need attention`} />
+        <SectionHeader title="Speak Up" aside={`${openGrievances} need attention`} />
         <GrievanceList items={grievances.map(({ submitterRef: _r, ...g }) => g)} now={now} />
       </Card>
 

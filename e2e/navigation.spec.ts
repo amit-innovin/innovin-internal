@@ -6,7 +6,7 @@ test.describe("Navigation & shell", () => {
     await page.goto("/");
     await expect(page.getByRole("img", { name: "Innovin Labs" }).first()).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(/Good (morning|afternoon|evening)/);
-    for (const section of ["Your Day", "Today's Attendance", "Quick Actions", "Today's Orders", "Announcements", "Your Grievances", "Wi-Fi Quality"]) {
+    for (const section of ["Attendance", "Today's food", "Speak Up", "Announcements", "What's on", "Wi-Fi"]) {
       await expect(page.getByRole("heading", { name: section })).toBeVisible();
     }
     const font = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
@@ -18,7 +18,7 @@ test.describe("Navigation & shell", () => {
     const destinations: [string, RegExp, string][] = [
       ["Attendance", /\/attendance$/, "Attendance"],
       [isMobile(page) ? "Meals" : "Meals & Snacks", /\/snacks$/, "Meals & Snacks"],
-      ["Grievances", /\/grievances$/, "Daily Grievances"],
+      ["Speak Up", /\/grievances$/, "Speak Up"],
       [isMobile(page) ? "Wi-Fi" : "Wi-Fi Quality", /\/wifi$/, "Wi-Fi Quality"],
       ["Home", /\/$/, ""],
     ];
@@ -30,15 +30,15 @@ test.describe("Navigation & shell", () => {
       if (heading) await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
     }
 
+    // Today's actions happen inline on home; each card links through to its history page.
     for (const [label, url] of [
-      ["Attendance", /\/attendance$/],
-      ["Meals & Snacks", /\/snacks$/],
-      ["Grievances", /\/grievances$/],
-      ["Wi-Fi Quality", /\/wifi$/],
+      ["Calendar, leave & history", /\/attendance$/],
+      ["Notes & history", /\/snacks$/],
+      ["Photo, name & your history", /\/grievances$/],
+      ["Check Speed", /\/wifi/],
     ] as const) {
       await page.goto("/");
-      const quick = page.locator("main section, main [data-slot=card]").filter({ hasText: "Quick Actions" });
-      await quick.getByRole("link", { name: label, exact: true }).click();
+      await page.getByRole("link", { name: new RegExp(label) }).first().click();
       await expect(page).toHaveURL(url);
     }
   });
@@ -52,7 +52,7 @@ test.describe("Navigation & shell", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Admin dashboard/ })).toBeVisible();
     await page.getByRole("link", { name: "Help" }).first().click();
-    await expect(page.getByRole("heading", { name: "Are grievances really anonymous?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Is Speak Up really anonymous?" })).toBeVisible();
     await expect(page.getByText("submit anytime")).toBeVisible();
     // Home is reached through the nav shell — the sidebar on desktop, the tab bar on mobile.
     await page.getByRole("link", { name: "Home" }).first().click();
@@ -67,7 +67,7 @@ test.describe("Navigation & shell", () => {
     }
   });
 
-  test("the Your Day strip reflects attendance, orders, and time away", async ({ page }) => {
+  test("home reflects attendance, orders, and time away without leaving the page", async ({ page }) => {
     const email = uniqueEmail();
     await page.goto("/attendance");
     await page.getByPlaceholder("you@innovinlabs.com").fill(email);
@@ -84,15 +84,16 @@ test.describe("Navigation & shell", () => {
 
     await page.goto("/snacks");
     await page.getByRole("button", { name: /^Tea/ }).click();
-    await page.getByRole("button", { name: "Submit Order" }).click();
+    await page.getByRole("button", { name: "Place order" }).click();
     await expect(page.getByText("Order placed: Tea")).toBeVisible();
 
     await page.goto("/");
-    const strip = page.locator("[data-slot=card]").filter({ hasText: "Your Day" });
-    await expect(strip).toContainText("since"); // checked-in cell shows "Location not shared · since 5:xx"
-    await expect(strip).toContainText("in today"); // At Innovin cell counts the check-in
-    await expect(strip).toContainText("Tea");
-    await expect(strip).toContainText("Leave · pending");
+    // One attendance card now does it all: status, the action, and who's in.
+    const attendance = page.locator("[data-slot=card]").filter({ hasText: "Attendance" });
+    await expect(attendance).toContainText("You're in");
+    await expect(attendance).toContainText("in today");
+    await expect(attendance).toContainText("Leave pending");
+    await expect(page.locator("[data-slot=card]").filter({ hasText: "Today's food" })).toContainText("Tea");
   });
 
   test("unknown pages show the branded 404 with a way home", async ({ page }) => {

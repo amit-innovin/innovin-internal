@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
     picture: identity.picture,
     role: owner ? "owner" : "member",
     joinedOn: null,
+    stepsOffset: 0,
     createdAt: now,
     lastSeenAt: now,
   });

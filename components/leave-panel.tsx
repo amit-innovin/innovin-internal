@@ -16,6 +16,7 @@ import { fmtDateRange, fmtShortDate, relativeTime } from "@/lib/format";
 import { useButtonState } from "@/lib/hooks/use-button-state";
 import { fmtLeaveDays, LEAVE_LABELS, type LeaveType } from "@/lib/leave";
 import type { AwayStatus, AwayType } from "@/lib/types";
+import { todayIST } from "@/lib/time";
 
 type AwayRequest = {
   id: string;
@@ -91,6 +92,7 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
   const [reason, setReason] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | false>(false);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   const [buttonState, run] = useButtonState();
 
   const load = async () => {
@@ -130,9 +132,26 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
       setStartDate("");
       setEndDate("");
       setReason("");
-      await load();
+      setEmail("");
       return true;
+    }).then((ok) => {
+      if (ok) load();
     });
+  };
+
+  const cancelRequest = async (id: string) => {
+    const r = requests?.find((x) => x.id === id);
+    const what = r ? AWAY_TYPE_LABEL[r.type] : "request";
+    if (!window.confirm(`Cancel this ${what.toLowerCase()} request? The days are freed back to your balance immediately.`)) return;
+    setCancelling(id);
+    const res = await send("/api/away", { method: "PATCH", json: { id, status: "cancelled" } });
+    if (res.ok) {
+      toast.success("Request cancelled");
+      await load();
+    } else {
+      toast.error(await readError(res));
+    }
+    setCancelling(null);
   };
 
   return (
@@ -344,9 +363,27 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
                   </p>
                   {r.reason && <p className="mt-0.5 truncate text-xs text-muted-foreground">{r.reason}</p>}
                 </div>
-                <AnimatedBadge status={AWAY_META[r.status].badge} size="sm" contentKey={r.status} className="shrink-0">
-                  {AWAY_META[r.status].label}
-                </AnimatedBadge>
+                {/* Plans change: pending or approved requests can be pulled back until the day
+                    itself. Cancelling frees the days against the balance immediately. */}
+                {(r.status === "pending" || r.status === "approved") && r.endDate >= todayIST() ? (
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <AnimatedBadge status={AWAY_META[r.status].badge} size="sm" contentKey={r.status}>
+                      {AWAY_META[r.status].label}
+                    </AnimatedBadge>
+                    <button
+                      type="button"
+                      disabled={cancelling === r.id}
+                      onClick={() => cancelRequest(r.id)}
+                      className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:opacity-50"
+                    >
+                      {cancelling === r.id ? "Cancelling…" : "Cancel"}
+                    </button>
+                  </div>
+                ) : (
+                  <AnimatedBadge status={AWAY_META[r.status].badge} size="sm" contentKey={r.status} className="shrink-0">
+                    {AWAY_META[r.status].label}
+                  </AnimatedBadge>
+                )}
               </li>
             ))}
           </ul>

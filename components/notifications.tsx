@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Bell, BellRing, CalendarDays, CalendarOff, Megaphone, MessageSquare } from "lucide-react";
+import { Bell, BellRing, CalendarDays, CalendarOff, Megaphone, MessageCircle, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Empty } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { getJSON, send } from "@/lib/fetcher";
 import { relativeTime } from "@/lib/format";
 
-type Item = { id: string; kind: "announcement" | "event" | "away" | "grievance"; title: string; body: string; at: string; href: string };
+type Item = { id: string; kind: "announcement" | "event" | "away" | "grievance" | "ping"; title: string; body: string; at: string; href: string };
 type Feed = { items: Item[]; unread: number };
 
-const ICON = { announcement: Megaphone, event: CalendarDays, away: CalendarOff, grievance: MessageSquare };
+const ICON = { announcement: Megaphone, event: CalendarDays, away: CalendarOff, grievance: MessageSquare, ping: MessageCircle };
 
 // base64url → Uint8Array, the form PushManager wants for the VAPID key.
 function urlBase64ToUint8Array(base64: string) {
@@ -130,7 +130,7 @@ export default function Notifications() {
         <div
           role="region"
           aria-label="Notifications"
-          className="absolute right-0 z-30 mt-1 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border bg-card shadow-lift"
+          className="fixed inset-x-4 top-[calc(3.5rem+env(safe-area-inset-top))] z-50 overflow-hidden rounded-xl border bg-card shadow-lift md:absolute md:left-0 md:right-auto md:top-full md:mt-1 md:w-80"
         >
           <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
             <p className="text-sm font-medium">Notifications</p>

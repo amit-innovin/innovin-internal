@@ -140,14 +140,16 @@ describe("flexible leave pro-rating", () => {
 });
 
 describe("ledger", () => {
-  it("separates used, pending and remaining per type and ignores rejected rows", () => {
+  it("separates used, pending and remaining per type and ignores rejected and cancelled rows", () => {
     const ledger = leaveLedger({
       entitlement: { cl: 8, sl: 6, fl: 2, el: 15 },
       requests: [
         { type: "cl", days: 2, status: "approved" },
         { type: "cl", days: 1, status: "pending" },
         { type: "cl", days: 3, status: "rejected" },
+        { type: "cl", days: 4, status: "cancelled" },
         { type: "sl", days: 1, status: "approved" },
+        { type: "sl", days: 2, status: "cancelled" },
       ],
     });
     const cl = ledger.find((l) => l.type === "cl")!;

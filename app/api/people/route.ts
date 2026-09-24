@@ -11,14 +11,17 @@ import type { Role } from "@/lib/types";
 // The office directory: everyone who's signed in, plus who's physically/virtually
 // in today. Presence shows a name and a broad tag — never raw coordinates or emails.
 export async function GET() {
-  const [employees, sessions] = await Promise.all([store.listEmployees(), store.listAttendance(todayIST())]);
+  const [employees, dayRows] = await Promise.all([store.listEmployees(), store.listAttendance(todayIST())]);
   const byEmail = new Map(employees.map((e) => [e.email, e]));
 
-  const present = new Map<string, { name: string; since: string; where: string }>();
-  for (const s of sessions) {
+  const present = new Map<string, { name: string; email?: string; since: string; where: string }>();
+  for (const s of dayRows) {
     if (s.checkOutAt || present.has(s.email)) continue;
     present.set(s.email, {
       name: byEmail.get(s.email)?.name || firstName(s.email) || s.email,
+      // The email is attached only when it's already public via the directory — a check-in
+      // from someone who never signed in must not expose it through presence.
+      email: byEmail.has(s.email) ? s.email : undefined,
       since: s.checkInAt,
       where: locationTag(s.lat, s.lng),
     });
@@ -44,6 +47,14 @@ export async function PATCH(req: NextRequest) {
 
   const target = await store.getEmployee(email);
   if (!target) return NextResponse.json({ error: "Person not found" }, { status: 404 });
+
+  // Days hit in the pre-app spreadsheet — an admin copies the Total Days column over.
+  if (body?.stepsOffset !== undefined) {
+    const days = Number(body.stepsOffset);
+    if (!Number.isInteger(days) || days < 0 || days > 10_000) return badRequest("Enter whole days");
+    await store.setStepsOffset(email, days);
+    return NextResponse.json({ ok: true });
+  }
 
   // Joining date drives Earned Leave accrual and Flexible Leave pro-rating; "" clears it.
   if (body?.joinedOn !== undefined) {

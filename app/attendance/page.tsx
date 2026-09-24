@@ -14,19 +14,17 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON, readError, send } from "@/lib/fetcher";
 import { useButtonState } from "@/lib/hooks/use-button-state";
-import { fmtDuration, fmtTime, sessionMinutes } from "@/lib/format";
+import { fmtTime } from "@/lib/format";
 import { LOCATION_LABEL, type LocationTag } from "@/lib/geo";
 
-type Session = { checkInAt: string; checkOutAt: string | null; location: LocationTag };
 type Status = {
   count: number;
   email: string | null;
   me: {
     checkedIn: boolean;
-    currentInAt: string | null;
+    checkInAt: string;
+    checkOutAt: string | null;
     location: LocationTag;
-    totalMinutes: number;
-    sessions: Session[];
   } | null;
 };
 
@@ -93,11 +91,10 @@ export default function Attendance() {
   }
 
   const me = status?.me;
-  const sessions = me?.sessions ?? [];
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="Attendance" />
+      <PageHeader title="Attendance" subtitle="Check in, see your month, plan time off." />
 
       {!status ? (
         <Card className="items-center gap-3 p-8">
@@ -118,11 +115,11 @@ export default function Attendance() {
           </h2>
           <p className="mt-1 text-sm text-muted-foreground" style={stagger(2)}>
             {me.checkedIn
-              ? `In since ${fmtTime(me.currentInAt!)} • ${fmtDuration(me.totalMinutes)} today`
-              : `${fmtDuration(me.totalMinutes)} today across ${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`}
+              ? `In since ${fmtTime(me.checkInAt)}`
+              : `Out since ${me.checkOutAt ? fmtTime(me.checkOutAt) : ""} — done for today`}
           </p>
           <p className="mt-2 inline-flex items-center gap-1 text-sm text-muted-foreground" style={stagger(3)}>
-            <MapPin className="size-4" /> {LOCATION_LABEL[me.checkedIn ? me.location : (sessions.at(-1)?.location ?? "unknown")]} • Innovin
+            <MapPin className="size-4" /> {LOCATION_LABEL[me.location]} • Innovin
           </p>
           <div className="mt-6 w-full" style={stagger(4)}>
             {me.checkedIn ? (
@@ -252,30 +249,6 @@ export default function Attendance() {
         <div className="mt-4">
           <LeavePanel rememberedEmail={status?.email ?? null} />
         </div>
-      )}
-
-      {tab === "today" && sessions.length > 0 && (
-        <Card className="mt-4 gap-0 p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="eyebrow">Today&apos;s sessions</h2>
-            <p className="text-xs font-medium text-muted-foreground">
-              Total <span className="text-foreground">{fmtDuration(me!.totalMinutes)}</span>
-            </p>
-          </div>
-          <ul className="mt-3 divide-y">
-            {sessions.map((s, i) => (
-              <li key={s.checkInAt} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                <span className="tabular-nums">
-                  {fmtTime(s.checkInAt)} – {s.checkOutAt ? fmtTime(s.checkOutAt) : "now"}
-                </span>
-                <span className="text-xs text-muted-foreground">{LOCATION_LABEL[s.location]}</span>
-                <span className={s.checkOutAt ? "shrink-0 text-muted-foreground" : "shrink-0 font-medium text-emerald-600"}>
-                  {s.checkOutAt ? fmtDuration(sessionMinutes(s)) : "in progress"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
       )}
 
       {tab === "today" && status && (

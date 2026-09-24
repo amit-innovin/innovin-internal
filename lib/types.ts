@@ -13,8 +13,21 @@ export type EmployeeRow = {
   // Date of joining (YYYY-MM-DD), admin-entered. Drives Earned Leave accrual, the one-year
   // availing gate, and Flexible Leave pro-rating. Null until someone fills it in.
   joinedOn: string | null;
+  // Days hit before the app took over the 10K challenge — copied from the sheet by an admin.
+  stepsOffset: number;
   createdAt: string;
   lastSeenAt: string;
+};
+
+// 10K steps challenge: one row per person per day. `hit` is the toggle; `steps` is the
+// optional actual count for people who want to share it.
+export type StepsRow = {
+  id: string;
+  email: string;
+  date: string;
+  hit: boolean;
+  steps: number | null;
+  createdAt: string;
 };
 
 export type AttendanceRow = {
@@ -40,7 +53,7 @@ export type OrderRow = {
 };
 
 export type AwayType = "leave" | "wfh";
-export type AwayStatus = "pending" | "approved" | "rejected";
+export type AwayStatus = "pending" | "approved" | "rejected" | "cancelled";
 
 export type AwayRow = {
   id: string;
@@ -116,8 +129,21 @@ export type GrievanceRow = {
   body: string;
   displayName: string | null;
   image: string | null;
+  // "can't wait" — admins see these first and get a push. Still anonymous either way.
+  urgent: boolean;
   submitterRef: string;
   status: GrievanceStatus;
+  createdAt: string;
+};
+
+// A one-line ping between two people — "chai?", "walk?". Deliberately ephemeral: stores purge
+// rows older than PING_TTL on every access, so there is no chat history to keep or leak.
+export type PingRow = {
+  id: string;
+  fromEmail: string;
+  toEmail: string;
+  body: string;
+  readAt: string | null;
   createdAt: string;
 };
 
@@ -145,10 +171,13 @@ export interface Store {
   checkOut(email: string, date: string, at: string): Promise<AttendanceRow | null>;
   // The currently open session, or null.
   getAttendance(email: string, date: string): Promise<AttendanceRow | null>;
-  listAttendanceByEmail(email: string, date: string): Promise<AttendanceRow[]>;
-  // One person's sessions across a date range (inclusive), for the attendance calendar.
+  // One person's day rows across a date range (inclusive), for the attendance calendar.
   listAttendanceRange(email: string, fromDate: string, toDate: string): Promise<AttendanceRow[]>;
   listAttendance(date: string): Promise<AttendanceRow[]>;
+  // 10K challenge: one row per person per day — today is the only writable day.
+  setSteps(row: StepsRow): Promise<StepsRow>;
+  listSteps(): Promise<StepsRow[]>;
+  listStepsByEmail(email: string, limit: number): Promise<StepsRow[]>;
   // Replaces the device's selection for the day (atomically in Postgres).
   setDayOrders(date: string, ref: string, rows: OrderRow[]): Promise<OrderRow[]>;
   listOrders(date: string): Promise<OrderRow[]>;
@@ -159,6 +188,11 @@ export interface Store {
   listGrievances(): Promise<GrievanceRow[]>;
   // "My submissions" lookup — ids come from the device's own cookie, never a stored ref.
   listGrievancesByIds(ids: string[], limit: number): Promise<GrievanceRow[]>;
+  // Pings — both sides of every conversation `email` is part of, newest first.
+  addPing(row: PingRow): Promise<PingRow>;
+  listPingsFor(email: string, limit: number): Promise<PingRow[]>;
+  // Marks unread pings sent to `email` by `fromEmail` as read.
+  markPingsRead(email: string, fromEmail: string): Promise<void>;
   addWifi(row: WifiRow): Promise<WifiRow>;
   listWifi(limit: number): Promise<WifiRow[]>;
   addAnnouncement(row: AnnouncementRow): Promise<AnnouncementRow>;
@@ -186,6 +220,8 @@ export interface Store {
   listEmployees(): Promise<EmployeeRow[]>;
   setRole(email: string, role: Role): Promise<boolean>;
   setJoinedOn(email: string, joinedOn: string | null): Promise<boolean>;
+  // Days hit before the app took over tracking — admin-entered from the old sheet.
+  setStepsOffset(email: string, days: number): Promise<boolean>;
   setLeaveBalance(row: LeaveBalanceRow): Promise<LeaveBalanceRow>;
   listLeaveBalances(year: number): Promise<LeaveBalanceRow[]>;
   savePushSubscription(row: PushSubscriptionRow): Promise<PushSubscriptionRow>;

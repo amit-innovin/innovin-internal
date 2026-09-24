@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Info, MessageSquare, Send, X } from "lucide-react";
+import { ImagePlus, Info, MessageSquare, Send, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
 import { VoiceArt } from "@/components/art";
 import { ImagePreview } from "@/components/image-preview";
@@ -15,17 +15,19 @@ import { getJSON, readError, send } from "@/lib/fetcher";
 import { useButtonState } from "@/lib/hooks/use-button-state";
 import { relativeTime } from "@/lib/format";
 import { compressImage } from "@/lib/image";
+import { cn } from "@/lib/utils";
 import type { GrievanceStatus } from "@/lib/types";
 
 const MAX = 500;
 
-type Mine = { id: string; body: string; displayName: string | null; image: string | null; status: GrievanceStatus; createdAt: string };
+type Mine = { id: string; body: string; displayName: string | null; image: string | null; urgent: boolean; status: GrievanceStatus; createdAt: string };
 
 export default function Grievances() {
   const [mode, setMode] = useState<"anonymous" | "named">("anonymous");
   const [body, setBody] = useState("");
   const [name, setName] = useState("");
   const [image, setImage] = useState<string | null>(null);
+  const [urgent, setUrgent] = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [mine, setMine] = useState<Mine[]>([]);
   const [buttonState, run] = useButtonState();
@@ -64,7 +66,7 @@ export default function Grievances() {
     run(async () => {
       const res = await send("/api/grievances", {
         method: "POST",
-        json: { body, displayName: mode === "anonymous" ? null : name, image },
+        json: { body, displayName: mode === "anonymous" ? null : name, image, urgent },
       });
       if (!res.ok) {
         toast.error(await readError(res));
@@ -72,7 +74,8 @@ export default function Grievances() {
       }
       setBody("");
       setImage(null);
-      toast.success("Thank you — we'll look into it and take action where needed.");
+      setUrgent(false);
+      toast.success(urgent ? "Sent — admins get pinged right away." : "Thank you — we'll look into it.");
       await load();
       return true;
     });
@@ -80,7 +83,7 @@ export default function Grievances() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="Daily Grievances" />
+      <PageHeader title="Speak Up" subtitle="Something broken, unfair, or bugging you? Say it here — anonymously if you like." />
 
       <form onSubmit={submit}>
         <Segmented
@@ -155,6 +158,25 @@ export default function Grievances() {
           </p>
         )}
 
+        <button
+          type="button"
+          aria-pressed={urgent}
+          onClick={() => setUrgent((u) => !u)}
+          className={cn(
+            "mt-3 flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors",
+            urgent ? "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "text-muted-foreground hover:bg-muted/60",
+          )}
+        >
+          <TriangleAlert className="size-4 shrink-0" />
+          <span className="flex-1 text-sm">
+            <span className="font-medium">This is urgent</span>
+            <span className="block text-xs opacity-80">Pings admins right away — still anonymous.</span>
+          </span>
+          <span className={cn("size-5 rounded-full border text-[10px] leading-5 text-center", urgent ? "border-rose-500 bg-rose-500 text-white" : "text-muted-foreground")}>
+            {urgent ? "✓" : ""}
+          </span>
+        </button>
+
         <StatefulButton
           type="submit"
           state={buttonState}
@@ -197,6 +219,7 @@ export default function Grievances() {
                   {g.image && <ImagePreview src={g.image} alt="Attached photo" className="mt-2" />}
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {relativeTime(g.createdAt)} • {g.displayName ? "With name" : "Anonymous"}
+                    {g.urgent && <span className="font-medium text-rose-600"> • Urgent</span>}
                   </p>
                 </div>
                 <StatusPill status={g.status} />

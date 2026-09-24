@@ -18,6 +18,7 @@ type Person = {
   name: string;
   email: string;
   joinedOn: string | null;
+  stepsOffset: number;
   summary: { ledger: Ledger[]; source: "zoho-snapshot" | "app-only"; asOf: string | null };
 };
 
@@ -39,10 +40,19 @@ export default function LeaveOverview({ people }: { people: Person[] }) {
       const raw = String(data.get(t) ?? "").trim();
       if (raw !== "") available[t] = Number(raw);
     }
+    const stepsRaw = String(data.get("stepsOffset") ?? "").trim();
     setBusy(email);
     const res = await send("/api/leave", { method: "PATCH", json: { email, available } });
+    if (res.ok && stepsRaw !== "") {
+      const steps = await send("/api/people", { method: "PATCH", json: { email, stepsOffset: Number(stepsRaw) } });
+      if (!steps.ok) {
+        toast.error(await readError(steps));
+        setBusy(null);
+        return;
+      }
+    }
     if (res.ok) {
-      toast.success("Balances updated from Zoho");
+      toast.success("Saved");
       setEditing(null);
       router.refresh();
     } else {
@@ -157,12 +167,25 @@ export default function LeaveOverview({ people }: { people: Person[] }) {
                       </label>
                     ))}
                   </div>
+                  <label className="mt-3 block text-[11px] text-muted-foreground">
+                    10K challenge — days from the sheet
+                    <input
+                      name="stepsOffset"
+                      type="number"
+                      min="0"
+                      step="1"
+                      aria-label={`Sheet days so far for ${p.name}`}
+                      defaultValue={p.stepsOffset || ""}
+                      placeholder="0"
+                      className="mt-0.5 h-8 w-28 rounded border border-input bg-card px-2 text-sm tabular-nums outline-none focus-visible:border-ring"
+                    />
+                  </label>
                   <button
                     type="submit"
                     disabled={busy === p.email}
                     className="mt-3 h-8 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground disabled:opacity-60"
                   >
-                    {busy === p.email ? "Saving…" : "Save balances"}
+                    {busy === p.email ? "Saving…" : "Save"}
                   </button>
                 </form>
               )}

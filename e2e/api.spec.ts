@@ -99,7 +99,7 @@ test.describe("API: input validation", () => {
 });
 
 test.describe("API: behaviour", () => {
-  test("check-in/out cycles: repeat check-in returns the open session, checkout starts a new one", async () => {
+  test("check-in/out cycles: one row per day — repeat check-in is a no-op, re-check-in reopens it", async () => {
     const ctx = await device();
     const who = email();
     const first = await (await ctx.post("/api/attendance", { data: { email: who, action: "in" } })).json();
@@ -108,13 +108,13 @@ test.describe("API: behaviour", () => {
     const out = await (await ctx.post("/api/attendance", { data: { email: who, action: "out" } })).json();
     expect(out.id).toBe(first.id);
     expect(out.checkOutAt).toBeTruthy();
-    // No open session now — a second checkout is refused, and a new check-in starts a new session.
+    // Checked out now — a second checkout is refused, and checking in again reopens the day.
     expect((await ctx.post("/api/attendance", { data: { email: who, action: "out" } })).status()).toBe(404);
     const second = await (await ctx.post("/api/attendance", { data: { email: who, action: "in" } })).json();
-    expect(second.id).not.toBe(first.id);
+    expect(second.id).toBe(first.id);
     const mine = await (await ctx.get("/api/attendance")).json();
-    expect(mine.me.sessions).toHaveLength(2);
     expect(mine.me.checkedIn).toBe(true);
+    expect(mine.me.checkOutAt).toBeNull();
   });
 
   test("attendance GET exposes only the count and the caller's own status", async () => {
@@ -124,12 +124,16 @@ test.describe("API: behaviour", () => {
     const mine = await (await ctx.get("/api/attendance")).json();
     expect(mine.email).toBe(who);
     expect(mine.me.checkedIn).toBe(true);
-    expect(mine.me.sessions[0].checkInAt).toBeTruthy();
-    expect(mine.me.totalMinutes).toBeGreaterThanOrEqual(0);
-    expect(Object.keys(mine).sort()).toEqual(["count", "email", "me"]);
+    expect(mine.me.checkInAt).toBeTruthy();
+    expect(mine.me.checkOutAt).toBeNull();
+    // `office` (the geofence) and `onOfficeNetwork` are exposed on purpose — the client needs
+    // them to decide auto check-in. Everyone else's sessions stay hidden.
+    expect(Object.keys(mine).sort()).toEqual(["count", "email", "me", "office", "onOfficeNetwork"]);
 
     const stranger = await (await (await device()).get("/api/attendance")).json();
-    expect(stranger).toEqual({ count: mine.count, email: null, me: null });
+    expect(stranger.count).toBe(mine.count);
+    expect(stranger.email).toBeNull();
+    expect(stranger.me).toBeNull();
   });
 
   test("check-in coordinates are classified against the office geofence, raw coords never returned", async () => {
@@ -139,16 +143,18 @@ test.describe("API: behaviour", () => {
     await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 12.9352, lng: 77.6241, accuracyM: 15 } });
     let mine = await (await ctx.get("/api/attendance")).json();
     expect(mine.me.location).toBe("office");
-    expect(mine.me.sessions[0].location).toBe("office");
-    expect(JSON.stringify(mine)).not.toContain("77.62");
+    // The submitted coordinates never echo back — only the classification does. (The office's
+    // own geofence config is deliberately exposed for client-side auto check-in.)
+    expect(JSON.stringify(mine)).not.toContain("77.6241");
+    expect(JSON.stringify(mine)).not.toContain("12.9352");
 
-    // A new session from far away is remote; invalid coords are rejected.
+    // Back in from far away reopens the same day-row as remote; invalid coords are rejected.
     await ctx.post("/api/attendance", { data: { email: who, action: "out" } });
     await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 13.05, lng: 77.6 } });
     mine = await (await ctx.get("/api/attendance")).json();
+    expect(mine.me.checkedIn).toBe(true);
     expect(mine.me.location).toBe("remote");
-    expect(mine.me.sessions[0].location).toBe("office");
-    expect(mine.me.sessions[1].location).toBe("remote");
+    expect(JSON.stringify(mine)).not.toContain("13.05");
     expect((await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 200, lng: 0 } })).status()).toBe(400);
     expect((await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 12.9 } })).status()).toBe(400);
   });

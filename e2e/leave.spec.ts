@@ -91,6 +91,87 @@ test.describe("Leave & calendar", () => {
     await employee.close();
   });
 
+  test("plans change: a pending request can be cancelled, and admins see it without actions", async ({ page, browser }) => {
+    const reason = uniqueText("plans changed");
+    const employee = await browser.newContext();
+    const e = await employee.newPage();
+    await leaveTab(e);
+    await e.locator("#away-start").fill("2026-11-09"); // Mon
+    await e.locator("#away-end").fill("2026-11-10");
+    await e.getByLabel("Email for this request").fill(uniqueEmail("cancel"));
+    await e.getByLabel("Reason").fill(reason);
+    await e.getByRole("button", { name: "Request Leave" }).click();
+    await expect(e.getByText("Leave request sent")).toBeVisible();
+
+    const row = e.locator("li", { hasText: reason });
+    await expect(row.getByRole("button", { name: "Cancel" })).toBeVisible();
+    e.once("dialog", (d) => d.accept());
+    await row.getByRole("button", { name: "Cancel" }).click();
+    await expect(row).toContainText("Cancelled");
+    await expect(row.getByRole("button", { name: "Cancel" })).toHaveCount(0);
+
+    await adminLogin(page, "approvals");
+    const adminRow = page.locator("li", { hasText: reason });
+    await expect(adminRow).toContainText("Cancelled");
+    await expect(adminRow.getByRole("button")).toHaveCount(0);
+    await employee.close();
+  });
+
+  test("an approved request can be cancelled — but only by its owner, and days return to the balance", async ({
+    page,
+    browser,
+  }) => {
+    const reason = uniqueText("approved then changed");
+    const email = uniqueEmail("cancel2");
+    const employee = await browser.newContext();
+    const e = await employee.newPage();
+    await leaveTab(e);
+    await e.locator("#away-start").fill("2026-11-16"); // Mon
+    await e.locator("#away-end").fill("2026-11-17");
+    await e.getByLabel("Email for this request").fill(email);
+    await e.getByLabel("Reason").fill(reason);
+    await e.getByRole("button", { name: "Request Leave" }).click();
+    await expect(e.getByText("Leave request sent")).toBeVisible();
+
+    await adminLogin(page, "approvals");
+    await page.locator("li", { hasText: reason }).getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText("Request approved")).toBeVisible();
+
+    // A different device holds no link to the request — the cancel is refused.
+    const rows = await (await page.request.get("/api/away")).json();
+    const id = rows.find((r: { reason: string }) => r.reason === reason)?.id;
+    expect(id).toBeTruthy();
+    const stranger = await browser.newContext();
+    const denied = await stranger.request.patch("/api/away", { data: { id, status: "cancelled" } });
+    expect(denied.status()).toBe(403);
+    await stranger.close();
+
+    // The owner's own device can, though — the approved days come back.
+    await leaveTab(e);
+    const row = e.locator("li", { hasText: reason });
+    await expect(row).toContainText("Approved");
+    e.once("dialog", (d) => d.accept());
+    await row.getByRole("button", { name: "Cancel" }).click();
+    await expect(row).toContainText("Cancelled");
+    await employee.close();
+  });
+
+  test("time away already past can't be cancelled", async ({ page }) => {
+    const res = await page.request.post("/api/away", {
+      data: {
+        email: uniqueEmail("past"),
+        type: "wfh",
+        startDate: "2026-09-21",
+        endDate: "2026-09-21",
+        reason: "past request",
+      },
+    });
+    const row = await res.json();
+    const cancel = await page.request.patch("/api/away", { data: { id: row.id, status: "cancelled" } });
+    expect(cancel.status()).toBe(400);
+    expect(await cancel.json()).toMatchObject({ error: expect.stringContaining("passed") });
+  });
+
   test("balances need a signed-in identity, not just a device", async ({ page }) => {
     await leaveTab(page);
     const balance = page.locator("[data-slot=card]").filter({ hasText: "Balance ·" });
@@ -173,7 +254,7 @@ test.describe("Attendance calendar", () => {
     await expect(page.getByRole("button", { name: /^26 Aug.*Onam/ })).toBeVisible();
   });
 
-  test("a day's sessions expand with times, location and duration", async ({ page }) => {
+  test("a day expands to show where and when you checked in", async ({ page }) => {
     const email = uniqueEmail("cal");
     await page.goto("/attendance");
     await page.getByLabel("Your Innovin email").fill(email);
@@ -185,8 +266,7 @@ test.describe("Attendance calendar", () => {
     const parts = new Intl.DateTimeFormat("en-US", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })
       .formatToParts(new Date())
       .reduce<Record<string, string>>((acc, p) => ({ ...acc, [p.type]: p.value }), {});
-    await page.getByRole("button", { name: new RegExp(`^${parts.day} ${parts.month}.*session`) }).click();
-    await expect(page.getByText("in progress")).toBeVisible();
+    await page.getByRole("button", { name: new RegExp(`^${parts.day} ${parts.month}.*still in`) }).click();
     await expect(page.getByText(/Location not shared|In office|Remote/).first()).toBeVisible();
   });
 

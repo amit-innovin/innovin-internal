@@ -34,21 +34,23 @@ git checkout main && git pull        # start from the merged state
 git checkout -b <short-change-name>  # one branch per change
 # …work, then the full gate (typecheck + npm test + e2e on both backends)…
 git push -u origin <branch>
-git checkout main && git merge <branch> --no-edit && git push origin main
+gh pr create … && gh pr merge …      # every branch ships via a PR — REQUIRED
 git checkout main && git pull        # next change starts here again
 ```
 
-Then deploy (`npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"`, token in `.env`),
-smoke-test production, and delete any test rows created by the smoke test.
+Per the owner's instruction: every committed branch MUST ship as a pull request that is
+then merged into `main`. Never merge to `main` locally or push to `main` directly.
 
 Git access: the remote uses the `github.com-innovin` SSH host alias (work account), so
-push/merge work. The `gh` CLI is authenticated as the *personal* `AmitJaison` account, which
+push works. The `gh` CLI is authenticated as the *personal* `AmitJaison` account, which
 cannot resolve the private `amit-innovin/innovin-internal` — so `gh pr create` fails.
+Until `gh` is logged in as `amit-innovin` (or AmitJaison is added as a collaborator),
+the fallback is: push the branch, hand the owner the compare URL
+(`github.com/amit-innovin/innovin-internal/pull/new/<branch>`), and they open + merge
+the PR in the web UI. Do not self-merge to `main` even then.
 
-Per the owner's instruction, don't try to work around that: push the branch and merge to `main`
-directly over SSH, keeping the one-branch-per-change discipline above. No PR object is created,
-so never describe the work as "opened a PR" or "merged a PR" — say the branch was merged.
-(If real PRs are wanted later, `gh auth login` as the work account is the one-time fix.)
+Then deploy (`npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"`, token in `.env`),
+smoke-test production, and delete any test rows created by the smoke test.
 
 ## Conventions
 - UI: shadcn/ui primitives in `components/ui`, beUI motion components in `components/motion`, shared blocks in `components/kit.tsx`, transitions.dev CSS in `app/transitions.css`. Brand tokens (innovinlabs.com) live in `app/globals.css`.

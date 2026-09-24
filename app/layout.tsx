@@ -15,7 +15,9 @@ export const metadata: Metadata = {
   description: "Simple tools for everyday needs. Built for our team.",
 };
 
-export const viewport: Viewport = { themeColor: "#015c89" };
+// viewportFit: "cover" lets the app use the whole screen when installed to a phone home
+// screen; the safe-area insets then become real values the bars can pad against.
+export const viewport: Viewport = { themeColor: "#015c89", viewportFit: "cover" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Computed on the server so the Admin link exists (or doesn't) in the first paint —

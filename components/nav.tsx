@@ -97,7 +97,7 @@ export function Sidebar({ showAdmin = false }: { showAdmin?: boolean }) {
 
 export function MobileTopBar({ showAdmin = false }: { showAdmin?: boolean }) {
   return (
-    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-card/90 px-4 py-3 backdrop-blur md:hidden">
+    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-card/90 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] backdrop-blur md:hidden">
       <Link href="/">
         <Logo />
       </Link>

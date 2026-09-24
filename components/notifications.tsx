@@ -130,7 +130,7 @@ export default function Notifications() {
         <div
           role="region"
           aria-label="Notifications"
-          className="absolute right-0 z-30 mt-1 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border bg-card shadow-lift"
+          className="fixed inset-x-4 top-[calc(3.5rem+env(safe-area-inset-top))] z-50 overflow-hidden rounded-xl border bg-card shadow-lift md:absolute md:left-0 md:right-auto md:top-full md:mt-1 md:w-80"
         >
           <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
             <p className="text-sm font-medium">Notifications</p>

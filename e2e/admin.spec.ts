@@ -1,4 +1,4 @@
-import { adminLogin, adminTab, expect, test, typePin, uniqueEmail, uniqueText } from "./fixtures";
+import { adminLogin, adminTab, expect, test, typePin, uniqueEmail, uniqueText, signInOffice } from "./fixtures";
 
 test.describe("Admin", () => {
   test("wrong PIN is rejected with feedback; correct PIN opens the dashboard", async ({ page }) => {
@@ -21,10 +21,7 @@ test.describe("Admin", () => {
     const instructions = uniqueText("extra hot");
     const employee = await browser.newContext();
     const e = await employee.newPage();
-    await e.goto("/attendance");
-    await e.getByPlaceholder("you@innovinlabs.com").fill(email);
-    await e.getByRole("button", { name: "Check In" }).click();
-    await expect(e.getByRole("heading", { name: "You're checked in" })).toBeVisible();
+    await signInOffice(e, email);
     await e.goto("/snacks");
     await e.getByRole("button", { name: /^Tea/ }).click();
     await e.getByLabel("Special instructions").fill(instructions);
@@ -33,7 +30,7 @@ test.describe("Admin", () => {
     await employee.close();
 
     await adminLogin(page);
-    await expect(page.getByText(email)).toBeVisible();
+    await expect(page.locator("#orders").getByText(email, { exact: true })).toBeVisible();
     await expect(page.getByText(`Tea: ${instructions}`)).toBeVisible();
   });
 
@@ -118,7 +115,7 @@ test.describe("Admin", () => {
 
     const employee = await browser.newContext();
     const e = await employee.newPage();
-    await e.goto("/");
+    await signInOffice(e);
     await expect(e.getByText(title)).toBeVisible();
     await expect(e.getByText("Assemble at the parking lot.")).toBeVisible();
 

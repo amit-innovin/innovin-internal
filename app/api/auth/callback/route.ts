@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUserSession, OAUTH_COOKIE, USER_COOKIE, USER_SESSION_MS, verifyOauthState } from "@/lib/auth";
 import { ownerEmails } from "@/lib/config";
-import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
+import { EMAIL_COOKIE, longLivedCookie, secureAuthCookie } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { clientIp } from "@/lib/http";
 import { exchangeCode, googleConfigured, verifyIdToken } from "@/lib/google";
@@ -21,12 +21,22 @@ export async function GET(req: NextRequest) {
 
   const next = verifyOauthState(req.cookies.get(OAUTH_COOKIE)?.value, req.nextUrl.searchParams.get("state"));
   const code = req.nextUrl.searchParams.get("code");
-  if (!next || !code) return fail(req, "failed");
+  if (!next || !code) {
+    console.warn("[google-auth] Callback rejected:", !code ? "missing authorization code" : "missing or expired state cookie");
+    return fail(req, "failed");
+  }
 
   const redirectUri = new URL("/api/auth/callback", req.nextUrl.origin).toString();
-  const idToken = await exchangeCode(code, redirectUri).catch(() => null);
+  const idToken = await exchangeCode(code, redirectUri).catch(() => {
+    console.warn("[google-auth] Google token exchange could not be reached");
+    return null;
+  });
+  if (!idToken) console.warn("[google-auth] Google token exchange failed");
   const identity = idToken ? await verifyIdToken(idToken).catch(() => null) : null;
-  if (!identity) return fail(req, "failed");
+  if (!identity) {
+    if (idToken) console.warn("[google-auth] Google identity verification failed");
+    return fail(req, "failed");
+  }
 
   const now = new Date().toISOString();
   // `role` applies to the insert only — upsert never overwrites a granted role. Bootstrap
@@ -46,9 +56,9 @@ export async function GET(req: NextRequest) {
 
   const res = NextResponse.redirect(new URL(next, req.nextUrl.origin));
   const token = createUserSession({ email: identity.email, name: identity.name });
-  if (token) res.cookies.set(USER_COOKIE, token, { ...longLivedCookie, maxAge: USER_SESSION_MS / 1000 });
+  if (token) res.cookies.set(USER_COOKIE, token, { ...longLivedCookie, secure: secureAuthCookie(req.nextUrl.origin), maxAge: USER_SESSION_MS / 1000 });
   // Align the remembered-email cookie with the verified identity.
-  res.cookies.set(EMAIL_COOKIE, identity.email, longLivedCookie);
+  res.cookies.set(EMAIL_COOKIE, identity.email, { ...longLivedCookie, secure: secureAuthCookie(req.nextUrl.origin) });
   res.cookies.delete(OAUTH_COOKIE);
   return res;
 }

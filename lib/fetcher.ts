@@ -70,6 +70,8 @@ export async function send(url: string, init: RequestInit & { json?: unknown } =
     if (res.ok && (rest.method ?? "GET").toUpperCase() !== "GET") {
       invalidate(pathOf(url));
       invalidate("/api/notifications");
+      invalidate("/api/workspace");
+      if (pathOf(url).startsWith("/api/auth/") || (pathOf(url) === "/api/attendance" && rest.method === "DELETE")) cache.clear();
     }
     return res;
   } catch {

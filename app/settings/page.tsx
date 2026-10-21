@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BadgeCheck, ChevronRight, Info, Lock, LogOut, User, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ const AUTH_ERRORS: Record<string, string> = {
 };
 
 export default function Settings() {
+  const router = useRouter();
   const [email, setEmail] = useState<string | null | undefined>(undefined);
   const [auth, setAuth] = useState<Auth | null>(null);
   const [autoCheckin, setAutoCheckin] = useState(false);
@@ -58,6 +60,7 @@ export default function Settings() {
     if (!res.ok) return toast.error(await readError(res));
     toast.success("Signed out of this device.");
     await load();
+    router.refresh();
   }
 
   async function forget() {

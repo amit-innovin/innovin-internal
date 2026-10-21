@@ -1,8 +1,9 @@
 import { CLOSED_URL } from "../playwright.config";
-import { expect, test } from "./fixtures";
+import { expect, test, signInOffice } from "./fixtures";
 
 test.describe("Meals & Snacks (orders open)", () => {
-  test("place a multi-item order, change it, view history, see it on home, then cancel", async ({ page }) => {
+  test("place a multi-item order, change it, view history, see it on home, then cancel", async ({ page, isMobile }) => {
+    await signInOffice(page);
     await page.goto("/snacks");
     await expect(page.getByText(/Nothing ordered yet/)).toBeVisible();
     const submit = page.getByRole("button", { name: "Place order" });
@@ -36,8 +37,9 @@ test.describe("Meals & Snacks (orders open)", () => {
     await page.getByRole("tab", { name: "Today" }).click();
 
     await page.goto("/");
-    const food = page.locator("[data-slot=card]").filter({ hasText: "Today's food" });
-    await expect(food.getByRole("button", { name: /^Lunch/ })).toHaveAttribute("aria-pressed", "true");
+    if (isMobile) await page.getByRole("button", { name: "Expand Pantry", exact: true }).click();
+    const food = page.locator(".reference-pantry");
+    await expect(food.getByRole("button", { name: "Remove Lunch from cart", exact: true })).toBeVisible();
     await expect(food).toContainText("Lunch");
 
     await page.goto("/snacks");
@@ -51,6 +53,7 @@ test.describe("Meals & Snacks (orders open)", () => {
   });
 
   test("keeping an order from the cancel dialog leaves it untouched", async ({ page }) => {
+    await signInOffice(page);
     await page.goto("/snacks");
     await page.getByRole("button", { name: /^Healthy Option/ }).click();
     await page.getByRole("button", { name: "Place order" }).click();
@@ -62,15 +65,17 @@ test.describe("Meals & Snacks (orders open)", () => {
     await expect(page.getByRole("button", { name: "Update order" })).toBeVisible();
   });
 
-  test("each device keeps its own order", async ({ browser }) => {
+  test("each signed-in employee keeps their own order", async ({ browser }) => {
     const deviceA = await browser.newContext();
     const deviceB = await browser.newContext();
     const a = await deviceA.newPage();
     const b = await deviceB.newPage();
+    await signInOffice(a);
     await a.goto("/snacks");
     await a.getByRole("button", { name: /^Tea/ }).click();
     await a.getByRole("button", { name: "Place order" }).click();
     await expect(a.getByText("Order placed: Tea")).toBeVisible();
+    await signInOffice(b);
     await b.goto("/snacks");
     await expect(b.getByText(/Nothing ordered yet/)).toBeVisible();
     await Promise.all([deviceA.close(), deviceB.close()]);
@@ -80,7 +85,8 @@ test.describe("Meals & Snacks (orders open)", () => {
 test.describe("Meals & Snacks (after cutoff)", () => {
   test.use({ baseURL: CLOSED_URL });
 
-  test("shows orders closed, disables ordering, and home says closed", async ({ page }) => {
+  test("shows orders closed, disables ordering, and home says closed", async ({ page, isMobile }) => {
+    await signInOffice(page);
     await page.goto("/snacks");
     await expect(page.getByText("Orders are closed for today")).toBeVisible();
     await expect(page.getByRole("button", { name: /^Tea/ })).toBeDisabled();
@@ -88,7 +94,9 @@ test.describe("Meals & Snacks (after cutoff)", () => {
     await expect(page.getByRole("button", { name: "Place order" })).toBeDisabled();
 
     await page.goto("/");
-    await expect(page.getByText("Closed today")).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Tea/ })).toBeDisabled();
+    if (isMobile) await page.getByRole("button", { name: "Expand Pantry", exact: true }).click();
+    await expect(page.getByText("Orders closed", { exact: true }).first()).toBeVisible();
+    await page.getByRole("searchbox", { name: "Search pantry" }).fill("Tea");
+    await expect(page.getByRole("button", { name: "Add Tea" })).toBeDisabled();
   });
 });

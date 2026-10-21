@@ -5,7 +5,7 @@ import { orderCutoffHour } from "./config";
 import { locationTag, officeLocation, onOfficeNetwork } from "./geo";
 import { STEP_GOAL, stepBoard, stepStreak } from "./steps";
 import { store } from "./store";
-import { ordersForDeviceOn } from "./submitter";
+import { ordersForDeviceOn, pantryRef } from "./submitter";
 import { istHour, todayIST } from "./time";
 
 export type SessionLite = { email: string; name: string };
@@ -34,8 +34,8 @@ export async function attendanceStatus(email: string | null, ip: string | null) 
   };
 }
 
-export async function snacksMine(deviceId: string | undefined) {
-  const items = await ordersForDeviceOn(deviceId, todayIST());
+export async function snacksMine(deviceId: string | undefined, email?: string) {
+  const items = email ? (await store.listOrders(todayIST())).filter((o) => o.submitterRef === pantryRef(email)).map(({ submitterRef: _, ...o }) => o) : await ordersForDeviceOn(deviceId, todayIST());
   return { open: istHour() < orderCutoffHour(), cutoffHour: orderCutoffHour(), items };
 }
 

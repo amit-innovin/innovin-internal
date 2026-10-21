@@ -177,6 +177,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
               </li>
             ))}
           </ul>
+          {orders.some((o) => o.orderedBy) && <div className="mt-4 border-t pt-3"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Employee trays</p><ul className="mt-2 space-y-2 text-sm text-muted-foreground">{[...new Set(orders.flatMap((o) => o.orderedBy ? [o.orderedBy] : []))].map((email) => <li key={email}><span className="font-medium text-foreground">{employees.find((e) => e.email === email)?.name || email}</span><span className="ml-2">{orders.filter((o) => o.orderedBy === email).map((o) => MENU.find((m) => m.id === o.itemId)?.name || o.itemId).join(" + ")}</span></li>)}</ul></div>}
           {orders.some((o) => o.instructions) && (
             <div className="mt-4 border-t pt-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Instructions</p>

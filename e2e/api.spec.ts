@@ -30,9 +30,15 @@ async function signedIn(who: string, name = who): Promise<APIRequestContext> {
   return ctx;
 }
 
+async function officeDevice() {
+  const ctx = await signedIn(email());
+  expect((await ctx.post("/api/workspace", { data: { mode: "office" } })).status()).toBe(200);
+  return ctx;
+}
+
 test.describe("API: input validation", () => {
   test("malformed or non-object JSON bodies return 400, never 500", async () => {
-    const ctx = await device();
+    const ctx = await officeDevice();
     for (const path of ["/api/attendance", "/api/snacks", "/api/grievances", "/api/wifi", "/api/away"]) {
       for (const body of ["{bad", "[1,2]", "null", '"text"']) {
         const res = await ctx.post(path, { data: body, headers: { "Content-Type": "application/json" } });
@@ -57,7 +63,7 @@ test.describe("API: input validation", () => {
   });
 
   test("snacks, wifi, and grievances reject invalid payloads", async () => {
-    const ctx = await device();
+    const ctx = await officeDevice();
     expect((await ctx.post("/api/snacks", { data: { items: ["caviar"] } })).status()).toBe(400);
     expect((await ctx.post("/api/snacks", { data: { items: [] } })).status()).toBe(400);
     expect((await ctx.post("/api/snacks", { data: { items: ["tea"], preference: "spicy" } })).status()).toBe(400);
@@ -89,7 +95,7 @@ test.describe("API: input validation", () => {
   });
 
   test("long inputs are truncated server-side", async () => {
-    const ctx = await device();
+    const ctx = await officeDevice();
     const g = await (await ctx.post("/api/grievances", { data: { body: "x".repeat(5000), displayName: "n".repeat(500) } })).json();
     expect(g.body).toHaveLength(2000);
     expect(g.displayName).toHaveLength(100);
@@ -193,7 +199,7 @@ test.describe("API: behaviour", () => {
   });
 
   test("a day's order can hold several items, is replaceable and cancellable", async () => {
-    const ctx = await device();
+    const ctx = await officeDevice();
     const placed = await (await ctx.post("/api/snacks", { data: { items: ["tea", "lunch"], instructions: "i" } })).json();
     expect(placed.items).toHaveLength(2);
     noRef(placed);

@@ -14,57 +14,46 @@ async function signInAs(browser: Browser, email: string, name: string) {
 }
 
 test.describe("10K Steps", () => {
-  test("a signed-in walker logs a hit from home and appears on the board", async ({ browser }) => {
+  test("a signed-in walker logs a count and appears on the board", async ({ browser }) => {
     const name = uniqueText("Wanda");
     const { ctx, page } = await signInAs(browser, `walker.${Date.now().toString(36)}@innovinlabs.com`, name);
-
-    const card = page.locator("[data-slot=card]").filter({ hasText: "10K Steps" });
-    await page.goto("/");
-    await expect(card.getByText("Hit 10K today?")).toBeVisible();
-    await card.getByRole("button", { name: /Yes, hit it/ }).click();
-    await expect(page.getByText("10K — nice walking!")).toBeVisible();
-    await expect(card.getByText("Done — you walked it")).toBeVisible();
-
     await page.goto("/steps");
-    const row = page.locator("li", { hasText: name });
-    await expect(row).toContainText("1 day");
-    await expect(row.getByText("today")).toBeVisible();
+    await page.getByLabel("Today's total steps").fill("10000");
+    await page.getByRole("button", { name: "Save today's steps" }).click();
+    await expect(page.getByText("Today's steps saved")).toBeVisible();
+    await expect(page.locator(".ranking-list .is-me")).toContainText(name);
+    await page.getByRole("button", { name: "10k+ days", exact: true }).click();
+    await expect(page.locator(".ranking-list .is-me")).toContainText("1");
     await ctx.close();
   });
 
-  test("an exact step count decides the day — 9,500 misses, 12,400 hits", async ({ browser }) => {
+  test("an exact count decides the day and stays editable", async ({ browser }) => {
     const { ctx, page } = await signInAs(browser, `counter.${Date.now().toString(36)}@innovinlabs.com`, uniqueText("Carl"));
-
-    const card = page.locator("[data-slot=card]").filter({ hasText: "10K Steps" });
-    await page.goto("/");
-    await card.getByRole("button", { name: "Add your step count" }).click();
-    await card.getByLabel("Today's step count").fill("9500");
-    await card.getByRole("button", { name: "Log it" }).click();
-    await expect(page.getByText("Logged as missed")).toBeVisible();
-
-    // Same day stays editable — correct it to the real count.
-    await card.getByRole("button", { name: "Add your step count" }).click();
-    await card.getByLabel("Today's step count").fill("12400");
-    await card.getByRole("button", { name: "Log it" }).click();
-    await expect(card.getByText(/12,400|Done — you walked it/)).toBeVisible();
+    await page.goto("/steps");
+    for (const [count, hit] of [[9500, false], [12400, true]] as const) {
+      await page.getByLabel("Today's total steps").fill(String(count));
+      await page.getByRole("button", { name: "Save today's steps" }).click();
+      await expect(page.getByText("Today's steps saved")).toBeVisible();
+      const data = await (await page.request.get("/api/steps")).json();
+      expect(data.me.today).toMatchObject({ steps: count, hit });
+      await page.reload();
+      await expect(page.getByLabel("Today's total steps")).toHaveValue(String(count));
+    }
     await ctx.close();
   });
 
-  test("unsigned visitors see the board but can't log", async ({ page }) => {
-    await page.goto("/");
-    const card = page.locator("[data-slot=card]").filter({ hasText: "10K Steps" });
-    await expect(card.getByRole("link", { name: "Sign in to join" })).toBeVisible();
-    await expect(card.getByRole("button", { name: /Yes, hit it/ })).toHaveCount(0);
-
-    const res = await page.request.post("/api/steps", { data: { hit: true } });
-    expect(res.status()).toBe(401);
+  test("unsigned visitors need Google to join and cannot log via the API", async ({ page }) => {
+    await page.goto("/steps");
+    await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save today's steps" })).toHaveCount(0);
+    expect((await page.request.post("/api/steps", { data: { hit: true } })).status()).toBe(401);
   });
 
   test("an admin banks sheet days on a person and the board adds them", async ({ page, browser }) => {
     const name = uniqueText("Bill");
     const { ctx, page: walker } = await signInAs(browser, `banker.${Date.now().toString(36)}@innovinlabs.com`, name);
     await walker.goto("/steps");
-    await expect(walker.locator("li", { hasText: name })).toHaveCount(0);
+    await expect(walker.locator(".ranking-list .is-me")).toHaveCount(0);
 
     await page.goto("/admin?tab=people");
     await typePin(page, "1704");
@@ -75,7 +64,9 @@ test.describe("10K Steps", () => {
     await expect(page.getByText("Saved")).toBeVisible();
 
     await walker.reload();
-    await expect(walker.locator("li", { hasText: name })).toContainText("45 days");
+    await walker.getByRole("button", { name: "10k+ days", exact: true }).click();
+    await expect(walker.locator(".ranking-list .is-me")).toContainText("45");
+    await expect(walker.locator(".ranking-list .is-me")).toContainText("admin sheet total");
     await ctx.close();
   });
 });

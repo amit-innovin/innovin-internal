@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import "./workspace.css";
 import "./reference-integration.css";
 import "./zip-design.css";
+import "./ios.css";
 
 // Font families used by the supplied workspace design.
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
@@ -19,12 +20,13 @@ const hand = Caveat({ subsets: ["latin"], variable: "--font-handwriting" });
 
 export const metadata: Metadata = {
   title: "Innovin Internal",
+  appleWebApp: { capable: true, title: "Innovin", statusBarStyle: "default" },
   description: "Simple tools for everyday needs. Built for our team.",
 };
 
 // viewportFit: "cover" lets the app use the whole screen when installed to a phone home
 // screen; the safe-area insets then become real values the bars can pad against.
-export const viewport: Viewport = { themeColor: "#F8F9FA", viewportFit: "cover" };
+export const viewport: Viewport = { themeColor: [{ media: "(max-width: 768px)", color: "#F5ECF0" }, { media: "(min-width: 769px)", color: "#F8F9FA" }], viewportFit: "cover" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Computed on the server so the Admin link exists (or doesn't) in the first paint —

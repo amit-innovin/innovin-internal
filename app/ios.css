@@ -1,0 +1,132 @@
+/* iPhone refinement of the supplied wallet design. Hardware chrome belongs to the
+   device; the simulated island is reserved for the desktop preview. */
+.phone-touchpoint-wrapper .phone-dynamic-island { display:none; }
+.phone-preview-dialog .phone-dynamic-island { display:flex; }
+.phone-touchpoint-wrapper .phone-heading-row { display:flex; flex-direction:column; align-items:stretch; gap:12px; }
+.phone-touchpoint-wrapper .phone-brand-title { font-size:clamp(28px,8vw,34px); line-height:1.15; letter-spacing:-.055em; overflow-wrap:anywhere; }
+.phone-touchpoint-wrapper .phone-account-tools { order:-1; align-self:flex-end; display:flex; gap:4px; }
+.phone-touchpoint-wrapper .phone-account-tools > button,
+.phone-touchpoint-wrapper .phone-account-tools > a,
+.phone-touchpoint-wrapper .phone-account-tools > div > button { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; min-width:44px; border-radius:50%; padding:0; color:#475569; background:rgba(255,255,255,.45); }
+.phone-touchpoint-wrapper .phone-account-tools button:active,
+.phone-touchpoint-wrapper .phone-account-tools a:active { background:rgba(255,255,255,.9); }
+.phone-touchpoint-wrapper .phone-page-header { margin-bottom:20px; }
+.phone-touchpoint-wrapper .phone-page-subtitle { display:block; font-size:12px; line-height:1.5; margin-top:7px; color:#7b8298; }
+.phone-touchpoint-wrapper .phone-presence-bar { margin:0 0 20px; }
+.phone-touchpoint-wrapper .workspace-presence-controls { flex-wrap:wrap; gap:6px; justify-content:flex-start; }
+.phone-touchpoint-wrapper .workspace-presence-controls button { min-height:44px; min-width:44px; padding:8px 14px; font-size:12px; border:1px solid rgba(255,255,255,.85); background:rgba(255,255,255,.55); }
+.phone-touchpoint-wrapper .workspace-presence-controls button[aria-pressed=true] { background:#e7f8ee; border-color:#a7e7c5; color:#147d60; }
+.phone-touchpoint-wrapper .phone-stack-card { min-width:0; -webkit-tap-highlight-color:transparent; }
+.phone-touchpoint-wrapper .card-innovin-pass { height:185px; }
+.phone-touchpoint-wrapper .phone-id-front { padding:20px 22px; }
+.phone-touchpoint-wrapper .phone-id-top { gap:12px; }
+.phone-touchpoint-wrapper .phone-id-label { font-size:10px; letter-spacing:.08em; line-height:1.4; }
+.phone-touchpoint-wrapper .phone-id-person { margin-top:12px; }
+.phone-touchpoint-wrapper .phone-id-name { font-size:clamp(23px,6.5vw,30px); line-height:1.12; overflow-wrap:anywhere; }
+.phone-touchpoint-wrapper .phone-id-role { display:block; font-size:13px; line-height:1.5; margin-top:6px; max-width:100%; overflow-wrap:anywhere; }
+.phone-touchpoint-wrapper .phone-btn-flip-card { width:44px; height:44px; min-width:44px; }
+.phone-touchpoint-wrapper .card-pantry-snacks,
+.phone-touchpoint-wrapper .card-people-office,
+.phone-touchpoint-wrapper .card-office-events { height:112px; margin-top:-24px; padding:18px 20px; border-radius:28px; }
+.phone-touchpoint-wrapper .phone-card-header-bar { gap:12px; min-height:52px; }
+.phone-touchpoint-wrapper .phone-card-title-wrap { min-width:0; flex:1; flex-direction:column; align-items:flex-start; gap:5px; }
+.phone-touchpoint-wrapper .phone-card-title { font-size:17px; line-height:1.25; letter-spacing:-.03em; overflow-wrap:anywhere; }
+.phone-touchpoint-wrapper .phone-card-badge-amber,
+.phone-touchpoint-wrapper .phone-card-badge-violet,
+.phone-touchpoint-wrapper .phone-live-pulse-badge { display:inline-flex; align-items:center; font-size:10px; line-height:1.4; padding:3px 8px; white-space:normal; }
+.phone-touchpoint-wrapper .phone-card-header-actions { flex-shrink:0; }
+.phone-touchpoint-wrapper .phone-btn-expand,
+.phone-touchpoint-wrapper .phone-btn-close-card { width:44px; height:44px; min-width:44px; padding:0; border-radius:50%; }
+.phone-touchpoint-wrapper .phone-btn-expand { background:rgba(15,23,42,.035); }
+.phone-touchpoint-wrapper .card-people-office .phone-btn-expand { color:#fff; background:rgba(255,255,255,.16); }
+.phone-touchpoint-wrapper .phone-expanded-body { overflow:visible; padding-top:8px; margin-top:12px; }
+.phone-touchpoint-wrapper .phone-expanded-body > section { min-height:0; }
+.phone-touchpoint-wrapper .card-people-office .phone-expanded-body { padding:12px; }
+.phone-touchpoint-wrapper .phone-expanded-body .pantry-search-dropdown { max-height:240px; }
+.phone-touchpoint-wrapper .pantry-search-box { min-height:48px; padding:10px 12px; }
+.phone-touchpoint-wrapper .pantry-search-box input,
+.phone-touchpoint-wrapper input,
+.phone-touchpoint-wrapper select,
+.phone-touchpoint-wrapper textarea { font-size:16px; }
+.phone-touchpoint-wrapper .pantry-result-row { gap:10px; padding:12px 4px; font-size:13px; }
+.phone-touchpoint-wrapper .pantry-result-row small { font-size:11px; }
+.phone-touchpoint-wrapper .pantry-result-row .btn-add-snack,
+.phone-touchpoint-wrapper .btn-delete-cart-item,
+.phone-touchpoint-wrapper .btn-clear-search { min-width:44px; min-height:44px; }
+.phone-touchpoint-wrapper .pantry-result-row .btn-add-snack { font-size:12px; padding:8px; }
+.phone-touchpoint-wrapper .pantry-quick-tags { gap:7px; padding:10px 0; }
+.phone-touchpoint-wrapper .pantry-tag-chip { min-height:36px; padding:7px 10px; font-size:11px; }
+.phone-touchpoint-wrapper .pantry-cart-box { margin-top:8px; padding:12px; border-radius:14px; }
+.phone-touchpoint-wrapper .pantry-cart-header { gap:8px; flex-wrap:wrap; }
+.phone-touchpoint-wrapper .cart-heading { font-size:12px; }
+.phone-touchpoint-wrapper .btn-clear-cart-all { min-height:44px; padding:8px; }
+.phone-touchpoint-wrapper .pantry-cart-footer { gap:12px; flex-wrap:wrap; padding-top:12px; }
+.phone-touchpoint-wrapper .cart-delivery-loc { font-size:11px; line-height:1.5; }
+.phone-touchpoint-wrapper .reference-tray-history { display:flex; align-items:center; min-height:44px; font-size:12px; margin-top:10px; }
+.phone-touchpoint-wrapper .phone-wallet-links { margin:22px 2px 0; gap:0 16px; }
+.phone-touchpoint-wrapper .phone-wallet-links a { display:inline-flex; align-items:center; min-height:44px; font-size:12px; }
+.phone-touchpoint-wrapper .phone-bottom-dock { border-color:rgba(255,255,255,.9); background:rgba(235,230,240,.85); box-shadow:0 8px 28px #44335916; }
+.phone-touchpoint-wrapper .phone-dock-item { min-width:44px; min-height:48px; }
+.phone-touchpoint-wrapper .phone-step-form { gap:12px; }
+.phone-touchpoint-wrapper .phone-step-form label { font-size:12px; }
+.phone-touchpoint-wrapper .phone-step-form input { min-height:48px; font-size:16px; }
+.phone-touchpoint-wrapper .phone-btn-log-steps { min-height:48px; }
+.phone-touchpoint-wrapper .phone-quick-walk { min-height:44px; padding:8px 14px; }
+.phone-touchpoint-wrapper .phone-post-note-box input { min-height:48px; font-size:16px; }
+.phone-touchpoint-wrapper .phone-post-note-actions { gap:12px; flex-wrap:wrap; }
+.phone-touchpoint-wrapper .phone-anon-toggle { min-height:44px; font-size:12px; }
+.phone-touchpoint-wrapper .phone-anon-toggle input { width:18px; height:18px; min-height:0; }
+.phone-touchpoint-wrapper .phone-btn-post-note { min-height:44px; padding:10px 16px; }
+.phone-touchpoint-wrapper .phone-planner-body .calendar-day { min-height:52px; }
+.phone-touchpoint-wrapper .phone-planner-body .status-btn { min-height:44px; }
+.phone-touchpoint-wrapper .phone-cal-close-btn { min-width:44px; min-height:44px; }
+.phone-touchpoint-wrapper [role=region][aria-label=Notifications] { max-height:calc(var(--workspace-viewport-height,100dvh) - 120px); overflow-y:auto; }
+
+/* The archived design has important fixed heights inside its reference layer.
+   Earlier-layer important declarations deliberately replace those constraints. */
+@layer theme {
+  .phone-touchpoint-wrapper .phone-stack-card.is-expanded { height:auto!important; margin-bottom:24px!important; }
+  .phone-touchpoint-wrapper .card-innovin-pass.is-expanded { height: min(700px,calc(100svh - 90px))!important; min-height:420px; }
+}
+
+@media(max-width:768px) {
+  body:has(.zip-workspace) { background:#f5ecf0; }
+  .phone-touchpoint-wrapper { min-height:100svh; }
+  .zip-workspace .phone-touchpoint-container { width:100%; max-width:440px; min-height:100svh; padding:calc(env(safe-area-inset-top,0px) + 12px) max(20px,env(safe-area-inset-right,0px)) calc(116px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px)); overflow:visible; }
+  .phone-touchpoint-wrapper .phone-bottom-dock { bottom:calc(12px + env(safe-area-inset-bottom,0px)); width:min(300px,calc(100vw - 40px)); max-width:none; height:64px; }
+  .phone-touchpoint-wrapper[data-keyboard-open=true] .phone-bottom-dock { visibility:hidden; pointer-events:none; }
+  body:has(.phone-touchpoint-wrapper[data-keyboard-open=true]) .reference-paper-trigger { visibility:hidden; pointer-events:none; }
+  .reference-paper-trigger { right:max(18px,env(safe-area-inset-right,0px)); bottom:calc(94px + env(safe-area-inset-bottom,0px)); min-width:48px; min-height:48px; }
+  .studio-modal { top:calc(var(--workspace-viewport-top,0px) + env(safe-area-inset-top,0px) + 12px); left:50%; right:auto; bottom:auto; transform:translateX(-50%); width:calc(100vw - 24px); max-width:480px; max-height:calc(var(--workspace-viewport-height,100dvh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px); border-radius:22px; padding:22px; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scroll-padding-bottom:20px; }
+  .studio-modal .studio-icon-button { min-width:44px; min-height:44px; }
+  .studio-modal .studio-form input,
+  .studio-modal .studio-form textarea,
+  .studio-modal .studio-form select { font-size:16px; }
+  .studio-modal .studio-form input:not([type=checkbox]),
+  .studio-modal .studio-form select { min-height:48px; }
+  .studio-modal .studio-form button[type=submit],
+  .studio-modal .studio-button { min-height:48px; }
+  .reference-paper-dialog { width:calc(100vw - 24px); transform:translateX(-50%); max-width:420px; }
+  .studio-onboarding .auth-container { padding:24px 20px; }
+}
+@media(max-width:359px) {
+  .zip-workspace .phone-touchpoint-container { padding-left:16px; padding-right:16px; }
+  .phone-touchpoint-wrapper .phone-card-title { font-size:16px; }
+  .phone-touchpoint-wrapper .card-pantry-snacks,
+  .phone-touchpoint-wrapper .card-people-office,
+  .phone-touchpoint-wrapper .card-office-events { padding-left:16px; padding-right:16px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .phone-touchpoint-wrapper .phone-id-card-flipper { transition:none; }
+}
+/* Safari can flatten back faces when the card's ancestor scrolls. Hide the inactive
+   face explicitly as well as using backface-visibility, so it never paints mirrored. */
+.phone-touchpoint-wrapper .phone-id-face[aria-hidden=true] { visibility:hidden; }
+.phone-touchpoint-wrapper .phone-id-face[aria-hidden=false] { visibility:visible; }
+.phone-touchpoint-wrapper .card-innovin-pass { height:210px; }
+.phone-touchpoint-wrapper .phone-id-name { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.phone-touchpoint-wrapper .phone-id-role { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media(max-width:768px) {
+  html:has(.phone-touchpoint-wrapper) { scroll-padding-bottom:calc(116px + env(safe-area-inset-bottom,0px)); }
+  .phone-touchpoint-wrapper :is(input,textarea,select,button,a) { scroll-margin-top:24px; scroll-margin-bottom:calc(116px + env(safe-area-inset-bottom,0px)); }
+}

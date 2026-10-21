@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Simple tools for everyday needs. Built for our team.",
     start_url: "/",
     display: "standalone",
-    background_color: "#f6f7fb",
-    theme_color: "#1e2a4a",
+    background_color: "#F5ECF0",
+    theme_color: "#F5ECF0",
     icons: [],
   };
 }

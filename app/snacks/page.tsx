@@ -25,9 +25,10 @@ import { useButtonState } from "@/lib/hooks/use-button-state";
 import { fmtHour, fmtShortDate, relativeDay } from "@/lib/format";
 import { MENU } from "@/lib/menu";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 type Order = { id: string; date: string; itemId: string; instructions: string; createdAt: string };
-type Mine = { open: boolean; cutoffHour: number; items: Order[] };
+type Mine = { open: boolean; cutoffHour: number; items: Order[]; officeAllowed: boolean; limit: number };
 
 const itemFor = (id: string) => MENU.find((m) => m.id === id);
 const names = (items: Order[]) => items.map((o) => itemFor(o.itemId)?.name ?? o.itemId).join(" + ");
@@ -97,6 +98,8 @@ export default function Snacks() {
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title="Meals & Snacks" subtitle="Today&apos;s kitchen order — tap, done." />
+      {mine && !mine.officeAllowed && <div className="studio-notice mb-4">Pantry ordering is for teammates checked in to the office. <Link href="/" className="underline">Set your presence on Overview</Link>. You can still view your orders and cancel before the cutoff.</div>}
+      {mine?.officeAllowed && <p className="text-xs text-muted-foreground mb-4">Choose up to {mine.limit} items per day. Your tray follows your account across devices.</p>}
 
       <Segmented
         value={tab}
@@ -164,7 +167,7 @@ export default function Snacks() {
                 <button
                   key={m.id}
                   type="button"
-                  disabled={closed}
+                  disabled={closed || !mine.officeAllowed || (!active && selected.length >= mine.limit)}
                   onClick={() => toggle(m.id)}
                   aria-pressed={active}
                   className={cn(
@@ -207,7 +210,7 @@ export default function Snacks() {
             <StatefulButton
               type="submit"
               state={buttonState}
-              disabled={!selected.length || closed}
+              disabled={!selected.length || closed || !mine.officeAllowed}
               loadingText="Placing order"
               successText="Order placed"
               errorText="Try again"

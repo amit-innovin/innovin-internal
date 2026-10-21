@@ -35,6 +35,15 @@ export async function checkIn(page: Page, email: string) {
   await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
 }
 
+// Pantry rules now require a verified company employee and a daily office declaration.
+export async function signInOffice(page: Page, email?: string) {
+  if (email) await page.request.get(`http://localhost:3999/as?email=${encodeURIComponent(email)}&name=${encodeURIComponent(email)}`);
+  try { await page.goto("/api/auth/google?next=/"); await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible(); }
+  finally { if (email) await page.request.get("http://localhost:3999/as?reset=1"); }
+  await page.getByRole("button", { name: "In office", exact: true }).click();
+  await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");
+}
+
 // The PIN input is disabled until hydrated (so early keystrokes can't be lost); wait for it.
 export async function typePin(page: Page, pin: string) {
   const input = page.getByLabel("Admin passcode");

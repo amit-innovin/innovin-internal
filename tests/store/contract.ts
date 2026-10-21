@@ -15,6 +15,25 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       await resetData();
     });
 
+    it("persists public notes while discarding anonymous authors and toggling one reaction per employee", async () => {
+      const note = await store.addNotice({ id: uid(), kind: "quote", title: "", body: "Make things that matter", attribution: "", color: "yellow", anonymous: true, authorEmail: "a@innovinlabs.com", authorName: "Asha", createdAt: iso() });
+      expect(note.authorEmail).toBeNull();
+      expect(note.authorName).toBeNull();
+      await store.addNotice({ ...note, id: uid(), anonymous: false, authorEmail: "b@innovinlabs.com", authorName: "Ben", createdAt: iso(1000) });
+      const rows = await store.listNotices(20);
+      expect(rows).toHaveLength(2);
+      expect(rows[0].authorName).toBe("Ben");
+      expect(await store.toggleNoticeReaction(note.id, "b@innovinlabs.com", "❤️")).toBe(true);
+      expect(await store.toggleNoticeReaction(note.id, "c@innovinlabs.com", "❤️")).toBe(true);
+      expect(await store.listNoticeReactions([note.id])).toHaveLength(2);
+      await store.toggleNoticeReaction(note.id, "b@innovinlabs.com", "❤️");
+      expect(await store.listNoticeReactions([note.id])).toEqual([{ noticeId: note.id, email: "c@innovinlabs.com", emoji: "❤️" }]);
+      expect(await store.toggleNoticeReaction("missing", "b@innovinlabs.com", "❤️")).toBe(false);
+      expect(await store.deleteNotice(note.id)).toBe(true);
+      expect(await store.listNoticeReactions([note.id])).toEqual([]);
+      expect(await store.deleteNotice(note.id)).toBe(false);
+    });
+
     const attendance = (p: Partial<AttendanceRow> = {}): AttendanceRow => ({
       id: uid(),
       email: "a@innovinlabs.com",
@@ -94,6 +113,27 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       createdBy: "admin",
       createdAt: iso(),
       ...p,
+    });
+
+    describe("workspace", () => {
+      it("merges profile edits without losing presence and isolates colleagues", async () => {
+        await store.saveWorkspaceProfile("a@innovinlabs.com", { designation: "Product Designer", mode: "office", presenceDate: "2026-10-15" });
+        await store.saveWorkspaceProfile("a@innovinlabs.com", { desk: "B12", project: "Portal" });
+        expect(await store.getWorkspaceProfile("a@innovinlabs.com")).toMatchObject({ designation: "Product Designer", desk: "B12", mode: "office" });
+        expect(await store.getWorkspaceProfile("b@innovinlabs.com")).toBeNull();
+        expect(await store.listWorkspaceProfiles()).toHaveLength(1);
+      });
+
+      it("replaces a person's planner day, ranges by date and clears only their own day", async () => {
+        await store.setPlannerDay({ email: "a@innovinlabs.com", date: "2026-10-15", kind: "office" });
+        await store.setPlannerDay({ email: "a@innovinlabs.com", date: "2026-10-15", kind: "vacation" });
+        await store.setPlannerDay({ email: "b@innovinlabs.com", date: "2026-10-15", kind: "remote" });
+        await store.setPlannerDay({ email: "a@innovinlabs.com", date: "2026-11-01", kind: "sick" });
+        expect(await store.listPlannerDays("a@innovinlabs.com", "2026-10-01", "2026-10-31")).toEqual([{ email: "a@innovinlabs.com", date: "2026-10-15", kind: "vacation" }]);
+        await store.deletePlannerDay("a@innovinlabs.com", "2026-10-15");
+        expect(await store.listPlannerDays("a@innovinlabs.com", "2026-10-01", "2026-10-31")).toEqual([]);
+        expect(await store.listPlannerDays("b@innovinlabs.com", "2026-10-01", "2026-10-31")).toHaveLength(1);
+      });
     });
 
     describe("attendance", () => {
@@ -260,6 +300,10 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
     });
 
     describe("orders", () => {
+      it("persists verified employee attribution for the buyer", async () => {
+        await store.setDayOrders("2026-09-23", "person", [order({ submitterRef: "person", orderedBy: "a@innovinlabs.com" })]);
+        expect((await store.listOrders("2026-09-23"))[0].orderedBy).toBe("a@innovinlabs.com");
+      });
       it("replaces the day's selection atomically — several items, then fewer", async () => {
         await store.setDayOrders("2026-09-23", "ref-1", [order()]);
         const replaced = await store.setDayOrders("2026-09-23", "ref-1", [

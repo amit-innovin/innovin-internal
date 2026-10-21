@@ -2,6 +2,8 @@ import { Pool } from "pg";
 import { pgConfig } from "./pgconfig";
 import { PING_TTL_MS } from "./pings";
 import type {
+  NoticeRow,
+  NoticeReaction,
   AnnouncementRow,
   AttendanceRow,
   AwayRow,
@@ -18,10 +20,33 @@ import type {
   Role,
   Store,
   WifiRow,
+  WorkspaceProfile,
+  PlannerDay,
 } from "./types";
 
 // Postgres persistence — used when DATABASE_URL is set (Neon, Supabase, Vercel Postgres).
 const SCHEMA = `
+CREATE TABLE IF NOT EXISTS notices (
+  id text PRIMARY KEY,
+  data jsonb NOT NULL,
+  created_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS notice_reactions (
+  notice_id text NOT NULL REFERENCES notices(id) ON DELETE CASCADE,
+  email text NOT NULL,
+  emoji text NOT NULL,
+  PRIMARY KEY (notice_id, email, emoji)
+);
+CREATE TABLE IF NOT EXISTS workspace_profiles (
+  email text PRIMARY KEY,
+  data jsonb NOT NULL DEFAULT '{}'::jsonb
+);
+CREATE TABLE IF NOT EXISTS planner_days (
+  email text NOT NULL,
+  date text NOT NULL,
+  kind text NOT NULL CHECK (kind IN ('office','remote','vacation','sick','festival','holiday')),
+  PRIMARY KEY (email, date)
+);
 CREATE TABLE IF NOT EXISTS attendance (
   id text PRIMARY KEY,
   email text NOT NULL,
@@ -105,6 +130,7 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
 -- Migrations for databases created before sessions/multi-item orders/images existed:
 ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS ordered_by text;
 ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
 ALTER TABLE grievances ADD COLUMN IF NOT EXISTS urgent boolean NOT NULL DEFAULT false;
 -- Scrub device-linked refs written before hard anonymity: the DB must not be joinable
@@ -218,6 +244,7 @@ const order = (r: any): OrderRow => ({
   preference: r.preference,
   instructions: r.instructions,
   submitterRef: r.submitter_ref,
+  ...(r.ordered_by ? { orderedBy: r.ordered_by } : {}),
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const grievance = (r: any): GrievanceRow => ({
@@ -316,6 +343,64 @@ const event = (r: any): EventRow => ({
 });
 
 class PgStore implements Store {
+  async addNotice(row: NoticeRow): Promise<NoticeRow> {
+    const safe = row.anonymous ? { ...row, authorEmail: null, authorName: null } : row;
+    await this.q(`INSERT INTO notices (id, data, created_at) VALUES ($1,$2::jsonb,$3)`, [safe.id, JSON.stringify(safe), safe.createdAt]);
+    return safe;
+  }
+  async listNotices(limit: number): Promise<NoticeRow[]> {
+    const res = await this.q(`SELECT data FROM notices ORDER BY created_at DESC LIMIT $1`, [limit]);
+    return res.rows.map(r => r.data);
+  }
+  async deleteNotice(id: string) {
+    const res = await this.q(`DELETE FROM notices WHERE id = $1`, [id]);
+    return !!res.rowCount;
+  }
+  async toggleNoticeReaction(id: string, email: string, emoji: string) {
+    // Lock the parent row so concurrent toggles cannot both observe an absent reaction.
+    await this.init();
+    const client = await this.db().connect();
+    try {
+      await client.query("BEGIN");
+      const found = await client.query(`SELECT id FROM notices WHERE id = $1 FOR UPDATE`, [id]);
+      if (!found.rowCount) { await client.query("COMMIT"); return false; }
+      const removed = await client.query(`DELETE FROM notice_reactions WHERE notice_id=$1 AND email=$2 AND emoji=$3`, [id,email,emoji]);
+      if (!removed.rowCount) await client.query(`INSERT INTO notice_reactions (notice_id,email,emoji) VALUES ($1,$2,$3)`, [id,email,emoji]);
+      await client.query("COMMIT");
+      return true;
+    } catch (error) { await client.query("ROLLBACK"); throw error; }
+    finally { client.release(); }
+  }
+  async listNoticeReactions(ids: string[]): Promise<NoticeReaction[]> {
+    const res = await this.q(`SELECT notice_id AS "noticeId", email, emoji FROM notice_reactions WHERE notice_id = ANY($1::text[])`, [ids]);
+    return res.rows;
+  }
+  async getWorkspaceProfile(email: string): Promise<WorkspaceProfile | null> {
+    const res = await this.q(`SELECT email, data FROM workspace_profiles WHERE email = $1`, [email]);
+    return res.rows[0] ? { ...res.rows[0].data, email } : null;
+  }
+  async listWorkspaceProfiles(): Promise<WorkspaceProfile[]> {
+    const res = await this.q(`SELECT email, data FROM workspace_profiles ORDER BY email`);
+    return res.rows.map((r) => ({ ...r.data, email: r.email }));
+  }
+  async saveWorkspaceProfile(email: string, patch: Partial<Omit<WorkspaceProfile, "email">>): Promise<WorkspaceProfile> {
+    const defaults = { designation: "", department: "", project: "", floor: "", desk: "", focus: "", mode: null, presenceDate: "" };
+    const res = await this.q(`INSERT INTO workspace_profiles (email, data) VALUES ($1, $2::jsonb)
+      ON CONFLICT (email) DO UPDATE SET data = workspace_profiles.data || $3::jsonb RETURNING data`,
+      [email, JSON.stringify({ ...defaults, ...patch }), JSON.stringify(patch)]);
+    return { ...res.rows[0].data, email };
+  }
+  async setPlannerDay(row: PlannerDay) {
+    await this.q(`INSERT INTO planner_days (email, date, kind) VALUES ($1,$2,$3)
+      ON CONFLICT (email, date) DO UPDATE SET kind = EXCLUDED.kind`, [row.email, row.date, row.kind]);
+  }
+  async deletePlannerDay(email: string, date: string) {
+    await this.q(`DELETE FROM planner_days WHERE email = $1 AND date = $2`, [email, date]);
+  }
+  async listPlannerDays(email: string, from: string, to: string): Promise<PlannerDay[]> {
+    const res = await this.q(`SELECT email, date, kind FROM planner_days WHERE email = $1 AND date >= $2 AND date <= $3 ORDER BY date`, [email, from, to]);
+    return res.rows;
+  }
   private pool: Pool | null = null;
   private ready: Promise<void> | null = null;
 
@@ -400,13 +485,14 @@ class PgStore implements Store {
     const client = await this.db().connect();
     try {
       await client.query("BEGIN");
+      await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`pantry:${date}:${ref}`]);
       await client.query(`DELETE FROM orders WHERE date = $1 AND submitter_ref = $2`, [date, ref]);
       for (const row of rows) {
         await client.query(
-          `INSERT INTO orders (id, date, item_id, preference, instructions, submitter_ref, created_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)
+          `INSERT INTO orders (id, date, item_id, preference, instructions, submitter_ref, created_at, ordered_by)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
            ON CONFLICT (date, submitter_ref, item_id) DO UPDATE SET preference = $4, instructions = $5`,
-          [row.id, row.date, row.itemId, row.preference, row.instructions, row.submitterRef, row.createdAt],
+          [row.id, row.date, row.itemId, row.preference, row.instructions, row.submitterRef, row.createdAt, row.orderedBy ?? null],
         );
       }
       await client.query("COMMIT");

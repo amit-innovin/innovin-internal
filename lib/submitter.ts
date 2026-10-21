@@ -4,6 +4,9 @@ import { DEVICE_COOKIE, longLivedCookie } from "./cookies";
 import { store } from "./store";
 
 const refFor = (deviceId: string) => crypto.createHash("sha256").update(deviceId).digest("hex").slice(0, 32);
+// Pantry ownership follows the verified employee across devices. Kept separate from device
+// identity so this never changes the anonymity boundary for grievances.
+export const pantryRef = (email: string) => refFor(`pantry-account:${email.toLowerCase()}`);
 
 const strip = <T extends { submitterRef: string }>({ submitterRef: _r, ...rest }: T) => rest;
 

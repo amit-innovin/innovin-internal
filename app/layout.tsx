@@ -1,14 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Figtree } from "next/font/google";
+import { Plus_Jakarta_Sans, Playfair_Display, JetBrains_Mono, Caveat } from "next/font/google";
 import "./globals.css";
-import { MobileTabBar, MobileTopBar, Sidebar } from "@/components/nav";
+import { WorkspaceNav } from "@/components/workspace/nav";
+import { currentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import "./workspace.css";
+import "./reference-integration.css";
+import "./zip-design.css";
 
-// Figtree — the typeface used on innovinlabs.com.
-const figtree = Figtree({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-sans" });
+// Font families used by the supplied workspace design.
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
+const editorial = Playfair_Display({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-editorial" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code" });
+const hand = Caveat({ subsets: ["latin"], variable: "--font-handwriting" });
 
 export const metadata: Metadata = {
   title: "Innovin Internal",
@@ -17,24 +24,18 @@ export const metadata: Metadata = {
 
 // viewportFit: "cover" lets the app use the whole screen when installed to a phone home
 // screen; the safe-area insets then become real values the bars can pad against.
-export const viewport: Viewport = { themeColor: "#015c89", viewportFit: "cover" };
+export const viewport: Viewport = { themeColor: "#F8F9FA", viewportFit: "cover" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Computed on the server so the Admin link exists (or doesn't) in the first paint —
   // members never see it render then vanish, and admins don't wait for a client fetch.
-  const showAdmin = await isAdmin();
+  const [showAdmin, user] = await Promise.all([isAdmin(), currentUser()]);
   return (
-    <html lang="en" className={cn("font-sans", figtree.variable)}>
+    <html lang="en" className={cn("font-sans", jakarta.variable, editorial.variable, mono.variable, hand.variable)}>
       <body className="antialiased">
         <TooltipProvider delayDuration={200}>
-          <div className="flex min-h-screen">
-            <Sidebar showAdmin={showAdmin} />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <MobileTopBar showAdmin={showAdmin} />
-              <main className="flex-1 px-4 pb-28 pt-6 md:px-10 md:pb-12 md:pt-8">{children}</main>
-            </div>
-          </div>
-          <MobileTabBar />
+          <WorkspaceNav signedIn={!!user} showAdmin={showAdmin} userEmail={user?.email} />
+          <main className="studio-main">{children}</main>
         </TooltipProvider>
         <Toaster position="top-center" richColors closeButton />
       </body>

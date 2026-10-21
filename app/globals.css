@@ -1,7 +1,9 @@
+@layer theme, base, reference, components, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "./transitions.css";
+@import "./reference.css" layer(reference);
 
 @custom-variant dark (&:is(.dark *));
 

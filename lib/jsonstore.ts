@@ -1,6 +1,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 import type {
+  NoticeRow,
+  NoticeReaction,
   AnnouncementRow,
   AttendanceRow,
   AwayRow,
@@ -15,6 +17,8 @@ import type {
   StepsRow,
   Store,
   WifiRow,
+  WorkspaceProfile,
+  PlannerDay,
 } from "./types";
 import { pingExpired } from "./pings";
 
@@ -23,6 +27,8 @@ import { pingExpired } from "./pings";
 const file = () => process.env.DATA_FILE || path.join(process.cwd(), "data", "store.json");
 
 type DB = {
+  notices: NoticeRow[];
+  noticeReactions: NoticeReaction[];
   attendance: AttendanceRow[];
   orders: OrderRow[];
   grievances: GrievanceRow[];
@@ -36,9 +42,11 @@ type DB = {
   pushSubscriptions: PushSubscriptionRow[];
   steps: StepsRow[];
   pings: PingRow[];
+  workspaceProfiles: WorkspaceProfile[];
+  plannerDays: PlannerDay[];
 };
 
-const empty = (): DB => ({ attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], pings: [] });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], pings: [], workspaceProfiles: [], plannerDays: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -101,6 +109,47 @@ const mutate = <T>(fn: (db: DB) => { result: T; changed: boolean }) =>
 const query = <T>(fn: (db: DB) => T) => locked(async () => fn(await read()));
 
 export const jsonStore: Store = {
+  addNotice: (row) => mutate((db) => {
+    const safe = row.anonymous ? { ...row, authorEmail: null, authorName: null } : row;
+    db.notices.push(safe);
+    return { result: safe, changed: true };
+  }),
+  listNotices: (limit) => query((db) => db.notices.sort(newestFirst).slice(0, limit)),
+  deleteNotice: (id) => mutate((db) => {
+    const exists = db.notices.some(n => n.id === id);
+    db.notices = db.notices.filter(n => n.id !== id);
+    db.noticeReactions = db.noticeReactions.filter(n => n.noticeId !== id);
+    return { result: exists, changed: exists };
+  }),
+  toggleNoticeReaction: (id, email, emoji) => mutate((db) => {
+    if (!db.notices.some(n => n.id === id)) return { result: false, changed: false };
+    const i = db.noticeReactions.findIndex(n => n.noticeId === id && n.email === email && n.emoji === emoji);
+    if (i >= 0) db.noticeReactions.splice(i, 1);
+    else db.noticeReactions.push({ noticeId: id, email, emoji });
+    return { result: true, changed: true };
+  }),
+  listNoticeReactions: (ids) => query((db) => db.noticeReactions.filter(n => ids.includes(n.noticeId))),
+  getWorkspaceProfile: (email) => query((db) => db.workspaceProfiles.find((p) => p.email === email) ?? null),
+  listWorkspaceProfiles: () => query((db) => db.workspaceProfiles),
+  saveWorkspaceProfile: (email, patch) => mutate((db) => {
+    let profile = db.workspaceProfiles.find((p) => p.email === email);
+    if (!profile) {
+      profile = { email, designation: "", department: "", project: "", floor: "", desk: "", focus: "", mode: null, presenceDate: "" };
+      db.workspaceProfiles.push(profile);
+    }
+    Object.assign(profile, patch, { email });
+    return { result: profile, changed: true };
+  }),
+  setPlannerDay: (row) => mutate((db) => {
+    db.plannerDays = db.plannerDays.filter((d) => d.email !== row.email || d.date !== row.date);
+    db.plannerDays.push(row);
+    return { result: undefined, changed: true };
+  }),
+  deletePlannerDay: (email, date) => mutate((db) => {
+    db.plannerDays = db.plannerDays.filter((d) => d.email !== email || d.date !== date);
+    return { result: undefined, changed: true };
+  }),
+  listPlannerDays: (email, from, to) => query((db) => db.plannerDays.filter((d) => d.email === email && d.date >= from && d.date <= to).sort((a, b) => a.date.localeCompare(b.date))),
   // One row per person per day: a fresh check-in reopens the day's row (back in = in again),
   // so the row's checkInAt is always the most recent arrival.
   checkIn: (row) =>

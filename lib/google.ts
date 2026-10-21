@@ -16,8 +16,8 @@ export function googleAuthUrl(redirectUri: string, state: string) {
   url.searchParams.set("scope", "openid email profile");
   url.searchParams.set("state", state);
   url.searchParams.set("prompt", "select_account");
-  const domain = allowedEmailDomains()[0];
-  if (domain) url.searchParams.set("hd", domain); // UX hint; the domain is verified server-side
+  // Leave the chooser unfiltered so "Use another account" stays available. The callback
+  // enforces innovinlabs.com on Google's verified identity, never on this UI hint.
   return url.toString();
 }
 
@@ -52,6 +52,6 @@ export async function verifyIdToken(idToken: string): Promise<GoogleIdentity | n
   if (Number.isFinite(exp) && exp * 1000 < Date.now()) return null;
   const email = String(t.email ?? "").toLowerCase();
   const domain = email.split("@")[1] ?? "";
-  if (!email || !allowedEmailDomains().includes(domain)) return null;
+  if (!email || domain !== "innovinlabs.com" || !allowedEmailDomains().includes(domain)) return null;
   return { email, name: String(t.name || email.split("@")[0]), picture: String(t.picture || "") };
 }

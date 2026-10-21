@@ -15,3 +15,10 @@ export const longLivedCookie = {
   maxAge: 60 * 60 * 24 * 365,
   path: "/",
 };
+
+// Production builds also run as HTTP localhost previews. Safari does not retain Secure
+// cookies on that transport. Only exact loopback hosts may use an insecure auth cookie.
+export function secureAuthCookie(origin: string) {
+  const url = new URL(origin);
+  return url.protocol === "https:" || !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+}

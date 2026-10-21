@@ -1,99 +1,76 @@
 import { CLOSED_URL } from "../playwright.config";
-import { expect, isMobile, test, uniqueEmail } from "./fixtures";
+import { expect, test, signInOffice } from "./fixtures";
 
-test.describe("Navigation & shell", () => {
-  test("home renders every dashboard section with the Innovin Labs brand", async ({ page }) => {
+test.describe("Navigation & studio shell", () => {
+  test("onboarding carries the studio brand and reference Plus Jakarta Sans font", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("img", { name: "Innovin Labs" }).first()).toBeVisible();
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(/Good (morning|afternoon|evening)/);
-    for (const section of ["Attendance", "Today's food", "Speak Up", "Announcements", "What's on", "Wi-Fi"]) {
-      await expect(page.getByRole("heading", { name: section })).toBeVisible();
-    }
-    const font = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
-    expect(font).toMatch(/Figtree/i);
+    await expect(page.locator(".brand-name-light")).toContainText("innovin.internal");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Manage your workspace");
+    expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/Jakarta/i);
   });
 
-  test("quick actions and primary navigation reach every module", async ({ page }) => {
-    const nav = isMobile(page) ? page.locator("nav.fixed") : page.locator("aside");
-    const destinations: [string, RegExp, string][] = [
-      ["Attendance", /\/attendance$/, "Attendance"],
-      [isMobile(page) ? "Meals" : "Meals & Snacks", /\/snacks$/, "Meals & Snacks"],
-      ["Speak Up", /\/grievances$/, "Speak Up"],
-      [isMobile(page) ? "Wi-Fi" : "Wi-Fi Quality", /\/wifi$/, "Wi-Fi Quality"],
-      ["Home", /\/$/, ""],
-    ];
-    await page.goto("/help");
-    for (const [label, url, heading] of destinations) {
-      await nav.getByRole("link", { name: label, exact: true }).click();
-      await expect(page).toHaveURL(url);
-      await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute("aria-current", "page");
-      if (heading) await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+  test("primary navigation and everyday tools reach each module", async ({ page, isMobile }) => {
+    await signInOffice(page);
+    const nav = page.getByRole("navigation", { name: isMobile ? "Phone workspace navigation" : "Workspace navigation", exact: true });
+    for (const [label, path] of [["Daily Steps & Prize", "/steps"], ["Leave & WFH Planner", "/planner"], ["Overview", "/"]]) {
+      const target = isMobile && path === "/planner" ? page.getByRole("link", { name: label, exact: true }) : nav.getByRole("link", { name: label, exact: true });
+      await target.click();
+      await expect(page).toHaveURL(new URL(path, "http://localhost:3210").toString());
+      await expect(target).toHaveAttribute("aria-current", "page");
     }
+    const more = page.getByRole("navigation", { name: "More workspace tools", exact: true });
+    for (const [label, heading] of [["Attendance", "Attendance"], ["People", "People"], ["Events", "Events"], ["Speak Up", "Speak Up"], ["Wi-Fi", "Wi-Fi Quality"]]) {
+      if (isMobile && new URL(page.url()).pathname === "/") {
+        await page.getByRole("link", { name: "Attendance & leave", exact: true }).click();
+      } else {
+        if (!(await more.isVisible())) await page.locator(".reference-more summary").click();
+        await more.getByRole("link", { name: label, exact: true }).click();
+      }
+      await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+    }
+  });
 
-    // Today's actions happen inline on home; each card links through to its history page.
-    for (const [label, url] of [
-      ["Calendar, leave & history", /\/attendance$/],
-      ["Notes & history", /\/snacks$/],
-      ["Photo, name & your history", /\/grievances$/],
-      ["Check Speed", /\/wifi/],
-    ] as const) {
+  test("overview links lead to ordering, reporting and settings", async ({ page, isMobile }) => {
+    await signInOffice(page);
+    await page.goto("/");
+    if (isMobile) await page.getByRole("button", { name: "Expand Pantry", exact: true }).click();
+    await page.getByRole("link", { name: /Notes.*history/ }).click();
+    await expect(page).toHaveURL(/snacks/);
+    for (const [label, url] of [["Wi-Fi pulse", /wifi/], [isMobile ? "Speak Up" : "Send private feedback", /grievances/], ["Settings", /settings/]] as const) {
       await page.goto("/");
-      await page.getByRole("link", { name: new RegExp(label) }).first().click();
+      await page.getByRole("link", { name: new RegExp(label) }).click();
       await expect(page).toHaveURL(url);
     }
   });
 
-  test("settings, events and help are reachable and render", async ({ page }) => {
-    await page.goto("/");
-    await page.getByRole("link", { name: "Events" }).first().click();
-    await expect(page).toHaveURL(/\/events$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Events" })).toBeVisible();
-    await page.getByRole("link", { name: "Settings" }).first().click();
+  test("support pages remain reachable through the studio shell", async ({ page }) => {
+    await page.goto("/settings");
     await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Admin dashboard/ })).toBeVisible();
-    await page.getByRole("link", { name: "Help" }).first().click();
+    await page.locator(".reference-more summary").click();
+    await page.getByRole("navigation", { name: "More workspace tools" }).getByRole("link", { name: "Help", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Is Speak Up really anonymous?" })).toBeVisible();
     await expect(page.getByText("submit anytime")).toBeVisible();
-    // Home is reached through the nav shell — the sidebar on desktop, the tab bar on mobile.
-    await page.getByRole("link", { name: "Home" }).first().click();
-    await expect(page).toHaveURL(/\/$/);
   });
 
-  test("feature pages carry no redundant back button — the nav shell is always present", async ({ page }) => {
+  test("feature pages use the persistent shell without redundant back links", async ({ page }) => {
     for (const path of ["/events", "/people", "/settings", "/help", "/attendance", "/snacks", "/wifi"]) {
       await page.goto(path);
       await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
-      await expect(page.getByRole("link", { name: "Home" }).first()).toBeVisible();
+      await expect(page.getByRole("link", { name: "Innovin Internal home" })).toBeVisible();
     }
   });
 
-  test("home reflects attendance, orders, and time away without leaving the page", async ({ page }) => {
-    const email = uniqueEmail();
-    await page.goto("/attendance");
-    await page.getByPlaceholder("you@innovinlabs.com").fill(email);
-    await page.getByRole("button", { name: "Check In" }).click();
-    await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
-
-    // Leave lives in the Attendance page's Leave tab now, and reuses the remembered email.
-    await page.getByRole("tab", { name: "Leave" }).click();
-    await expect(page.getByText(`Requesting as ${email}`)).toBeVisible();
-    await page.locator("#away-start").fill("2026-10-07");
-    await page.locator("#away-end").fill("2026-10-07");
-    await page.getByRole("button", { name: "Request Leave" }).click();
-    await expect(page.getByText("Leave request sent")).toBeVisible();
-
+  test("overview reflects saved attendance and pantry selection", async ({ page, isMobile }) => {
+    await signInOffice(page);
     await page.goto("/snacks");
     await page.getByRole("button", { name: /^Tea/ }).click();
     await page.getByRole("button", { name: "Place order" }).click();
     await expect(page.getByText("Order placed: Tea")).toBeVisible();
-
     await page.goto("/");
-    // One attendance card now does it all: status, the action, and who's in.
-    const attendance = page.locator("[data-slot=card]").filter({ hasText: "Attendance" });
-    await expect(attendance).toContainText("You're in");
-    await expect(attendance).toContainText("in today");
-    await expect(attendance).toContainText("Leave pending");
-    await expect(page.locator("[data-slot=card]").filter({ hasText: "Today's food" })).toContainText("Tea");
+    await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");
+    if (isMobile) await page.getByRole("button", { name: "Expand Pantry", exact: true }).click();
+    await expect(page.locator(".pantry-cart-items")).toContainText("Tea");
   });
 
   test("unknown pages show the branded 404 with a way home", async ({ page }) => {
@@ -104,12 +81,12 @@ test.describe("Navigation & shell", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("no page overflows horizontally", async ({ page }) => {
-    for (const path of ["/", "/attendance", "/snacks", "/grievances", "/wifi", "/events", "/people", "/settings", "/help", "/admin"]) {
+  test("signed-in pages never overflow horizontally", async ({ page }) => {
+    await signInOffice(page);
+    for (const path of ["/", "/steps", "/planner", "/attendance", "/snacks", "/grievances", "/wifi", "/events", "/people", "/settings", "/help", "/admin"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
-      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-      expect(overflow, `${path} overflows by ${overflow}px`).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBeLessThanOrEqual(0);
     }
   });
 

@@ -49,6 +49,7 @@ export type OrderRow = {
   preference: string;
   instructions: string;
   submitterRef: string;
+  orderedBy?: string;
   createdAt: string;
 };
 
@@ -164,7 +165,47 @@ export type AnnouncementRow = {
   createdAt: string;
 };
 
+export type WorkspaceProfile = {
+  email: string;
+  designation: string;
+  department: string;
+  project: string;
+  floor: string;
+  desk: string;
+  focus: string;
+  mode: "office" | "remote" | null;
+  presenceDate: string;
+};
+
+export type PlannerKind = "office" | "remote" | "vacation" | "sick" | "festival" | "holiday";
+export type PlannerDay = { email: string; date: string; kind: PlannerKind };
+
+export type NoticeRow = {
+  id: string;
+  kind: "quote" | "feedback";
+  title: string;
+  body: string;
+  attribution: string;
+  color: "yellow" | "peach" | "blue" | "green" | "purple";
+  anonymous: boolean;
+  authorEmail: string | null;
+  authorName: string | null;
+  createdAt: string;
+};
+export type NoticeReaction = { noticeId: string; email: string; emoji: string };
+
 export interface Store {
+  addNotice(row: NoticeRow): Promise<NoticeRow>;
+  listNotices(limit: number): Promise<NoticeRow[]>;
+  deleteNotice(id: string): Promise<boolean>;
+  toggleNoticeReaction(id: string, email: string, emoji: string): Promise<boolean>;
+  listNoticeReactions(ids: string[]): Promise<NoticeReaction[]>;
+  getWorkspaceProfile(email: string): Promise<WorkspaceProfile | null>;
+  listWorkspaceProfiles(): Promise<WorkspaceProfile[]>;
+  saveWorkspaceProfile(email: string, patch: Partial<Omit<WorkspaceProfile, "email">>): Promise<WorkspaceProfile>;
+  setPlannerDay(row: PlannerDay): Promise<void>;
+  deletePlannerDay(email: string, date: string): Promise<void>;
+  listPlannerDays(email: string, from: string, to: string): Promise<PlannerDay[]>;
   // Returns the open session if one exists, otherwise inserts a new one.
   checkIn(row: AttendanceRow): Promise<AttendanceRow>;
   // Closes the open session; null when there isn't one.

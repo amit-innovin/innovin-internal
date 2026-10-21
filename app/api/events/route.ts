@@ -34,6 +34,22 @@ export async function GET(req: NextRequest) {
 
 // Admin-only. Plain form post: `_action=delete` removes, otherwise creates.
 export async function POST(req: Request) {
+  if (req.headers.get("content-type")?.includes("application/json")) {
+    const { cookies } = await import("next/headers");
+    const session = verifyUserSession((await cookies()).get(USER_COOKIE)?.value);
+    if (!session) return NextResponse.json({ error: "Sign in to publish an event" }, { status: 401 });
+    const limited = enforce([["writeIp", clientIp(req)]]);
+    if (limited) return limited;
+    const body = await readJSON(req);
+    if (!body) return badRequest();
+    const title = str(body.title).trim();
+    const startsAt = istToIso(str(body.startsAt));
+    const category = str(body.category) as EventCategory;
+    if (!title || title.length > 120 || !startsAt || !CATEGORIES.includes(category)) return badRequest("Enter a title, valid time and category");
+    if (Date.parse(startsAt) < Date.now() - 60000) return badRequest("Choose a future event time");
+    const event = await store.addEvent({ id: id(), title, startsAt, category, body: str(body.body).trim().slice(0, 500), location: str(body.location).trim().slice(0, 80), createdBy: session.email, createdAt: new Date().toISOString() });
+    return NextResponse.json({ ok: true, event: { id: event.id } }, { status: 201 });
+  }
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const form = await req.formData();
   const text = (key: string, max: number) => String(form.get(key) ?? "").trim().slice(0, max);

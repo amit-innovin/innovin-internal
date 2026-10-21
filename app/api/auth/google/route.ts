@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createOauthState, OAUTH_COOKIE, sanitizeNext } from "@/lib/auth";
+import { createOauthState, OAUTH_COOKIE, sanitizeNext, USER_COOKIE } from "@/lib/auth";
+import { EMAIL_COOKIE, secureAuthCookie } from "@/lib/cookies";
 import { googleAuthUrl, googleConfigured } from "@/lib/google";
 
 // Starts the Google sign-in flow. `next` is where the employee lands afterwards.
@@ -13,10 +14,15 @@ export async function GET(req: NextRequest) {
   const redirectUri = new URL("/api/auth/callback", req.nextUrl.origin).toString();
   const { cookie, state } = createOauthState(next);
   const res = NextResponse.redirect(googleAuthUrl(redirectUri, state));
+  // A fresh chooser must not fall back to the previous local identity after cancellation
+  // or a rejected account. Cookies are scoped to hostname, not localhost port.
+  res.cookies.delete(USER_COOKIE);
+  res.cookies.delete(EMAIL_COOKIE);
+  res.headers.set("Cache-Control", "no-store");
   res.cookies.set(OAUTH_COOKIE, cookie, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureAuthCookie(req.nextUrl.origin),
     maxAge: 600,
     path: "/",
   });

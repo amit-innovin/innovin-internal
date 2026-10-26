@@ -19,11 +19,14 @@ type Person = {
   email: string;
   joinedOn: string | null;
   stepsOffset: number;
+  snapshotAvailable: Partial<Record<BalanceType, number>>;
+  reconciledRequestIds: string[];
+  approvedRequests: { id: string; startDate: string; endDate: string; leaveType: string | null; days: number }[];
   summary: { ledger: Ledger[]; source: "zoho-snapshot" | "app-only"; asOf: string | null };
 };
 
 // Zoho People holds the real balances, so an admin copies each person's "Available" figures in
-// here. Everything requested through this app after that is counted on top, which is why the
+// here. Unreconciled local approvals are estimated deductions, which is why the
 // snapshot date is shown rather than hidden.
 export default function LeaveOverview({ people }: { people: Person[] }) {
   const router = useRouter();
@@ -42,7 +45,7 @@ export default function LeaveOverview({ people }: { people: Person[] }) {
     }
     const stepsRaw = String(data.get("stepsOffset") ?? "").trim();
     setBusy(email);
-    const res = await send("/api/leave", { method: "PATCH", json: { email, available } });
+    const res = await send("/api/leave", { method: "PATCH", json: { email, available, reconciledRequestIds: data.getAll("reconciledRequestIds") } });
     if (res.ok && stepsRaw !== "") {
       const steps = await send("/api/people", { method: "PATCH", json: { email, stepsOffset: Number(stepsRaw) } });
       if (!steps.ok) {
@@ -161,12 +164,13 @@ export default function LeaveOverview({ people }: { people: Person[] }) {
                           min="0"
                           max="365"
                           aria-label={`${LEAVE_LABELS[t]} available for ${p.name}`}
-                          defaultValue={p.summary.ledger.find((l) => l.type === t)?.remaining ?? ""}
+                          defaultValue={p.snapshotAvailable[t] ?? ""}
                           className="mt-0.5 h-8 w-full rounded border border-input bg-card px-2 text-sm tabular-nums outline-none focus-visible:border-ring"
                         />
                       </label>
                     ))}
                   </div>
+                  <fieldset className="mt-3 space-y-2"><legend className="text-xs font-medium">Already reflected in the Zoho figures you copied</legend><p className="text-xs text-muted-foreground">Select only requests you have reconciled in Zoho. Unselected approvals remain estimated local deductions; a timestamp does not prove inclusion.</p>{p.approvedRequests.map(r => <label key={r.id} className="flex gap-2 text-xs"><input type="checkbox" name="reconciledRequestIds" value={r.id} defaultChecked={p.reconciledRequestIds.includes(r.id)} />{r.leaveType?.toUpperCase()} · {r.startDate} - {r.endDate} · {r.days} days</label>)}</fieldset>
                   <label className="mt-3 block text-[11px] text-muted-foreground">
                     10K challenge — days from the sheet
                     <input

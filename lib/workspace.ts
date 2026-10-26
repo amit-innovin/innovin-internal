@@ -1,9 +1,10 @@
+import { attendanceMode } from "./presence";
 import { isAdmin } from "./admin";
 import { noticeBoard } from "./notices";
 import { store } from "./store";
 import { todayIST } from "./time";
 import { snacksMine, stepsBoard } from "./today";
-import { activeMode, arenaRankings } from "./workspace-model";
+import { arenaRankings } from "./workspace-model";
 import type { UserSession } from "./auth";
 
 export async function workspaceData(user: UserSession, deviceId?: string) {
@@ -16,8 +17,7 @@ export async function workspaceData(user: UserSession, deviceId?: string) {
   const byEmail = new Map(profiles.map((p) => [p.email, p]));
   const people = employees.map((e) => {
     const p = byEmail.get(e.email);
-    const active = attendance.some((a) => a.email === e.email && !a.checkOutAt);
-    return { email: e.email, name: e.name, picture: e.picture, designation: p?.designation ?? "", department: p?.department ?? "", project: p?.project ?? "", desk: p?.desk ?? "", floor: p?.floor ?? "", focus: p?.focus ?? "", mode: activeMode(p ?? null, active, today) };
+    return { email: e.email, name: e.name, picture: e.picture, designation: p?.designation ?? "", department: p?.department ?? "", project: p?.project ?? "", desk: p?.desk ?? "", floor: p?.floor ?? "", focus: p?.focus ?? "", mode: attendanceMode(attendance.find(a => a.email === e.email)) };
   });
   const counts = await store.rsvpCounts(events.map((e) => e.id));
   return {
@@ -34,6 +34,5 @@ export type WorkspaceData = Awaited<ReturnType<typeof workspaceData>>;
 export async function officePantryAllowed(email: string | undefined) {
   if (!email) return false;
   const today = todayIST();
-  const [profile, row] = await Promise.all([store.getWorkspaceProfile(email), store.getAttendance(email, today)]);
-  return activeMode(profile, !!row && !row.checkOutAt, today) === "office";
+  return attendanceMode(await store.getAttendance(email, today)) === "office";
 }

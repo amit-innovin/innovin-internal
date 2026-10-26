@@ -221,18 +221,31 @@ describe("Zoho snapshot reconciliation", () => {
     expect(left).toMatchObject({ cl: 3.5, sl: 5, el: 21, fl: 1 });
   });
 
-  it("subtracts only what was requested here after the snapshot", () => {
+  it("subtracts all unreconciled local approvals regardless of creation timestamp", () => {
     const s = summarize(
       employee,
       [
         away({ createdAt: "2026-09-30T00:00:00.000Z", days: 1 }), // after → counts
-        away({ createdAt: "2026-09-01T00:00:00.000Z", days: 2 }), // before → already in Zoho's figure
+        away({ createdAt: "2026-09-01T00:00:00.000Z", days: 2 }), // before does not prove it is in Zoho
       ],
       2026,
       "2026-09-23",
       snapshot({ cl: 3.5 }),
     );
-    expect(s.ledger.find((l) => l.type === "cl")).toMatchObject({ used: 1, remaining: 2.5 });
+    expect(s.ledger.find((l) => l.type === "cl")).toMatchObject({ used: 3, remaining: 0.5 });
+  });
+
+  it("retains policy history for types omitted from a partial snapshot", () => {
+    const old = away({ createdAt: "2026-09-01T00:00:00Z", days: 1 });
+    const result = summarize(employee, [old], 2026, "2026-10-26", snapshot({ sl: 5 }));
+    expect(result.ledger.find(r => r.type === "cl")).toMatchObject({ used: 1, remaining: 3 });
+  });
+
+  it("excludes only explicitly reconciled approved requests for populated types", () => {
+    const row = away({ id: "reconciled" });
+    const balance = { ...snapshot({ cl: 3 }), reconciledRequestIds: [row.id] };
+    expect(summarize(employee, [row], 2026, "2026-10-26", balance).ledger.find(r => r.type === "cl")).toMatchObject({ used: 0, remaining: 3 });
+    expect(summarize(employee, [{ ...row, status: "pending" }], 2026, "2026-10-26", balance).ledger.find(r => r.type === "cl")).toMatchObject({ pending: 1 });
   });
 
   it("keeps Earned Leave carry-forward above the annual grant", () => {

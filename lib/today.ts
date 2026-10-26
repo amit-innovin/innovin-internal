@@ -1,8 +1,9 @@
+import { attendanceLocation } from "@/lib/presence";
 // The shapes behind home's three action cards — shared between the API routes and the
 // server-rendered home page, so first paint already carries the data instead of the client
 // fetching it again after hydration.
 import { orderCutoffHour } from "./config";
-import { locationTag, officeLocation, onOfficeNetwork } from "./geo";
+import { officeLocation, onOfficeNetwork } from "./geo";
 import { STEP_GOAL, stepBoard, stepStreak } from "./steps";
 import { store } from "./store";
 import { ordersForDeviceOn, pantryRef } from "./submitter";
@@ -28,7 +29,7 @@ export async function attendanceStatus(email: string | null, ip: string | null) 
           checkedIn: !day.checkOutAt,
           checkInAt: day.checkInAt,
           checkOutAt: day.checkOutAt,
-          location: locationTag(day.lat, day.lng),
+          location: attendanceLocation(day),
         }
       : null,
   };

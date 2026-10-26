@@ -42,10 +42,9 @@ export async function POST(req: NextRequest) {
   const today = todayIST();
   if (mode === "out") {
     await store.checkOut(user.email, today, new Date().toISOString());
-    await store.saveWorkspaceProfile(user.email, { mode: null, presenceDate: today });
+
   } else {
-    await store.checkIn({ id: id(), email: user.email, date: today, checkInAt: new Date().toISOString(), checkOutAt: null, lat: null, lng: null, accuracyM: null });
-    await store.saveWorkspaceProfile(user.email, { mode, presenceDate: today });
+    await store.checkIn({ id: id(), email: user.email, date: today, checkInAt: new Date().toISOString(), checkOutAt: null, lat: null, lng: null, accuracyM: null, declaredMode: mode });
   }
   return NextResponse.json({ ok: true });
 }

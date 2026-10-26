@@ -1,3 +1,6 @@
+import { store } from "@/lib/store";
+import { cookies } from "next/headers";
+import { pushSession } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { createOauthState, OAUTH_COOKIE, sanitizeNext, USER_COOKIE } from "@/lib/auth";
 import { EMAIL_COOKIE, secureAuthCookie } from "@/lib/cookies";
@@ -10,6 +13,8 @@ export async function GET(req: NextRequest) {
     fallback.searchParams.set("auth", "unavailable");
     return NextResponse.redirect(fallback);
   }
+  const binding = pushSession(req.cookies.get(USER_COOKIE)?.value);
+  if (binding) await store.revokePushSession(binding.sessionRef).catch(() => console.warn("[push] Session revocation failed; local identity still cleared"));
   const next = sanitizeNext(req.nextUrl.searchParams.get("next"));
   const redirectUri = new URL("/api/auth/callback", req.nextUrl.origin).toString();
   const { cookie, state } = createOauthState(next);

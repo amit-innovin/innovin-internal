@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getJSON, readError, send } from "@/lib/fetcher";
 import { fmtTime } from "@/lib/format";
 import { PING_MAX_LEN, PING_PRESETS } from "@/lib/pings";
+import { StudioDialog } from "@/components/workspace/dialog";
 import { cn } from "@/lib/utils";
 
 export type PingTarget = { email: string; name: string; picture?: string };
@@ -60,13 +61,7 @@ export function PingSheet({ target, onClose }: { target: PingTarget; onClose: ()
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Ping ${target.name}`}
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
-    >
+    <StudioDialog title={`Ping ${target.name}`} description="Private messages disappear after 24 hours." onClose={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
         className="flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border bg-card shadow-lift sm:rounded-2xl"
@@ -148,6 +143,6 @@ export function PingSheet({ target, onClose }: { target: PingTarget; onClose: ()
           </form>
         </div>
       </div>
-    </div>
+    </StudioDialog>
   );
 }

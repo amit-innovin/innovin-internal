@@ -1,3 +1,4 @@
+import { attendanceLocation } from "@/lib/presence";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { CalendarCheck, CalendarDays, Coffee, LogOut, Megaphone, MessageSquare, Trash2, Wifi } from "lucide-react";
@@ -27,7 +28,6 @@ import { Card } from "@/components/ui/card";
 import { currentActor, isAdmin, isOwner } from "@/lib/admin";
 import { leaveOverview } from "@/lib/leave-data";
 import { fmtDay, fmtShortDate, fmtTime, relativeDay } from "@/lib/format";
-import { locationTag } from "@/lib/geo";
 import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
@@ -100,7 +100,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
     store.listOrders(date),
     store.listGrievances(),
     store.listWifi(50),
-    store.listAway(50),
+    Promise.all([store.listAway(50), store.listPendingAway()]).then(([history, pending]) => [...pending, ...history.filter(r => r.status !== "pending")]),
     store.listEmployees(),
   ]);
 
@@ -125,7 +125,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const people = attendance.map((a) => ({
     email: a.email,
     in: !a.checkOutAt,
-    where: locationTag(a.lat, a.lng),
+    where: attendanceLocation(a),
     inAt: a.checkInAt,
     outAt: a.checkOutAt,
   }));
@@ -143,7 +143,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         </div>
         <form action="/api/admin/logout" method="post">
           <Button type="submit" variant="outline" size="lg">
-            <LogOut /> Sign out
+            <LogOut /> End passcode access
           </Button>
         </form>
       </div>
@@ -239,7 +239,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         <SectionHeader title={`Leave balances · ${year}`} aside={overview ? `${overview.people.length} people` : undefined} />
         <p className="mt-1 text-xs text-muted-foreground">
           Zoho People holds the real balances — copy each person’s “Available” figures in here and the app counts
-          anything requested through it on top. Joining dates drive Earned Leave accrual.
+          unreconciled app approvals as estimated adjustments. Mark which approved requests are already reflected in the copied figures. Joining dates drive Earned Leave accrual.
         </p>
         {overview && <LeaveOverview people={overview.people} />}
       </Card>

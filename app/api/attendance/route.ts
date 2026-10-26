@@ -1,8 +1,11 @@
+import { attendanceLocation } from "@/lib/presence";
+import { cookies } from "next/headers";
+import { pushSession } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { allowedEmailDomains } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
-import { locationTag, officeLocation, onOfficeNetwork } from "@/lib/geo";
+import { officeLocation, onOfficeNetwork } from "@/lib/geo";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON } from "@/lib/http";
 import { holidaysFor, isWorkingDay, nonWorkingReason, workingDaysInMonth } from "@/lib/leave";
@@ -55,7 +58,7 @@ async function monthView(month: string, email: string | null, verified: boolean,
       // Raw coordinates never leave the server — only the office/remote classification.
       present: !!day,
       open: !!day && !day.checkOutAt,
-      location: day ? locationTag(day.lat, day.lng) : null,
+      location: day ? attendanceLocation(day) : null,
       checkInAt: day?.checkInAt ?? null,
       checkOutAt: day?.checkOutAt ?? null,
       holiday: holidays[date] ?? null,
@@ -138,6 +141,8 @@ export async function POST(req: NextRequest) {
 // "Not you?" — forget the remembered email on this device. Also ends a Google sign-in so a
 // shared device can't keep marking attendance as the signed-in person.
 export async function DELETE() {
+  const binding = pushSession((await cookies()).get(USER_COOKIE)?.value);
+  if (binding) await store.revokePushSession(binding.sessionRef).catch(() => console.warn("[push] Session revocation failed; local identity still cleared"));
   const res = NextResponse.json({ ok: true });
   res.cookies.set(EMAIL_COOKIE, "", { expires: new Date(0), path: "/" });
   res.cookies.delete(USER_COOKIE);

@@ -11,6 +11,7 @@ import "./workspace.css";
 import "./reference-integration.css";
 import "./zip-design.css";
 import "./ios.css";
+import "./workspace-polish.css";
 
 // Font families used by the supplied workspace design.
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
@@ -20,6 +21,7 @@ const hand = Caveat({ subsets: ["latin"], variable: "--font-handwriting" });
 
 export const metadata: Metadata = {
   title: "Innovin Internal",
+  icons: { apple: "/icons/icon-192.png" },
   appleWebApp: { capable: true, title: "Innovin", statusBarStyle: "default" },
   description: "Simple tools for everyday needs. Built for our team.",
 };

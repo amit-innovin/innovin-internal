@@ -90,7 +90,7 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
       kind: "grievance",
       title: `Your feedback is ${g.status === "in_progress" ? "in progress" : "resolved"}`,
       body: g.body.slice(0, 80),
-      at: g.createdAt,
+      at: g.updatedAt ?? g.createdAt,
       href: "/grievances",
     });
   }

@@ -1,0 +1,68 @@
+/* Current workspace refinements. Keep the archived reference stylesheet untouched. */
+.paper-note-visibility { display:flex; align-items:flex-start; gap:8px; padding:10px 12px; border-radius:10px; background:#f1f5f9; color:#475569; font-size:12px; line-height:1.6; }
+.paper-note-visibility svg { flex-shrink:0; margin-top:2px; }
+.reference-paper-dialog { max-height:calc(100dvh - 110px); overflow-y:auto; overscroll-behavior:contain; }
+
+@media(min-width:769px) {
+  .zip-workspace .dash-col-team { display:flex; flex-direction:column; gap:14px; min-height:0; overflow-y:auto; scrollbar-width:thin; }
+  .zip-workspace .dash-col-team > .reference-arena { flex:1 0 310px; min-height:310px; margin:0; }
+  .zip-workspace .dash-col-team > .notice-board-widget { flex:0 0 auto; height:auto; min-height:0; max-height:360px; padding:14px; overflow:hidden; }
+  .zip-workspace .dash-col-team .notice-board-canvas { flex:0 1 auto; min-height:0; max-height:250px; overflow-y:auto; overscroll-behavior:contain; border-radius:10px; }
+  .zip-workspace .dash-col-team .notice-cards-grid { min-height:0; max-height:none; overflow:visible; padding:12px; gap:10px; grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr)); }
+  .zip-workspace .dash-col-team .notice-card { min-height:0; padding:14px; transform:none; }
+  .zip-workspace .dash-col-team .quote-text-styled { font-size:15px; line-height:1.5; }
+  .zip-workspace .dash-col-team .board-empty { padding:16px 12px; }
+  .zip-workspace .dash-col-team .board-empty > span { font-size:22px; }
+}
+
+.phone-workspace-polished .phone-cards-stack { gap:14px; perspective:none; }
+.phone-workspace-polished .phone-stack-card { cursor:default; transition:none; }
+.phone-workspace-polished .card-innovin-pass { height:190px; box-shadow:0 8px 24px #0284c71a; }
+.phone-workspace-polished .phone-id-card-flipper { transition:transform .28s ease; }
+.phone-workspace-polished :is(.card-pantry-snacks,.card-people-office,.card-office-events) { height:auto; min-height:100px; margin-top:0; border-radius:22px; padding:18px; box-shadow:0 3px 14px #0f172a08; }
+.phone-workspace-polished .phone-expanded-body { animation:mobile-content-in .16s ease-out; }
+.phone-workspace-polished .phone-card-header-bar { margin:0; }
+.phone-workspace-polished .phone-wallet-links { margin-top:8px; }
+.phone-workspace-polished .phone-bottom-dock { width:min(360px,calc(100vw - 32px)); height:72px; border-radius:24px; background:#faf7fbf5; backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:0 4px 20px #0f172a12; padding:6px; }
+.phone-workspace-polished .phone-bottom-dock .phone-dock-item { width:auto; flex:1; height:56px; min-width:44px; flex-direction:column; gap:4px; border-radius:18px; transition:background-color .14s ease,color .14s ease,transform .14s ease; }
+.phone-workspace-polished .phone-dock-item span { font-size:10px; font-weight:600; line-height:1.2; }
+.phone-workspace-polished .phone-dock-item:hover { transform:none; }
+.phone-workspace-polished .phone-dock-item:active { transform:scale(.96); background:#e9e3ef; }
+.phone-workspace-polished :is(button,a,input,select,textarea):focus-visible { outline:2px solid #2563eb; outline-offset:3px; }
+.phone-workspace-polished :is(button,a) { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.phone-workspace-polished .phone-card-header-actions button { transition:background-color .14s ease,transform .14s ease; }
+.phone-workspace-polished .phone-card-header-actions button:active { transform:scale(.94); }
+.phone-workspace-polished .phone-steps-circle-card { backdrop-filter:none; -webkit-backdrop-filter:none; }
+
+/* Important declarations in the archive are replaced in the existing early layer. */
+@layer theme {
+  .phone-touchpoint-wrapper.phone-workspace-polished .phone-stack-card.is-expanded { height:auto!important; margin-top:0!important; margin-bottom:0!important; box-shadow:0 4px 18px #0f172a0d!important; }
+  .phone-touchpoint-wrapper.phone-workspace-polished .card-innovin-pass.is-expanded { height:min(700px,calc(100svh - 90px))!important; }
+}
+
+@media(max-width:768px) {
+  .zip-workspace .phone-workspace-polished .phone-touchpoint-container { padding-bottom:calc(120px + env(safe-area-inset-bottom,0px)); }
+  .phone-workspace-polished .phone-page-header { margin-bottom:16px; }
+  .phone-workspace-polished .phone-brand-title { font-size:clamp(26px,7vw,32px); }
+  .phone-workspace-polished .phone-account-tools { gap:2px; }
+  .phone-workspace-polished .phone-account-tools > :is(button,a),
+  .phone-workspace-polished .phone-account-tools > div > button { background:transparent; }
+  .studio-modal-overlay { backdrop-filter:none; -webkit-backdrop-filter:none; background:#0f172a70; }
+  .studio-modal { overflow-y:auto; scroll-padding-top:20px; touch-action:pan-y; }
+  .reference-paper-dialog { right:auto; bottom:auto; max-height:calc(var(--workspace-viewport-height,100dvh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px); }
+  .studio-modal :is(input,textarea,select) { scroll-margin-block:20px; }
+  .studio-modal .paper-tags-row button { min-height:44px; }
+  .studio-modal .paper-action-btn { min-height:48px; }
+  html[data-mobile-keyboard-open=true] .phone-bottom-dock { visibility:hidden; pointer-events:none; }
+  html[data-mobile-keyboard-open=true] .phone-touchpoint-container { padding-bottom:24px; }
+  .paper-animation { pointer-events:none; }
+}
+
+@keyframes mobile-content-in { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+@media(prefers-reduced-motion:reduce) {
+  .phone-workspace-polished *, .studio-modal *, .paper-animation { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
+}
+
+.zoho-sync-status { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px 16px; padding:12px; border-radius:12px; background:#f0fdf4; color:#166534; font-size:12px; }
+.zoho-sync-status span { font-size:11px; }
+.zoho-leave-summary > ul > li { overflow-wrap:anywhere; }

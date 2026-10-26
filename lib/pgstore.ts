@@ -145,6 +145,8 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   email text,
   created_at timestamptz NOT NULL
 );
+ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS session_ref text;
+ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS session_expires_at timestamptz;
 CREATE INDEX IF NOT EXISTS push_email_idx ON push_subscriptions (email);
 -- 10K steps challenge: one row per person per day, today is the only writable day.
 CREATE TABLE IF NOT EXISTS steps (
@@ -190,6 +192,15 @@ ALTER TABLE away ADD COLUMN IF NOT EXISTS decided_at timestamptz;
 ALTER TABLE away ADD COLUMN IF NOT EXISTS leave_type text;
 ALTER TABLE away ADD COLUMN IF NOT EXISTS half_day boolean NOT NULL DEFAULT false;
 ALTER TABLE away ADD COLUMN IF NOT EXISTS days real NOT NULL DEFAULT 0;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='attendance' AND column_name='declared_mode') THEN
+    ALTER TABLE attendance ADD COLUMN declared_mode text;
+    UPDATE attendance a SET declared_mode=p.data->>'mode' FROM workspace_profiles p
+      WHERE a.email=p.email AND a.date=p.data->>'presenceDate' AND p.data->>'mode' IN ('office','remote');
+  END IF;
+END $$;
+ALTER TABLE grievances ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+ALTER TABLE leave_balances ADD COLUMN IF NOT EXISTS reconciled_request_ids jsonb;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lat double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lng double precision;
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS accuracy_m real;
@@ -235,6 +246,7 @@ const attendance = (r: any): AttendanceRow => ({
   checkOutAt: r.check_out_at ? r.check_out_at.toISOString?.() ?? r.check_out_at : null,
   lat: r.lat ?? null,
   lng: r.lng ?? null,
+  declaredMode: r.declared_mode ?? null,
   accuracyM: r.accuracy_m ?? null,
 });
 const order = (r: any): OrderRow => ({
@@ -255,6 +267,7 @@ const grievance = (r: any): GrievanceRow => ({
   urgent: r.urgent === true,
   submitterRef: r.submitter_ref,
   status: r.status,
+  updatedAt: r.updated_at?.toISOString?.() ?? r.updated_at ?? r.created_at?.toISOString?.() ?? r.created_at,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const wifi = (r: any): WifiRow => ({
@@ -283,6 +296,8 @@ const employee = (r: any): EmployeeRow => ({
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
 });
 const pushSubscription = (r: any): PushSubscriptionRow => ({
+  sessionRef: r.session_ref ?? null,
+  sessionExpiresAt: r.session_expires_at?.toISOString?.() ?? r.session_expires_at ?? null,
   endpoint: r.endpoint,
   p256dh: r.p256dh,
   auth: r.auth,
@@ -312,6 +327,7 @@ const leaveBalance = (r: any): LeaveBalanceRow => ({
   available: Object.fromEntries(
     (["cl", "sl", "el", "fl"] as const).filter((k) => r[k] !== null && r[k] !== undefined).map((k) => [k, Number(r[k])]),
   ),
+  reconciledRequestIds: r.reconciled_request_ids ?? undefined,
   asOf: r.as_of?.toISOString?.() ?? r.as_of,
   updatedBy: r.updated_by ?? null,
 });
@@ -446,16 +462,19 @@ class PgStore implements Store {
   // so the row's check_in_at is always the most recent arrival.
   async checkIn(row: AttendanceRow) {
     const res = await this.q(
-      `INSERT INTO attendance (id, email, date, check_in_at, lat, lng, accuracy_m)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)
+      `INSERT INTO attendance (id, email, date, check_in_at, lat, lng, accuracy_m, declared_mode)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
        ON CONFLICT (email, date) DO UPDATE
-       SET check_out_at = NULL, check_in_at = EXCLUDED.check_in_at,
-           lat = EXCLUDED.lat, lng = EXCLUDED.lng, accuracy_m = EXCLUDED.accuracy_m
-       WHERE attendance.check_out_at IS NOT NULL
+       SET declared_mode = CASE WHEN attendance.check_out_at IS NOT NULL THEN EXCLUDED.declared_mode ELSE CASE WHEN $9 THEN EXCLUDED.declared_mode ELSE attendance.declared_mode END END,
+           check_in_at = CASE WHEN attendance.check_out_at IS NOT NULL THEN EXCLUDED.check_in_at ELSE attendance.check_in_at END,
+           lat = CASE WHEN attendance.check_out_at IS NOT NULL THEN EXCLUDED.lat ELSE attendance.lat END,
+           lng = CASE WHEN attendance.check_out_at IS NOT NULL THEN EXCLUDED.lng ELSE attendance.lng END,
+           accuracy_m = CASE WHEN attendance.check_out_at IS NOT NULL THEN EXCLUDED.accuracy_m ELSE attendance.accuracy_m END,
+           check_out_at = NULL
        RETURNING *`,
-      [row.id, row.email, row.date, row.checkInAt, row.lat, row.lng, row.accuracyM],
+      [row.id, row.email, row.date, row.checkInAt, row.lat, row.lng, row.accuracyM, row.declaredMode ?? null, row.declaredMode !== undefined],
     );
-    // The WHERE makes a repeat check-in while still open a no-op — return the day's row.
+    // Repeated check-in preserves arrival/evidence while allowing an explicit declaration change.
     return res.rows[0] ? attendance(res.rows[0]) : (await this.getAttendance(row.email, row.date))!;
   }
   async checkOut(email: string, date: string, at: string) {
@@ -526,7 +545,7 @@ class PgStore implements Store {
     return grievance(res.rows[0]);
   }
   async setGrievanceStatus(id: string, status: GrievanceStatus) {
-    const res = await this.q(`UPDATE grievances SET status = $2 WHERE id = $1`, [id, status]);
+    const res = await this.q(`UPDATE grievances SET status = $2, updated_at = NOW() WHERE id = $1`, [id, status]);
     return (res.rowCount ?? 0) > 0;
   }
   async listGrievances() {
@@ -634,9 +653,9 @@ class PgStore implements Store {
   async setLeaveBalance(row: LeaveBalanceRow) {
     const a = row.available;
     const res = await this.q(
-      `INSERT INTO leave_balances (email, year, cl, sl, el, fl, as_of, updated_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       ON CONFLICT (email, year) DO UPDATE SET cl = $3, sl = $4, el = $5, fl = $6, as_of = $7, updated_by = $8 RETURNING *`,
-      [row.email, row.year, a.cl ?? null, a.sl ?? null, a.el ?? null, a.fl ?? null, row.asOf, row.updatedBy],
+      `INSERT INTO leave_balances (email, year, cl, sl, el, fl, as_of, updated_by, reconciled_request_ids) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
+       ON CONFLICT (email, year) DO UPDATE SET cl = $3, sl = $4, el = $5, fl = $6, as_of = $7, updated_by = $8, reconciled_request_ids=$9::jsonb RETURNING *`,
+      [row.email, row.year, a.cl ?? null, a.sl ?? null, a.el ?? null, a.fl ?? null, row.asOf, row.updatedBy, row.reconciledRequestIds === undefined ? null : JSON.stringify(row.reconciledRequestIds)],
     );
     return leaveBalance(res.rows[0]);
   }
@@ -646,9 +665,9 @@ class PgStore implements Store {
   }
   async savePushSubscription(row: PushSubscriptionRow) {
     const res = await this.q(
-      `INSERT INTO push_subscriptions (endpoint, p256dh, auth, email, created_at) VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (endpoint) DO UPDATE SET p256dh = $2, auth = $3, email = $4 RETURNING *`,
-      [row.endpoint, row.p256dh, row.auth, row.email, row.createdAt],
+      `INSERT INTO push_subscriptions (endpoint, p256dh, auth, email, created_at, session_ref, session_expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (endpoint) DO UPDATE SET p256dh = $2, auth = $3, email = $4, session_ref=$6, session_expires_at=$7 RETURNING *`,
+      [row.endpoint, row.p256dh, row.auth, row.email, row.createdAt, row.sessionRef ?? null, row.sessionExpiresAt ?? null],
     );
     return pushSubscription(res.rows[0]);
   }
@@ -656,6 +675,7 @@ class PgStore implements Store {
     const res = await this.q(`DELETE FROM push_subscriptions WHERE endpoint = $1`, [endpoint]);
     return (res.rowCount ?? 0) > 0;
   }
+  async revokePushSession(ref: string) { await this.q(`DELETE FROM push_subscriptions WHERE session_ref=$1`, [ref]); }
   async listPushSubscriptions(email?: string) {
     const res = email
       ? await this.q(`SELECT * FROM push_subscriptions WHERE email = $1`, [email])
@@ -679,12 +699,15 @@ class PgStore implements Store {
     );
     return away(res.rows[0]);
   }
-  async setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string) {
-    const res = await this.q(`UPDATE away SET status = $2, decided_by = $3, decided_at = $4 WHERE id = $1`, [
+  async getAway(id: string) { const res = await this.q(`SELECT * FROM away WHERE id=$1`, [id]); return res.rows[0] ? away(res.rows[0]) : null; }
+  async listPendingAway() { const res = await this.q(`SELECT * FROM away WHERE status='pending' ORDER BY created_at DESC`); return res.rows.map(away); }
+  async setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string, expected: AwayStatus) {
+    const res = await this.q(`UPDATE away SET status = $2, decided_by = $3, decided_at = $4 WHERE id = $1 AND status=$5`, [
       id,
       status,
       decidedBy,
       decidedAt,
+      expected,
     ]);
     return (res.rowCount ?? 0) > 0;
   }
@@ -721,15 +744,17 @@ class PgStore implements Store {
     return res.rows.map(event);
   }
   async setRsvp(eventId: string, ref: string, email: string | null, going: boolean) {
-    if (going) {
-      await this.q(
-        `INSERT INTO event_rsvps (event_id, submitter_ref, email, created_at) VALUES ($1,$2,$3,$4)
-         ON CONFLICT (event_id, submitter_ref) DO UPDATE SET email = EXCLUDED.email`,
-        [eventId, ref, email, new Date().toISOString()],
-      );
-    } else {
-      await this.q(`DELETE FROM event_rsvps WHERE event_id = $1 AND submitter_ref = $2`, [eventId, ref]);
-    }
+    await this.init();
+    const client = await this.db().connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`rsvp:${eventId}:${email ?? ref}`]);
+      if (email) await client.query(`DELETE FROM event_rsvps WHERE event_id=$1 AND email=$2 AND (NOT $3 OR submitter_ref<>$4)`, [eventId,email,going,ref]);
+      if (going) await client.query(`INSERT INTO event_rsvps (event_id, submitter_ref, email, created_at) VALUES ($1,$2,$3,$4) ON CONFLICT (event_id,submitter_ref) DO UPDATE SET email=EXCLUDED.email`, [eventId,ref,email,new Date().toISOString()]);
+      else await client.query(`DELETE FROM event_rsvps WHERE event_id=$1 AND submitter_ref=$2`, [eventId,ref]);
+      await client.query("COMMIT");
+    } catch(error) { await client.query("ROLLBACK"); throw error; }
+    finally { client.release(); }
   }
   async listRsvps(eventId: string) {
     const res = await this.q(`SELECT * FROM event_rsvps WHERE event_id = $1 ORDER BY created_at`, [eventId]);
@@ -743,13 +768,13 @@ class PgStore implements Store {
   async rsvpCounts(eventIds: string[]) {
     if (eventIds.length === 0) return {};
     const res = await this.q(
-      `SELECT event_id, COUNT(*)::int AS n FROM event_rsvps WHERE event_id = ANY($1) GROUP BY event_id`,
+      `SELECT event_id, COUNT(DISTINCT COALESCE(email, submitter_ref))::int AS n FROM event_rsvps WHERE event_id = ANY($1) GROUP BY event_id`,
       [eventIds],
     );
     return Object.fromEntries(res.rows.map((r: any) => [r.event_id, r.n]));
   }
-  async myRsvpEventIds(ref: string) {
-    const res = await this.q(`SELECT event_id FROM event_rsvps WHERE submitter_ref = $1`, [ref]);
+  async myRsvpEventIds(ref: string, email?: string) {
+    const res = await this.q(`SELECT DISTINCT event_id FROM event_rsvps WHERE submitter_ref = $1 OR email=$2`, [ref, email ?? null]);
     return res.rows.map((r: any) => r.event_id);
   }
 }

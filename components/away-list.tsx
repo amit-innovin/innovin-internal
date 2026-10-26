@@ -9,6 +9,7 @@ import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { Button } from "@/components/ui/button";
 import { readError, send } from "@/lib/fetcher";
 import { fmtDateRange, relativeTime } from "@/lib/format";
+import { todayIST } from "@/lib/time";
 import type { AwayStatus, AwayType } from "@/lib/types";
 
 type Item = {

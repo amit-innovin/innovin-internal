@@ -114,7 +114,7 @@ test.describe("Studio workspace", () => {
     await page.getByRole("button", { name: "10k+ days", exact: true }).click();
     await expect(page.locator(".ranking-list .is-me")).toContainText("1");
     await page.getByRole("button", { name: "Write a paper note" }).click();
-    const recipient = await page.getByRole("combobox", { name: "To", exact: true }).locator("option").nth(1).getAttribute("value");
+    const recipient = await page.getByRole("combobox", { name: "To", exact: true }).locator('option[value$="@innovinlabs.com"]').first().getAttribute("value");
     await page.getByRole("combobox", { name: "To", exact: true }).selectOption(recipient!);
     const text = uniqueText("Thanks for the help");
     await page.getByLabel("Your note", { exact: true }).fill(text);

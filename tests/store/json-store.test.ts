@@ -18,6 +18,15 @@ storeContract(
 );
 
 describe("JSON store safety", () => {
+  it("preserves legacy declarations once without resurrecting an explicitly cleared mode", async () => {
+    await fs.mkdir(dir, { recursive: true });
+    const row = { id: "legacy", email: "a@innovinlabs.com", date: "2026-10-26", checkInAt: "2026-10-26T04:00:00Z", checkOutAt: null, lat: null, lng: null, accuracyM: null };
+    await fs.writeFile(file, JSON.stringify({ attendance: [row], workspaceProfiles: [{ email: row.email, mode: "office", presenceDate: row.date }] }));
+    expect(await jsonStore.getAttendance(row.email, row.date)).toMatchObject({ declaredMode: "office" });
+    await jsonStore.checkIn({ ...row, declaredMode: null });
+    expect(await jsonStore.getAttendance(row.email, row.date)).toMatchObject({ declaredMode: null });
+  });
+
   it("refuses to read (and never overwrites) a corrupt data file", async () => {
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(file, "{ this is not json");

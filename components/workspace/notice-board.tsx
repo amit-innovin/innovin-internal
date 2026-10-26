@@ -32,7 +32,7 @@ export function NoticeBoard({ initial, announcements, canModerate = false, compa
     setBusy(null);
   }
   const visible = notes.filter(n => filter === "all" || n.kind === filter);
-  return <section className="widget-card notice-board-widget" aria-label="Office Notice Board">
+  return <section id="announcements" className="widget-card notice-board-widget" aria-label="Office Notice Board">
     <div className="widget-header">
       <div className="widget-title-group"><span className="widget-icon-pill coral"><FileText size={16} /></span><div><h2 className="widget-title">Office Notice Board</h2><span className="widget-sub">Quotes, Inspiration &amp; Team Feedback</span></div></div>
       <div className="notice-header-actions"><div className="notice-filter-tabs" aria-label="Filter board notes">

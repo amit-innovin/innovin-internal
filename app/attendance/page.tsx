@@ -1,7 +1,7 @@
 "use client";
+import { LoadRecovery } from "@/components/load-recovery";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { CalendarCheck, Clock, LogIn, LogOut, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import AttendanceCalendar from "@/components/attendance-calendar";
@@ -38,7 +38,6 @@ const position = () =>
   });
 
 export default function Attendance() {
-  const router = useRouter();
   const [status, setStatus] = useState<Status | null>(null);
   const [user, setUser] = useState<Auth | null>(null);
   const [tab, setTab] = useState<"today" | "calendar" | "leave">("today");
@@ -81,7 +80,7 @@ export default function Attendance() {
   async function forget() {
     const res = await send("/api/attendance", { method: "DELETE" });
     if (!res.ok) return toast.error(await readError(res));
-    router.refresh();
+    window.location.assign("/");
   }
 
   const me = status?.me;
@@ -90,14 +89,14 @@ export default function Attendance() {
     <div className="mx-auto max-w-xl">
       <PageHeader title="Attendance" subtitle="Check in, see your month, plan time off." />
 
-      {!status ? (
+      {!status ? (<LoadRecovery>
         <Card className="items-center gap-3 p-8">
           <Skeleton className="size-20 rounded-full" />
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-56" />
           <Skeleton className="mt-4 h-11 w-full rounded-lg" />
         </Card>
-      ) : me ? (
+      </LoadRecovery>) : me ? (
         <Card className="t-stagger items-center gap-0 p-8 text-center">
           <span className="flex size-20 items-center justify-center rounded-full bg-emerald-50" style={stagger(0)}>
             <span className="flex size-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lift">

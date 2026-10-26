@@ -1,4 +1,5 @@
 "use client";
+import { LoadRecovery } from "@/components/load-recovery";
 
 import { useEffect, useState } from "react";
 import { CalendarOff, Info, Mail, Palmtree, Send } from "lucide-react";
@@ -17,6 +18,8 @@ import { useButtonState } from "@/lib/hooks/use-button-state";
 import { fmtLeaveDays, LEAVE_LABELS, type LeaveType } from "@/lib/leave";
 import type { AwayStatus, AwayType } from "@/lib/types";
 import { todayIST } from "@/lib/time";
+import { ZohoLeave } from "@/components/zoho-leave";
+import type { ZohoLeaveResult } from "@/lib/zoho-people";
 
 type AwayRequest = {
   id: string;
@@ -36,6 +39,7 @@ type LeaveSummary = {
   joinedOn?: string | null;
   source?: "zoho-snapshot" | "app-only";
   asOf?: string | null;
+  zoho?: ZohoLeaveResult;
   ledger?: Ledger[];
   earned?: { accrued: number | null; canAvail: boolean; note: string | null };
 };
@@ -142,7 +146,7 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
   const cancelRequest = async (id: string) => {
     const r = requests?.find((x) => x.id === id);
     const what = r ? AWAY_TYPE_LABEL[r.type] : "request";
-    if (!window.confirm(`Cancel this ${what.toLowerCase()} request? The days are freed back to your balance immediately.`)) return;
+    if (!window.confirm(`Cancel this ${what.toLowerCase()} request? Local estimates will update. Any leave already recorded in Zoho must also be cancelled there.`)) return;
     setCancelling(id);
     const res = await send("/api/away", { method: "PATCH", json: { id, status: "cancelled" } });
     if (res.ok) {
@@ -161,9 +165,9 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
           title={`Balance · ${summary?.year ?? "…"}`}
           aside={summary?.joinedOn ? `Joined ${fmtShortDate(`${summary.joinedOn}T00:00:00`)}` : undefined}
         />
-        {!summary ? (
+        {!summary ? (<LoadRecovery>
           <Skeleton className="mt-3 h-24 w-full" />
-        ) : !summary.signedIn ? (
+        </LoadRecovery>) : !summary.signedIn ? (
           <p className="mt-2 text-sm text-muted-foreground">
             {/* A plain anchor: a Next Link would prefetch the OAuth route and trip CSP. */}
             <a href="/api/auth/google?next=/attendance" className="underline underline-offset-4">
@@ -172,8 +176,11 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
             to see your leave balances — they&apos;re tied to your identity, not this device. You can still request time away
             below.
           </p>
+        ) : summary.zoho?.data ? (
+          <ZohoLeave result={summary.zoho} today={todayIST()} />
         ) : (
           <>
+            {summary.zoho && <ZohoLeave result={summary.zoho} today={todayIST()} />}
             <ul className="mt-1 divide-y">
               {summary.ledger?.map((row, i) => (
                 <div key={row.type} style={stagger(i)}>
@@ -182,11 +189,11 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
               ))}
             </ul>
             {/* Say where the numbers came from: Zoho People is the record, this is a snapshot
-                plus anything requested here since. Never let it look more authoritative. */}
+                with estimated local adjustments. Never let it look more authoritative. */}
             <p className="mt-4 flex items-start gap-2 border-t pt-4 text-xs text-muted-foreground">
               <Info className="mt-0.5 size-3.5 shrink-0" />
               {summary.source === "zoho-snapshot" && summary.asOf
-                ? `From Zoho People as of ${fmtShortDate(summary.asOf)}, plus anything you've requested here since. Zoho is the official record.`
+                ? `From Zoho People as of ${fmtShortDate(summary.asOf)}, with estimated local adjustments. Only requests explicitly reconciled by an admin are treated as included. Zoho is the official record.`
                 : "Showing your policy entitlement — an admin hasn't copied your Zoho balances in yet, so check Zoho People for the official numbers."}
             </p>
             {summary.earned?.note && (
@@ -199,13 +206,13 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
         )}
       </Card>
 
-      {!auth ? (
+      {!auth ? (<LoadRecovery>
         <Card className="mt-4 gap-3 p-6">
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-10 w-full rounded-lg" />
           <Skeleton className="h-24 w-full rounded-lg" />
         </Card>
-      ) : (
+      </LoadRecovery>) : (
         <Card className="mt-4 gap-0 p-6">
           <form onSubmit={submit}>
             <div className="flex items-center gap-3">
@@ -344,12 +351,12 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
 
       <Card className="mt-4 gap-0 p-5">
         <h2 className="eyebrow">Your requests</h2>
-        {!requests ? (
+        {!requests ? (<LoadRecovery>
           <div className="mt-3 space-y-3">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
-        ) : requests.length === 0 ? (
+        </LoadRecovery>) : requests.length === 0 ? (
           <Empty>No requests yet — approved time away shows up here.</Empty>
         ) : (
           <ul className="mt-1 divide-y">
@@ -364,7 +371,7 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
                   {r.reason && <p className="mt-0.5 truncate text-xs text-muted-foreground">{r.reason}</p>}
                 </div>
                 {/* Plans change: pending or approved requests can be pulled back until the day
-                    itself. Cancelling frees the days against the balance immediately. */}
+                    itself. Zoho reconciliation remains separate from cancellation here. */}
                 {(r.status === "pending" || r.status === "approved") && r.endDate >= todayIST() ? (
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
                     <AnimatedBadge status={AWAY_META[r.status].badge} size="sm" contentKey={r.status}>

@@ -26,7 +26,7 @@ test.describe("Pings", () => {
     const sheet = a.page.getByRole("dialog", { name: `Ping ${receiver}` });
     await expect(sheet.getByText("Pings vanish after 24 hours")).toBeVisible();
     await sheet.getByRole("button", { name: "☕ Chai?" }).click();
-    await expect(sheet.getByText("☕ Chai?")).toBeVisible();
+    await expect(sheet.getByRole("paragraph").filter({ hasText: "☕ Chai?" })).toBeVisible();
 
     // B sees the thread in the Pings inbox with an unread badge, opens it, replies.
     await b.page.goto("/people");
@@ -35,7 +35,7 @@ test.describe("Pings", () => {
     await expect(thread).toContainText("☕ Chai?");
     await thread.getByRole("button").click();
     const bSheet = b.page.getByRole("dialog", { name: `Ping ${sender}` });
-    await expect(bSheet.getByText("☕ Chai?")).toBeVisible();
+    await expect(bSheet.getByRole("paragraph").filter({ hasText: "☕ Chai?" })).toBeVisible();
     await bSheet.getByLabel("Ping message").fill("5 mins, coming");
     await bSheet.getByRole("button", { name: "Send ping" }).click();
     await expect(bSheet.getByText("5 mins, coming")).toBeVisible();

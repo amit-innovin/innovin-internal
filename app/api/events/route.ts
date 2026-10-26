@@ -6,7 +6,7 @@ import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { sendPush } from "@/lib/push";
 import { id, store } from "@/lib/store";
-import { setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
+import { pantryRef, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 import type { EventCategory } from "@/lib/types";
 
 const CATEGORIES: EventCategory[] = ["sports", "arts", "culture", "learning", "social", "company"];
@@ -24,8 +24,9 @@ const flash = (done: string) =>
 export async function GET(req: NextRequest) {
   const from = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(); // include today's in-progress events
   const rows = await store.listEvents(from, 30);
-  const ref = submitterIdentity(req).ref;
-  const [counts, mine] = await Promise.all([store.rsvpCounts(rows.map((r) => r.id)), store.myRsvpEventIds(ref)]);
+  const user = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+  const ref = user ? pantryRef(`rsvp:${user.email}`) : submitterIdentity(req).ref;
+  const [counts, mine] = await Promise.all([store.rsvpCounts(rows.map((r) => r.id)), store.myRsvpEventIds(ref, user?.email)]);
   const myIds = new Set(mine);
   return NextResponse.json(
     rows.map(({ createdBy: _c, ...e }) => ({ ...e, going: counts[e.id] ?? 0, mine: myIds.has(e.id) })),
@@ -86,7 +87,7 @@ export async function POST(req: Request) {
   return flash("event-posted");
 }
 
-// RSVP toggle — one row per device per event; signed-in employees attach their verified email.
+// RSVP toggle — verified employees follow their account; guests follow a browser capability.
 export async function PATCH(req: NextRequest) {
   const identity = submitterIdentity(req);
   const limited = enforce([
@@ -103,7 +104,7 @@ export async function PATCH(req: NextRequest) {
   if (!(await store.getEvent(eventId))) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
-  await store.setRsvp(eventId, identity.ref, going ? (session?.email ?? null) : null, going);
+  await store.setRsvp(eventId, session ? pantryRef(`rsvp:${session.email}`) : identity.ref, session?.email ?? null, going);
   const counts = await store.rsvpCounts([eventId]);
   const res = NextResponse.json({ going, count: counts[eventId] ?? 0 });
   setSubmitterCookie(res, identity.deviceId);

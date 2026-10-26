@@ -31,15 +31,18 @@ export async function sendPush(message: PushMessage, to?: string) {
   if (!configure()) return { sent: 0, removed: 0 };
 
   const subs = await store.listPushSubscriptions(to);
-  const payload = JSON.stringify(message);
+  // Private content is fetched only after opening the authenticated app. Queued pushes
+  // can arrive after logout, so never put a private name, message or HR decision in them.
+  const payload = JSON.stringify(to ? { title: "Innovin Internal", body: "Open the app to check your updates.", href: "/", tag: "private-update" } : message);
   let sent = 0;
   let removed = 0;
 
   await Promise.all(
     subs.map(async (s) => {
       if (!validPushEndpoint(s.endpoint)) return;
+      if (to && (!s.sessionRef || !s.sessionExpiresAt || !Number.isFinite(Date.parse(s.sessionExpiresAt)) || Date.parse(s.sessionExpiresAt) <= Date.now())) return;
       try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { timeout: 5000, TTL: to ? 60 : 3600 });
         sent += 1;
       } catch (err) {
         // 404/410 mean the browser dropped the subscription — prune it so the list doesn't rot.

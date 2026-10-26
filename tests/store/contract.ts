@@ -384,6 +384,16 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(mine.find((g) => g.body === "with photo")?.image).toBe("data:image/jpeg;base64,abc");
       });
 
+      it("keeps a signed-in employee's RSVP unique across devices and recognizes legacy references", async () => {
+        const e = await store.addEvent(event());
+        await store.setRsvp(e.id, "device-a", "a@innovinlabs.com", true);
+        expect(await store.myRsvpEventIds("account-a", "a@innovinlabs.com")).toContain(e.id);
+        await store.setRsvp(e.id, "account-a", "a@innovinlabs.com", true);
+        expect((await store.rsvpCounts([e.id]))[e.id]).toBe(1);
+        await store.setRsvp(e.id, "another-device", "a@innovinlabs.com", false);
+        expect((await store.rsvpCounts([e.id]))[e.id] ?? 0).toBe(0);
+      });
+
       it("updates status and reports unknown ids", async () => {
         const g = await store.addGrievance(grievance());
         expect(await store.setGrievanceStatus(g.id, "resolved")).toBe(true);
@@ -530,7 +540,38 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       });
     });
 
+    it("keeps explicit presence consistent across repeat check-ins and reopening", async () => {
+      const row = attendance({ declaredMode: "office" });
+      await store.checkIn(row);
+      const switched = await store.checkIn({ ...row, declaredMode: "remote", checkInAt: iso(5000) });
+      expect(switched).toMatchObject({ declaredMode: "remote", checkInAt: row.checkInAt });
+      expect(await store.checkIn({ ...row, declaredMode: null })).toMatchObject({ declaredMode: null });
+      await store.checkOut(row.email, row.date, iso(6000));
+      await store.checkIn({ ...row, declaredMode: null, checkInAt: iso(7000) });
+      expect(await store.getAttendance(row.email, row.date)).toMatchObject({ declaredMode: null, checkOutAt: null });
+    });
+
+    it("revokes only the signing-out session's push subscriptions", async () => {
+      const sub = { endpoint: "https://fcm.googleapis.com/fcm/send/a", p256dh: "key", auth: "auth", email: "a@innovinlabs.com", createdAt: iso(), sessionRef: "session-a", sessionExpiresAt: iso(99999) };
+      await store.savePushSubscription(sub);
+      await store.savePushSubscription({ ...sub, endpoint: sub.endpoint + "b", sessionRef: "session-b" });
+      await store.revokePushSession("session-a");
+      expect((await store.listPushSubscriptions()).map(s => s.sessionRef)).toEqual(["session-b"]);
+    });
+
     describe("time away", () => {
+      it("commits only one competing leave decision and keeps older pending work actionable", async () => {
+        const row = await store.addAway(away());
+        await store.addAway(away({ status: "rejected", createdAt: iso(1000) }));
+        expect((await store.listPendingAway()).map(r => r.id)).toEqual([row.id]);
+        const results = await Promise.all([
+          store.setAwayStatus(row.id, "approved", "Admin", iso(5000), "pending"),
+          store.setAwayStatus(row.id, "cancelled", null, iso(5000), "pending"),
+        ]);
+        expect(results.filter(Boolean)).toHaveLength(1);
+        expect((await store.getAway(row.id))?.status).toBe(results[0] ? "approved" : "cancelled");
+      });
+
       it("adds and lists newest first across leave and wfh", async () => {
         await store.addAway(away({ type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07", createdAt: iso(0) }));
         await store.addAway(away({ type: "leave", reason: "family trip", createdAt: iso(1000) }));
@@ -539,23 +580,33 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(rows[0]).toMatchObject({ status: "pending", reason: "family trip", startDate: "2026-10-01", endDate: "2026-10-02" });
       });
 
+      it("keeps a signed-in employee's RSVP unique across devices and recognizes legacy references", async () => {
+        const e = await store.addEvent(event());
+        await store.setRsvp(e.id, "device-a", "a@innovinlabs.com", true);
+        expect(await store.myRsvpEventIds("account-a", "a@innovinlabs.com")).toContain(e.id);
+        await store.setRsvp(e.id, "account-a", "a@innovinlabs.com", true);
+        expect((await store.rsvpCounts([e.id]))[e.id]).toBe(1);
+        await store.setRsvp(e.id, "another-device", "a@innovinlabs.com", false);
+        expect((await store.rsvpCounts([e.id]))[e.id] ?? 0).toBe(0);
+      });
+
       it("updates status and reports unknown ids", async () => {
         const row = await store.addAway(away());
-        expect(await store.setAwayStatus(row.id, "approved", "Asha", iso(5000))).toBe(true);
+        expect(await store.setAwayStatus(row.id, "approved", "Asha", iso(5000), "pending")).toBe(true);
         expect((await store.listAway(10))[0].status).toBe("approved");
-        expect(await store.setAwayStatus("missing", "rejected", null, iso())).toBe(false);
+        expect(await store.setAwayStatus("missing", "rejected", null, iso(), "pending")).toBe(false);
       });
 
       it("records who decided a request, and leaves it unattributed for passcode admins", async () => {
         const named = await store.addAway(away({ reason: "named" }));
-        await store.setAwayStatus(named.id, "approved", "Asha", iso(5000));
+        await store.setAwayStatus(named.id, "approved", "Asha", iso(5000), "pending");
         expect(await store.listAway(10)).toContainEqual(
           expect.objectContaining({ id: named.id, status: "approved", decidedBy: "Asha", decidedAt: iso(5000) }),
         );
 
         // Break-glass PIN sessions carry no identity, so the decision stays unattributed.
         const anon = await store.addAway(away({ reason: "anon", submitterRef: "ref-9" }));
-        await store.setAwayStatus(anon.id, "rejected", null, iso(6000));
+        await store.setAwayStatus(anon.id, "rejected", null, iso(6000), "pending");
         expect(await store.listAway(10)).toContainEqual(
           expect.objectContaining({ id: anon.id, status: "rejected", decidedBy: null }),
         );

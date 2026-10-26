@@ -11,7 +11,7 @@ Simple tools for everyday needs. Built for our team. See [PRODUCT.md](PRODUCT.md
 - **Wi-Fi Quality** — speed test + Good/Poor reports with notes and a recent feed
 - **Time Away** (`/away`) — leave and work-from-home requests: pick dates, submit, track approval status under your verified employee account; admins approve/reject on the dashboard. Submissions require a verified Google identity.
 - **Attendance calendar** — a month grid inside Attendance with one dot per day (present / leave / WFH / holiday / weekly off); tap a day for its check-in/out times and location tag. Upcoming holidays sit below it.
-- **Leave** (Attendance → Leave tab) — balances per leave type (Casual, Sick, Earned, Flexible) under Employee Leave Policy 3.0, plus the declared-holiday calendar. Leave is charged in **working days**: Sundays, the 2nd and 4th Saturday, and declared holidays are free. Half-day Casual Leave is supported; Earned Leave accrues 1.25 days per completed month and can't be availed in the first year. Balances are per verified identity, so signing in is required — the Attendance page requires Google sign-in. **Zoho People is the system of record**: an admin copies each person's "Available" figures into the dashboard's People tab, and the app counts anything requested here after that snapshot on top, labelling every balance with the date it was taken. Where no snapshot exists the policy entitlement is shown, clearly marked. `/leave` and `/away` redirect here.
+- **Leave** (Attendance → Leave tab) — balances per leave type (Casual, Sick, Earned, Flexible) under Employee Leave Policy 3.0, plus the declared-holiday calendar. Leave is charged in **working days**: Sundays, the 2nd and 4th Saturday, and declared holidays are free. Half-day Casual Leave is supported; Earned Leave accrues 1.25 days per completed month and can't be availed in the first year. Balances are per verified identity, so signing in is required — the Attendance page requires Google sign-in. **Zoho People is the system of record**: an admin copies each person's "Available" figures into the dashboard's People tab, and the admin explicitly selects which app approvals the copied figures include; unreconciled local approvals are estimated deductions. Every snapshot shows its date. Where no snapshot exists the policy entitlement is shown, clearly marked. `/leave` and `/away` redirect here.
 - **Events** (`/events`) — upcoming internal events (matches, workshops, celebrations, town halls) published by admins; one-tap RSVP per device showing only a going count — never a guest list.
 - **People** (`/people`) — the office directory: everyone who's signed in (Google name/photo/email), plus "In today" — who's checked in right now with an In office / Remote tag.
 - **Notifications** — a bell in the nav with an unread count, listing new announcements, upcoming events, decisions on your own leave, and your grievance status. Derived from existing rows (there is no notifications table); "last seen" is a cookie, so it works unsigned. Optional **Web Push** per device on top (`VAPID_*` keys) — announcements, events and leave decisions only. Grievance status updates are never pushed: push is server-initiated, so it would need the grievance→device link that anonymity forbids.
@@ -41,7 +41,7 @@ Without `DATABASE_URL`, data is stored in `data/store.json` (git-ignored).
 | `ADMIN_PASSCODE` | Break-glass access to `/admin`. 4–8 digits → PIN pad, otherwise password field. Unset → passcode entry locked (role-based sign-in still works). **Use a long, unique value in production.** |
 | `OWNER_EMAILS` | Comma-separated emails granted the `owner` role on Google sign-in. Owners grant/revoke admin in-app; an owner's own role can only be changed here. |
 | `DATABASE_URL` | Postgres (Supabase/Neon/any). Required when deployed — the app refuses the file store on Vercel. |
-| `DATABASE_CA_CERT` / `DATABASE_SSL_VERIFY` | TLS verification for remote Postgres (default: encrypted, unverified — see `lib/pgconfig.ts`). |
+| `DATABASE_CA_CERT` | Trusted provider CA (PEM) for remote Postgres when system CAs do not suffice. Remote certificate verification is always required. |
 | `DATABASE_POOL_MAX` | Connections per serverless instance (default 5). |
 | `ALLOWED_EMAIL_DOMAINS` | Comma-separated domains allowed to mark attendance (default `innovinlabs.com`). |
 | `ORDER_CUTOFF_HOUR` | IST hour (0–24) when orders close (default 24 = open all day). |
@@ -81,3 +81,27 @@ What's covered: every employee and admin flow in the browser (with console-error
 1. Create a Postgres database (Supabase: use the pooled connection string).
 2. In the Vercel project set `DATABASE_URL`, a strong `ADMIN_PASSCODE`, `OFFICE_LAT`/`OFFICE_LNG`/`OFFICE_RADIUS_M` for attendance tagging, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` for sign-in, and optionally `ALLOWED_EMAIL_DOMAINS` / `ORDER_CUTOFF_HOUR` / `SESSION_SECRET`.
 3. `vercel link --token "$VERCEL_TOKEN"` then `vercel deploy --token "$VERCEL_TOKEN"`.
+
+## Optional Zoho People read-only connection
+
+The employee leave screen and balance chips can read balances and approved day-based
+leave from Zoho People using a server-side OAuth connection. Until credentials and
+explicit employee/leave-type mappings are configured, the app continues to show
+clearly labeled manual snapshots or policy figures. Live figures do not have local
+approvals deducted again. The UI shows last-read time and stale/unavailable states.
+
+See [connection setup and verified API contracts](docs/research/2026-10-26-zoho-people-integration.md)
+and the ZOHO_* variables in .env.example. This path is implemented locally; live OAuth,
+provider payloads, permissions and browser behavior have not yet been verified.
+Request submission and approval through Zoho are not implemented.
+
+Paper notes can target one teammate (private, expires after 24 hours) or the whole
+team (a named post on the shared board, retained until an admin removes it).
+
+## Release repair notes (October 26)
+
+Presence uses the attendance row for Overview, directory, calendar and pantry eligibility; declared office/remote is stored separately from location evidence. Leave decisions use an atomic expected-status transition. Manual Zoho snapshots include explicit reconciliation checkboxes: timestamps no longer imply that local requests reached Zoho. Partial snapshots retain policy history for omitted types. Values adjusted for unreconciled local requests are estimates; Zoho remains authoritative.
+
+Private push registrations are tied to an expiring sign-in session and revoked before logout/account switching. Targeted push payloads contain only a generic prompt to open the app; private content is fetched after authentication. Old registrations must be refreshed by opening the app. Auto check-in is not part of v0. Signed-in RSVPs follow employee identity; guest RSVPs remain browser-scoped.
+
+Remote Postgres now always verifies TLS certificates. Install the trusted CA in Vercel before deploying this revision if the provider certificate is not trusted by system CAs. Browser, physical-device, provider and full release verification remain pending.

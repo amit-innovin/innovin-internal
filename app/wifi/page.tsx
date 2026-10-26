@@ -1,4 +1,5 @@
 "use client";
+import { LoadRecovery } from "@/components/load-recovery";
 
 import { useEffect, useState } from "react";
 import { Gauge, ThumbsDown, ThumbsUp } from "lucide-react";
@@ -73,7 +74,7 @@ async function measureDownload(): Promise<Measurement | { error: string }> {
   for (const url of fast?.targets ?? []) {
     try {
       const startedAt = performance.now();
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(12000) });
       if (!res.ok) throw new Error(String(res.status));
       return { mbps: await timeBody(res, startedAt), via: fast?.city ? `fast.com · ${fast.city}` : "fast.com" };
     } catch {
@@ -82,7 +83,7 @@ async function measureDownload(): Promise<Measurement | { error: string }> {
   }
 
   const startedAt = performance.now();
-  const res = await send(`/api/wifi/speedtest?t=${Date.now()}`, { cache: "no-store" });
+  const res = await send(`/api/wifi/speedtest?t=${Date.now()}`, { cache: "no-store", signal: AbortSignal.timeout(12000) });
   if (!res.ok) return { error: await readError(res) };
   try {
     return { mbps: await timeBody(res, startedAt), via: null };
@@ -148,13 +149,13 @@ export default function Wifi() {
         subtitle="Fast or crawling? Check it, report it — we watch this."
       />
 
-      {!reports ? (
+      {!reports ? (<LoadRecovery>
         <Card className="items-center gap-3 p-6">
           <Skeleton className="size-28 rounded-full" />
           <Skeleton className="h-5 w-24" />
           <Skeleton className="h-11 w-full rounded-lg" />
         </Card>
-      ) : (
+      </LoadRecovery>) : (
         <div className="t-stagger">
           <Card className="gap-0 p-6 text-center" style={stagger(0)}>
             <WifiArt quality={latest?.quality ?? null} />

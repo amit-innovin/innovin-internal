@@ -1,4 +1,5 @@
 "use client";
+import { LoadRecovery } from "@/components/load-recovery";
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -31,8 +32,9 @@ export default function Notifications() {
   const panel = useRef<HTMLDivElement>(null);
 
   const load = async () => {
-    const data = await getJSON<Feed>("/api/notifications", "your notifications");
+    const data = await getJSON<Feed>("/api/notifications", "your notifications", { fresh: true });
     if (data) setFeed(data);
+    return data;
   };
 
   useEffect(() => {
@@ -42,8 +44,18 @@ export default function Notifications() {
     navigator.serviceWorker
       .register("/sw.js")
       .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => setPushState(sub ? "on" : "off"))
+      .then(async (sub) => {
+        if (!sub) return setPushState("off");
+        const res = await send("/api/push", { method: "POST", json: sub.toJSON() });
+        setPushState(res.ok ? "on" : "off");
+      })
       .catch(() => setPushState("unsupported"));
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") void load(); };
+    window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh);
+    return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
   }, []);
 
   // Close on outside click, so the panel behaves like a menu.
@@ -60,9 +72,13 @@ export default function Notifications() {
     const next = !open;
     setOpen(next);
     // Opening marks what's visible as read.
-    if (next && feed?.unread) {
-      await send("/api/notifications", { method: "POST" });
-      setFeed({ ...feed, unread: 0 });
+    if (next) {
+      const current = await load();
+      if (current?.unread) {
+        const res = await send("/api/notifications", { method: "POST" });
+        if (res.ok) setFeed({ ...current, unread: 0 });
+        else toast.error("Couldn't mark updates as read. Try again.");
+      }
     }
   }
 
@@ -91,7 +107,8 @@ export default function Notifications() {
     const reg = await navigator.serviceWorker.getRegistration();
     const sub = await reg?.pushManager.getSubscription();
     if (sub) {
-      await send("/api/push", { method: "DELETE", json: { endpoint: sub.endpoint } });
+      const res = await send("/api/push", { method: "DELETE", json: { endpoint: sub.endpoint } });
+      if (!res.ok) return toast.error("Couldn't turn off notifications. Try again.");
       await sub.unsubscribe();
     }
     setPushState("off");
@@ -139,9 +156,9 @@ export default function Notifications() {
             {pushState === "denied" && <span className="text-xs text-muted-foreground">Blocked in browser</span>}
           </div>
 
-          {!feed ? (
+          {!feed ? (<LoadRecovery>
             <p className="px-4 py-6 text-center text-sm text-muted-foreground">Loading…</p>
-          ) : feed.items.length === 0 ? (
+          </LoadRecovery>) : feed.items.length === 0 ? (
             <Empty>Nothing new in the last month.</Empty>
           ) : (
             <ul className="max-h-96 divide-y overflow-y-auto">

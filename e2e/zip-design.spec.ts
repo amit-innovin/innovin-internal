@@ -54,13 +54,9 @@ test.describe("Supplied workspace design", () => {
     await page.screenshot({ path: `output/playwright/zip-overview-${test.info().project.name}.png`, fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (!isMobile) {
-      await page.getByRole("button", { name: "Phone View", exact: true }).click();
-      const preview = page.getByRole("dialog", { name: "Phone View", exact: true });
-      await expect(preview.locator(".phone-id-name")).toBeVisible();
-      await preview.getByRole("button", { name: "Expand Events", exact: true }).click();
-      await expect(preview.getByRole("button", { name: "Add event", exact: true })).toBeVisible();
-      await preview.getByRole("button", { name: "Close dialog", exact: true }).click();
-      await expect(preview).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Phone View", exact: true })).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: "People in Office", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Add event", exact: true })).toBeVisible();
     }
   });
 

@@ -7,10 +7,11 @@ import { id, store } from "@/lib/store";
 import { stepsBoard } from "@/lib/today";
 import { todayIST } from "@/lib/time";
 
-// The 10K challenge. The board is public inside the app (names are already visible in the
-// directory); logging needs a verified Google identity so the count can't be stuffed.
+// The 10K challenge contains employee identities and activity, so reads and writes
+// both require the same verified identity as the directory.
 export async function GET(req: NextRequest) {
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+  if (!session) return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
   return NextResponse.json(await stepsBoard(session));
 }
 

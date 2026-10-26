@@ -1,8 +1,8 @@
-import { checkIn, expect, test, uniqueEmail } from "./fixtures";
+import { checkIn, expect, test, uniqueEmail, signInEmployee } from "./fixtures";
 
 test.describe("People", () => {
   test("the directory page loads with In today and Everyone sections", async ({ page }) => {
-    await page.goto("/people");
+    await signInEmployee(page, undefined, "/people");
     await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
     await expect(page.getByText(/In today/)).toBeVisible();
     await expect(page.getByRole("heading", { name: /Everyone/ })).toBeVisible();
@@ -18,7 +18,7 @@ test.describe("People", () => {
   });
 
   test("no horizontal overflow on the directory", async ({ page }) => {
-    await page.goto("/people");
+    await signInEmployee(page, undefined, "/people");
     await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);

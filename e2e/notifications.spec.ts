@@ -1,4 +1,4 @@
-import { adminLogin, expect, test, uniqueEmail, uniqueText } from "./fixtures";
+import { adminLogin, expect, test, uniqueEmail, uniqueText, signInEmployee } from "./fixtures";
 
 test.describe("Notifications", () => {
   test("an announcement appears in the feed and clears the unread badge once opened", async ({ page, browser }) => {
@@ -12,7 +12,7 @@ test.describe("Notifications", () => {
     await expect(a.getByText("Announcement posted")).toBeVisible();
     await admin.close();
 
-    await page.goto("/");
+    await signInEmployee(page, undefined, "/");
     const bell = page.getByRole("button", { name: /Notifications/ }).filter({ visible: true });
     // Unread count shows in the accessible name, so it's announced not just coloured.
     await expect(bell).toHaveAccessibleName(/\d+ unread/);
@@ -25,7 +25,7 @@ test.describe("Notifications", () => {
     await expect(page.getByRole("button", { name: "Notifications" }).filter({ visible: true })).toBeVisible();
   });
 
-  test("a published event reaches the feed and home", async ({ page, browser }) => {
+  test("a published event reaches the feed and home", async ({ page, browser, isMobile }) => {
     const title = uniqueText("Town hall");
     const admin = await browser.newContext();
     const a = await admin.newPage();
@@ -40,9 +40,10 @@ test.describe("Notifications", () => {
     await a.getByRole("button", { name: "Publish event" }).click();
     await expect(a.getByText("Event published")).toBeVisible();
 
-    await page.goto("/");
+    await signInEmployee(page, undefined, "/");
+    if (isMobile) await page.getByRole("button", { name: "Expand Events", exact: true }).click();
     // Events used to be invisible on home; they now have their own card.
-    await expect(page.locator("[data-slot=card]").filter({ hasText: "What's on" })).toContainText(title);
+    await expect(page.locator(".events-card")).toContainText(title);
     await page.getByRole("button", { name: /Notifications/ }).filter({ visible: true }).click();
     await expect(page.getByRole("region", { name: "Notifications" }).filter({ visible: true }).filter({ visible: true })).toContainText(title);
 
@@ -116,6 +117,9 @@ test.describe("Notifications", () => {
     if (config.enabled) {
       const bad = await page.request.post("/api/push", { data: { endpoint: "javascript:alert(1)", keys: { p256dh: "x", auth: "y" } } });
       expect(bad.status()).toBe(400);
+      for (const endpoint of ["https://127.0.0.1/private", "https://internal.example/private", "https://fcm.googleapis.com.evil.example/token"]) {
+        expect((await page.request.post("/api/push", { data: { endpoint, keys: { p256dh: "x", auth: "y" } } })).status()).toBe(400);
+      }
       const missing = await page.request.post("/api/push", { data: { endpoint: "https://push.example.com/x" } });
       expect(missing.status()).toBe(400);
     }

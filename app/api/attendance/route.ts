@@ -4,7 +4,7 @@ import { allowedEmailDomains } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { locationTag, officeLocation, onOfficeNetwork } from "@/lib/geo";
 import { enforce } from "@/lib/guard";
-import { badRequest, clientIp, readJSON, str } from "@/lib/http";
+import { badRequest, clientIp, readJSON } from "@/lib/http";
 import { holidaysFor, isWorkingDay, nonWorkingReason, workingDaysInMonth } from "@/lib/leave";
 import { id, store } from "@/lib/store";
 import { attendanceStatus } from "@/lib/today";
@@ -16,14 +16,14 @@ const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : n
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-// Public: today's headcount + the caller's own status (identified by their remembered email).
+// Employee-only: today's headcount and the verified caller's own status.
 export async function GET(req: NextRequest) {
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
-  const email = session?.email ?? req.cookies.get(EMAIL_COOKIE)?.value ?? null;
+  if (!session) return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
+  const email = session.email;
   const date = todayIST();
 
-  // Calendar: one month of the caller's own days. Works without a Google sign-in, since
-  // attendance is keyed by the remembered email — leave days need a verified identity though.
+  // Calendar: one month of the verified caller's own days.
   const month = req.nextUrl.searchParams.get("month");
   if (month !== null) {
     if (!MONTH.test(month)) return badRequest("Invalid month");
@@ -81,15 +81,15 @@ async function monthView(month: string, email: string | null, verified: boolean,
 }
 
 export async function POST(req: NextRequest) {
+  const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+  if (!session) return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
   const limited = enforce([["writeIp", clientIp(req)]]);
   if (limited) return limited;
 
   const body = await readJSON(req);
   if (!body) return badRequest();
-  // A verified Google sign-in wins over whatever email the client sent — attendance can't be
-  // marked for someone else on a signed-in device.
-  const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
-  const email = session?.email ?? str(body.email).trim().toLowerCase().slice(0, 254);
+  // The signed session is the only source of identity; ignore client-supplied emails.
+  const email = session.email;
   const action = body.action;
 
   if (!EMAIL.test(email)) return badRequest("Enter a valid email");

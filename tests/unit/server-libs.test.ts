@@ -207,6 +207,15 @@ describe("employee sessions & oauth state", () => {
     expect(sanitizeNext("//evil.com")).toBe("/");
     expect(sanitizeNext(null)).toBe("/");
   });
+
+  it("keeps OAuth redirects on the app origin after browser URL normalization", () => {
+    for (const path of ["/\\evil.example", "/\t/evil.example", "/\n/evil.example"]) {
+      expect(sanitizeNext(path)).toBe("/");
+      const { cookie, state } = createOauthState(path);
+      expect(verifyOauthState(cookie, state)).toBe("/");
+    }
+    expect(sanitizeNext("/planner?month=2026-10#today")).toBe("/planner?month=2026-10#today");
+  });
 });
 
 describe("pgConfig", () => {

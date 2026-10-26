@@ -7,17 +7,6 @@ import { BadgeCheck, ChevronRight, Info, Lock, LogOut, User, Zap } from "lucide-
 import { toast } from "sonner";
 import { AUTO_CHECKIN_KEY } from "@/components/check-in-card";
 import { IconTile, PageHeader } from "@/components/kit";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -41,12 +30,8 @@ export default function Settings() {
   const [autoCheckin, setAutoCheckin] = useState(false);
 
   const load = async () => {
-    const [data, me] = await Promise.all([
-      getJSON<{ email: string | null }>("/api/attendance", "your profile"),
-      getJSON<Auth>("/api/auth/me", "your sign-in"),
-    ]);
-    if (data) setEmail(data.email);
-    if (me) setAuth(me);
+    const me = await getJSON<Auth>("/api/auth/me", "your sign-in");
+    if (me) { setAuth(me); setEmail(me.email ?? null); }
   };
   useEffect(() => {
     load();
@@ -61,13 +46,6 @@ export default function Settings() {
     toast.success("Signed out of this device.");
     await load();
     router.refresh();
-  }
-
-  async function forget() {
-    const res = await send("/api/attendance", { method: "DELETE" });
-    if (!res.ok) return toast.error(await readError(res));
-    toast.success("This device no longer remembers your email.");
-    await load();
   }
 
   return (
@@ -116,40 +94,13 @@ export default function Settings() {
         </Card>
       )}
 
-      {email && !auth?.signedIn && (
-        <Card className="mt-4 gap-0 p-6">
-          <p className="text-sm font-medium">Remembered email</p>
-          <p className="mt-1 text-sm text-muted-foreground">{email}</p>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="xl" className="mt-5 w-full">
-                <LogOut /> Forget me on this device
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Forget your email?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  You&apos;ll need to enter your Innovin email again next time you check in on this device. Your
-                  attendance history isn&apos;t affected.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={forget}>Forget me</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </Card>
-      )}
-
       {!email && !auth?.signedIn && auth !== null && (
         <p className="mt-4 px-1 text-sm text-muted-foreground">
-          Check in once from{" "}
+          Sign in with Google from{" "}
           <Link href="/attendance" className="font-medium text-accent-foreground hover:underline">
             Attendance
           </Link>{" "}
-          and we&apos;ll remember your email here.
+          to use employee tools.
         </p>
       )}
 

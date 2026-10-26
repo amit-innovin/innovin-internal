@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarCheck, Clock, LogIn, LogOut, Mail, MapPin } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CalendarCheck, Clock, LogIn, LogOut, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import AttendanceCalendar from "@/components/attendance-calendar";
 import { IconTile, PageHeader, Segmented, SuccessCheck, stagger } from "@/components/kit";
 import LeavePanel from "@/components/leave-panel";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { StatefulButton } from "@/components/motion/button/stateful";
-import { Input } from "@/components/motion/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,10 +38,9 @@ const position = () =>
   });
 
 export default function Attendance() {
+  const router = useRouter();
   const [status, setStatus] = useState<Status | null>(null);
   const [user, setUser] = useState<Auth | null>(null);
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | false>(false);
   const [tab, setTab] = useState<"today" | "calendar" | "leave">("today");
   const [buttonState, run] = useButtonState();
 
@@ -59,12 +58,10 @@ export default function Attendance() {
 
   const mark = (action: "in" | "out") =>
     run(async () => {
-      setError(false);
       const pos = action === "in" ? await position() : null;
       const res = await send("/api/attendance", {
         method: "POST",
         json: {
-          email: status?.email ?? email,
           action,
           lat: pos?.coords.latitude ?? null,
           lng: pos?.coords.longitude ?? null,
@@ -73,9 +70,7 @@ export default function Attendance() {
       });
       if (!res.ok) {
         const message = await readError(res);
-        // The inline field only exists before an email is remembered; otherwise use a toast.
-        if (status?.email) toast.error(message);
-        else setError(message);
+        toast.error(message);
         return false;
       }
       toast.success(action === "in" ? "You're checked in" : "Checked out — see you soon");
@@ -86,8 +81,7 @@ export default function Attendance() {
   async function forget() {
     const res = await send("/api/attendance", { method: "DELETE" });
     if (!res.ok) return toast.error(await readError(res));
-    setEmail("");
-    await load();
+    router.refresh();
   }
 
   const me = status?.me;
@@ -165,50 +159,13 @@ export default function Attendance() {
               </div>
             </div>
 
-            {user?.signedIn ? (
-              <p className="mt-5 rounded-lg bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
-                Checking in as <span className="font-medium text-foreground">{user.name}</span>{" "}
-                <span className="text-xs">({user.email})</span>
-                <Button type="button" variant="link" size="sm" onClick={forget} className="ml-1 h-auto p-0 text-accent-foreground">
-                  Not you?
-                </Button>
-              </p>
-            ) : status.email ? (
-              <p className="mt-5 rounded-lg bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
-                Checking in as <span className="font-medium text-foreground">{status.email}</span>
-                <Button type="button" variant="link" size="sm" onClick={forget} className="ml-1 h-auto p-0 text-accent-foreground">
-                  Not you?
-                </Button>
-              </p>
-            ) : (
-              <div className="mt-5">
-                <Input
-                  label="Your Innovin email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(v) => {
-                    setEmail(v);
-                    setError(false);
-                  }}
-                  error={error}
-                  reserveErrorLine
-                  placeholder="you@innovinlabs.com"
-                  leftIcon={<Mail className="size-4" />}
-                  autoComplete="email"
-                />
-                <p className="text-xs text-muted-foreground">We&apos;ll remember it on this device.</p>
-              </div>
-            )}
-
-            {!user?.signedIn && user?.googleEnabled && (
-              <p className="mt-3 text-center text-xs text-muted-foreground">
-                or{" "}
-                <a href="/api/auth/google?next=/attendance" className="font-medium text-accent-foreground hover:underline">
-                  sign in with your Innovin Google account
-                </a>
-              </p>
-            )}
+            <p className="mt-5 rounded-lg bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
+              Checking in as <span className="font-medium text-foreground">{user?.name}</span>{" "}
+              <span className="text-xs">({user?.email})</span>
+              <Button type="button" variant="link" size="sm" onClick={forget} className="ml-1 h-auto p-0 text-accent-foreground">
+                Not you?
+              </Button>
+            </p>
 
             <StatefulButton
               type="submit"
@@ -226,7 +183,7 @@ export default function Attendance() {
       )}
 
       {/* One time surface: today's detail, the month calendar, and leave. The check-in action
-          above stays put and keeps working without a Google sign-in. */}
+          above stays put for the verified employee. */}
       <div className="mt-4">
         <Segmented
           value={tab}

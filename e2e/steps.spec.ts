@@ -46,6 +46,7 @@ test.describe("10K Steps", () => {
     await page.goto("/steps");
     await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Save today's steps" })).toHaveCount(0);
+    expect((await page.request.get("/api/steps")).status()).toBe(401);
     expect((await page.request.post("/api/steps", { data: { hit: true } })).status()).toBe(401);
   });
 

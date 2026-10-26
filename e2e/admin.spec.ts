@@ -1,4 +1,4 @@
-import { adminLogin, adminTab, expect, test, typePin, uniqueEmail, uniqueText, signInOffice } from "./fixtures";
+import { adminLogin, adminTab, expect, test, typePin, uniqueEmail, uniqueText, signInOffice, signInEmployee } from "./fixtures";
 
 test.describe("Admin", () => {
   test("wrong PIN is rejected with feedback; correct PIN opens the dashboard", async ({ page }) => {
@@ -38,11 +38,10 @@ test.describe("Admin", () => {
     // A pending request so the Approvals badge has something to count.
     const employee = await browser.newContext();
     const e = await employee.newPage();
-    await e.goto("/attendance");
+    await signInEmployee(e);
     await e.getByRole("tab", { name: "Leave" }).click();
     await e.locator("#away-start").fill("2026-10-19");
     await e.locator("#away-end").fill("2026-10-19");
-    await e.getByLabel("Email for this request").fill(uniqueEmail("badge"));
     await e.getByRole("button", { name: "Request Leave" }).click();
     await expect(e.getByText("Leave request sent")).toBeVisible();
     await employee.close();
@@ -100,7 +99,7 @@ test.describe("Admin", () => {
     await employee.close();
   });
 
-  test("announcements: post → visible to employees → delete with confirmation", async ({ page, browser }) => {
+  test("announcements: post → visible to employees → delete with confirmation", async ({ page, browser, isMobile }) => {
     const title = uniqueText("Fire drill at 3 PM");
     await adminLogin(page, "publish");
     // The composer renders one form at a time, so these no longer need scoping to disambiguate
@@ -116,6 +115,7 @@ test.describe("Admin", () => {
     const employee = await browser.newContext();
     const e = await employee.newPage();
     await signInOffice(e);
+    if (isMobile) await e.getByRole("button", { name: "Office Notice Board", exact: true }).click();
     await expect(e.getByText(title)).toBeVisible();
     await expect(e.getByText("Assemble at the parking lot.")).toBeVisible();
 
@@ -132,6 +132,7 @@ test.describe("Admin", () => {
     await expect(listed).toHaveCount(0);
 
     await e.reload();
+    if (isMobile) await e.getByRole("button", { name: "Office Notice Board", exact: true }).click();
     await expect(e.getByText(title)).toHaveCount(0);
     await employee.close();
   });

@@ -13,7 +13,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: CalendarCheck,
     tone: "blue",
     q: "How does attendance work?",
-    a: "Enter your Innovin email once and tap Check In — we remember it on this device. Check out when you leave — that's all there is to it, no time tracking. Your browser may ask for your location on check-in so we can tell office days from remote ones — you can decline and check in anyway.",
+    a: "Sign in with your Innovin Google account and tap Check In. Attendance always uses your verified identity. Check out when you leave — that's all there is to it, no time tracking. Your browser may ask for your location on check-in so we can tell office days from remote ones — you can decline and check in anyway.",
   },
   {
     icon: Coffee,

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentActor, isAdmin } from "@/lib/admin";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { allowedEmailDomains } from "@/lib/config";
-import { DEVICE_COOKIE } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { fmtShortDate } from "@/lib/format";
 import { isLeaveType, leaveCost, nonWorkingReason } from "@/lib/leave";
@@ -24,10 +23,9 @@ const dayDiff = (a: string, b: string) => (Date.parse(b) - Date.parse(a)) / 86_4
 export async function GET(req: NextRequest) {
   const scope = req.nextUrl.searchParams.get("scope");
   if (scope === "mine") {
-    const deviceId = req.cookies.get(DEVICE_COOKIE)?.value;
-    if (!deviceId) return NextResponse.json([]);
-    const ref = submitterIdentity(req).ref;
-    const rows = await store.listAwayByRef(ref, 30);
+    const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+    if (!session) return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
+    const rows = await store.listAwayByEmail(session.email, 30);
     return NextResponse.json(rows.map(strip));
   }
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,6 +34,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+  if (!session) return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
   const identity = submitterIdentity(req);
   const limited = enforce([
     ["awayDevice", identity.ref],
@@ -45,9 +45,8 @@ export async function POST(req: NextRequest) {
 
   const body = await readJSON(req);
   if (!body) return badRequest();
-  // A signed-in Google session wins over a typed email, same as attendance.
-  const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
-  const email = session?.email ?? str(body.email).trim().toLowerCase().slice(0, 254);
+  // Only the verified session may identify the requester, including direct API calls.
+  const email = session.email;
   const type = body.type as AwayType;
   const startDate = str(body.startDate).trim();
   const endDate = str(body.endDate).trim();
@@ -105,7 +104,7 @@ const notify = (row: { id: string; type: AwayType; startDate: string; email: str
 
 // Two kinds of update:
 //   approve/reject — admin only.
-//   cancel — the requester themselves (verified email, or the device that filed it) or an admin.
+//   cancel — the verified requester or an admin, never a remembered browser identity.
 //   Cancelling is allowed while pending *or* approved, but only before the dates have passed —
 //   past leave is history, and rewriting it would corrupt the balances.
 export async function PATCH(req: NextRequest) {
@@ -126,8 +125,7 @@ export async function PATCH(req: NextRequest) {
 
   if (status === "cancelled") {
     const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
-    const identity = submitterIdentity(req);
-    const owns = session?.email === row.email || identity.ref === row.submitterRef;
+    const owns = session?.email === row.email;
     if (!owns && !(await isAdmin())) {
       return NextResponse.json({ error: "Not your request" }, { status: 403 });
     }

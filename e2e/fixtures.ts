@@ -29,10 +29,17 @@ export const uniqueText = (label: string) => `${label} ${Date.now().toString(36)
 export const isMobile = (page: Page) => (page.viewportSize()?.width ?? 1280) < 768;
 
 export async function checkIn(page: Page, email: string) {
-  await page.goto("/attendance");
-  await page.getByPlaceholder("you@innovinlabs.com").fill(email);
+  await signInEmployee(page, email, "/attendance");
   await page.getByRole("button", { name: "Check In" }).click();
   await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
+}
+
+export async function signInEmployee(page: Page, email?: string, next = "/attendance") {
+  if (email) await page.request.get(`http://localhost:3999/as?email=${encodeURIComponent(email)}&name=${encodeURIComponent(email.split("@")[0].split(".")[0].replace(/^./, c => c.toUpperCase()))}`);
+  try {
+    await page.goto(`/api/auth/google?next=${encodeURIComponent(next)}`);
+    await expect(page).toHaveURL(new URL(next, "http://localhost:3210").toString());
+  } finally { if (email) await page.request.get("http://localhost:3999/as?reset=1"); }
 }
 
 // Pantry rules now require a verified company employee and a daily office declaration.

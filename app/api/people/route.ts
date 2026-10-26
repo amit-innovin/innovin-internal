@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { isAdmin, isOwner } from "@/lib/admin";
 import { enforce } from "@/lib/guard";
 import { firstName } from "@/lib/format";
@@ -9,8 +10,12 @@ import { todayIST } from "@/lib/time";
 import type { Role } from "@/lib/types";
 
 // The office directory: everyone who's signed in, plus who's physically/virtually
-// in today. Presence shows a name and a broad tag — never raw coordinates or emails.
-export async function GET() {
+// in today. Presence shows names and broad tags, with work emails only for directory
+// employees. Raw coordinates are never returned.
+export async function GET(req: NextRequest) {
+  if (!verifyUserSession(req.cookies.get(USER_COOKIE)?.value)) {
+    return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
+  }
   const [employees, dayRows] = await Promise.all([store.listEmployees(), store.listAttendance(todayIST())]);
   const byEmail = new Map(employees.map((e) => [e.email, e]));
 

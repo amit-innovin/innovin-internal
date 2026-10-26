@@ -1,4 +1,4 @@
-import { expect, test, typePin } from "./fixtures";
+import { expect, test, typePin, signInEmployee } from "./fixtures";
 import type { Browser, Page } from "@playwright/test";
 
 // Roles: owner (bootstrapped from OWNER_EMAILS) > admin (granted by the owner) > member.
@@ -65,11 +65,10 @@ test.describe("Roles & access", () => {
   test("approvals are attributed to the admin who made them", async ({ browser, page }) => {
     // An employee files a leave request.
     const reason = `attribution ${Date.now().toString(36)}`;
-    await page.goto("/attendance");
+    await signInEmployee(page);
     await page.getByRole("tab", { name: "Leave" }).click();
     await page.locator("#away-start").fill("2026-11-02");
     await page.locator("#away-end").fill("2026-11-03");
-    await page.getByLabel("Email for this request").fill(`att.${Date.now().toString(36)}@innovinlabs.com`);
     await page.getByLabel("Reason").fill(reason);
     await page.getByRole("button", { name: "Request leave" }).click();
     await expect(page.locator("li", { hasText: reason })).toContainText("Pending");
@@ -126,6 +125,9 @@ test.describe("Roles & access", () => {
     await owner.ctx.close();
 
     await member.page.goto("/");
+    if (!(await member.page.getByRole("link", { name: "Admin", exact: true }).filter({ visible: true }).count())) {
+      await member.page.locator(".reference-more summary").click();
+    }
     const link = member.page.getByRole("link", { name: "Admin", exact: true }).filter({ visible: true });
     await expect(link).toHaveCount(1);
     await link.click();
@@ -133,7 +135,7 @@ test.describe("Roles & access", () => {
     await member.ctx.close();
   });
 
-  test("admins get the Admin entry in the mobile top bar too", async ({ browser }) => {
+  test("break-glass admins can reach Admin through the mobile More menu", async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await ctx.newPage();
     await page.goto("/admin");
@@ -142,6 +144,7 @@ test.describe("Roles & access", () => {
     await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
 
     await page.goto("/");
+    await page.locator(".reference-more summary").click();
     const link = page.getByRole("link", { name: "Admin", exact: true }).filter({ visible: true });
     await expect(link).toHaveCount(1);
     await link.click();

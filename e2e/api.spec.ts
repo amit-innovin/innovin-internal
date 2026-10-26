@@ -49,17 +49,17 @@ test.describe("API: input validation", () => {
     expect(login.status()).toBe(401);
   });
 
-  test("attendance validates email, domain, and action", async () => {
-    const ctx = await device();
-    const cases: [unknown, number][] = [
-      [{ email: "nope", action: "in" }, 400],
-      [{ email: 42, action: "in" }, 400],
-      [{ email: "a@gmail.com", action: "in" }, 403],
-      [{ email: "A@INNOVINLABS.COM.evil.com", action: "in" }, 403],
-      [{ email: email(), action: "dance" }, 400],
-      [{ email: email(), action: "out" }, 404],
-    ];
-    for (const [data, status] of cases) expect((await ctx.post("/api/attendance", { data })).status(), JSON.stringify(data)).toBe(status);
+  test("attendance requires identity and validates the action", async () => {
+    const guest = await device();
+    for (const who of ["nope", "a@gmail.com", email()]) {
+      expect((await guest.post("/api/attendance", { data: { email: who, action: "in" } })).status()).toBe(401);
+    }
+    for (const path of ["/api/attendance", "/api/attendance?month=2026-10", "/api/people", "/api/steps"]) {
+      expect((await guest.get(path)).status()).toBe(401);
+    }
+    const ctx = await signedIn(email());
+    expect((await ctx.post("/api/attendance", { data: { action: "dance" } })).status()).toBe(400);
+    expect((await ctx.post("/api/attendance", { data: { action: "out" } })).status()).toBe(404);
   });
 
   test("snacks, wifi, and grievances reject invalid payloads", async () => {
@@ -78,12 +78,12 @@ test.describe("API: input validation", () => {
     expect((await ctx.delete("/api/snacks")).status()).toBe(404);
   });
 
-  test("time away validates email, domain, type and the date range", async () => {
-    const ctx = await device();
+  test("time away requires identity and validates type and the date range", async () => {
+    const guest = await device();
+    expect((await guest.post("/api/away", { data: { email: email(), type: "wfh", startDate: "2026-11-09", endDate: "2026-11-09" } })).status()).toBe(401);
     const who = email();
+    const ctx = await signedIn(who);
     const cases: [unknown, number][] = [
-      [{ email: "nope", type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 400],
-      [{ email: "a@gmail.com", type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 403],
       [{ email: who, type: "sabbatical", startDate: "2026-10-07", endDate: "2026-10-07" }, 400],
       [{ email: who, type: "leave", leaveType: "cl", startDate: "07/10/2026", endDate: "2026-10-08" }, 400],
       [{ email: who, type: "leave", leaveType: "cl", startDate: "2026-10-08", endDate: "2026-10-07" }, 400],
@@ -106,8 +106,8 @@ test.describe("API: input validation", () => {
 
 test.describe("API: behaviour", () => {
   test("check-in/out cycles: one row per day — repeat check-in is a no-op, re-check-in reopens it", async () => {
-    const ctx = await device();
     const who = email();
+    const ctx = await signedIn(who);
     const first = await (await ctx.post("/api/attendance", { data: { email: who, action: "in" } })).json();
     const again = await (await ctx.post("/api/attendance", { data: { email: ` ${who.toUpperCase()} `, action: "in" } })).json();
     expect(again.id).toBe(first.id);
@@ -124,8 +124,8 @@ test.describe("API: behaviour", () => {
   });
 
   test("attendance GET exposes only the count and the caller's own status", async () => {
-    const ctx = await device();
     const who = email();
+    const ctx = await signedIn(who);
     await ctx.post("/api/attendance", { data: { email: who, action: "in" } });
     const mine = await (await ctx.get("/api/attendance")).json();
     expect(mine.email).toBe(who);
@@ -136,15 +136,15 @@ test.describe("API: behaviour", () => {
     // them to decide auto check-in. Everyone else's sessions stay hidden.
     expect(Object.keys(mine).sort()).toEqual(["count", "email", "me", "office", "onOfficeNetwork"]);
 
-    const stranger = await (await (await device()).get("/api/attendance")).json();
+    const stranger = await (await (await signedIn(email())).get("/api/attendance")).json();
     expect(stranger.count).toBe(mine.count);
-    expect(stranger.email).toBeNull();
+    expect(stranger.email).not.toBe(who);
     expect(stranger.me).toBeNull();
   });
 
   test("check-in coordinates are classified against the office geofence, raw coords never returned", async () => {
-    const ctx = await device();
     const who = email();
+    const ctx = await signedIn(who);
     // Inside the configured fake office (12.935,77.624 ±1km).
     await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 12.9352, lng: 77.6241, accuracyM: 15 } });
     let mine = await (await ctx.get("/api/attendance")).json();
@@ -217,8 +217,8 @@ test.describe("API: behaviour", () => {
   });
 
   test("time away: a request is visible to its device and admin, and approval flows through", async () => {
-    const ctx = await device();
     const who = email();
+    const ctx = await signedIn(who);
     const req = await (
       await ctx.post("/api/away", { data: { email: who, type: "leave", leaveType: "cl", startDate: "2026-11-02", endDate: "2026-11-03", reason: "trip" } })
     ).json();
@@ -228,7 +228,7 @@ test.describe("API: behaviour", () => {
     const mine = await (await ctx.get("/api/away?scope=mine")).json();
     expect(mine.map((r: { id: string }) => r.id)).toContain(req.id);
     noRef(mine);
-    expect(await (await (await device()).get("/api/away?scope=mine")).json()).toEqual([]);
+    expect((await (await device()).get("/api/away?scope=mine")).status()).toBe(401);
 
     const adm = await admin();
     const all = await (await adm.get("/api/away")).json();
@@ -242,9 +242,26 @@ test.describe("API: behaviour", () => {
     expect(after.find((r: { id: string }) => r.id === req.id).status).toBe("approved");
   });
 
-  test("leave is charged in working days, skipping Sundays, 2nd/4th Saturdays and holidays", async () => {
-    const ctx = await device();
+  test("leave history and cancellation follow the employee across account switching", async () => {
     const who = email();
+    const ctx = await signedIn(who);
+    const created = await (await ctx.post("/api/away", { data: { type: "wfh", startDate: "2026-11-09", endDate: "2026-11-09", reason: "private reason" } })).json();
+    const secondDevice = await signedIn(who);
+    expect((await (await secondDevice.get("/api/away?scope=mine")).json()).some((r: { id: string }) => r.id === created.id)).toBe(true);
+    await ctx.post("/api/auth/logout");
+    expect((await ctx.get("/api/away?scope=mine")).status()).toBe(401);
+    expect((await ctx.patch("/api/away", { data: { id: created.id, status: "cancelled" } })).status()).toBe(403);
+    await ctx.get(`http://localhost:3999/as?email=${encodeURIComponent(email())}`);
+    try { await ctx.get("/api/auth/google?next=/"); }
+    finally { await ctx.get("http://localhost:3999/as?reset=1"); }
+    expect((await (await ctx.get("/api/away?scope=mine")).json()).some((r: { id: string }) => r.id === created.id)).toBe(false);
+    expect((await ctx.patch("/api/away", { data: { id: created.id, status: "cancelled" } })).status()).toBe(403);
+    expect((await secondDevice.patch("/api/away", { data: { id: created.id, status: "cancelled" } })).status()).toBe(200);
+  });
+
+  test("leave is charged in working days, skipping Sundays, 2nd/4th Saturdays and holidays", async () => {
+    const who = email();
+    const ctx = await signedIn(who);
     const mk = (data: Record<string, unknown>) => ctx.post("/api/away", { data: { email: who, ...data } });
 
     // Mon 7 Sep 2026 → Mon 14 Sep spans 8 calendar days but only 6 working ones:
@@ -347,9 +364,9 @@ test.describe("API: behaviour", () => {
     noRef(overview);
   });
 
-  test("people directory exposes names and presence tags — never coords, emails in presence, or refs", async () => {
-    const ctx = await device();
+  test("people directory exposes names and presence tags only to employees, never coords or refs", async () => {
     const who = `presence.${Date.now().toString(36)}@innovinlabs.com`; // firstName → "Presence"
+    const ctx = await signedIn(who, "Presence");
     await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 12.9352, lng: 77.6241 } });
 
     const res = await (await ctx.get("/api/people")).json();
@@ -358,7 +375,7 @@ test.describe("API: behaviour", () => {
     expect(me.since).toBeTruthy();
     const raw = JSON.stringify(res.inToday);
     expect(raw).not.toContain("77.62"); // raw coordinates never leave the server
-    expect(raw).not.toContain(who); // presence shows names, not emails
+    expect(me.email).toBe(who); // verified directory identities include their work email
     noRef(res);
     expect(Array.isArray(res.people)).toBe(true);
   });

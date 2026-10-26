@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { store } from "./store";
+import { validPushEndpoint } from "./push-endpoint";
 
 // Web Push delivery. Sending is best-effort and never blocks the action that triggered it: a
 // failed notification must not fail an approval or a published announcement.
@@ -36,6 +37,7 @@ export async function sendPush(message: PushMessage, to?: string) {
 
   await Promise.all(
     subs.map(async (s) => {
+      if (!validPushEndpoint(s.endpoint)) return;
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
         sent += 1;

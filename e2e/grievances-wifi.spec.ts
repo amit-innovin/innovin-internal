@@ -1,4 +1,4 @@
-import { expect, test, uniqueText } from "./fixtures";
+import { expect, test, uniqueText, signInEmployee } from "./fixtures";
 
 test.describe("Speak Up", () => {
   test("anonymous submission is confirmed and tracked on this device only", async ({ page, browser }) => {
@@ -70,16 +70,13 @@ test.describe("Speak Up", () => {
     await expect(mine.getByRole("button", { name: "View Attached photo" })).toBeVisible();
   });
 
-  test("home's Speak Up box submits anonymously and lands in your list", async ({ page }) => {
-    const text = uniqueText("Deep link check");
-    await page.goto("/");
-    await page.getByLabel("Speak up anonymously").fill(text);
-    await page.getByRole("button", { name: "Send", exact: true }).click();
-    await expect(page.getByText("Heard. Thank you.")).toBeVisible();
-
-    await page.goto("/grievances#mine");
-    await expect(page.locator("#mine")).toContainText(text);
+  test("Speak Up accepts anonymous feedback without an employee account", async ({ page }) => {
+    const text = uniqueText("Guest feedback");
+    await page.goto("/grievances");
+    await page.getByLabel("Your feedback").fill(text);
+    await page.getByRole("button", { name: "Submit", exact: true }).click();
     await expect(page.locator("#mine li", { hasText: text })).toContainText("Anonymous");
+    expect((await (await page.request.get("/api/auth/me")).json()).signedIn).toBe(false);
   });
 
   test("the urgent toggle marks the report and floats it to the top for admins", async ({ page }) => {
@@ -94,9 +91,9 @@ test.describe("Speak Up", () => {
 });
 
 test.describe("Wi-Fi Quality", () => {
-  test("home 'Check Speed' runs the test immediately and cleans the URL", async ({ page }) => {
-    await page.goto("/");
-    await page.getByRole("link", { name: "Check Speed" }).click();
+  test("workspace Wi-Fi pulse runs the test immediately and cleans the URL", async ({ page }) => {
+    await signInEmployee(page, undefined, "/");
+    await page.getByRole("link", { name: "Wi-Fi pulse", exact: true }).filter({ visible: true }).click();
     await expect(page).toHaveURL(/\/wifi$/);
     await expect(page.getByText(/^Download/)).toContainText("Mbps", { timeout: 20_000 });
   });

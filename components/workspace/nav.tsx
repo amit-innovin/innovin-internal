@@ -9,7 +9,7 @@ import Notifications from "@/components/notifications";
 const links = [{ href: "/", label: "Overview", icon: LayoutGrid }, { href: "/steps", label: "Daily Steps & Prize", icon: Footprints }, { href: "/planner", label: "Leave & WFH Planner", icon: CalendarDays }];
 export function WorkspaceNav({ signedIn, showAdmin, userEmail }: { signedIn: boolean; showAdmin: boolean; userEmail?: string }) {
   const path = usePathname();
-  if (!signedIn && path === "/") return null;
+  if (!signedIn && !showAdmin && path === "/") return null;
   return <header className="studio-nav top-nav zip-nav">
     <div className="nav-left"><Link href="/" className="studio-wordmark nav-brand" aria-label="Innovin Internal home"><span className="flowbooks-logo-mark small"><svg width="24" height="24" viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M20 3L22.5 14.2L32 7.8L26.2 17.5L37 20L26.2 22.5L32 32.2L22.5 25.8L20 37L17.5 25.8L8 32.2L13.8 22.5L3 20L13.8 17.5L8 7.8L17.5 14.2L20 3Z" fill="#FA845E" /></svg></span><span className="brand-text-wrap"><span className="nav-brand-title">innovin<span className="brand-coral-dot">.internal</span></span><span className="nav-workspace-tag">Your team workspace</span></span></Link>
       <nav aria-label="Workspace navigation" className="nav-links studio-nav-primary">{links.map(l => <Link key={l.href} href={l.href} className={`nav-link ${path === l.href ? "active" : ""}`} aria-current={path === l.href ? "page" : undefined}><l.icon size={16} /><span>{l.label}</span></Link>)}</nav>

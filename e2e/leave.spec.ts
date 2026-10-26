@@ -1,4 +1,4 @@
-import { adminLogin, adminTab, expect, test, uniqueEmail, uniqueText } from "./fixtures";
+import { adminLogin, adminTab, expect, test, uniqueEmail, uniqueText, signInEmployee } from "./fixtures";
 import type { Page } from "@playwright/test";
 
 // Leave, WFH requests and the month calendar all live inside Attendance now — one "my time"
@@ -8,12 +8,15 @@ const openTab = async (page: Page, name: "Today" | "Calendar" | "Leave") => {
 };
 
 async function leaveTab(page: Page, path = "/attendance") {
+  const me = await (await page.request.get("/api/auth/me")).json();
+  if (!me.signedIn) await signInEmployee(page);
   await page.goto(path);
   await openTab(page, "Leave");
 }
 
 test.describe("Leave & calendar", () => {
   test("the old Leave and Time Away URLs redirect into Attendance", async ({ page }) => {
+    await signInEmployee(page);
     for (const stale of ["/away", "/leave"]) {
       await page.goto(stale);
       await expect(page).toHaveURL(/\/attendance$/);
@@ -24,11 +27,12 @@ test.describe("Leave & calendar", () => {
     await expect(page.getByRole("link", { name: "Leave tracker" })).toHaveCount(0);
   });
 
-  test("checking in stays the first thing on the page and needs no sign-in", async ({ page }) => {
+  test("checking in stays the first thing after verified sign-in", async ({ page }) => {
     await page.goto("/attendance");
-    // The daily action is above the tabs and works with just a typed email.
+    await signInEmployee(page);
+    // The daily action stays above the tabs after verified sign-in.
     await expect(page.getByRole("heading", { name: "Not checked in yet" })).toBeVisible();
-    await expect(page.getByLabel("Your Innovin email")).toBeVisible();
+    await expect(page.getByText(/Checking in as/)).toBeVisible();
     await expect(page.getByRole("tab", { name: "Today" })).toBeVisible();
   });
 
@@ -39,7 +43,6 @@ test.describe("Leave & calendar", () => {
     await page.getByRole("tab", { name: "Work from home" }).click();
     await page.locator("#away-start").fill("2026-10-07");
     await page.locator("#away-end").fill("2026-10-07");
-    await page.getByLabel("Email for this request").fill(email);
     await page.getByLabel("Reason").fill(reason);
     await page.getByRole("button", { name: "Request WFH" }).click();
     await expect(page.getByText("Work from home request sent")).toBeVisible();
@@ -55,13 +58,12 @@ test.describe("Leave & calendar", () => {
     await other.close();
   });
 
-  test("a non-Innovin email is rejected inline", async ({ page }) => {
+  test("a signed-in request cannot use a forged email", async ({ page }) => {
     await leaveTab(page);
-    await page.locator("#away-start").fill("2026-10-08");
-    await page.locator("#away-end").fill("2026-10-08");
-    await page.getByLabel("Email for this request").fill("someone@gmail.com");
-    await page.getByRole("button", { name: "Request Leave" }).click();
-    await expect(page.getByText("Use your Innovin email")).toBeVisible();
+    const me = await (await page.request.get("/api/auth/me")).json();
+    const res = await page.request.post("/api/away", { data: { email: "someone@gmail.com", type: "wfh", startDate: "2026-11-09", endDate: "2026-11-09" } });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).email).toBe(me.email);
   });
 
   test("the end date can't be picked before the start date", async ({ page }) => {
@@ -77,7 +79,6 @@ test.describe("Leave & calendar", () => {
     await leaveTab(e);
     await e.locator("#away-start").fill("2026-10-12");
     await e.locator("#away-end").fill("2026-10-13");
-    await e.getByLabel("Email for this request").fill(uniqueEmail("leave"));
     await e.getByLabel("Reason").fill(reason);
     await e.getByRole("button", { name: "Request Leave" }).click();
     await expect(e.getByText("Leave request sent")).toBeVisible();
@@ -98,7 +99,6 @@ test.describe("Leave & calendar", () => {
     await leaveTab(e);
     await e.locator("#away-start").fill("2026-11-09"); // Mon
     await e.locator("#away-end").fill("2026-11-10");
-    await e.getByLabel("Email for this request").fill(uniqueEmail("cancel"));
     await e.getByLabel("Reason").fill(reason);
     await e.getByRole("button", { name: "Request Leave" }).click();
     await expect(e.getByText("Leave request sent")).toBeVisible();
@@ -128,7 +128,6 @@ test.describe("Leave & calendar", () => {
     await leaveTab(e);
     await e.locator("#away-start").fill("2026-11-16"); // Mon
     await e.locator("#away-end").fill("2026-11-17");
-    await e.getByLabel("Email for this request").fill(email);
     await e.getByLabel("Reason").fill(reason);
     await e.getByRole("button", { name: "Request Leave" }).click();
     await expect(e.getByText("Leave request sent")).toBeVisible();
@@ -157,6 +156,7 @@ test.describe("Leave & calendar", () => {
   });
 
   test("time away already past can't be cancelled", async ({ page }) => {
+    await signInEmployee(page);
     const res = await page.request.post("/api/away", {
       data: {
         email: uniqueEmail("past"),
@@ -173,11 +173,12 @@ test.describe("Leave & calendar", () => {
   });
 
   test("balances need a signed-in identity, not just a device", async ({ page }) => {
+    expect((await (await page.request.get("/api/leave")).json()).signedIn).toBe(false);
+    await page.goto("/attendance");
+    await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
     await leaveTab(page);
-    const balance = page.locator("[data-slot=card]").filter({ hasText: "Balance ·" });
-    await expect(balance).toContainText("Sign in with Google");
-    // Requesting still works unsigned — only the balances need identity.
     await expect(page.getByRole("button", { name: "Request Leave" })).toBeVisible();
+    expect((await (await page.request.get("/api/leave")).json()).signedIn).toBe(true);
   });
 
   test("a leave request moves from pending to used in the balance", async ({ page, browser }) => {
@@ -212,7 +213,6 @@ test.describe("Leave & calendar", () => {
     await leaveTab(page);
     await page.locator("#away-start").fill("2026-09-06"); // a Sunday
     await page.locator("#away-end").fill("2026-09-06");
-    await page.getByLabel("Email for this request").fill(uniqueEmail("sun"));
     await page.getByRole("button", { name: "Request Leave" }).click();
     await expect(page.getByText(/non-working day \(Sunday\)/)).toBeVisible();
   });
@@ -232,10 +232,20 @@ test.describe("Leave & calendar", () => {
   });
 });
 
+async function browseSeptember(page: Page) {
+  const current = new Date();
+  const distance = (current.getUTCFullYear() - 2026) * 12 + current.getUTCMonth() - 8;
+  for (let i = 0; i < Math.abs(distance); i++) {
+    await page.getByRole("button", { name: distance > 0 ? "Previous month" : "Next month" }).click();
+  }
+  await expect(page.getByRole("heading", { name: "September 2026" })).toBeVisible();
+}
+
 test.describe("Attendance calendar", () => {
   test("plots the month, explains weekly offs and lists upcoming holidays", async ({ page }) => {
-    await page.goto("/attendance");
+    await signInEmployee(page);
     await openTab(page, "Calendar");
+    await browseSeptember(page);
     // The month grid renders a button per day, plus the weekday header row.
     await expect(page.getByRole("button", { name: /^1 Sep/ })).toBeVisible();
     await expect(page.getByText("weekly off")).toBeVisible();
@@ -244,8 +254,9 @@ test.describe("Attendance calendar", () => {
   });
 
   test("labels a Sunday, a 2nd Saturday and a holiday from the policy engine", async ({ page }) => {
-    await page.goto("/attendance");
+    await signInEmployee(page);
     await openTab(page, "Calendar");
+    await browseSeptember(page);
     // Sep 2026: the 6th is a Sunday, the 12th the 2nd Saturday.
     await expect(page.getByRole("button", { name: /^6 Sep.*Sunday/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /^12 Sep.*2nd Saturday/ })).toBeVisible();
@@ -256,8 +267,7 @@ test.describe("Attendance calendar", () => {
 
   test("a day expands to show where and when you checked in", async ({ page }) => {
     const email = uniqueEmail("cal");
-    await page.goto("/attendance");
-    await page.getByLabel("Your Innovin email").fill(email);
+    await signInEmployee(page, email);
     await page.getByRole("button", { name: "Check In" }).click();
     await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
 
@@ -271,7 +281,7 @@ test.describe("Attendance calendar", () => {
   });
 
   test("no horizontal overflow with the calendar open", async ({ page }) => {
-    await page.goto("/attendance");
+    await signInEmployee(page);
     await openTab(page, "Calendar");
     await expect(page.getByRole("heading", { name: "Upcoming holidays" })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

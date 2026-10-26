@@ -3,6 +3,7 @@ import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { pushConfigured, vapidPublicKey } from "@/lib/push";
+import { validPushEndpoint } from "@/lib/push-endpoint";
 import { store } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
   const p256dh = str((body?.keys as Record<string, unknown>)?.p256dh).trim();
   const auth = str((body?.keys as Record<string, unknown>)?.auth).trim();
   // Only accept real push endpoints, so this can't be turned into a request forwarder.
-  if (!/^https:\/\/[\w.-]+\//.test(endpoint) || !p256dh || !auth) return badRequest("Invalid subscription");
+  if (!validPushEndpoint(endpoint) || !p256dh || !auth || p256dh.length > 256 || auth.length > 256) return badRequest("Invalid subscription");
 
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
   await store.savePushSubscription({

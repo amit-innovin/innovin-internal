@@ -66,10 +66,13 @@ export function verifyOauthState(cookie: string | undefined, state: string | nul
   if (dot < 0 || state.slice(0, dot) !== nonce) return null;
   try {
     const next = Buffer.from(state.slice(dot + 1), "base64url").toString("utf8");
-    return next.startsWith("/") && !next.startsWith("//") ? next : "/";
+    return sanitizeNext(next);
   } catch {
     return "/";
   }
 }
 
-export const sanitizeNext = (next: string | null) => (next?.startsWith("/") && !next.startsWith("//") ? next : "/");
+// Browsers normalize backslashes to slashes and strip control characters from URLs.
+// Reject them before resolving the callback destination so a path cannot become a host.
+export const sanitizeNext = (next: string | null) =>
+  next?.startsWith("/") && !next.startsWith("//") && !/[\\\u0000-\u0020\u007f]/.test(next) ? next : "/";

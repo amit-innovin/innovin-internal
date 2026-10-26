@@ -6,13 +6,16 @@ import { toast } from "sonner";
 const TTL_MS = 15_000;
 const cache = new Map<string, { data: unknown; at: number }>();
 const pending = new Map<string, Promise<unknown>>();
+let generation = 0;
 
 const pathOf = (url: string) => url.split("?")[0];
 
 // Drop cached GETs whose path matches (query variants included — /api/snacks clears
 // scope=mine and scope=history). send() calls this after every successful mutation.
 export function invalidate(urlPrefix: string) {
+  generation++;
   for (const key of cache.keys()) if (pathOf(key).startsWith(urlPrefix) || key.startsWith(urlPrefix)) cache.delete(key);
+  for (const key of pending.keys()) if (pathOf(key).startsWith(urlPrefix) || key.startsWith(urlPrefix)) pending.delete(key);
 }
 
 async function request<T>(url: string, what: string): Promise<T | null> {
@@ -27,7 +30,7 @@ async function request<T>(url: string, what: string): Promise<T | null> {
         toast.error(`Couldn't load ${what}. Check your connection and try again.`, { id: `load-${url}` });
         return null;
       })
-      .finally(() => pending.delete(url));
+      .finally(() => { if (pending.get(url) === p) pending.delete(url); });
     pending.set(url, p);
   }
   return p;
@@ -38,7 +41,11 @@ async function request<T>(url: string, what: string): Promise<T | null> {
 export async function getJSON<T>(url: string, what: string, opts: { fresh?: boolean } = {}): Promise<T | null> {
   const hit = cache.get(url);
   if (!opts.fresh && hit && Date.now() - hit.at < TTL_MS) return hit.data as T;
+  const started = generation;
   const data = await request<T>(url, what);
+  // A mutation (including sign-out) may have completed while this GET was in flight.
+  // Refetch instead of rendering or caching a response from the old state/identity.
+  if (started !== generation) return getJSON<T>(url, what, { fresh: true });
   if (data !== null) cache.set(url, { data, at: Date.now() });
   return data;
 }
@@ -71,7 +78,9 @@ export async function send(url: string, init: RequestInit & { json?: unknown } =
       invalidate(pathOf(url));
       invalidate("/api/notifications");
       invalidate("/api/workspace");
-      if (pathOf(url).startsWith("/api/auth/") || (pathOf(url) === "/api/attendance" && rest.method === "DELETE")) cache.clear();
+      // Leave balances are derived from away requests; their URL differs from the write.
+      if (pathOf(url) === "/api/away") invalidate("/api/leave");
+      if (pathOf(url).startsWith("/api/auth/") || (pathOf(url) === "/api/attendance" && rest.method === "DELETE")) invalidate("");
     }
     return res;
   } catch {

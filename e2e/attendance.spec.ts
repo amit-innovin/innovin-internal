@@ -1,22 +1,17 @@
-import { checkIn, expect, test, uniqueEmail } from "./fixtures";
+import { checkIn, expect, test, uniqueEmail, signInEmployee } from "./fixtures";
 
 test.describe("Attendance", () => {
-  test("rejects a non-Innovin email inline, then clears the error when the email changes", async ({ page }) => {
+  test("guest attendance requires Google identity rather than a typed email", async ({ page }) => {
     await page.goto("/attendance");
-    const email = page.getByPlaceholder("you@innovinlabs.com");
-    await email.fill("someone@gmail.com");
-    await page.getByRole("button", { name: "Check In" }).click();
-    await expect(page.getByText("Use your Innovin email")).toBeVisible();
-    await email.fill(uniqueEmail());
-    await expect(page.getByText("Use your Innovin email")).toBeHidden();
+    await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
+    await expect(page.getByPlaceholder("you@innovinlabs.com")).toHaveCount(0);
+    expect((await page.request.post("/api/attendance", { data: { email: uniqueEmail(), action: "in" } })).status()).toBe(401);
   });
 
-  test("blocks submission of a malformed email in the browser", async ({ page }) => {
-    await page.goto("/attendance");
-    await page.getByPlaceholder("you@innovinlabs.com").fill("not-an-email");
-    await page.getByRole("button", { name: "Check In" }).click();
-    expect(await page.getByPlaceholder("you@innovinlabs.com").evaluate((el: HTMLInputElement) => el.validity.valid)).toBe(false);
-    await expect(page.getByRole("heading", { name: "Not checked in yet" })).toBeVisible();
+  test("Google rejects a non-company account before attendance access", async ({ page }) => {
+    await signInEmployee(page, "someone@gmail.com", "/settings?auth=failed");
+    await expect(page.getByText("Sign-in didn't complete. Use your Innovin Google account.")).toBeVisible();
+    expect((await page.request.get("/api/attendance")).status()).toBe(401);
   });
 
   test("full day: check in, check out, check in again — one status, no time tracking", async ({ page }) => {
@@ -38,8 +33,8 @@ test.describe("Attendance", () => {
     await expect(page.getByText(/In since/)).toBeVisible();
 
     await page.goto("/");
-    await expect(page.getByText("You're in")).toBeVisible();
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(", Amit");
+    await expect(page.getByRole("heading", { level: 1, name: "Your workspace" })).toBeVisible();
+    expect((await (await page.request.get("/api/attendance")).json()).me.checkedIn).toBe(true);
   });
 
   test("check-in inside the office radius tags the session In office", async ({ page, context }) => {
@@ -56,32 +51,26 @@ test.describe("Attendance", () => {
     await expect(page.getByText("Remote • Innovin")).toBeVisible();
   });
 
-  test("a remembered email offers one-tap check-in and 'Not you?' switches user", async ({ page, context, baseURL }) => {
-    // Simulate an email remembered from a previous day (not checked in today).
+  test("a remembered email cannot impersonate an employee and Not you signs out", async ({ page, context, baseURL }) => {
     const email = uniqueEmail("returning");
     await context.addCookies([{ name: "innovin_email", value: email, url: baseURL! }]);
     await page.goto("/attendance");
-    await expect(page.getByText(`Checking in as ${email}`)).toBeVisible();
-    await expect(page.getByPlaceholder("you@innovinlabs.com")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
+    expect((await page.request.get("/api/attendance")).status()).toBe(401);
+    await signInEmployee(page, email);
+    await expect(page.getByText(/Checking in as/)).toContainText(email);
     await page.getByRole("button", { name: "Not you?" }).click();
-    await expect(page.getByPlaceholder("you@innovinlabs.com")).toBeVisible();
-
-    await context.addCookies([{ name: "innovin_email", value: email, url: baseURL! }]);
-    await page.reload();
-    await page.getByRole("button", { name: "Check In" }).click();
-    await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
+    expect((await page.request.get("/api/attendance")).status()).toBe(401);
   });
 
-  test("Settings 'Forget me' clears the remembered email after confirmation", async ({ page }) => {
-    const email = uniqueEmail();
-    await checkIn(page, email);
+  test("Settings sign-out removes attendance access", async ({ page }) => {
+    await checkIn(page, uniqueEmail());
     await page.goto("/settings");
-    await expect(page.getByText("Remembered email")).toBeVisible();
-    await expect(page.getByText(email).first()).toBeVisible();
-    await page.getByRole("button", { name: "Forget me on this device" }).click();
-    await page.getByRole("alertdialog").getByRole("button", { name: "Forget me" }).click();
-    await expect(page.getByText("No email saved on this device")).toBeVisible();
+    await expect(page.getByText("Verified with Google")).toBeVisible();
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(page.getByText("Verified with Google")).toBeHidden();
     await page.goto("/attendance");
-    await expect(page.getByPlaceholder("you@innovinlabs.com")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
   });
 });

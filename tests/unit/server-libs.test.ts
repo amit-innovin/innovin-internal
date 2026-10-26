@@ -225,10 +225,10 @@ describe("pgConfig", () => {
     expect(c.connectionString).toBe("postgres://u:p@localhost:5432/db");
   });
 
-  it("uses encrypted TLS for remote hosts; verification is opt-in", () => {
+  it("verifies remote TLS by default and accepts an explicit trusted CA", () => {
     const url = "postgresql://u:p@db.abc.supabase.co:6543/postgres?sslmode=require&pgbouncer=true";
     const c = pgConfig(url, {});
-    expect(c.ssl).toEqual({ rejectUnauthorized: false });
+    expect(c.ssl).toEqual({ rejectUnauthorized: true });
     expect(c.connectionString).not.toContain("sslmode");
     expect(c.connectionString).toContain("pgbouncer=true");
     expect(pgConfig(url, { DATABASE_SSL_VERIFY: "true" }).ssl).toEqual({ rejectUnauthorized: true });
@@ -238,9 +238,9 @@ describe("pgConfig", () => {
     });
   });
 
-  it("honours sslmode=disable and pool size", () => {
+  it("rejects remote TLS downgrade while preserving pool size", () => {
     const c = pgConfig("postgres://u:p@db.internal:5432/db?sslmode=disable", { DATABASE_POOL_MAX: "2" });
-    expect(c.ssl).toBe(false);
+    expect(c.ssl).toEqual({ rejectUnauthorized: true });
     expect(c.max).toBe(2);
   });
 });

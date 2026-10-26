@@ -85,7 +85,7 @@ test.describe("Speak Up", () => {
     await page.getByLabel("Your feedback").fill(text);
     await page.getByRole("button", { name: /This is urgent/ }).click();
     await page.getByRole("button", { name: "Submit" }).click();
-    await expect(page.getByText("admins get pinged")).toBeVisible();
+    await expect(page.getByText("Sent — marked urgent for admins. Notifications are best-effort.", { exact: true })).toBeVisible();
     await expect(page.locator("#mine li", { hasText: text })).toContainText("Urgent");
   });
 });

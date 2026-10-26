@@ -1,4 +1,5 @@
 "use client";
+import { LoadRecovery } from "@/components/load-recovery";
 
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -102,9 +103,9 @@ export default function AttendanceCalendar() {
         </div>
       </div>
 
-      {!data ? (
+      {!data ? (<LoadRecovery>
         <Skeleton className="mt-3 h-52 w-full" />
-      ) : (
+      </LoadRecovery>) : (
         <>
           <div className="mt-3 grid grid-cols-7 gap-1 text-center">
             {WEEKDAYS.map((w, i) => (

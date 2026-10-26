@@ -44,6 +44,13 @@ export function verifyUserSession(token: string | undefined, now = Date.now()): 
   }
 }
 
+export function pushSession(token: string | undefined) {
+  const user = verifyUserSession(token);
+  if (!user || !token) return null;
+  const payload = JSON.parse(Buffer.from(token.slice(0, token.lastIndexOf(".")), "base64url").toString("utf8")) as { i: number };
+  return { sessionRef: crypto.createHash("sha256").update(token).digest("hex"), sessionExpiresAt: new Date(payload.i + USER_SESSION_MS).toISOString() };
+}
+
 export async function currentUser() {
   return verifyUserSession((await cookies()).get(USER_COOKIE)?.value);
 }

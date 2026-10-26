@@ -1,3 +1,4 @@
+import { validPlannerDate } from "@/lib/workspace-model";
 import { NextRequest, NextResponse } from "next/server";
 import { currentActor, isAdmin } from "@/lib/admin";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
@@ -13,7 +14,6 @@ import { setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 import type { AwayStatus, AwayType } from "@/lib/types";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_SPAN_DAYS = 92;
 
 const strip = ({ submitterRef: _r, ...rest }: import("@/lib/types").AwayRow) => rest;
@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows.map(strip));
   }
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const rows = await store.listAway(100);
+  const [history, pending] = await Promise.all([store.listAway(100), store.listPendingAway()]);
+  const rows = [...pending, ...history.filter(r => r.status !== "pending")];
   return NextResponse.json(rows.map(strip));
 }
 
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
   }
   if (type !== "leave" && type !== "wfh") return badRequest("Choose Leave or WFH");
   if (type === "leave" && !leaveType) return badRequest("Choose a leave type");
-  if (!DATE.test(startDate) || !DATE.test(endDate)) return badRequest("Pick valid dates");
+  if (!validPlannerDate(startDate) || !validPlannerDate(endDate)) return badRequest("Pick valid dates");
   if (startDate > endDate) return badRequest("Start date can't be after the end date");
   if (dayDiff(startDate, endDate) > MAX_SPAN_DAYS) return badRequest("Requests can span at most 3 months");
   if (halfDay && (startDate !== endDate || leaveType !== "cl")) {
@@ -119,7 +120,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const row = (await store.listAway(200)).find((r) => r.id === rid);
+  const row = await store.getAway(rid);
   if (!row) return NextResponse.json({ error: "Request not found" }, { status: 404 });
   const actor = await currentActor();
 
@@ -135,7 +136,7 @@ export async function PATCH(req: NextRequest) {
 
     // Attribution: self-cancels show plain "Cancelled"; an admin cancelling for someone is named.
     const decidedBy = owns ? null : actor ? actor.name || actor.email : null;
-    await store.setAwayStatus(rid, "cancelled", decidedBy, new Date().toISOString());
+    if (!await store.setAwayStatus(rid, "cancelled", decidedBy, new Date().toISOString(), row.status)) return NextResponse.json({ error: "This request changed. Refresh and try again." }, { status: 409 });
 
     const what = row.type === "wfh" ? "Work from home" : "Leave";
     if (owns) {
@@ -157,8 +158,8 @@ export async function PATCH(req: NextRequest) {
   // Attribute the decision when the admin is a verified identity; break-glass PIN sessions
   // have nobody to attribute it to.
   const decidedBy = actor?.role === "admin" || actor?.role === "owner" ? actor.name || actor.email : null;
-  const updated = await store.setAwayStatus(rid, status, decidedBy, new Date().toISOString());
-  if (!updated) return NextResponse.json({ error: "Request not found" }, { status: 404 });
+  const updated = await store.setAwayStatus(rid, status, decidedBy, new Date().toISOString(), "pending");
+  if (!updated) return NextResponse.json({ error: "This request changed. Refresh and try again." }, { status: 409 });
 
   // Tell just that person's devices. Best-effort — the decision is already saved.
   const what = row.type === "wfh" ? "Work from home" : "Leave";

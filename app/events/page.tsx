@@ -1,4 +1,5 @@
 "use client";
+import { LoadRecovery } from "@/components/load-recovery";
 
 import { useEffect, useState } from "react";
 import { CalendarDays, Check, MapPin } from "lucide-react";
@@ -70,7 +71,7 @@ export default function Events() {
     <div className="mx-auto max-w-xl">
       <PageHeader title="Events" subtitle="What's coming up — tap Join and you're in." />
 
-      {!events ? (
+      {!events ? (<LoadRecovery>
         <div className="space-y-3">
           <Card className="gap-3 p-5">
             <Skeleton className="h-5 w-48" />
@@ -81,7 +82,7 @@ export default function Events() {
             <Skeleton className="h-4 w-56" />
           </Card>
         </div>
-      ) : events.length === 0 ? (
+      </LoadRecovery>) : events.length === 0 ? (
         <Card className="p-6">
           <Empty>Nothing on the calendar yet — good things land here first.</Empty>
         </Card>

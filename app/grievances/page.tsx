@@ -75,7 +75,7 @@ export default function Grievances() {
       setBody("");
       setImage(null);
       setUrgent(false);
-      toast.success(urgent ? "Sent — admins get pinged right away." : "Thank you — we'll look into it.");
+      toast.success(urgent ? "Sent — marked urgent for admins. Notifications are best-effort." : "Thank you — we'll look into it.");
       await load();
       return true;
     });

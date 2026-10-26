@@ -28,7 +28,9 @@ test.describe("Google sign-in", () => {
 
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page.getByText("Verified with Google")).toBeHidden();
-    await expect(page.getByRole("link", { name: "Sign in with Google" })).toBeVisible();
+    await expect(page).toHaveURL("http://localhost:3210/");
+    await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
+    expect((await (await page.request.get("/api/auth/me")).json()).signedIn).toBe(false);
   });
 
   test("a signed-in device cannot mark attendance for a different email", async ({ page }) => {

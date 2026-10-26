@@ -1,11 +1,10 @@
 "use client";
+import { LoadRecovery } from "@/components/load-recovery";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BadgeCheck, ChevronRight, Info, Lock, LogOut, User, Zap } from "lucide-react";
+import { BadgeCheck, ChevronRight, Info, Lock, LogOut, User } from "lucide-react";
 import { toast } from "sonner";
-import { AUTO_CHECKIN_KEY } from "@/components/check-in-card";
 import { IconTile, PageHeader } from "@/components/kit";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,6 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON, readError, send } from "@/lib/fetcher";
 import { firstName, initials } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 type Auth = { signedIn: boolean; googleEnabled: boolean; email?: string; name?: string };
 
@@ -24,10 +22,8 @@ const AUTH_ERRORS: Record<string, string> = {
 };
 
 export default function Settings() {
-  const router = useRouter();
   const [email, setEmail] = useState<string | null | undefined>(undefined);
   const [auth, setAuth] = useState<Auth | null>(null);
-  const [autoCheckin, setAutoCheckin] = useState(false);
 
   const load = async () => {
     const me = await getJSON<Auth>("/api/auth/me", "your sign-in");
@@ -35,7 +31,6 @@ export default function Settings() {
   };
   useEffect(() => {
     load();
-    setAutoCheckin(localStorage.getItem(AUTO_CHECKIN_KEY) === "1");
     const reason = new URLSearchParams(window.location.search).get("auth");
     if (reason && AUTH_ERRORS[reason]) toast.error(AUTH_ERRORS[reason]);
   }, []);
@@ -44,15 +39,14 @@ export default function Settings() {
     const res = await send("/api/auth/logout", { method: "POST" });
     if (!res.ok) return toast.error(await readError(res));
     toast.success("Signed out of this device.");
-    await load();
-    router.refresh();
+    window.location.assign("/");
   }
 
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title="Settings" />
 
-      {email === undefined || auth === null ? (
+      {email === undefined || auth === null ? (<LoadRecovery>
         <Card className="flex-row items-center gap-4 p-6">
           <Skeleton className="size-14 rounded-full" />
           <div className="space-y-2">
@@ -60,7 +54,7 @@ export default function Settings() {
             <Skeleton className="h-3 w-44" />
           </div>
         </Card>
-      ) : (
+      </LoadRecovery>) : (
         <Card className="gap-0 p-6">
           <div className="flex items-center gap-4">
             <Avatar className="size-14">
@@ -114,41 +108,6 @@ export default function Settings() {
           <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </Card>
       </Link>
-
-      <Card className="mt-4 gap-0 p-5">
-        <div className="flex items-center gap-4">
-          <IconTile icon={Zap} tone="amber" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Auto check-in</p>
-            <p className="text-xs text-muted-foreground">
-              When you open the app on office Wi-Fi — or your phone knows you&apos;re at the office — we&apos;ll mark you in automatically.
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={autoCheckin}
-            aria-label="Auto check-in"
-            onClick={() => {
-              const next = !autoCheckin;
-              setAutoCheckin(next);
-              localStorage.setItem(AUTO_CHECKIN_KEY, next ? "1" : "0");
-              toast.success(next ? "Auto check-in on — we'll spot you at the office" : "Auto check-in off");
-            }}
-            className={cn(
-              "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-              autoCheckin ? "bg-emerald-500" : "bg-muted-foreground/30",
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-1 size-5 rounded-full bg-white shadow transition-all",
-                autoCheckin ? "left-6" : "left-1",
-              )}
-            />
-          </button>
-        </div>
-      </Card>
 
       <p className="mt-6 flex gap-2 px-1 text-xs leading-relaxed text-muted-foreground">
         <Info className="mt-0.5 size-4 shrink-0" />

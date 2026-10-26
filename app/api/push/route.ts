@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
+import { USER_COOKIE, verifyUserSession, pushSession } from "@/lib/auth";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { pushConfigured, vapidPublicKey } from "@/lib/push";
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
 
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
   await store.savePushSubscription({
+    ...(pushSession(req.cookies.get(USER_COOKIE)?.value) ?? { sessionRef: null, sessionExpiresAt: null }),
     endpoint,
     p256dh,
     auth,

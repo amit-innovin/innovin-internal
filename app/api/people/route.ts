@@ -1,9 +1,10 @@
+import { validPlannerDate } from "@/lib/workspace-model";
+import { attendanceLocation } from "@/lib/presence";
 import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { isAdmin, isOwner } from "@/lib/admin";
 import { enforce } from "@/lib/guard";
 import { firstName } from "@/lib/format";
-import { locationTag } from "@/lib/geo";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
       // from someone who never signed in must not expose it through presence.
       email: byEmail.has(s.email) ? s.email : undefined,
       since: s.checkInAt,
-      where: locationTag(s.lat, s.lng),
+      where: attendanceLocation(s),
     });
   }
 
@@ -64,7 +65,7 @@ export async function PATCH(req: NextRequest) {
   // Joining date drives Earned Leave accrual and Flexible Leave pro-rating; "" clears it.
   if (body?.joinedOn !== undefined) {
     const joinedOn = str(body.joinedOn).trim();
-    if (joinedOn && !/^\d{4}-\d{2}-\d{2}$/.test(joinedOn)) return badRequest("Pick a valid joining date");
+    if (joinedOn && !validPlannerDate(joinedOn)) return badRequest("Pick a valid joining date");
     await store.setJoinedOn(email, joinedOn || null);
     return NextResponse.json({ ok: true });
   }

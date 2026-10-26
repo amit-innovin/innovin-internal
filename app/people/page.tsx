@@ -1,4 +1,5 @@
 "use client";
+import { LoadRecovery } from "@/components/load-recovery";
 
 import { useEffect, useState } from "react";
 import { MessageCircle, UserRound, Users } from "lucide-react";
@@ -65,7 +66,7 @@ export default function People() {
     <div className="mx-auto max-w-xl">
       <PageHeader title="People" subtitle="The whole crew — and who's around today." />
 
-      {!data ? (
+      {!data ? (<LoadRecovery>
         <div className="space-y-3">
           <Card className="gap-3 p-5">
             <Skeleton className="h-4 w-24" />
@@ -76,7 +77,7 @@ export default function People() {
             <Skeleton className="h-9 w-full" />
           </Card>
         </div>
-      ) : (
+      </LoadRecovery>) : (
         <>
           {pings?.signedIn && (
             <Card className="mb-4 gap-0 p-5">

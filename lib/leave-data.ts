@@ -4,6 +4,7 @@ import {
   flexibleEntitlement,
   holidaysFor,
   leaveLedger,
+  leaveCost,
   POLICY_ENTITLEMENT,
   round,
   type LeaveLedger,
@@ -11,10 +12,11 @@ import {
 } from "./leave";
 import { store } from "./store";
 import type { AwayRow, EmployeeRow, LeaveBalanceRow } from "./types";
+import type { ZohoLeaveResult } from "./zoho-people";
 
 // Zoho People is the system of record for leave. This app holds a snapshot an admin copies in
-// (lib/types LeaveBalanceRow) plus whatever has been requested here since that snapshot, so the
-// two never silently disagree: every balance is labelled with the date it was taken from Zoho.
+// (lib/types LeaveBalanceRow) with explicitly reconciled app approvals. Local adjustments
+// remain estimates, and copied figures are labeled with their freshness.
 //
 // An earlier version imported a spreadsheet of per-person entitlements. It was dropped because
 // it disagreed with Zoho on three of four leave types — including a Casual Leave allowance of 8
@@ -26,6 +28,7 @@ export type LeaveSummary = {
   // Where the numbers came from: an admin's Zoho snapshot, or just this app's own requests.
   source: "zoho-snapshot" | "app-only";
   asOf: string | null;
+  zoho?: ZohoLeaveResult;
   ledger: LeaveLedger[];
   earned: { accrued: number | null; canAvail: boolean; note: string | null };
   holidays: { date: string; name: string }[];
@@ -49,12 +52,12 @@ export function summarize(
   today: string,
   balance?: LeaveBalanceRow,
 ): LeaveSummary {
-  // Only requests made *after* the snapshot count on top of it — anything earlier is already
-  // reflected in the Zoho figure the admin copied.
+  // Only explicitly reconciled approved requests are included in a copied figure.
+  // Missing types retain their complete local history. Pending requests are never hidden.
   const requests = rows
-    .filter((r) => r.type === "leave" && r.leaveType && r.startDate.startsWith(String(year)))
-    .filter((r) => !balance || r.createdAt > balance.asOf)
-    .map((r) => ({ type: r.leaveType as LeaveType, days: r.days, status: r.status }));
+    .filter(r => r.type === "leave" && r.leaveType && r.startDate <= `${year}-12-31` && r.endDate >= `${year}-01-01`)
+    .filter(r => !(balance?.available[r.leaveType as typeof BALANCE_TYPES[number]] !== undefined && balance?.reconciledRequestIds?.includes(r.id) && r.status === "approved"))
+    .map(r => ({ type: r.leaveType as LeaveType, days: r.startDate.startsWith(String(year)) && r.endDate.startsWith(String(year)) ? r.days : leaveCost(r.startDate < `${year}-01-01` ? `${year}-01-01` : r.startDate, r.endDate > `${year}-12-31` ? `${year}-12-31` : r.endDate, r.halfDay), status: r.status }));
 
   const entitlement = entitlementFor(employee, year);
   const ledger = leaveLedger({ entitlement, requests }).map((row) => {
@@ -90,9 +93,9 @@ export function summarize(
 
 // Everyone's balances for the admin overview.
 export async function leaveOverview(year: number, today: string) {
-  const [employees, away, balances] = await Promise.all([
-    store.listEmployees(),
-    store.listAway(500),
+  const employees = await store.listEmployees();
+  const [away, balances] = await Promise.all([
+    Promise.all(employees.map(e => store.listAwayByEmail(e.email, 2147483647))).then(rows => rows.flat()),
     store.listLeaveBalances(year),
   ]);
   const byEmail = new Map<string, AwayRow[]>();
@@ -105,6 +108,9 @@ export async function leaveOverview(year: number, today: string) {
       email: e.email,
       joinedOn: e.joinedOn,
       stepsOffset: e.stepsOffset,
+      snapshotAvailable: balanceFor.get(e.email)?.available ?? {},
+      reconciledRequestIds: balanceFor.get(e.email)?.reconciledRequestIds ?? [],
+      approvedRequests: (byEmail.get(e.email) ?? []).filter(r => r.type === "leave" && r.status === "approved" && r.startDate <= `${year}-12-31` && r.endDate >= `${year}-01-01`).map(({ id, startDate, endDate, leaveType, days }) => ({ id, startDate, endDate, leaveType, days })),
       summary: summarize(e, byEmail.get(e.email) ?? [], year, today, balanceFor.get(e.email)),
     })),
   };

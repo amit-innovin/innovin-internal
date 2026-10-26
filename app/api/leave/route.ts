@@ -6,6 +6,7 @@ import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { leaveOverview, summarize } from "@/lib/leave-data";
 import { store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
+import { zohoLeave } from "@/lib/zoho-people";
 
 // The leave tracker. Balances are per person and per leave type, so this needs a verified
 // identity — a device cookie isn't enough to know whose entitlement to apply.
@@ -21,14 +22,15 @@ export async function GET(req: NextRequest) {
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
   if (!session) return NextResponse.json({ signedIn: false, year }, { status: 200 });
 
-  const [employee, rows, balances] = await Promise.all([
+  const [employee, rows, balances, zoho] = await Promise.all([
     store.getEmployee(session.email),
-    store.listAwayByEmail(session.email, 200),
+    store.listAwayByEmail(session.email, 2147483647),
     store.listLeaveBalances(year),
+    zohoLeave(session.email, year),
   ]);
   const person = { name: employee?.name ?? session.name, joinedOn: employee?.joinedOn ?? null };
   const balance = balances.find((b) => b.email === session.email);
-  return NextResponse.json({ signedIn: true, name: person.name, ...summarize(person, rows, year, today, balance) });
+  return NextResponse.json({ signedIn: true, name: person.name, ...summarize(person, rows, year, today, balance), zoho }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 const TYPES = ["cl", "sl", "el", "fl"] as const;
@@ -57,11 +59,15 @@ export async function PATCH(req: NextRequest) {
     available[type] = days;
   }
 
+  const allRequests = await store.listAwayByEmail(email, 2147483647);
+  const requestedIds = body.reconciledRequestIds ?? [];
+  if (!Array.isArray(requestedIds) || requestedIds.some(id => typeof id !== "string" || !allRequests.some(r => r.id === id && r.type === "leave" && r.status === "approved" && r.leaveType && available[r.leaveType as keyof typeof available] !== undefined))) return badRequest("Select approved requests reflected in the copied balance");
   const actor = await currentActor();
   const row = await store.setLeaveBalance({
     email,
     year: Number(todayIST().slice(0, 4)),
     available,
+    reconciledRequestIds: [...new Set(requestedIds)] as string[],
     asOf: new Date().toISOString(),
     updatedBy: actor ? actor.name || actor.email : null,
   });

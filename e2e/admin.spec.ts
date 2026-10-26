@@ -141,7 +141,7 @@ test.describe("Admin", () => {
     await adminLogin(page);
     await page.reload();
     await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByRole("button", { name: "End passcode access" }).click();
     await expect(page.getByText("Enter the admin passcode")).toBeVisible();
     await page.goto("/admin");
     await expect(page.getByText("Enter the admin passcode")).toBeVisible();

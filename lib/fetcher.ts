@@ -21,12 +21,16 @@ export function invalidate(urlPrefix: string) {
 async function request<T>(url: string, what: string): Promise<T | null> {
   let p = pending.get(url) as Promise<T | null> | undefined;
   if (!p) {
-    p = fetch(url, { cache: "no-store" })
+    p = fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15000) })
       .then(async (res) => {
-        if (!res.ok) throw new Error(String(res.status));
+        if (!res.ok) {
+          if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("innovin:load-failure", { detail: { url, status: res.status } }));
+          throw new Error(String(res.status));
+        }
         return (await res.json()) as T;
       })
       .catch(() => {
+        if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("innovin:load-failure", { detail: { url } }));
         toast.error(`Couldn't load ${what}. Check your connection and try again.`, { id: `load-${url}` });
         return null;
       })
@@ -79,7 +83,8 @@ export async function send(url: string, init: RequestInit & { json?: unknown } =
       invalidate("/api/notifications");
       invalidate("/api/workspace");
       // Leave balances are derived from away requests; their URL differs from the write.
-      if (pathOf(url) === "/api/away") invalidate("/api/leave");
+      if (pathOf(url) === "/api/away") { invalidate("/api/leave"); invalidate("/api/attendance"); }
+      if (["/api/workspace", "/api/attendance"].includes(pathOf(url))) { invalidate("/api/attendance"); invalidate("/api/people"); invalidate("/api/snacks"); }
       if (pathOf(url).startsWith("/api/auth/") || (pathOf(url) === "/api/attendance" && rest.method === "DELETE")) invalidate("");
     }
     return res;

@@ -40,6 +40,7 @@ export type AttendanceRow = {
   lat: number | null;
   lng: number | null;
   accuracyM: number | null;
+  declaredMode?: "office" | "remote" | null;
 };
 
 export type OrderRow = {
@@ -79,14 +80,15 @@ export type AwayRow = {
 };
 
 // A person's leave balances as recorded in Zoho People, typed in by an admin. Zoho is the
-// system of record; this is a snapshot, so `asOf` matters — anything requested through this app
-// after that moment is counted on top, and everything before it is already reflected.
+// system of record. asOf is freshness only; reconciledRequestIds explicitly identifies
+// app approvals reflected in the copied amounts. Other approvals remain estimated deductions.
 export type LeaveBalanceRow = {
   email: string;
   year: number;
   available: Partial<Record<"cl" | "sl" | "el" | "fl", number>>;
   asOf: string;
   updatedBy: string | null;
+  reconciledRequestIds?: string[];
 };
 
 // A browser's push subscription. `email` is set when the device is signed in, which is what
@@ -96,6 +98,8 @@ export type LeaveBalanceRow = {
 // so delivering a grievance update would require storing exactly the grievance→device join that
 // anonymity forbids. Grievance updates appear in the in-app feed only.
 export type PushSubscriptionRow = {
+  sessionRef?: string | null;
+  sessionExpiresAt?: string | null;
   endpoint: string;
   p256dh: string;
   auth: string;
@@ -134,6 +138,7 @@ export type GrievanceRow = {
   urgent: boolean;
   submitterRef: string;
   status: GrievanceStatus;
+  updatedAt?: string;
   createdAt: string;
 };
 
@@ -240,7 +245,9 @@ export interface Store {
   deleteAnnouncement(id: string): Promise<void>;
   listAnnouncements(limit: number): Promise<AnnouncementRow[]>;
   addAway(row: AwayRow): Promise<AwayRow>;
-  setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string): Promise<boolean>;
+  setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string, expected: AwayStatus): Promise<boolean>;
+  getAway(id: string): Promise<AwayRow | null>;
+  listPendingAway(): Promise<AwayRow[]>;
   listAway(limit: number): Promise<AwayRow[]>;
   listAwayByRef(ref: string, limit: number): Promise<AwayRow[]>;
   // A verified employee's requests across all their devices.
@@ -250,11 +257,11 @@ export interface Store {
   deleteEvent(id: string): Promise<boolean>;
   // Upcoming events (startsAt >= fromIso), soonest first.
   listEvents(fromIso: string, limit: number): Promise<EventRow[]>;
-  // One RSVP per device per event; email recorded only for signed-in employees.
+  // Signed-in RSVPs follow email ownership; guest RSVPs follow their browser capability.
   setRsvp(eventId: string, ref: string, email: string | null, going: boolean): Promise<void>;
   listRsvps(eventId: string): Promise<RsvpRow[]>;
   rsvpCounts(eventIds: string[]): Promise<Record<string, number>>;
-  myRsvpEventIds(ref: string): Promise<string[]>;
+  myRsvpEventIds(ref: string, email?: string): Promise<string[]>;
   // Creates the employee on first sign-in; refreshes name/picture/lastSeenAt afterwards.
   upsertEmployee(row: EmployeeRow): Promise<EmployeeRow>;
   getEmployee(email: string): Promise<EmployeeRow | null>;
@@ -267,6 +274,7 @@ export interface Store {
   listLeaveBalances(year: number): Promise<LeaveBalanceRow[]>;
   savePushSubscription(row: PushSubscriptionRow): Promise<PushSubscriptionRow>;
   deletePushSubscription(endpoint: string): Promise<boolean>;
+  revokePushSession(sessionRef: string): Promise<void>;
   // `email` narrows to one person's devices; omit it to broadcast.
   listPushSubscriptions(email?: string): Promise<PushSubscriptionRow[]>;
 }

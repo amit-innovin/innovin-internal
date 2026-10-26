@@ -63,6 +63,14 @@ async function read(): Promise<DB> {
   // One-time migration: scrub any device-linked submitter refs ever written, so the
   // file can't be joined against away/orders to de-anonymize old submissions.
   let dirty = false;
+  // Upgrade old workspace declarations once. Explicit null means intentionally cleared.
+  for (const row of db.attendance) {
+    if (row.declaredMode !== undefined) continue;
+    const profile = db.workspaceProfiles.find(p => p.email === row.email && p.presenceDate === row.date);
+    row.declaredMode = profile?.mode === "office" || profile?.mode === "remote" ? profile.mode : null;
+    dirty = true;
+  }
+
   for (const g of db.grievances) {
     if (g.submitterRef !== "anon") {
       g.submitterRef = "anon";
@@ -156,18 +164,23 @@ export const jsonStore: Store = {
     mutate((db) => {
       const existing = db.attendance.find((r) => r.email === row.email && r.date === row.date);
       if (existing) {
-        if (!existing.checkOutAt) return { result: existing, changed: false };
+        if (!existing.checkOutAt) {
+          if (row.declaredMode !== undefined) existing.declaredMode = row.declaredMode;
+          return { result: existing, changed: row.declaredMode !== undefined };
+        }
         Object.assign(existing, {
           checkInAt: row.checkInAt,
           checkOutAt: null,
           lat: row.lat,
           lng: row.lng,
           accuracyM: row.accuracyM,
+          declaredMode: row.declaredMode ?? null,
         });
         return { result: existing, changed: true };
       }
-      db.attendance.unshift(row);
-      return { result: row, changed: true };
+      const normalized = { ...row, declaredMode: row.declaredMode ?? null };
+      db.attendance.unshift(normalized);
+      return { result: normalized, changed: true };
     }),
   checkOut: (email, date, at) =>
     mutate((db) => {
@@ -224,7 +237,7 @@ export const jsonStore: Store = {
   setGrievanceStatus: (id, status) =>
     mutate((db) => {
       const row = db.grievances.find((r) => r.id === id);
-      if (row) row.status = status;
+      if (row) { row.status = status; row.updatedAt = new Date().toISOString(); }
       return { result: !!row, changed: !!row };
     }),
   listGrievances: () =>
@@ -364,6 +377,7 @@ export const jsonStore: Store = {
       db.pushSubscriptions = db.pushSubscriptions.filter((s) => s.endpoint !== endpoint);
       return { result: db.pushSubscriptions.length < before, changed: db.pushSubscriptions.length < before };
     }),
+  revokePushSession: (ref) => mutate(db => { const before = db.pushSubscriptions.length; db.pushSubscriptions = db.pushSubscriptions.filter(s => s.sessionRef !== ref); return { result: undefined, changed: before !== db.pushSubscriptions.length }; }),
   listPushSubscriptions: (email) =>
     query((db) => (email ? db.pushSubscriptions.filter((s) => s.email === email) : db.pushSubscriptions)),
   listEmployees: () =>
@@ -378,9 +392,11 @@ export const jsonStore: Store = {
       db.away.unshift(row);
       return { result: row, changed: true };
     }),
-  setAwayStatus: (id, status, decidedBy, decidedAt) =>
+  getAway: (id) => query(db => db.away.find(r => r.id === id) ?? null),
+  listPendingAway: () => query(db => db.away.filter(r => r.status === "pending").sort(newestFirst)),
+  setAwayStatus: (id, status, decidedBy, decidedAt, expected) =>
     mutate((db) => {
-      const row = db.away.find((r) => r.id === id);
+      const row = db.away.find((r) => r.id === id && r.status === expected);
       if (row) {
         row.status = status;
         row.decidedBy = decidedBy;
@@ -427,6 +443,7 @@ export const jsonStore: Store = {
     ),
   setRsvp: (eventId, ref, email, going) =>
     mutate((db) => {
+      if (email) db.rsvps = db.rsvps.filter(r => r.eventId !== eventId || r.email !== email || (going && r.submitterRef === ref));
       if (going) {
         const existing = db.rsvps.find((r) => r.eventId === eventId && r.submitterRef === ref);
         if (existing) {
@@ -448,8 +465,12 @@ export const jsonStore: Store = {
   rsvpCounts: (eventIds) =>
     query((db) => {
       const counts: Record<string, number> = {};
-      for (const r of db.rsvps) if (eventIds.includes(r.eventId)) counts[r.eventId] = (counts[r.eventId] ?? 0) + 1;
+      const seen = new Set<string>();
+      for (const r of db.rsvps) {
+        const identity = `${r.eventId}:${r.email ?? r.submitterRef}`;
+        if (eventIds.includes(r.eventId) && !seen.has(identity)) { counts[r.eventId] = (counts[r.eventId] ?? 0) + 1; seen.add(identity); }
+      }
       return counts;
     }),
-  myRsvpEventIds: (ref) => query((db) => db.rsvps.filter((r) => r.submitterRef === ref).map((r) => r.eventId)),
+  myRsvpEventIds: (ref, email) => query((db) => db.rsvps.filter((r) => r.submitterRef === ref || (!!email && r.email === email)).map((r) => r.eventId)),
 };

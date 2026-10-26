@@ -25,7 +25,7 @@ export default function SpeakUpCard() {
     if (!res.ok) return toast.error(await readError(res));
     setBody("");
     setUrgent(false);
-    toast.success(urgent ? "Sent — admins get pinged right away." : "Heard. Thank you.");
+    toast.success(urgent ? "Sent — marked urgent for admins. Notifications are best-effort." : "Heard. Thank you.");
   };
 
   return (

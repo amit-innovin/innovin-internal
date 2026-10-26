@@ -1,4 +1,5 @@
 "use client";
+import { LoadRecovery } from "@/components/load-recovery";
 
 import { useEffect, useState } from "react";
 import { Check, Clock, History, Send } from "lucide-react";
@@ -110,7 +111,7 @@ export default function Snacks() {
         ]}
       />
 
-      {!mine || !history ? (
+      {!mine || !history ? (<LoadRecovery>
         <Card className="mt-5 gap-3 p-5">
           <Skeleton className="h-4 w-40" />
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
@@ -119,7 +120,7 @@ export default function Snacks() {
             ))}
           </div>
         </Card>
-      ) : tab === "today" ? (
+      </LoadRecovery>) : tab === "today" ? (
         <form onSubmit={submit} className="t-stagger mt-5">
           {/* Status first — "did my order go through?" is the #1 question. */}
           <Card

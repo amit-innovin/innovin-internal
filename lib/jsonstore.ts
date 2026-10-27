@@ -19,6 +19,7 @@ import type {
   WifiRow,
   WorkspaceProfile,
   PlannerDay,
+  ProviderRecord,
 } from "./types";
 import { pingExpired } from "./pings";
 
@@ -27,6 +28,7 @@ import { pingExpired } from "./pings";
 const file = () => process.env.DATA_FILE || path.join(process.cwd(), "data", "store.json");
 
 type DB = {
+  providerRecords: ProviderRecord[];
   notices: NoticeRow[];
   noticeReactions: NoticeReaction[];
   attendance: AttendanceRow[];
@@ -46,7 +48,7 @@ type DB = {
   plannerDays: PlannerDay[];
 };
 
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], pings: [], workspaceProfiles: [], plannerDays: [] });
+const empty = (): DB => ({ providerRecords: [], notices: [], noticeReactions: [], attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], pings: [], workspaceProfiles: [], plannerDays: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -117,6 +119,15 @@ const mutate = <T>(fn: (db: DB) => { result: T; changed: boolean }) =>
 const query = <T>(fn: (db: DB) => T) => locked(async () => fn(await read()));
 
 export const jsonStore: Store = {
+  getProviderRecord: key => query(db => db.providerRecords.find(r => r.key === key) ?? null),
+  putProviderRecord: (key, expectedVersion, value, updatedAt) => mutate(db => {
+    const row = db.providerRecords.find(r => r.key === key);
+    if ((!row && expectedVersion !== null) || (row && row.version !== expectedVersion)) return { result: false, changed: false };
+    if (row) { row.version++; row.value = value; row.updatedAt = updatedAt; }
+    else db.providerRecords.push({ key, version: 1, value, updatedAt });
+    return { result: true, changed: true };
+  }),
+
   addNotice: (row) => mutate((db) => {
     const safe = row.anonymous ? { ...row, authorEmail: null, authorName: null } : row;
     db.notices.push(safe);

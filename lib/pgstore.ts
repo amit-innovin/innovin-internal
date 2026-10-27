@@ -22,10 +22,18 @@ import type {
   WifiRow,
   WorkspaceProfile,
   PlannerDay,
+  ProviderRecord,
 } from "./types";
 
 // Postgres persistence — used when DATABASE_URL is set (Neon, Supabase, Vercel Postgres).
 const SCHEMA = `
+CREATE TABLE IF NOT EXISTS provider_records (
+  key text PRIMARY KEY,
+  version integer NOT NULL,
+  value text NOT NULL,
+  updated_at timestamptz NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS notices (
   id text PRIMARY KEY,
   data jsonb NOT NULL,
@@ -359,6 +367,18 @@ const event = (r: any): EventRow => ({
 });
 
 class PgStore implements Store {
+  async getProviderRecord(key: string): Promise<ProviderRecord | null> {
+    const result = await this.q(`SELECT key, version, value, updated_at AS "updatedAt" FROM provider_records WHERE key=$1`, [key]);
+    const row = result.rows[0];
+    return row ? { ...row, updatedAt: row.updatedAt?.toISOString?.() ?? row.updatedAt } : null;
+  }
+  async putProviderRecord(key: string, expectedVersion: number | null, value: string, updatedAt: string) {
+    const result = expectedVersion === null
+      ? await this.q(`INSERT INTO provider_records(key,version,value,updated_at) VALUES($1,1,$2,$3) ON CONFLICT(key) DO NOTHING`, [key,value,updatedAt])
+      : await this.q(`UPDATE provider_records SET version=version+1, value=$3, updated_at=$4 WHERE key=$1 AND version=$2`, [key,expectedVersion,value,updatedAt]);
+    return !!result.rowCount;
+  }
+
   async addNotice(row: NoticeRow): Promise<NoticeRow> {
     const safe = row.anonymous ? { ...row, authorEmail: null, authorName: null } : row;
     await this.q(`INSERT INTO notices (id, data, created_at) VALUES ($1,$2::jsonb,$3)`, [safe.id, JSON.stringify(safe), safe.createdAt]);

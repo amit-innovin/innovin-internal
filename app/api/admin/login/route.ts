@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { secureAuthCookie } from "@/lib/cookies";
 import { ADMIN_COOKIE, createAdminSession, validAdminPasscode } from "@/lib/admin";
 import { ADMIN_SESSION_MS, LIMITS } from "@/lib/config";
 import { clientIp, readJSON, tooMany } from "@/lib/http";
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
   res.cookies.set(ADMIN_COOKIE, createAdminSession(), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureAuthCookie(new URL(req.url).origin),
     maxAge: ADMIN_SESSION_MS / 1000,
     path: "/",
   });

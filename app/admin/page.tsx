@@ -1,3 +1,7 @@
+import { cookies } from "next/headers";
+import { ADMIN_COOKIE,verifyAdminSession } from "@/lib/admin";
+import { PantryFulfillment } from "@/components/pantry-fulfillment";
+import { EventManageButton } from "@/components/event-editor";
 import { attendanceLocation } from "@/lib/presence";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
@@ -89,6 +93,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   }
 
   const tab: Tab = (TABS.find((t) => t.id === params.tab)?.id ?? "today") as Tab;
+  const pinSession=verifyAdminSession((await cookies()).get(ADMIN_COOKIE)?.value);
   const date = todayIST();
   const year = Number(date.slice(0, 4));
   const now = Date.now(); // frozen for hydration — client lists must render the same labels as the server
@@ -141,11 +146,11 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
             {actor ? ` · ${actor.name || actor.email}` : " · signed in with the shared passcode"}
           </p>
         </div>
-        <form action="/api/admin/logout" method="post">
+        {pinSession && <form action="/api/admin/logout" method="post">
           <Button type="submit" variant="outline" size="lg">
             <LogOut /> End passcode access
           </Button>
-        </form>
+        </form>}
       </div>
 
       <div className="t-stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -153,7 +158,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           <Stat icon={CalendarCheck} tone="blue" label="Checked in today" value={people.length} href="/admin?tab=today#attendance" />
         </div>
         <div style={stagger(1)}>
-          <Stat icon={Coffee} tone="sky" label="Orders today" value={orders.length} href="/admin?tab=today#orders" />
+          <Stat icon={Coffee} tone="sky" label="Pantry requests" value={orders.length} href="/admin?tab=today#orders" />
         </div>
         <div style={stagger(2)}>
           <Stat icon={MessageSquare} tone="ink" label="Open reports" value={openGrievances} href="/admin?tab=approvals#grievances" />
@@ -168,7 +173,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <div className={`mt-4 grid gap-4 md:grid-cols-2 ${tab === "today" ? "" : "hidden"}`}>
         <Card id="orders" className="gap-0 p-5">
           <Link href="/admin/pantry" className="mb-3 inline-flex min-h-11 items-center text-sm underline">Order pantry supplies with Instamart</Link>
-          <SectionHeader title="Today's orders" aside={`Total ₹${total}${hasUnpriced ? "+" : ""}`} />
+          <SectionHeader title="Today's pantry requests" aside={`Menu estimate ₹${total}${hasUnpriced ? "+" : ""}`} />
           <ul className="mt-3 space-y-2">
             {consolidated.map((c) => (
               <li key={c.id} className="flex items-center gap-3 text-sm">
@@ -178,7 +183,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
               </li>
             ))}
           </ul>
-          {orders.some((o) => o.orderedBy) && <div className="mt-4 border-t pt-3"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Employee trays</p><ul className="mt-2 space-y-2 text-sm text-muted-foreground">{[...new Set(orders.flatMap((o) => o.orderedBy ? [o.orderedBy] : []))].map((email) => <li key={email}><span className="font-medium text-foreground">{employees.find((e) => e.email === email)?.name || email}</span><span className="ml-2">{orders.filter((o) => o.orderedBy === email).map((o) => MENU.find((m) => m.id === o.itemId)?.name || o.itemId).join(" + ")}</span></li>)}</ul></div>}
+          {orders.some((o) => o.orderedBy) && <div className="mt-4 border-t pt-3"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Employee trays</p><ul className="mt-2 space-y-2 text-sm text-muted-foreground">{[...new Set(orders.flatMap((o) => o.orderedBy ? [o.orderedBy] : []))].map((email) => <li key={email}><span className="font-medium text-foreground">{employees.find((e) => e.email === email)?.name || email}</span><span className="ml-2">{orders.filter((o) => o.orderedBy === email).map((o) => MENU.find((m) => m.id === o.itemId)?.name || o.itemId).join(" + ")}</span><PantryFulfillment email={email} orders={orders.filter(o=>o.orderedBy===email)} /></li>)}</ul></div>}
           {orders.some((o) => o.instructions) && (
             <div className="mt-4 border-t pt-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Instructions</p>
@@ -269,7 +274,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                 <IconTile icon={CalendarDays} tone="blue" size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">
-                    {e.title} <Badge variant="secondary" className="ml-1 align-middle">{e.category}</Badge>
+                    <EventManageButton event={e} canEdit={Date.parse(e.startsAt)>now} /> <Badge variant="secondary" className="ml-1 align-middle">{e.category}</Badge>
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {fmtDay(new Date(e.startsAt))} · {fmtTime(e.startsAt)}

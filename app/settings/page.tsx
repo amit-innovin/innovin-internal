@@ -103,7 +103,7 @@ export default function Settings() {
           <IconTile icon={Lock} tone="slate" />
           <div className="flex-1">
             <p className="text-sm font-medium">Admin dashboard</p>
-            <p className="text-xs text-muted-foreground">For office coordinators — passcode required.</p>
+            <p className="text-xs text-muted-foreground">For office coordinators with admin access.</p>
           </div>
           <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </Card>

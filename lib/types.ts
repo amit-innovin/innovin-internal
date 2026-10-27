@@ -44,6 +44,9 @@ export type AttendanceRow = {
 };
 
 export type OrderRow = {
+  fulfillment?: import("./order-state").OrderFulfillment;
+  fulfillmentAt?: string;
+  fulfillmentBy?: string | null;
   id: string;
   date: string;
   itemId: string;
@@ -110,6 +113,8 @@ export type PushSubscriptionRow = {
 export type EventCategory = "sports" | "arts" | "culture" | "learning" | "social" | "company";
 
 export type EventRow = {
+  updatedAt?: string;
+  cancelledAt?: string;
   id: string;
   title: string;
   body: string;
@@ -230,6 +235,7 @@ export interface Store {
   listStepsByEmail(email: string, limit: number): Promise<StepsRow[]>;
   // Replaces the device's selection for the day (atomically in Postgres).
   setDayOrders(date: string, ref: string, rows: OrderRow[]): Promise<OrderRow[]>;
+  setOrderFulfillment(date: string, ref: string, expectedIds: string[], expected: import("./order-state").OrderFulfillment, next: import("./order-state").OrderFulfillment, actor: string | null, at: string): Promise<boolean>;
   listOrders(date: string): Promise<OrderRow[]>;
   listOrdersByRef(ref: string, limit: number): Promise<OrderRow[]>;
   deleteOrder(ref: string, date: string): Promise<boolean>;
@@ -246,6 +252,7 @@ export interface Store {
   addWifi(row: WifiRow): Promise<WifiRow>;
   listWifi(limit: number): Promise<WifiRow[]>;
   addAnnouncement(row: AnnouncementRow): Promise<AnnouncementRow>;
+  getAnnouncement(id: string): Promise<AnnouncementRow | null>;
   deleteAnnouncement(id: string): Promise<void>;
   listAnnouncements(limit: number): Promise<AnnouncementRow[]>;
   addAway(row: AwayRow): Promise<AwayRow>;
@@ -258,11 +265,12 @@ export interface Store {
   listAwayByEmail(email: string, limit: number): Promise<AwayRow[]>;
   addEvent(row: EventRow): Promise<EventRow>;
   getEvent(id: string): Promise<EventRow | null>;
-  deleteEvent(id: string): Promise<boolean>;
+  updateEvent(id: string, expected: string, patch: Pick<EventRow,"title"|"body"|"category"|"startsAt"|"location"> & {cancelledAt?:string}, updatedAt: string): Promise<EventRow | null>;
+  deleteEvent(id: string, expected?: string): Promise<boolean>;
   // Upcoming events (startsAt >= fromIso), soonest first.
   listEvents(fromIso: string, limit: number): Promise<EventRow[]>;
   // Signed-in RSVPs follow email ownership; guest RSVPs follow their browser capability.
-  setRsvp(eventId: string, ref: string, email: string | null, going: boolean): Promise<void>;
+  setRsvp(eventId: string, ref: string, email: string | null, going: boolean): Promise<boolean>;
   listRsvps(eventId: string): Promise<RsvpRow[]>;
   rsvpCounts(eventIds: string[]): Promise<Record<string, number>>;
   myRsvpEventIds(ref: string, email?: string): Promise<string[]>;

@@ -1,102 +1,53 @@
 import { CLOSED_URL } from "../playwright.config";
-import { expect, test, signInOffice } from "./fixtures";
+import { expect,test,signInOffice } from "./fixtures";
 
-test.describe("Meals & Snacks (orders open)", () => {
-  test("place a multi-item order, change it, view history, see it on home, then cancel", async ({ page, isMobile }) => {
-    await signInOffice(page);
-    await page.goto("/snacks");
-    await expect(page.getByText(/Nothing ordered yet/)).toBeVisible();
-    const submit = page.getByRole("button", { name: "Place order" });
-    await expect(submit).toBeDisabled();
-
-    await page.getByRole("button", { name: /^Tea/ }).click();
-    await page.getByRole("button", { name: /^Lunch/ }).click();
-    await expect(page.getByRole("button", { name: /^Tea/ })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: /^Lunch/ })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByText("Tea + Lunch")).toBeVisible();
+test.describe("Meals & Snacks (requests open)",()=>{
+  test("selections and notes save across pages, history and reload before cancellation",async({page,isMobile})=>{
+    await signInOffice(page);await page.goto("/snacks");
+    await expect(page.getByRole("button",{name:"Save pantry request",exact:true})).toBeDisabled();
+    await page.getByRole("button",{name:/^Tea/}).click();
+    await expect(page.getByText(/Request received.*Tea/)).toBeVisible();
+    await page.getByRole("button",{name:/^Lunch/}).click();
+    await expect(page.getByText(/Request received.*Tea.*Lunch/)).toBeVisible();
     await page.getByLabel("Special instructions").fill("  less sugar  ");
-    await submit.click();
-    await expect(page.getByText("Order placed: Tea + Lunch")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Update order" })).toBeVisible();
-
-    await page.reload();
-    await expect(page.getByLabel("Special instructions")).toHaveValue("less sugar");
-    await expect(page.getByRole("button", { name: /^Tea/ })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: /^Lunch/ })).toHaveAttribute("aria-pressed", "true");
-
-    // Drop tea, keep lunch — the day's selection is replaced.
-    await page.getByRole("button", { name: /^Tea/ }).click();
-    await page.getByRole("button", { name: "Update order" }).click();
-    await expect(page.getByText("Order updated: Lunch")).toBeVisible();
-
-    await page.getByRole("tab", { name: "History" }).click();
-    await expect(page.getByText("Today ·")).toBeVisible();
-    // The post-update reload may still be in flight — wait for it to settle to [lunch] only.
-    await expect(page.getByText("less sugar")).toHaveCount(1);
-    await expect(page.getByText("less sugar").first()).toBeVisible();
-    await page.getByRole("tab", { name: "Today" }).click();
-
-    await page.goto("/");
-    if (isMobile) await page.getByRole("button", { name: "Expand Pantry", exact: true }).click();
-    const food = page.locator(".reference-pantry");
-    await expect(food.getByRole("button", { name: "Remove Lunch from cart", exact: true })).toBeVisible();
-    await expect(food).toContainText("Lunch");
-
-    await page.goto("/snacks");
-    await page.getByRole("button", { name: "Cancel today's order" }).click();
+    await page.getByLabel("Special instructions").press("Tab");
+    await expect.poll(async()=>{const data=await(await page.request.get("/api/snacks?scope=mine")).json();return data.items[0]?.instructions;}).toBe("less sugar");
+    await page.reload();await expect(page.getByLabel("Special instructions")).toHaveValue("less sugar");
+    await expect(page.getByRole("button",{name:/^Tea/})).toHaveAttribute("aria-pressed","true");
+    await page.getByRole("button",{name:/^Tea/}).click();
+    await expect(page.getByRole("button",{name:/^Tea/})).toHaveAttribute("aria-pressed","false");
+    await page.getByRole("tab",{name:"History"}).click();
+    await expect(page.getByText("Today ·")).toBeVisible();await expect(page.getByText("less sugar",{exact:true})).toBeVisible();
+    await page.goto("/");if(isMobile)await page.getByRole("button",{name:"Expand Pantry",exact:true}).click();
+    await expect(page.getByRole("button",{name:"Remove Lunch from cart",exact:true})).toBeVisible();
+    await page.goto("/snacks");await page.getByRole("button",{name:"Cancel today's request",exact:true}).click();
     await expect(page.getByRole("alertdialog")).toContainText("Lunch will be removed");
-    await page.getByRole("alertdialog").getByRole("button", { name: "Cancel order" }).click();
-    await expect(page.getByText("Order cancelled")).toBeVisible();
-    await expect(page.getByText(/Nothing ordered yet|closed for today/)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Place order" })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Cancel today's order" })).toHaveCount(0);
+    await page.getByRole("alertdialog").getByRole("button",{name:"Cancel request",exact:true}).click();
+    await expect(page.getByText("Pantry request cancelled",{exact:true})).toBeVisible();
+    await page.reload();await expect(page.getByRole("button",{name:"Save pantry request",exact:true})).toBeDisabled();
+    expect((await(await page.request.get("/api/snacks?scope=mine")).json()).items).toEqual([]);
   });
-
-  test("keeping an order from the cancel dialog leaves it untouched", async ({ page }) => {
-    await signInOffice(page);
-    await page.goto("/snacks");
-    await page.getByRole("button", { name: /^Healthy Option/ }).click();
-    await page.getByRole("button", { name: "Place order" }).click();
-    await expect(page.getByText("Order placed: Healthy Option")).toBeVisible();
-    await page.getByRole("button", { name: "Cancel today's order" }).click();
-    await page.getByRole("alertdialog").getByRole("button", { name: "Keep order" }).click();
-    await expect(page.getByRole("alertdialog")).toHaveCount(0);
-    await page.reload();
-    await expect(page.getByRole("button", { name: "Update order" })).toBeVisible();
+  test("keeping a request from the cancel dialog leaves it untouched",async({page})=>{
+    await signInOffice(page);await page.goto("/snacks");await page.getByRole("button",{name:/^Healthy Option/}).click();
+    await expect(page.getByText(/Request received.*Healthy Option/)).toBeVisible();
+    await page.getByRole("button",{name:"Cancel today's request",exact:true}).click();
+    await page.getByRole("alertdialog").getByRole("button",{name:"Keep request",exact:true}).click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);await page.reload();
+    await expect(page.getByRole("button",{name:/^Healthy Option/})).toHaveAttribute("aria-pressed","true");
   });
-
-  test("each signed-in employee keeps their own order", async ({ browser }) => {
-    const deviceA = await browser.newContext();
-    const deviceB = await browser.newContext();
-    const a = await deviceA.newPage();
-    const b = await deviceB.newPage();
-    await signInOffice(a);
-    await a.goto("/snacks");
-    await a.getByRole("button", { name: /^Tea/ }).click();
-    await a.getByRole("button", { name: "Place order" }).click();
-    await expect(a.getByText("Order placed: Tea")).toBeVisible();
-    await signInOffice(b);
-    await b.goto("/snacks");
-    await expect(b.getByText(/Nothing ordered yet/)).toBeVisible();
-    await Promise.all([deviceA.close(), deviceB.close()]);
+  test("each signed-in employee keeps their own request",async({browser})=>{
+    const ca=await browser.newContext(),cb=await browser.newContext(),a=await ca.newPage(),b=await cb.newPage();
+    await signInOffice(a);await a.goto("/snacks");await a.getByRole("button",{name:/^Tea/}).click();await expect(a.getByText(/Request received.*Tea/)).toBeVisible();
+    await signInOffice(b);await b.goto("/snacks");await expect(b.getByText(/Nothing ordered yet/)).toBeVisible();
+    expect((await(await b.request.get("/api/snacks?scope=mine")).json()).items).toEqual([]);await ca.close();await cb.close();
   });
 });
-
-test.describe("Meals & Snacks (after cutoff)", () => {
-  test.use({ baseURL: CLOSED_URL });
-
-  test("shows orders closed, disables ordering, and home says closed", async ({ page, isMobile }) => {
-    await signInOffice(page);
-    await page.goto("/snacks");
-    await expect(page.getByText("Orders are closed for today")).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Tea/ })).toBeDisabled();
-    await expect(page.getByLabel("Special instructions")).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Place order" })).toBeDisabled();
-
-    await page.goto("/");
-    if (isMobile) await page.getByRole("button", { name: "Expand Pantry", exact: true }).click();
-    await expect(page.getByText("Orders closed", { exact: true }).first()).toBeVisible();
-    await page.getByRole("searchbox", { name: "Search pantry" }).fill("Tea");
-    await expect(page.getByRole("button", { name: "Add Tea" })).toBeDisabled();
+test.describe("Meals & Snacks (after cutoff)",()=>{
+  test.use({baseURL:CLOSED_URL});
+  test("closed requests cannot be edited or cancelled",async({page,isMobile})=>{
+    await signInOffice(page);await page.goto("/snacks");await expect(page.getByText("Orders are closed for today")).toBeVisible();
+    await expect(page.getByRole("button",{name:/^Tea/})).toBeDisabled();await expect(page.getByLabel("Special instructions")).toBeDisabled();await expect(page.getByRole("button",{name:"Save pantry request",exact:true})).toBeDisabled();
+    await page.goto("/");if(isMobile)await page.getByRole("button",{name:"Expand Pantry",exact:true}).click();await expect(page.getByText("Requests closed",{exact:true})).toBeVisible();
+    await page.getByRole("searchbox",{name:"Search pantry"}).fill("Tea");await expect(page.getByRole("button",{name:"Add Tea",exact:true})).toBeDisabled();
   });
 });

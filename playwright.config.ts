@@ -63,6 +63,7 @@ export default defineConfig({
     { name: "desktop", testIgnore: /(?:api|ios)\.spec/, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, launchOptions } },
     { name: "mobile", testIgnore: /(?:api|ios)\.spec/, use: { ...devices["Pixel 7"], launchOptions } },
     ...(process.env.E2E_IOS ? [
+      { name: "ios-journeys", testMatch: /journey-repairs\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
       { name: "ios-pantry", testMatch: /pantry(?:-safety)?\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
       { name: "ios-small", testMatch: /ios\.spec/, use: { ...devices["iPhone SE (3rd gen)"], browserName: "webkit" as const } },
       { name: "ios", testMatch: /ios\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },

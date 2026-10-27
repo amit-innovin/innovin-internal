@@ -83,6 +83,7 @@ export async function send(url: string, init: RequestInit & { json?: unknown } =
       invalidate("/api/notifications");
       invalidate("/api/workspace");
       // Leave balances are derived from away requests; their URL differs from the write.
+      if (pathOf(url) === "/api/snacks") { invalidate("/api/snacks"); }
       if (pathOf(url) === "/api/away") { invalidate("/api/leave"); invalidate("/api/attendance"); }
       if (["/api/workspace", "/api/attendance"].includes(pathOf(url))) { invalidate("/api/attendance"); invalidate("/api/people"); invalidate("/api/snacks"); }
       if (pathOf(url).startsWith("/api/auth/") || (pathOf(url) === "/api/attendance" && rest.method === "DELETE")) invalidate("");

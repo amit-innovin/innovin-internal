@@ -1,3 +1,4 @@
+import { assertRequestEditable, fulfillmentOf, nextFulfillment, canMoveFulfillment, sameTray, type OrderFulfillment } from "./order-state";
 import { Pool } from "pg";
 import { pgConfig } from "./pgconfig";
 import { PING_TTL_MS } from "./pings";
@@ -230,6 +231,9 @@ DELETE FROM attendance a USING attendance b
 ALTER TABLE attendance ADD CONSTRAINT attendance_email_date_key UNIQUE (email, date);
 CREATE UNIQUE INDEX IF NOT EXISTS orders_day_ref_item ON orders (date, submitter_ref, item_id);
 CREATE INDEX IF NOT EXISTS attendance_date_idx ON attendance (date);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_at timestamptz;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_by text;
 CREATE INDEX IF NOT EXISTS orders_date_idx ON orders (date);
 CREATE INDEX IF NOT EXISTS orders_submitter_idx ON orders (submitter_ref, date DESC);
 CREATE INDEX IF NOT EXISTS grievances_created_idx ON grievances (created_at DESC);
@@ -239,6 +243,8 @@ CREATE INDEX IF NOT EXISTS announcements_created_idx ON announcements (created_a
 CREATE INDEX IF NOT EXISTS away_created_idx ON away (created_at DESC);
 CREATE INDEX IF NOT EXISTS away_submitter_idx ON away (submitter_ref, created_at DESC);
 CREATE INDEX IF NOT EXISTS steps_date_idx ON steps (date);
+ALTER TABLE events ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled_at timestamptz;
 CREATE INDEX IF NOT EXISTS events_starts_idx ON events (starts_at);
 CREATE INDEX IF NOT EXISTS event_rsvps_ref_idx ON event_rsvps (submitter_ref);`;
 
@@ -258,6 +264,7 @@ const attendance = (r: any): AttendanceRow => ({
   accuracyM: r.accuracy_m ?? null,
 });
 const order = (r: any): OrderRow => ({
+  ...(r.fulfillment ? {fulfillment:r.fulfillment,fulfillmentAt:r.fulfillment_at?.toISOString?.()??r.fulfillment_at,fulfillmentBy:r.fulfillment_by??null} : {}),
   id: r.id,
   date: r.date,
   itemId: r.item_id,
@@ -356,6 +363,8 @@ const away = (r: any): AwayRow => ({
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const event = (r: any): EventRow => ({
+  ...(r.updated_at ? {updatedAt:r.updated_at?.toISOString?.() ?? r.updated_at} : {}),
+  ...(r.cancelled_at ? {cancelledAt:r.cancelled_at?.toISOString?.() ?? r.cancelled_at} : {}),
   id: r.id,
   title: r.title,
   body: r.body,
@@ -525,6 +534,8 @@ class PgStore implements Store {
     try {
       await client.query("BEGIN");
       await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`pantry:${date}:${ref}`]);
+      const existing=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);
+      assertRequestEditable(existing.rows.map(order));
       await client.query(`DELETE FROM orders WHERE date = $1 AND submitter_ref = $2`, [date, ref]);
       for (const row of rows) {
         await client.query(
@@ -547,9 +558,20 @@ class PgStore implements Store {
     const res = await this.q(`SELECT * FROM orders WHERE date = $1 ORDER BY created_at`, [date]);
     return res.rows.map(order);
   }
+  async setOrderFulfillment(date:string,ref:string,expectedIds:string[],expected:OrderFulfillment,next:OrderFulfillment,actor:string|null,at:string) {
+    await this.init();const client=await this.db().connect();
+    try {await client.query("BEGIN");await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,[`pantry:${date}:${ref}`]);
+      const result=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);const rows=result.rows.map(order);
+      if(!canMoveFulfillment(expected,next) || !sameTray(rows,expectedIds) || rows.some(r=>fulfillmentOf(r)!==expected)){await client.query("COMMIT");return false;}
+      await client.query(`UPDATE orders SET fulfillment=$3,fulfillment_at=$4,fulfillment_by=$5 WHERE date=$1 AND submitter_ref=$2`,[date,ref,next,at,actor]);await client.query("COMMIT");return true;
+    } catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}finally{client.release();}
+  }
   async deleteOrder(ref: string, date: string) {
-    const res = await this.q(`DELETE FROM orders WHERE submitter_ref = $1 AND date = $2`, [ref, date]);
-    return (res.rowCount ?? 0) > 0;
+    await this.init();const client=await this.db().connect();
+    try {await client.query("BEGIN");await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,[`pantry:${date}:${ref}`]);
+      const rows=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);assertRequestEditable(rows.rows.map(order));
+      const result=await client.query(`DELETE FROM orders WHERE submitter_ref=$1 AND date=$2`,[ref,date]);await client.query("COMMIT");return !!result.rowCount;
+    }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}finally{client.release();}
   }
   async listOrdersByRef(ref: string, limit: number) {
     const res = await this.q(`SELECT * FROM orders WHERE submitter_ref = $1 ORDER BY date DESC LIMIT $2`, [ref, limit]);
@@ -599,6 +621,7 @@ class PgStore implements Store {
     );
     return announcement(res.rows[0]);
   }
+  async getAnnouncement(id:string) {const res=await this.q(`SELECT * FROM announcements WHERE id=$1`,[id]);return res.rows[0]?announcement(res.rows[0]):null;}
   async deleteAnnouncement(id: string) {
     await this.q(`DELETE FROM announcements WHERE id = $1`, [id]);
   }
@@ -755,8 +778,12 @@ class PgStore implements Store {
     const res = await this.q(`SELECT * FROM events WHERE id = $1`, [rid]);
     return res.rows[0] ? event(res.rows[0]) : null;
   }
-  async deleteEvent(rid: string) {
-    const res = await this.q(`DELETE FROM events WHERE id = $1`, [rid]);
+  async updateEvent(rid: string, expected: string, patch: Pick<EventRow,"title"|"body"|"category"|"startsAt"|"location"> & {cancelledAt?:string}, updatedAt:string) {
+    const res=await this.q(`UPDATE events SET title=$3,body=$4,category=$5,starts_at=$6,location=$7,updated_at=$8,cancelled_at=COALESCE($9::timestamptz,cancelled_at) WHERE id=$1 AND COALESCE(updated_at,created_at)=$2::timestamptz RETURNING *`,[rid,expected,patch.title,patch.body,patch.category,patch.startsAt,patch.location,updatedAt,patch.cancelledAt??null]);
+    return res.rows[0]?event(res.rows[0]):null;
+  }
+  async deleteEvent(rid: string, expected?:string) {
+    const res = expected ? await this.q(`DELETE FROM events WHERE id = $1 AND COALESCE(updated_at,created_at)=$2::timestamptz`, [rid,expected]) : await this.q(`DELETE FROM events WHERE id = $1`, [rid]);
     return (res.rowCount ?? 0) > 0;
   }
   async listEvents(fromIso: string, limit: number) {
@@ -769,10 +796,12 @@ class PgStore implements Store {
     try {
       await client.query("BEGIN");
       await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`rsvp:${eventId}:${email ?? ref}`]);
+      const active=await client.query(`SELECT id,cancelled_at FROM events WHERE id=$1 FOR UPDATE`,[eventId]);
+      if(!active.rows[0]||active.rows[0].cancelled_at){await client.query("COMMIT");return false;}
       if (email) await client.query(`DELETE FROM event_rsvps WHERE event_id=$1 AND email=$2 AND (NOT $3 OR submitter_ref<>$4)`, [eventId,email,going,ref]);
       if (going) await client.query(`INSERT INTO event_rsvps (event_id, submitter_ref, email, created_at) VALUES ($1,$2,$3,$4) ON CONFLICT (event_id,submitter_ref) DO UPDATE SET email=EXCLUDED.email`, [eventId,ref,email,new Date().toISOString()]);
       else await client.query(`DELETE FROM event_rsvps WHERE event_id=$1 AND submitter_ref=$2`, [eventId,ref]);
-      await client.query("COMMIT");
+      await client.query("COMMIT");return true;
     } catch(error) { await client.query("ROLLBACK"); throw error; }
     finally { client.release(); }
   }

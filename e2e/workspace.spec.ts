@@ -71,10 +71,10 @@ test.describe("Studio workspace", () => {
     const event = page.locator("article").filter({ hasText: title });
     await expect(event).toBeVisible();
     await event.getByRole("button", { name: "RSVP" }).click();
-    await expect(event.getByRole("button", { name: "Going" })).toBeVisible();
+    await expect(event.getByRole("button", { name: "Cancel RSVP" })).toBeVisible();
     await page.reload();
     if (isMobile) await page.getByRole("button", { name: "Expand Events", exact: true }).click();
-    await expect(page.locator("article").filter({ hasText: title }).getByRole("button", { name: "Going" })).toBeVisible();
+    await expect(page.locator("article").filter({ hasText: title }).getByRole("button", { name: "Cancel RSVP" })).toBeVisible();
   });
 
   test("calendar editing persists without rewriting attendance or HR approvals", async ({ page }) => {
@@ -107,7 +107,7 @@ test.describe("Studio workspace", () => {
     await peer.close();
     await page.goto("/api/auth/google?next=/steps");
     await page.getByLabel("Today's total steps").fill("12450");
-    await page.getByRole("button", { name: "Save today's steps" }).click();
+    await page.getByRole("button", { name: "Save unsaved steps" }).click();
     await expect(page.getByText("Today's steps saved")).toBeVisible();
     await page.reload();
     await expect(page.getByLabel("Today's total steps")).toHaveValue("12450");

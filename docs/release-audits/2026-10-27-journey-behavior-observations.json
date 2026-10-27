@@ -1,0 +1,26 @@
+[
+  {
+    "finding": "Mobile Log 500 is only an unsaved edit",
+    "draftSteps": "500",
+    "afterReload": "0",
+    "server": null
+  },
+  {
+    "finding": "Planner WFH does not submit WFH approval or change presence",
+    "plans": [
+      {
+        "email": "journey@innovinlabs.com",
+        "date": "2026-10-27",
+        "kind": "remote"
+      }
+    ],
+    "requests": [],
+    "currentPresence": "office"
+  },
+  {
+    "finding": "Mobile announcement notification does not open board",
+    "url": "http://localhost:33283/#announcements",
+    "mountedBoardCount": 0,
+    "mobileHeading": "Innovin internal"
+  }
+]

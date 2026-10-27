@@ -2,7 +2,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { mountLanyard } from "@/lib/lanyard";
 import { getJSON } from "@/lib/fetcher";
-import type { PlannerDay } from "@/lib/types";
+import type { PlannerKind } from "@/lib/types";
+import { attendanceHref } from "@/lib/journey";
+import { todayIST } from "@/lib/time";
 import { PLANNER_ICONS } from "@/lib/workspace-model";
 export function WorkspacePass({ name = "Innovin Team", designation, department, desk, mode, joined = false, flipToken = 0 }: { name?: string; designation?: string; department?: string; desk?: string; mode?: "office" | "remote" | null; joined?: boolean; flipToken?: number }) {
  const [flipped,setFlipped]=useState(false), [tilt,setTilt]=useState(0);
@@ -12,10 +14,10 @@ export function WorkspacePass({ name = "Innovin Team", designation, department, 
  useEffect(()=>{if(!joined||!stageRef.current||!badgeRef.current||!canvasRef.current)return; const mounted=mountLanyard(stageRef.current,badgeRef.current,canvasRef.current,()=>flipRef.current,()=>setFlipped(f=>!f));physics.current=mounted;return()=>{mounted.dispose();physics.current=null;};},[joined]);
  useEffect(()=>{physics.current?.sync();},[flipped]);
  const [first,...parts]=name.split(" "); const last=parts.join(" ") || "Team";
- const filterId=useId(); const [month,setMonth]=useState(()=>new Date().toISOString().slice(0,7)); const [plans,setPlans]=useState<PlannerDay[]>([]);
+ const filterId=useId(); const [month,setMonth]=useState(()=>todayIST().slice(0,7)); const [plans,setPlans]=useState<{date:string;kind:PlannerKind}[]>([]);
  const year=Number(month.slice(0,4)), mon=Number(month.slice(5)); const monthDays=new Date(Date.UTC(year,mon,0)).getUTCDate(); const monthOffset=new Date(Date.UTC(year,mon-1,1)).getUTCDay(); const monthLabel=new Intl.DateTimeFormat("en",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(`${month}-01T00:00:00Z`)).toUpperCase();
  useEffect(()=>{if(flipToken) setFlipped(f=>!f);},[flipToken]);
- useEffect(()=>{if(!joined||!flipped)return;let active=true;getJSON<PlannerDay[]>(`/api/planner?from=${month}-01&to=${month}-${monthDays}`,"your pass calendar",{fresh:true}).then(p=>{if(p&&active)setPlans(p);});return()=>{active=false;};},[joined,flipped,month,monthDays]);
+ useEffect(()=>{if(!joined||!flipped)return;let active=true;getJSON<{days:{date:string;present:boolean;location?:string;holiday?:string;leave?:{status:string;kind:string;type?:string}}[]}>(`/api/attendance?month=${month}`,"your attendance calendar",{fresh:true}).then(result=>{if(!result||!active)return;setPlans(result.days.flatMap(d=>{let kind:PlannerKind|undefined;if(d.present)kind=d.location==="remote"?"remote":d.location==="office"?"office":undefined;else if(d.leave?.status==="approved")kind=d.leave.kind==="wfh"?"remote":d.leave.type==="sl"?"sick":d.leave.type==="fl"?"festival":"vacation";else if(d.holiday)kind="holiday";return kind?[{date:d.date,kind}]:[];}));});return()=>{active=false;};},[joined,flipped,month,monthDays]);
  function shift(n:number){setMonth(new Date(Date.UTC(year,mon-1+n,1)).toISOString().slice(0,7));}
 
  return <div ref={stageRef} className={`reference-pass-stage ${joined ? "physics-pass-stage" : "preview-pass-stage"}`} onPointerMove={(e)=>{ if(!joined&&e.pointerType!=="touch") {const r=e.currentTarget.getBoundingClientRect();setTilt((e.clientX-r.left-r.width/2)/40);}}} onPointerLeave={()=>setTilt(0)}>
@@ -90,7 +92,7 @@ export function WorkspacePass({ name = "Innovin Team", designation, department, 
 <div className="editorial-value">{designation || "Workspace member"}</div>
 </div>
 <div className="editorial-row">
-<span className="editorial-label">{"Previously"}</span>
+<span className="editorial-label">{"Team & desk"}</span>
 <div className="editorial-pills-wrap">
 <span className="editorial-pill pill-dark">{department || "Innovin"}</span>
 <span className="editorial-pill pill-red">{desk || "Innovin team"}</span>
@@ -135,20 +137,20 @@ export function WorkspacePass({ name = "Innovin Team", designation, department, 
 <span className="cb-chip-count">{joined ? plans.filter(p=>p.kind==="remote").length : "—"}</span>
 <span className="cb-chip-lbl">{"WFH"}</span>
 </div>
-<div className="cb-chip chip-casual" title="Casual Leave">
+<div className="cb-chip chip-casual" title="Other approved leave">
 <span className="cb-chip-dot"></span>
 <span className="cb-chip-count">{joined ? plans.filter(p=>p.kind==="vacation").length : "—"}</span>
-<span className="cb-chip-lbl">{"Casual"}</span>
+<span className="cb-chip-lbl">{"Leave"}</span>
 </div>
 <div className="cb-chip chip-sick" title="Sick Leave">
 <span className="cb-chip-dot"></span>
 <span className="cb-chip-count">{joined ? plans.filter(p=>p.kind==="sick").length : "—"}</span>
 <span className="cb-chip-lbl">{"Sick"}</span>
 </div>
-<div className="cb-chip chip-festival" title="Festival Leave">
+<div className="cb-chip chip-festival" title="Flexible Leave">
 <span className="cb-chip-dot"></span>
 <span className="cb-chip-count">{joined ? plans.filter(p=>p.kind==="festival").length : "—"}</span>
-<span className="cb-chip-lbl">{"Festive"}</span>
+<span className="cb-chip-lbl">{"Flexible"}</span>
 </div>
 <div className="cb-chip chip-holiday" title="Public Holiday">
 <span className="cb-chip-dot"></span>
@@ -167,24 +169,24 @@ export function WorkspacePass({ name = "Innovin Team", designation, department, 
 <span>{"S"}</span>
 </div>
 
-<div className="card-back-cal-grid">{Array.from({ length: monthOffset }, (_, i) => <span key={`e-${i}`} />)}{Array.from({ length: monthDays }, (_, i) => <a key={i} href="/planner" className="card-cal-day" aria-label={`Plan day ${i + 1}`}>{i + 1}{plans.find(p=>p.date===`${month}-${String(i+1).padStart(2,"0")}`)?.kind ? <small>{PLANNER_ICONS[plans.find(p=>p.date===`${month}-${String(i+1).padStart(2,"0")}`)!.kind]}</small> : null}</a>)}</div>
+<div className="card-back-cal-grid">{Array.from({ length: monthOffset }, (_, i) => <span key={`e-${i}`} />)}{Array.from({ length: monthDays }, (_, i) => <a key={i} href={attendanceHref("calendar",`${month}-${String(i+1).padStart(2,"0")}`)} className="card-cal-day" aria-label={`View attendance for ${month}-${String(i+1).padStart(2,"0")}`}>{i + 1}{plans.find(p=>p.date===`${month}-${String(i+1).padStart(2,"0")}`)?.kind ? <small>{PLANNER_ICONS[plans.find(p=>p.date===`${month}-${String(i+1).padStart(2,"0")}`)!.kind]}</small> : null}</a>)}</div>
 
 <div className="card-back-day-status">
 <span className="status-indicator-dot"></span>
-<span className="status-indicator-text">Personal plans · open planner to edit</span>
+<span className="status-indicator-text">Recorded attendance · open a day for details</span>
 </div>
 
 <div className="card-back-footer">
 <div className="card-back-legend">
 <span className="legend-tag tag-office"><i className="dot"></i>{"Office"}</span>
 <span className="legend-tag tag-wfh"><i className="dot"></i>{"WFH"}</span>
-<span className="legend-tag tag-casual"><i className="dot"></i>{"Casual"}</span>
+<span className="legend-tag tag-casual"><i className="dot"></i>{"Leave"}</span>
 <span className="legend-tag tag-sick"><i className="dot"></i>{"Sick"}</span>
-<span className="legend-tag tag-festival"><i className="dot"></i>{"Festive"}</span>
+<span className="legend-tag tag-festival"><i className="dot"></i>{"Flexible"}</span>
 <span className="legend-tag tag-holiday"><i className="dot"></i>{"Holiday"}</span>
 </div>
 <div className="card-back-meta">
-<span className="meta-crypto-id">PERSONAL PLANNER</span>
+<span className="meta-crypto-id">ATTENDANCE HISTORY</span>
 <button className="btn-flip-back-card" type="button" title="Flip to front face" onClick={() => setFlipped(false)}>
 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
 <span>{"Front"}</span>

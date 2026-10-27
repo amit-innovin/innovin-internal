@@ -15,6 +15,57 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       await resetData();
     });
 
+    it("tracks pantry preparation against the exact reviewed tray and locks employee changes", async () => {
+      const date="2026-10-27", ref="verified-tray", rows=[{id:uid(),date,itemId:"tea",preference:"anything",instructions:"",submitterRef:ref,orderedBy:"a@innovinlabs.com",createdAt:iso()}];
+      await store.setDayOrders(date,ref,rows);
+      expect(await store.setOrderFulfillment(date,ref,["stale"],"requested","preparing","admin",iso(1))).toBe(false);
+      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"requested","preparing","admin",iso(1))).toBe(true);
+      expect((await store.listOrders(date))[0]).toMatchObject({fulfillment:"preparing",fulfillmentBy:"admin"});
+      await expect(store.setDayOrders(date,ref,[{...rows[0],id:uid(),itemId:"snacks"}])).rejects.toThrow(/preparation/i);
+      await expect(store.deleteOrder(ref,date)).rejects.toThrow(/preparation/i);
+      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"requested","ready","admin",iso(2))).toBe(false);
+      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"preparing","ready","admin",iso(3))).toBe(true);
+      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"ready","fulfilled","admin",iso(4))).toBe(true);
+      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"fulfilled","requested","admin",iso(5))).toBe(false);
+    });
+
+    it("serializes a changing employee tray against coordinator preparation",async()=>{
+      const date="2026-10-27",ref="racing-tray",row={id:uid(),date,itemId:"tea",preference:"anything",instructions:"",submitterRef:ref,createdAt:iso()};
+      await store.setDayOrders(date,ref,[row]);
+      const results=await Promise.allSettled([store.setOrderFulfillment(date,ref,[row.id],"requested","preparing","admin",iso(1)),store.setDayOrders(date,ref,[{...row,id:uid(),itemId:"snacks"}])]);
+      const rows=await store.listOrders(date);
+      if(results[0].status==="fulfilled"&&results[0].value===true){expect(rows[0]).toMatchObject({itemId:"tea",fulfillment:"preparing"});expect(results[1].status).toBe("rejected");}
+      else {expect(rows[0]).toMatchObject({itemId:"snacks"});expect(results[1].status).toBe("fulfilled");}
+    });
+
+    it("lets a coordinator reopen preparation before an employee changes the request",async()=>{
+      const date="2026-10-27",ref="reopen-tray",rows=[{id:uid(),date,itemId:"tea",preference:"anything",instructions:"",submitterRef:ref,createdAt:iso()}];
+      await store.setDayOrders(date,ref,rows);
+      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"requested","preparing","admin",iso(1))).toBe(true);
+      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"preparing","requested","admin",iso(2))).toBe(true);
+      await expect(store.setDayOrders(date,ref,[{...rows[0],id:uid(),itemId:"snacks"}])).resolves.toMatchObject([{itemId:"snacks"}]);
+    });
+
+    it("does not add RSVP to a cancelled or deleted event even through a stale caller",async()=>{
+      const e=await store.addEvent({id:uid(),title:"Cancelled",body:"",category:"social",startsAt:iso(86400000),location:"",createdBy:"owner",createdAt:iso()});
+      await store.updateEvent(e.id,e.createdAt,{...e,cancelledAt:iso(1000)},iso(1000));
+      expect(await store.setRsvp(e.id,"late","late@innovinlabs.com",true)).toBe(false);
+      expect(await store.listRsvps(e.id)).toEqual([]);
+      await store.deleteEvent(e.id);
+      expect(await store.setRsvp(e.id,"late",null,true)).toBe(false);
+    });
+
+    it("lets a creator correct an event without losing RSVPs and rejects stale edits/deletes", async () => {
+      const event = await store.addEvent({id:uid(),title:"Original",body:"",category:"social",startsAt:iso(86400000),location:"Studio",createdBy:"creator@innovinlabs.com",createdAt:iso()});
+      await store.setRsvp(event.id,"guest",null,true);
+      const patch={title:"Corrected",body:"New details",category:"learning" as const,startsAt:iso(86400000),location:"Room 2"};
+      expect(await store.updateEvent(event.id,event.createdAt,patch,iso(1000))).toMatchObject({...patch,createdBy:event.createdBy,updatedAt:iso(1000)});
+      expect(await store.updateEvent(event.id,event.createdAt,patch,iso(2000))).toBeNull();
+      expect(await store.rsvpCounts([event.id])).toEqual({[event.id]:1});
+      expect(await store.deleteEvent(event.id,event.createdAt)).toBe(false);
+      expect(await store.deleteEvent(event.id,iso(1000))).toBe(true);
+    });
+
     it("persists provider state with compare-and-set so two coordinators cannot both claim checkout", async () => {
       expect(await store.getProviderRecord("instamart")).toBeNull();
       expect(await store.putProviderRecord("instamart", null, "encrypted-initial", iso())).toBe(true);
@@ -442,6 +493,8 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         const a = await store.addAnnouncement({ id: uid(), title: "Old", body: "", tag: "Office", createdAt: iso(0) });
         await store.addAnnouncement({ id: uid(), title: "New", body: "Details", tag: "Safety", createdAt: iso(1000) });
         expect((await store.listAnnouncements(10)).map((x) => x.title)).toEqual(["New", "Old"]);
+        expect(await store.getAnnouncement(a.id)).toMatchObject({title:"Old"});
+        expect(await store.getAnnouncement("missing")).toBeNull();
         await store.deleteAnnouncement(a.id);
         await store.deleteAnnouncement("missing");
         expect((await store.listAnnouncements(10)).map((x) => x.title)).toEqual(["New"]);

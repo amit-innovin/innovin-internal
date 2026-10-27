@@ -1,6 +1,9 @@
 "use client";
 import { LoadRecovery } from "@/components/load-recovery";
 
+import { useRouter, useSearchParams } from "next/navigation";
+import { attendanceView, attendanceHref, type AttendanceTab } from "@/lib/journey";
+import { todayIST } from "@/lib/time";
 import { useEffect, useState } from "react";
 import { CalendarCheck, Clock, LogIn, LogOut, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -40,7 +43,11 @@ const position = () =>
 export default function Attendance() {
   const [status, setStatus] = useState<Status | null>(null);
   const [user, setUser] = useState<Auth | null>(null);
-  const [tab, setTab] = useState<"today" | "calendar" | "leave">("today");
+  const params = useSearchParams();
+  const router = useRouter();
+  const view = attendanceView(params,todayIST());
+  const tab = view.tab;
+  const setTab = (next: AttendanceTab) => router.push(attendanceHref(next),{scroll:false});
   const [buttonState, run] = useButtonState();
 
   const load = async () => {
@@ -197,13 +204,13 @@ export default function Attendance() {
 
       {tab === "calendar" && (
         <Card className="mt-4 gap-0 p-5">
-          <AttendanceCalendar />
+          <AttendanceCalendar initialMonth={view.month} initialDate={view.date} />
         </Card>
       )}
 
       {tab === "leave" && (
         <div className="mt-4">
-          <LeavePanel rememberedEmail={status?.email ?? null} />
+          <LeavePanel rememberedEmail={status?.email ?? null} focusRequest={view.request} />
         </div>
       )}
 

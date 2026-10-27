@@ -18,7 +18,6 @@ test.describe("Supplied workspace design", () => {
     await card.getByRole("button", { name: "React ❤️", exact: true }).click();
     await expect(card.getByRole("button", { name: "React ❤️", exact: true })).toHaveAttribute("aria-pressed", "true");
     await page.reload();
-    if (isMobile) await page.getByRole("button", { name: "Office Notice Board", exact: true }).click();
     await expect(card).toBeVisible();
     await expect(card.getByRole("button", { name: "React ❤️", exact: true })).toHaveAttribute("aria-pressed", "true");
     const rows = await (await page.request.get("/api/notices")).json();
@@ -28,7 +27,7 @@ test.describe("Supplied workspace design", () => {
     expect(row).not.toHaveProperty("authorEmail");
     expect(row.reactions.find((r: { emoji: string }) => r.emoji === "❤️")).toMatchObject({ count: 1, mine: true });
     expect(JSON.stringify(row.reactions)).not.toContain("@innovinlabs.com");
-    await page.getByRole("button", { name: /Feedback/ }).click();
+    await page.getByRole("button", { name: /Public feedback/i }).click();
     await expect(card).toHaveCount(0);
     await page.getByRole("button", { name: /Quotes/ }).click();
     await expect(card).toBeVisible();

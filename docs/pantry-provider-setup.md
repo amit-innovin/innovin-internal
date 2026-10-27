@@ -1,6 +1,6 @@
 # Instamart office purchasing
 
-The coordinator workflow lives at `/admin/pantry`, linked from Admin > Today > Today's orders.
+The coordinator workflow lives at `/admin/pantry`, linked from Admin > Today > Pantry requests.
 An admin or owner must sign in with Google. The shared admin PIN cannot connect a supplier,
 read provider account information, or place a purchase. Employee snack requests remain internal
 requests; they never automatically become supplier orders or marked fulfilled purchases.
@@ -26,6 +26,16 @@ Swiggy uses dynamic public-client registration and PKCE; no manually configured 
 is needed. Tokens rotate and are saved before subsequent requests. Both JSON and Postgres
 stores persist encrypted provider records with versioned conditional writes. Production uses
 Postgres. Keep the database backups and integration key together in the recovery plan.
+
+## Employee request fulfillment
+
+The existing daily-demand rows in Admin and Purchasing show a coordinator status control.
+Mark the exact reviewed tray Being prepared before purchasing. Employee changes and cancellation
+are then locked atomically. If preparation has not led to a purchase, explicitly reopen the
+request to permit a correction. Reopening or cancelling a request does not cancel a supplier order.
+Mark Ready for collection and Collected / delivered only after observing those outcomes.
+Employees see the status on Home, Meals & Snacks and in their notifications. Supplier receipts
+and delivery tracking remain separate; no provider receipt automatically marks employee delivery.
 
 ## Purchasing and recovery
 

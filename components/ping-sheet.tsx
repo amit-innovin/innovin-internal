@@ -77,9 +77,7 @@ export function PingSheet({ target, onClose }: { target: PingTarget; onClose: ()
             <p className="truncate text-sm font-medium">{target.name}</p>
             <p className="text-[11px] text-muted-foreground">Pings vanish after 24 hours — say it, don't store it.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-1.5 text-muted-foreground hover:bg-accent/50">
-            <X className="size-4" />
-          </button>
+
         </div>
 
         <div className="min-h-32 flex-1 space-y-2 overflow-y-auto px-4 py-3">

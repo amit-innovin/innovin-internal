@@ -1,3 +1,4 @@
+import { assertRequestEditable, fulfillmentOf, nextFulfillment, canMoveFulfillment, sameTray } from "./order-state";
 import { promises as fs } from "fs";
 import path from "path";
 import type {
@@ -217,10 +218,17 @@ export const jsonStore: Store = {
 
   setDayOrders: (date, ref, rows) =>
     mutate((db) => {
+      assertRequestEditable(db.orders.filter(o=>o.date===date&&o.submitterRef===ref));
       db.orders = db.orders.filter((o) => !(o.date === date && o.submitterRef === ref));
       db.orders.unshift(...rows);
       return { result: rows, changed: true };
     }),
+  setOrderFulfillment: (date,ref,expectedIds,expected,next,actor,at) => mutate(db=>{
+    const rows=db.orders.filter(o=>o.date===date&&o.submitterRef===ref);
+    if(!canMoveFulfillment(expected,next) || !sameTray(rows,expectedIds) || rows.some(r=>fulfillmentOf(r)!==expected))return {result:false,changed:false};
+    for(const row of rows)Object.assign(row,{fulfillment:next,fulfillmentAt:at,fulfillmentBy:actor});
+    return {result:true,changed:true};
+  }),
   listOrders: (date) =>
     query((db) => db.orders.filter((r) => r.date === date).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
   listOrdersByRef: (ref, limit) =>
@@ -232,6 +240,7 @@ export const jsonStore: Store = {
     ),
   deleteOrder: (ref, date) =>
     mutate((db) => {
+      assertRequestEditable(db.orders.filter(r=>r.submitterRef===ref&&r.date===date));
       const before = db.orders.length;
       db.orders = db.orders.filter((r) => !(r.submitterRef === ref && r.date === date));
       const changed = db.orders.length < before;
@@ -274,6 +283,7 @@ export const jsonStore: Store = {
       db.announcements.unshift(row);
       return { result: row, changed: true };
     }),
+  getAnnouncement: id=>query(db=>db.announcements.find(a=>a.id===id)??null),
   deleteAnnouncement: (id) =>
     mutate((db) => {
       const before = db.announcements.length;
@@ -437,8 +447,15 @@ export const jsonStore: Store = {
       return { result: row, changed: true };
     }),
   getEvent: (rid) => query((db) => db.events.find((e) => e.id === rid) ?? null),
-  deleteEvent: (rid) =>
+  updateEvent: (rid, expected, patch, updatedAt) => mutate(db => {
+    const row=db.events.find(e=>e.id===rid);
+    if(!row || (row.updatedAt??row.createdAt)!==expected) return {result:null,changed:false};
+    Object.assign(row,{title:patch.title,body:patch.body,category:patch.category,startsAt:patch.startsAt,location:patch.location,...(patch.cancelledAt?{cancelledAt:patch.cancelledAt}:{}),updatedAt}); return {result:row,changed:true};
+  }),
+  deleteEvent: (rid, expected) =>
     mutate((db) => {
+      const row=db.events.find(e=>e.id===rid);
+      if(expected && (!row || (row.updatedAt??row.createdAt)!==expected))return {result:false,changed:false};
       const before = db.events.length;
       db.events = db.events.filter((e) => e.id !== rid);
       const found = db.events.length !== before;
@@ -454,6 +471,8 @@ export const jsonStore: Store = {
     ),
   setRsvp: (eventId, ref, email, going) =>
     mutate((db) => {
+      const event=db.events.find(e=>e.id===eventId);
+      if(!event||event.cancelledAt)return {result:false,changed:false};
       if (email) db.rsvps = db.rsvps.filter(r => r.eventId !== eventId || r.email !== email || (going && r.submitterRef === ref));
       if (going) {
         const existing = db.rsvps.find((r) => r.eventId === eventId && r.submitterRef === ref);
@@ -465,7 +484,7 @@ export const jsonStore: Store = {
       } else {
         db.rsvps = db.rsvps.filter((r) => !(r.eventId === eventId && r.submitterRef === ref));
       }
-      return { result: undefined, changed: true };
+      return { result: true, changed: true };
     }),
   listRsvps: (eventId) =>
     query((db) =>

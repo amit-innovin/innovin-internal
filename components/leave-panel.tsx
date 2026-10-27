@@ -84,7 +84,7 @@ function Balance({ row }: { row: Ledger }) {
 // "my time" is one surface; the holiday calendar sits in the Calendar tab next door.
 // `rememberedEmail` comes from the attendance status above, so nobody types their address twice
 // on this page — and it keeps the check-in card's email field the only one of its kind.
-export default function LeavePanel({ rememberedEmail }: { rememberedEmail: string | null }) {
+export default function LeavePanel({ rememberedEmail, focusRequest }: { rememberedEmail: string | null; focusRequest?: string | null }) {
   const [requests, setRequests] = useState<AwayRequest[] | null>(null);
   const [summary, setSummary] = useState<LeaveSummary | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
@@ -112,6 +112,8 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => { if(focusRequest && requests) document.getElementById(`request-${focusRequest}`)?.scrollIntoView({block:"center",behavior:"smooth"}); },[focusRequest,requests]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,7 +221,7 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
               <IconTile icon={Palmtree} tone="amber" size="lg" />
               <div>
                 <h2 className="font-medium">Request time away</h2>
-                <p className="text-sm text-muted-foreground">The office coordinator approves it on the admin dashboard.</p>
+                <p className="text-sm text-muted-foreground">Sends to your office coordinator. Submission and approval here do not update Zoho People.</p>
               </div>
             </div>
 
@@ -351,6 +353,7 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
 
       <Card className="mt-4 gap-0 p-5">
         <h2 className="eyebrow">Your requests</h2>
+        {focusRequest && requests && !requests.some(r=>r.id===focusRequest) && <p role="status" className="studio-notice">This request is not in your recent history. Ask the coordinator to check it.</p>}
         {!requests ? (<LoadRecovery>
           <div className="mt-3 space-y-3">
             <Skeleton className="h-12 w-full" />
@@ -361,7 +364,7 @@ export default function LeavePanel({ rememberedEmail }: { rememberedEmail: strin
         ) : (
           <ul className="mt-1 divide-y">
             {requests.map((r, i) => (
-              <li key={r.id} className="flex items-center gap-3 py-3.5" style={stagger(i)}>
+              <li key={r.id} id={`request-${r.id}`} className="flex items-center gap-3 py-3.5" style={stagger(i)}>
                 <IconTile icon={r.type === "leave" ? Palmtree : CalendarOff} tone={r.type === "leave" ? "amber" : "sky"} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{AWAY_TYPE_LABEL[r.type]}</p>

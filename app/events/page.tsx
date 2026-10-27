@@ -1,7 +1,9 @@
 "use client";
+import { EventManageButton } from "@/components/event-editor";
+import { useSearchParams } from "next/navigation";
 import { LoadRecovery } from "@/components/load-recovery";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 import { CalendarDays, Check, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Empty, IconTile, PageHeader, stagger, type Tone } from "@/components/kit";
@@ -22,6 +24,7 @@ type Event = {
   location: string;
   going: number;
   mine: boolean;
+  canManage?: boolean; updatedAt?: string; cancelledAt?:string; createdAt:string;
 };
 
 const CATEGORY_META: Record<EventCategory, { label: string; tone: Tone }> = {
@@ -43,16 +46,21 @@ const dayLabel = (iso: string) => {
 };
 
 export default function Events() {
+  const params=useSearchParams();
+  const focused=params.get("event");
+  const loadVersion=useRef(0);
+  const [resolvedTarget,setResolvedTarget]=useState<string|null|undefined>(undefined);
   const [events, setEvents] = useState<Event[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  const load = async () => {
-    const data = await getJSON<Event[]>("/api/events", "events");
-    if (data) setEvents(data);
+  const load = async (id?:string) => {
+    const version=++loadVersion.current;setResolvedTarget(undefined);
+    const data = await getJSON<Event[]>("/api/events", "events",{fresh:true});
+    if(!data)return;const target=id??focused;const extra=target&&!data.some(e=>e.id===target)?await getJSON<Event[]>(`/api/events?event=${encodeURIComponent(target)}`,"the event",{fresh:true}):[];
+    if(version===loadVersion.current){setEvents([...(extra??[]),...data]);if(extra!==null)setResolvedTarget(target??null);}
   };
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { void load(); return()=>{loadVersion.current++;}; }, [focused]);
+  useEffect(()=>{if(focused&&events)document.getElementById(`event-${focused}`)?.scrollIntoView({block:"center",behavior:"smooth"});},[focused,events]);
 
   async function rsvp(e: Event) {
     setBusy(e.id);
@@ -71,6 +79,7 @@ export default function Events() {
     <div className="mx-auto max-w-xl">
       <PageHeader title="Events" subtitle="What's coming up — tap Join and you're in." />
 
+      {focused && resolvedTarget===focused && events && !events.some(e=>e.id===focused) && <p role="status" className="studio-notice">This event is no longer available.</p>}
       {!events ? (<LoadRecovery>
         <div className="space-y-3">
           <Card className="gap-3 p-5">
@@ -91,13 +100,13 @@ export default function Events() {
           {events.map((e, i) => {
             const meta = CATEGORY_META[e.category] ?? CATEGORY_META.company;
             return (
-              <li key={e.id} style={stagger(i)}>
+              <li key={e.id} id={`event-${e.id}`} style={stagger(i)}>
                 <Card className="gap-0 p-5">
                   <div className="flex items-start gap-3">
                     <IconTile icon={CalendarDays} tone={meta.tone} size="lg" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <h2 className="truncate font-medium">{e.title}</h2>
+                        <h2 className="truncate font-medium">{e.canManage ? <EventManageButton event={e} onSaved={load} /> : <>{e.title}{e.cancelledAt?" · Cancelled":""}</>}</h2>
                         <Badge variant="secondary" className="shrink-0">
                           {meta.label}
                         </Badge>
@@ -121,12 +130,12 @@ export default function Events() {
                     <Button
                       size="sm"
                       variant={e.mine ? "secondary" : "default"}
-                      disabled={busy === e.id}
+                      disabled={busy === e.id || !!e.cancelledAt}
                       onClick={() => rsvp(e)}
                       className="gap-1.5"
                     >
                       {e.mine && <Check className="size-3.5" />}
-                      {e.mine ? "Going" : "Join"}
+                      {e.cancelledAt?"Cancelled":e.mine ? "Cancel RSVP" : "Join"}
                     </Button>
                   </div>
                 </Card>

@@ -1,3 +1,6 @@
+import { fulfillmentOf,FULFILLMENT_LABELS } from "./order-state";
+import { todayIST } from "./time";
+import { boardHref,attendanceHref,eventHref } from "./journey";
 import { fmtShortDate } from "./format";
 import { LEAVE_LABELS } from "./leave";
 import { store } from "./store";
@@ -13,7 +16,7 @@ import type { GrievanceRow } from "./types";
 
 export type Notification = {
   id: string;
-  kind: "announcement" | "event" | "away" | "grievance" | "ping";
+  kind: "announcement" | "event" | "away" | "grievance" | "ping" | "pantry";
   title: string;
   body: string;
   at: string;
@@ -38,20 +41,27 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
 
   for (const a of announcements) {
     if (a.createdAt < since) continue;
-    items.push({ id: `ann-${a.id}`, kind: "announcement", title: a.title, body: a.body, at: a.createdAt, href: "/#announcements" });
+    items.push({ id: `ann-${a.id}`, kind: "announcement", title: a.title, body: a.body, at: a.createdAt, href: boardHref(a.id) });
   }
 
   // Upcoming events are news until they happen, so they're keyed on publication time.
   for (const e of events) {
-    if (e.createdAt < since) continue;
+    if ((e.updatedAt??e.createdAt) < since) continue;
     items.push({
-      id: `evt-${e.id}`,
+      id: `evt-${e.id}-${e.updatedAt??e.createdAt}`,
       kind: "event",
-      title: e.title,
+      title: `${e.cancelledAt?"Cancelled: ":e.updatedAt?"Updated: ":""}${e.title}`,
       body: `${fmtShortDate(e.startsAt)}${e.location ? ` · ${e.location}` : ""}`,
-      at: e.createdAt,
-      href: "/events",
+      at: e.updatedAt??e.createdAt,
+      href: eventHref(e.id),
     });
+  }
+
+  if(opts.email) {
+    const trays=(await store.listOrders(todayIST())).filter(r=>r.orderedBy===opts.email&&r.fulfillmentAt);
+    const first=trays[0];if(first?.fulfillmentAt)items.push({id:`pantry-${first.date}-${fulfillmentOf(first)}`,kind:"pantry",title:FULFILLMENT_LABELS[fulfillmentOf(first)],body:"Your pantry request",at:first.fulfillmentAt,href:"/snacks?tab=today"});
+    const me=employees.find(e=>e.email===opts.email);
+    if(me?.role==="admin"||me?.role==="owner")for(const r of await store.listPendingAway())items.push({id:`pending-away-${r.id}`,kind:"away",title:"Time-away request awaiting review",body:"Open Approvals to review it.",at:r.createdAt,href:"/admin?tab=approvals#away"});
   }
 
   // A decision on your own request — only ever for a verified identity.
@@ -64,7 +74,7 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
       title: `${what} ${r.status}`,
       body: `${fmtShortDate(`${r.startDate}T00:00:00`)}${r.decidedBy ? ` · by ${r.decidedBy}` : ""}`,
       at: r.decidedAt,
-      href: "/attendance",
+      href: attendanceHref("leave",undefined,r.id),
     });
   }
 

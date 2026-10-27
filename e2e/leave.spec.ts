@@ -19,7 +19,7 @@ test.describe("Leave & calendar", () => {
     await signInEmployee(page);
     for (const stale of ["/away", "/leave"]) {
       await page.goto(stale);
-      await expect(page).toHaveURL(/\/attendance$/);
+      await expect(page).toHaveURL(/\/attendance\?tab=leave$/);
       await expect(page.getByRole("heading", { level: 1, name: "Attendance" })).toBeVisible();
     }
     // Neither appears in the navigation any more.

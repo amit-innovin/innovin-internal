@@ -11,8 +11,8 @@ test.describe("Admin", () => {
     await page.reload();
     await typePin(page, "1704");
     await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
-    for (const stat of ["Checked in today", "Orders today", "Open reports", "Poor Wi-Fi reports today"]) {
-      await expect(page.getByText(stat)).toBeVisible();
+    for (const stat of ["Checked in today", "Pantry requests", "Open reports", "Poor Wi-Fi reports today"]) {
+      await expect(page.getByText(stat,{exact:true})).toBeVisible();
     }
   });
 
@@ -25,8 +25,8 @@ test.describe("Admin", () => {
     await e.goto("/snacks");
     await e.getByRole("button", { name: /^Tea/ }).click();
     await e.getByLabel("Special instructions").fill(instructions);
-    await e.getByRole("button", { name: "Place order" }).click();
-    await expect(e.getByText("Order placed: Tea")).toBeVisible();
+    await e.getByRole("button", { name: "Save request notes" }).click();
+    await expect(e.getByText("Your pantry request is saved")).toBeVisible();
     await employee.close();
 
     await adminLogin(page);

@@ -36,6 +36,7 @@ function PersonAvatar({ name, picture }: { name: string; picture?: string }) {
 export default function People() {
   const [data, setData] = useState<Directory | null>(null);
   const [pings, setPings] = useState<Pings | null>(null);
+  const [query,setQuery]=useState("");
   const [target, setTarget] = useState<PingTarget | null>(null);
 
   const loadPings = () => getJSON<Pings>("/api/pings", "pings").then((d) => d && setPings(d));
@@ -140,7 +141,7 @@ export default function People() {
           </Card>
 
           <Card className="mt-4 gap-0 p-5">
-            <h2 className="eyebrow">Everyone{data.people.length > 0 ? ` · ${data.people.length}` : ""}</h2>
+            <h2 className="eyebrow">Everyone{data.people.length > 0 ? ` · ${data.people.length}` : ""}</h2><input type="search" aria-label="Search teammates" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name or email" className="mt-3 h-9 w-full rounded-md border bg-card px-3 text-sm" />
             {data.people.length === 0 ? (
               <div className="py-6 text-center">
                 <IconTile icon={Users} tone="slate" className="mx-auto" />
@@ -150,7 +151,7 @@ export default function People() {
               </div>
             ) : (
               <ul className="mt-1 divide-y">
-                {data.people.map((p, i) => (
+                {query.trim()&&!data.people.some(p=>`${p.name} ${p.email}`.toLowerCase().includes(query.trim().toLowerCase()))&&<Empty>No teammates match that name or email.</Empty>}{data.people.filter(p=>`${p.name} ${p.email}`.toLowerCase().includes(query.trim().toLowerCase())).map((p, i) => (
                   <li key={p.email} className="flex items-center gap-3 py-3" style={stagger(i)}>
                     <PersonAvatar name={p.name} picture={p.picture} />
                     <div className="min-w-0 flex-1">

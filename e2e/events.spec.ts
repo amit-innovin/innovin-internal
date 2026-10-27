@@ -35,16 +35,16 @@ test.describe("Events", () => {
     await expect(card).toContainText("Be the first to join");
 
     await card.getByRole("button", { name: "Join" }).click();
-    await expect(card.getByRole("button", { name: "Going" })).toBeVisible();
+    await expect(card.getByRole("button", { name: "Cancel RSVP" })).toBeVisible();
     await expect(card).toContainText("1 going");
 
     // The RSVP survives a reload (device cookie).
     await e.reload();
     const again = e.locator("li", { hasText: title });
-    await expect(again.getByRole("button", { name: "Going" })).toBeVisible();
+    await expect(again.getByRole("button", { name: "Cancel RSVP" })).toBeVisible();
 
     // Toggling off drops the count.
-    await again.getByRole("button", { name: "Going" }).click();
+    await again.getByRole("button", { name: "Cancel RSVP" }).click();
     await expect(again.getByRole("button", { name: "Join" })).toBeVisible();
     await expect(again).toContainText("Be the first to join");
     await employee.close();

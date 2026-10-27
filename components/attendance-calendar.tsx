@@ -1,6 +1,9 @@
 "use client";
 import { LoadRecovery } from "@/components/load-recovery";
 
+import { useRouter } from "next/navigation";
+import { attendanceHref } from "@/lib/journey";
+import { todayIST } from "@/lib/time";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Empty, SectionHeader } from "@/components/kit";
@@ -70,20 +73,25 @@ function dayHeadline(day: Day) {
   return "No attendance recorded";
 }
 
-export default function AttendanceCalendar() {
-  const [key, setKey] = useState(() => monthKey(new Date()));
+export default function AttendanceCalendar({ initialMonth, initialDate, navigate = true }: { initialMonth?: string; initialDate?: string | null; navigate?: boolean }) {
+  const router = useRouter();
+  const [key, setKey] = useState(() => initialMonth ?? todayIST().slice(0,7));
   const [data, setData] = useState<Month | null>(null);
-  const [picked, setPicked] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(initialDate ?? null);
 
+  useEffect(() => { if (initialMonth) setKey(initialMonth); setPicked(initialDate ?? null); }, [initialMonth,initialDate]);
   useEffect(() => {
+    let alive = true;
     setData(null);
-    getJSON<Month>(`/api/attendance?month=${key}`, "your calendar").then((d) => d && setData(d));
+    getJSON<Month>(`/api/attendance?month=${key}`, "your calendar").then((d) => { if (d && alive) setData(d); });
+    return () => { alive=false; };
   }, [key]);
 
   const shift = (by: number) => {
     const d = new Date(`${key}-01T00:00:00Z`);
     d.setUTCMonth(d.getUTCMonth() + by);
-    setKey(monthKey(d));
+    const next=monthKey(d); setKey(next);
+    if(navigate) router.push(attendanceHref("calendar",`${next}-01`),{scroll:false});
     setPicked(null);
   };
 
@@ -125,7 +133,7 @@ export default function AttendanceCalendar() {
                   type="button"
                   aria-label={`${fmtShortDate(`${d.date}T00:00:00`)} — ${dayHeadline(d)}`}
                   aria-pressed={isPicked}
-                  onClick={() => setPicked(isPicked ? null : d.date)}
+                  onClick={() => { const date=isPicked?null:d.date; setPicked(date); if(navigate) router.push(date ? attendanceHref("calendar",date) : `/attendance?tab=calendar&month=${key}`,{scroll:false}); }}
                   className={`flex flex-col items-center gap-1 rounded-lg py-1.5 transition-colors ${
                     isPicked ? "bg-accent" : "hover:bg-accent/50"
                   } ${isToday ? "ring-1 ring-ring/60" : ""}`}

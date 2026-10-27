@@ -12,12 +12,14 @@ test.describe("Navigation & studio shell", () => {
   test("primary navigation and everyday tools reach each module", async ({ page, isMobile }) => {
     await signInOffice(page);
     const nav = page.getByRole("navigation", { name: isMobile ? "Phone workspace navigation" : "Workspace navigation", exact: true });
-    for (const [label, path] of [["Daily Steps & Prize", "/steps"], ["Leave & WFH Planner", "/planner"], ["Overview", "/"]]) {
-      const target = isMobile && path === "/planner" ? page.getByRole("link", { name: label, exact: true }) : nav.getByRole("link", { name: label, exact: true });
-      await target.click();
-      await expect(page).toHaveURL(new URL(path, "http://localhost:3210").toString());
-      await expect(target).toHaveAttribute("aria-current", "page");
-    }
+    await nav.getByRole("link",{name:"Daily Steps",exact:true}).click();
+    await expect(page).toHaveURL(/\/steps$/);
+    await expect(nav.getByRole("link",{name:"Daily Steps",exact:true})).toHaveAttribute("aria-current","page");
+    await page.getByRole("link",{name:"Attendance & Leave",exact:true}).click();
+    await expect(page).toHaveURL(/\/attendance\?tab=leave$/);
+    await expect(page.getByRole("heading",{name:"Request time away"})).toBeVisible();
+    await page.getByRole("link",{name:"Innovin Internal home"}).click();
+    await expect(page).toHaveURL("http://localhost:3210/");
     const more = page.getByRole("navigation", { name: "More workspace tools", exact: true });
     for (const [label, heading] of [["Attendance", "Attendance"], ["People", "People"], ["Events", "Events"], ["Speak Up", "Speak Up"], ["Wi-Fi", "Wi-Fi Quality"]]) {
       if (isMobile && new URL(page.url()).pathname === "/") {
@@ -50,7 +52,7 @@ test.describe("Navigation & studio shell", () => {
     await page.locator(".reference-more summary").click();
     await page.getByRole("navigation", { name: "More workspace tools" }).getByRole("link", { name: "Help", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Is Speak Up really anonymous?" })).toBeVisible();
-    await expect(page.getByText("submit anytime")).toBeVisible();
+    await expect(page.getByText(/Selections save automatically as requests, not supplier purchases/)).toBeVisible();
   });
 
   test("feature pages use the persistent shell without redundant back links", async ({ page }) => {
@@ -65,8 +67,8 @@ test.describe("Navigation & studio shell", () => {
     await signInOffice(page);
     await page.goto("/snacks");
     await page.getByRole("button", { name: /^Tea/ }).click();
-    await page.getByRole("button", { name: "Place order" }).click();
-    await expect(page.getByText("Order placed: Tea")).toBeVisible();
+    await page.getByRole("button", { name: "Save request notes" }).click();
+    await expect(page.getByText("Your pantry request is saved")).toBeVisible();
     await page.goto("/");
     await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");
     if (isMobile) await page.getByRole("button", { name: "Expand Pantry", exact: true }).click();
@@ -92,6 +94,6 @@ test.describe("Navigation & studio shell", () => {
 
   test("help reflects the configured cutoff", async ({ page }) => {
     await page.goto(`${CLOSED_URL}/help`);
-    await expect(page.getByText("submit before 12:00 AM")).toBeVisible();
+    await expect(page.getByText(/Pick up to four menu items before 12:00 AM/)).toBeVisible();
   });
 });

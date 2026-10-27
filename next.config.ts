@@ -47,8 +47,8 @@ const nextConfig: NextConfig = {
   // these paths may be reused.
   async redirects() {
     return [
-      { source: "/leave", destination: "/attendance", permanent: false },
-      { source: "/away", destination: "/attendance", permanent: false },
+      { source: "/leave", destination: "/attendance?tab=leave", permanent: false },
+      { source: "/away", destination: "/attendance?tab=leave", permanent: false },
     ];
   },
 };

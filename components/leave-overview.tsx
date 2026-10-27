@@ -31,6 +31,7 @@ type Person = {
 export default function LeaveOverview({ people }: { people: Person[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  const [fitnessBusy,setFitnessBusy]=useState<string|null>(null);
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -43,25 +44,20 @@ export default function LeaveOverview({ people }: { people: Person[] }) {
       const raw = String(data.get(t) ?? "").trim();
       if (raw !== "") available[t] = Number(raw);
     }
-    const stepsRaw = String(data.get("stepsOffset") ?? "").trim();
     setBusy(email);
     const res = await send("/api/leave", { method: "PATCH", json: { email, available, reconciledRequestIds: data.getAll("reconciledRequestIds") } });
-    if (res.ok && stepsRaw !== "") {
-      const steps = await send("/api/people", { method: "PATCH", json: { email, stepsOffset: Number(stepsRaw) } });
-      if (!steps.ok) {
-        toast.error(await readError(steps));
-        setBusy(null);
-        return;
-      }
-    }
     if (res.ok) {
-      toast.success("Saved");
+      toast.success("Leave balances saved");
       setEditing(null);
       router.refresh();
     } else {
       toast.error(await readError(res));
     }
     setBusy(null);
+  }
+
+  async function setStepsOffset(email:string,raw:string) {
+    if(raw.trim()===""||fitnessBusy===email)return;setFitnessBusy(email);const res=await send("/api/people",{method:"PATCH",json:{email,stepsOffset:Number(raw)}});if(!res.ok)toast.error(await readError(res));else {toast.success("Fitness history saved separately");router.refresh();}setFitnessBusy(null);
   }
 
   async function setJoinedOn(email: string, joinedOn: string) {
@@ -99,7 +95,7 @@ export default function LeaveOverview({ people }: { people: Person[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{p.name}</p>
                   <label className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    {p.joinedOn ? "Joined" : "Add joining date"}
+                    {p.joinedOn ? "Joined" : "Joining date (saves immediately)"}
                     <input
                       type="date"
                       defaultValue={p.joinedOn ?? ""}
@@ -172,14 +168,14 @@ export default function LeaveOverview({ people }: { people: Person[] }) {
                   </div>
                   <fieldset className="mt-3 space-y-2"><legend className="text-xs font-medium">Already reflected in the Zoho figures you copied</legend><p className="text-xs text-muted-foreground">Select only requests you have reconciled in Zoho. Unselected approvals remain estimated local deductions; a timestamp does not prove inclusion.</p>{p.approvedRequests.map(r => <label key={r.id} className="flex gap-2 text-xs"><input type="checkbox" name="reconciledRequestIds" value={r.id} defaultChecked={p.reconciledRequestIds.includes(r.id)} />{r.leaveType?.toUpperCase()} · {r.startDate} - {r.endDate} · {r.days} days</label>)}</fieldset>
                   <label className="mt-3 block text-[11px] text-muted-foreground">
-                    10K challenge — days from the sheet
+                    Fitness history — prior 10k+ days (saves separately)
                     <input
                       name="stepsOffset"
                       type="number"
                       min="0"
                       step="1"
-                      aria-label={`Sheet days so far for ${p.name}`}
-                      defaultValue={p.stepsOffset || ""}
+                      aria-label={`Fitness history: prior 10k+ days for ${p.name}`}
+                      defaultValue={p.stepsOffset || ""} disabled={fitnessBusy===p.email} onBlur={e=>{if(e.target.value!==String(p.stepsOffset)&&e.target.value!=="")void setStepsOffset(p.email,e.target.value);}}
                       placeholder="0"
                       className="mt-0.5 h-8 w-28 rounded border border-input bg-card px-2 text-sm tabular-nums outline-none focus-visible:border-ring"
                     />
@@ -189,7 +185,7 @@ export default function LeaveOverview({ people }: { people: Person[] }) {
                     disabled={busy === p.email}
                     className="mt-3 h-8 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground disabled:opacity-60"
                   >
-                    {busy === p.email ? "Saving…" : "Save"}
+                    {busy === p.email ? "Saving…" : "Save balances"}
                   </button>
                 </form>
               )}

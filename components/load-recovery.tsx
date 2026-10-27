@@ -8,5 +8,5 @@ export function LoadRecovery({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("innovin:load-failure", fail);
   }, []);
   if (!failed) return <>{children}</>;
-  return <div role="alert" className="rounded-xl border bg-card p-5 text-sm"><p>{expired ? "Your session ended. Sign in to continue." : "We couldn't load this information. Check your connection and try again."}</p><div className="mt-3 flex gap-4"><button className="underline" onClick={() => window.location.reload()}>Try again</button>{expired && <a className="underline" href="/api/auth/google?next=/">Sign in with Google</a>}</div></div>;
+  return <div role="alert" className="rounded-xl border bg-card p-5 text-sm"><p>{expired ? "Your session ended. Sign in to continue." : "We couldn't load this information. Check your connection and try again."}</p><div className="mt-3 flex gap-4"><button className="underline" onClick={() => window.location.reload()}>Try again</button>{expired && <a className="underline" href={`/api/auth/google?next=${encodeURIComponent(typeof window!=="undefined"?window.location.pathname+window.location.search:"/")}`}>Sign in with Google</a>}</div></div>;
 }

@@ -1,7 +1,9 @@
 "use client";
+import { fulfillmentOf,FULFILLMENT_LABELS, type OrderFulfillment } from "@/lib/order-state";
+import { useSearchParams,useRouter } from "next/navigation";
 import { LoadRecovery } from "@/components/load-recovery";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 import { Check, Clock, History, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Empty, IconTile, MENU_ICONS, PageHeader, Segmented, stagger } from "@/components/kit";
@@ -28,14 +30,18 @@ import { MENU } from "@/lib/menu";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-type Order = { id: string; date: string; itemId: string; instructions: string; createdAt: string };
+type Order = { id: string; date: string; itemId: string; instructions: string; createdAt: string; fulfillment?:OrderFulfillment };
 type Mine = { open: boolean; cutoffHour: number; items: Order[]; officeAllowed: boolean; limit: number };
 
 const itemFor = (id: string) => MENU.find((m) => m.id === id);
 const names = (items: Order[]) => items.map((o) => itemFor(o.itemId)?.name ?? o.itemId).join(" + ");
 
 export default function Snacks() {
-  const [tab, setTab] = useState<"today" | "history">("today");
+  const params=useSearchParams(),router=useRouter();
+  const tab=params.get("tab")==="history"?"history":"today";
+  const setTab=(next:"today"|"history")=>router.push(`/snacks?tab=${next}`,{scroll:false});
+  const writing=useRef(false);
+  const pendingWrite=useRef<Promise<boolean>|null>(null);
   const [mine, setMine] = useState<Mine | null>(null);
   const [history, setHistory] = useState<Order[] | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -44,8 +50,8 @@ export default function Snacks() {
 
   const load = async () => {
     const [today, past] = await Promise.all([
-      getJSON<Mine>("/api/snacks?scope=mine", "today's menu"),
-      getJSON<Order[]>("/api/snacks?scope=history", "your order history"),
+      getJSON<Mine>("/api/snacks?scope=mine", "today's menu",{fresh:true}),
+      getJSON<Order[]>("/api/snacks?scope=history", "your request history",{fresh:true}),
     ]);
     if (!today || !past) return;
     setMine(today);
@@ -55,41 +61,35 @@ export default function Snacks() {
   };
 
   async function cancelOrder() {
-    const res = await send("/api/snacks", { method: "DELETE" });
-    if (res.ok) toast.success("Order cancelled");
-    else toast.error(await readError(res));
-    await load();
+    if(pendingWrite.current)await pendingWrite.current;
+    await saveRequest([],instructions);
   }
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(()=>{
+    load();const refresh=()=>{if(document.visibilityState==="visible"&&!writing.current&&!document.activeElement?.matches("input,textarea,select"))void load();};
+    const timer=setInterval(refresh,30000);window.addEventListener("focus",refresh);return()=>{clearInterval(timer);window.removeEventListener("focus",refresh);};
+  },[]);
 
-  const toggle = (id: string) =>
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selected.length) return;
-    const updating = !!mine?.items.length;
-    run(async () => {
-      const res = await send("/api/snacks", {
-        method: "POST",
-        json: { items: selected, instructions },
-      });
-      if (!res.ok) {
-        toast.error(await readError(res));
-        // e.g. the page was left open past the cutoff — refresh so the UI shows "closed".
-        await load();
-        return false;
-      }
-      const label = selected.map((i) => itemFor(i)?.name).join(" + ");
-      toast.success(`Order ${updating ? "updated" : "placed"}: ${label}`);
-      await load();
-      return true;
+  async function saveRequest(items:string[],note:string) {
+    if(writing.current)return false;
+    writing.current=true;
+    const task=run(async()=>{
+      const res=await send("/api/snacks",items.length?{method:"POST",json:{items,instructions:note}}:{method:"DELETE"});
+      if(!res.ok){toast.error(await readError(res));await load();return false;}
+      toast.success(items.length?"Your pantry request is saved":"Pantry request cancelled",{id:"pantry-request"});await load();return true;
     });
+    pendingWrite.current=task;const ok=await task;
+    writing.current=false;if(pendingWrite.current===task)pendingWrite.current=null;return ok;
+  }
+  const toggle=async(id:string)=>{
+    if(writing.current)return;
+    const next=selected.includes(id)?selected.filter(x=>x!==id):[...selected,id];
+    if(!next.length&&!window.confirm("Cancel today's pantry request? This does not cancel any supplier purchase."))return;
+    setSelected(next);await saveRequest(next,instructions);
   };
+  const submit=(e:React.FormEvent)=>{e.preventDefault();if(selected.length)void saveRequest(selected,instructions);};
 
   const closed = mine ? !mine.open : false;
+  const stage=fulfillmentOf(mine?.items[0]),editable=stage==="requested";
   const chosen = selected.map(itemFor).filter((m): m is (typeof MENU)[number] => !!m);
   const total = chosen.reduce((sum, m) => sum + (m.price ?? 0), 0);
   const historyDays = [...new Set((history ?? []).map((o) => o.date))];
@@ -98,9 +98,9 @@ export default function Snacks() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="Meals & Snacks" subtitle="Today&apos;s kitchen order — tap, done." />
-      {mine && !mine.officeAllowed && <div className="studio-notice mb-4">Pantry ordering is for teammates checked in to the office. <Link href="/" className="underline">Set your presence on Overview</Link>. You can still view your orders and cancel before the cutoff.</div>}
-      {mine?.officeAllowed && <p className="text-xs text-muted-foreground mb-4">Choose up to {mine.limit} items per day. Your tray follows your account across devices.</p>}
+      <PageHeader title="Meals & Snacks" subtitle="Your pantry request — selections save automatically." />
+      {mine && !mine.officeAllowed && <div className="studio-notice mb-4">Pantry ordering is for teammates checked in to the office. <Link href="/" className="underline">Set your presence on Overview</Link>. You can still view your requests and cancel before preparation starts and the cutoff.</div>}
+      {mine?.officeAllowed && <p className="text-xs text-muted-foreground mb-4">Choose up to {mine.limit} items per day. Your request follows your account across devices; supplier purchases are handled separately.</p>}
 
       <Segmented
         value={tab}
@@ -132,7 +132,7 @@ export default function Snacks() {
           >
             {mine.items.length > 0 ? (
               <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                ✓ Ordered — {names(mine.items)}
+                ✓ {FULFILLMENT_LABELS[stage]} — {names(mine.items)}
                 <span className="ml-1 font-normal text-emerald-600/80 dark:text-emerald-500">
                   {mine.items[0]?.instructions ? `· ${mine.items[0].instructions}` : ""}
                 </span>
@@ -147,14 +147,11 @@ export default function Snacks() {
             {!mine.items.length && !closed && yesterday && (
               <button
                 type="button"
-                onClick={() => {
-                  setSelected(yesterday.map((o) => o.itemId));
-                  setInstructions(yesterday[0]?.instructions ?? "");
-                  toast.success("Same as yesterday — hit Place order to confirm");
-                }}
+                disabled={!mine.officeAllowed||!editable||writing.current}
+                onClick={() => { const items=yesterday.map(o=>o.itemId),note=yesterday[0]?.instructions??"";setSelected(items);setInstructions(note);void saveRequest(items,note); }}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent"
               >
-                <History className="size-3.5" /> Same as yesterday ({yesterday.map((o) => itemFor(o.itemId)?.name).join(" + ")})
+                <History className="size-3.5" /> Repeat last request ({yesterday.map((o) => itemFor(o.itemId)?.name).join(" + ")})
               </button>
             )}
           </Card>
@@ -168,7 +165,7 @@ export default function Snacks() {
                 <button
                   key={m.id}
                   type="button"
-                  disabled={closed || !mine.officeAllowed || (!active && selected.length >= mine.limit)}
+                  disabled={writing.current || closed || !editable || !mine.officeAllowed || (!active && selected.length >= mine.limit)}
                   onClick={() => toggle(m.id)}
                   aria-pressed={active}
                   className={cn(
@@ -198,7 +195,8 @@ export default function Snacks() {
             )}
             <Input
               value={instructions}
-              disabled={closed}
+              disabled={closed || !editable || writing.current}
+              onBlur={() => { if(selected.length && instructions !== (mine.items[0]?.instructions??""))void saveRequest(selected,instructions); }}
               maxLength={500}
               onChange={(e) => setInstructions(e.target.value)}
               placeholder="Anything specific? (no sugar, less spicy…)"
@@ -211,34 +209,34 @@ export default function Snacks() {
             <StatefulButton
               type="submit"
               state={buttonState}
-              disabled={!selected.length || closed || !mine.officeAllowed}
-              loadingText="Placing order"
-              successText="Order placed"
+              disabled={!selected.length || closed || !editable || !mine.officeAllowed}
+              loadingText="Saving request"
+              successText="Request saved"
               errorText="Try again"
               icon={<Send className="size-4" />}
               className="mt-4 h-11 w-full rounded-lg font-medium"
             >
-              {mine.items.length ? "Update order" : "Place order"}
+              {mine.items.length ? "Save request notes" : "Save pantry request"}
             </StatefulButton>
-            {mine.items.length > 0 && !closed && (
+            {mine.items.length > 0 && !closed && editable && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button type="button" variant="ghost" size="xl" className="mt-2 w-full text-muted-foreground hover:text-destructive">
-                    Cancel today&apos;s order
+                  <Button type="button" disabled={buttonState==="loading"} variant="ghost" size="xl" className="mt-2 w-full text-muted-foreground hover:text-destructive">
+                    Cancel today&apos;s request
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Cancel today&apos;s order?</AlertDialogTitle>
+                    <AlertDialogTitle>Cancel today&apos;s request?</AlertDialogTitle>
                     <AlertDialogDescription>
                       {names(mine.items)} will be removed from today&apos;s list. You can order again
-                      {mine.cutoffHour >= 24 ? " anytime today." : ` until ${fmtHour(mine.cutoffHour)}.`}
+                      {mine.cutoffHour >= 24 ? " anytime today." : ` until ${fmtHour(mine.cutoffHour)}.`} This does not cancel any supplier purchase.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Keep order</AlertDialogCancel>
-                    <AlertDialogAction variant="destructive" onClick={cancelOrder}>
-                      Cancel order
+                    <AlertDialogCancel>Keep request</AlertDialogCancel>
+                    <AlertDialogAction disabled={buttonState==="loading"} variant="destructive" onClick={cancelOrder}>
+                      Cancel request
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -249,7 +247,7 @@ export default function Snacks() {
       ) : (
         <Card className="mt-5 gap-0 p-2">
           {history.length === 0 ? (
-            <Empty>No past orders from this device yet.</Empty>
+            <Empty>No previous pantry requests for this account yet.</Empty>
           ) : (
             historyDays.map((date) => {
               const dayOrders = history.filter((o) => o.date === date);

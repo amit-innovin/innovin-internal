@@ -13,7 +13,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: CalendarCheck,
     tone: "blue",
     q: "How does attendance work?",
-    a: "Sign in with your Innovin Google account and tap Check In. Attendance always uses your verified identity. Check out when you leave — that's all there is to it, no time tracking. Your browser may ask for your location on check-in so we can tell office days from remote ones — you can decline and check in anyway.",
+    a: "Sign in with your Innovin Google account. On Home, choose In office or Remote to record today’s presence; Attendance also has Check In and Check Out. Check out when you leave. Attendance may ask for location, which you can decline. Personal plans do not change attendance.",
   },
   {
     icon: Coffee,
@@ -21,38 +21,38 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     q: "How do I order food or tea?",
     a:
       orderCutoffHour() >= 24
-        ? "Pick what you'd like — tea, snacks, lunch or dinner — and submit anytime. You can change or cancel your order the same day; the coordinator gets one consolidated list."
-        : `Pick what you'd like and submit before ${fmtHour(orderCutoffHour())}. You can change your order until the cutoff — the coordinator gets one consolidated list.`,
+        ? "When checked in to the office, pick up to four menu items. Selections save automatically as requests, not supplier purchases. The coordinator marks preparation, readiness and collection/delivery. Change or cancel before preparation starts; afterward contact the coordinator. Cancelling a request does not cancel a supplier order."
+        : `Pick up to four menu items before ${fmtHour(orderCutoffHour())}. Selections save automatically as requests. Change or cancel before preparation starts and the cutoff. Contact the coordinator afterward; request cancellation does not cancel supplier purchases.`,
   },
   {
     icon: MessageSquare,
     tone: "ink",
     q: "Is Speak Up really anonymous?",
-    a: "Yes. Anonymous reports never show your name or email to anyone, including admins — the database stores no link at all. Mark it Urgent and admins get pinged on their devices. You can track status on this device.",
+    a: "Yes. Anonymous reports never show your name or email to anyone, including admins — the database stores no link at all. Mark it Urgent to highlight it and attempt an alert to admins with device notifications enabled. You can track status on this device.",
   },
   {
     icon: CalendarOff,
     tone: "amber",
     q: "How do leave and WFH requests work?",
-    a: "Open Attendance and switch to the Leave tab, pick Leave or Work from home, choose the leave type and your dates, and send — the coordinator approves or rejects it on the admin dashboard and you can watch the status under Your requests. Sign in with Google first so requests come from your verified identity.",
+    a: "Open Attendance & Leave, choose Leave or Work from home, fill the dates and send. The coordinator approves or rejects the request in this app; its status appears under Your requests. Zoho People remains separate and must be updated there. Personal plans never submit a leave request.",
   },
   {
     icon: Plane,
     tone: "sky",
     q: "How is my leave balance calculated?",
-    a: "The Leave tab in Attendance shows your remaining days for each type — Casual, Sick, Earned and Flexible — for the calendar year. Leave is counted in working days only: Sundays, the 2nd and 4th Saturday, and declared holidays are never charged, so a week off that contains a holiday costs less than five days. Casual Leave can be taken as a half day. Earned Leave builds up at 1.25 days per completed month and can be used after a year of service. Balances follow your verified Google identity, not the device, so sign in to see them. The Calendar tab plots your days, leave, holidays and weekly offs on one month grid.",
+    a: "The Leave tab in Attendance shows your remaining days for each type — Casual, Sick, Earned and Flexible — for the calendar year. Leave is counted in working days only: Sundays, the 2nd and 4th Saturday, and declared holidays are never charged, so non-working dates do not reduce the balance. Casual Leave can be taken as a half day. Earned Leave builds up at 1.25 days per completed month and can be used after a year of service. Balances follow your verified Google identity, not the device, so sign in to see them. The Calendar tab plots your days, leave, holidays and weekly offs on one month grid.",
   },
   {
     icon: CalendarDays,
     tone: "rose",
     q: "How do events and RSVPs work?",
-    a: "The Events page lists what's coming up — matches, workshops, celebrations, town halls. Tap Join to RSVP so organizers know the headcount; tap again to drop out. Nobody sees who else is going, only the count.",
+    a: "The Events page lists what's coming up — matches, workshops, celebrations, town halls. Tap Join to RSVP so organizers know the headcount; use Cancel RSVP to drop out. Organizers can click their event title to edit or cancel their own future event. Nobody sees who else is going, only the count.",
   },
   {
     icon: Wifi,
     tone: "blue",
     q: "Why report Wi-Fi quality?",
-    a: "If nobody flags it, everyone assumes it's fine. Quick Good/Poor reports and speed checks make recurring problems visible so they get fixed.",
+    a: "If nobody flags it, everyone assumes it's fine. Check Speed measures a download; Good or Poor submits the current note and any measured speed. Measuring alone does not submit a report. Reports help the coordinator spot recurring problems.",
   },
 ];
 

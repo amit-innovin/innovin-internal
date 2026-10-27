@@ -40,7 +40,7 @@ test.describe("iPhone workspace", () => {
     await page.getByRole("button", { name: "Flip workspace pass", exact: true }).click();
     await expect(page.locator(".phone-id-front")).toHaveCSS("visibility", "hidden");
     await expect(page.locator(".phone-id-back")).toHaveCSS("visibility", "visible");
-    await expect(page.getByText("YOUR PERSONAL CALENDAR", { exact: true })).toBeVisible();
+    await expect(page.getByText("YOUR ATTENDANCE CALENDAR", { exact: true })).toBeVisible();
     await capture(page, "ios-pass-calendar");
     await page.getByRole("button", { name: "Close pass calendar", exact: true }).click();
     await expect(page.locator(".phone-id-back")).toHaveCSS("visibility", "hidden");
@@ -95,15 +95,18 @@ test.describe("iPhone workspace", () => {
 
   test("steps and planner work in Safari without losing edits", async ({ page }) => {
     await signInOffice(page);
-    await page.getByRole("link", { name: "Daily Steps & Prize", exact: true }).click();
+    await page.getByRole("link", { name: "Daily Steps", exact: true }).click();
     const count = page.getByLabel("Today's total steps");
     await count.fill("12880");
-    await page.getByRole("button", { name: "Save today's steps", exact: true }).click();
+    await page.getByRole("button", { name: "Save unsaved steps", exact: true }).click();
     await expect(page.getByText("Today's steps saved")).toBeVisible();
     await page.reload();
     await expect(count).toHaveValue("12880");
     await capture(page, "ios-steps");
-    await page.getByRole("link", { name: "Leave & WFH Planner", exact: true }).click();
+    await page.getByRole("link", { name: "Attendance & Leave", exact: true }).click();
+    await expect(page.getByRole("heading",{name:"Request time away"})).toBeVisible();
+    await page.locator(".reference-more summary").click();
+    await page.getByRole("link",{name:"Personal plans",exact:true}).click();
     await page.getByRole("button", { name: /Select .*15$/ }).click();
     await page.getByRole("button", { name: "🌴 Vacation", exact: true }).click();
     await expect(page.getByText("Calendar updated")).toBeVisible();

@@ -105,3 +105,16 @@ Presence uses the attendance row for Overview, directory, calendar and pantry el
 Private push registrations are tied to an expiring sign-in session and revoked before logout/account switching. Targeted push payloads contain only a generic prompt to open the app; private content is fetched after authentication. Old registrations must be refreshed by opening the app. Auto check-in is not part of v0. Signed-in RSVPs follow employee identity; guest RSVPs remain browser-scoped.
 
 Remote Postgres now always verifies TLS certificates. Install the trusted CA in Vercel before deploying this revision if the provider certificate is not trusted by system CAs. Browser, physical-device, provider and full release verification remain pending.
+
+## Instamart office purchasing
+
+Admin > Today links to `/admin/pantry`. A named Google admin or owner can connect the
+Swiggy office purchasing account, choose a saved address and exact product variants,
+review the live bill, and explicitly confirm a returned Cash/COD payment method.
+Employee requests remain separate from supplier purchases. Unknown checkout outcomes
+block new purchases until matched to provider receipts; checkout is never auto-retried.
+
+See [setup, production access and recovery](docs/pantry-provider-setup.md) and the
+PANTRY_* variables in `.env.example`. Ordering defaults to disabled. Live Swiggy OAuth,
+production callback approval and a real purchase/delivery remain unverified. Blinkit
+ordering is unavailable until approved partner access and documentation are supplied.

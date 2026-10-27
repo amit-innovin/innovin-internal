@@ -12,6 +12,10 @@ const db = process.env.E2E_DATABASE_URL;
 // Fake office at 12.935,77.624 — e2e geolocation tests check in from inside/outside this geofence.
 const serverEnv = (name: string, cutoff: string) => ({
   ADMIN_PASSCODE: "1704",
+  PANTRY_INTEGRATION_KEY: "b".repeat(64),
+  PANTRY_ORDERING_ENABLED: "true",
+  PANTRY_SWIGGY_TEST_URL: "http://localhost:3998",
+  PANTRY_SWIGGY_REDIRECT_URI: `http://localhost:${name === "main" ? 3210 : 3211}/api/pantry-provider/callback`,
   ORDER_CUTOFF_HOUR: cutoff,
   ALLOWED_EMAIL_DOMAINS: "innovinlabs.com",
   // Never reach out to fast.com from tests — the speed test falls back to our own payload,
@@ -59,6 +63,7 @@ export default defineConfig({
     { name: "desktop", testIgnore: /(?:api|ios)\.spec/, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, launchOptions } },
     { name: "mobile", testIgnore: /(?:api|ios)\.spec/, use: { ...devices["Pixel 7"], launchOptions } },
     ...(process.env.E2E_IOS ? [
+      { name: "ios-pantry", testMatch: /pantry(?:-safety)?\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
       { name: "ios-small", testMatch: /ios\.spec/, use: { ...devices["iPhone SE (3rd gen)"], browserName: "webkit" as const } },
       { name: "ios", testMatch: /ios\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
       { name: "ios-large", testMatch: /ios\.spec/, use: { ...devices["iPhone 16 Pro Max"], browserName: "webkit" as const } },

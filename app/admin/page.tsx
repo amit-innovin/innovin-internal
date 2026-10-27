@@ -167,6 +167,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
       <div className={`mt-4 grid gap-4 md:grid-cols-2 ${tab === "today" ? "" : "hidden"}`}>
         <Card id="orders" className="gap-0 p-5">
+          <Link href="/admin/pantry" className="mb-3 inline-flex min-h-11 items-center text-sm underline">Order pantry supplies with Instamart</Link>
           <SectionHeader title="Today's orders" aside={`Total ₹${total}${hasUnpriced ? "+" : ""}`} />
           <ul className="mt-3 space-y-2">
             {consolidated.map((c) => (

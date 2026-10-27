@@ -199,7 +199,11 @@ export type NoticeRow = {
 };
 export type NoticeReaction = { noticeId: string; email: string; emoji: string };
 
+export type ProviderRecord = { key: string; version: number; value: string; updatedAt: string };
+
 export interface Store {
+  getProviderRecord(key: string): Promise<ProviderRecord | null>;
+  putProviderRecord(key: string, expectedVersion: number | null, value: string, updatedAt: string): Promise<boolean>;
   addNotice(row: NoticeRow): Promise<NoticeRow>;
   listNotices(limit: number): Promise<NoticeRow[]>;
   deleteNotice(id: string): Promise<boolean>;

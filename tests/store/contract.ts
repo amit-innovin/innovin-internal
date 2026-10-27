@@ -15,6 +15,22 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       await resetData();
     });
 
+    it("persists provider state with compare-and-set so two coordinators cannot both claim checkout", async () => {
+      expect(await store.getProviderRecord("instamart")).toBeNull();
+      expect(await store.putProviderRecord("instamart", null, "encrypted-initial", iso())).toBe(true);
+      expect(await store.putProviderRecord("instamart", null, "overwrite", iso())).toBe(false);
+      const initial = (await store.getProviderRecord("instamart"))!;
+      expect(initial).toMatchObject({ key: "instamart", version: 1, value: "encrypted-initial" });
+      const writes = await Promise.all([
+        store.putProviderRecord("instamart", initial.version, "encrypted-checkout-a", iso(1000)),
+        store.putProviderRecord("instamart", initial.version, "encrypted-checkout-b", iso(1000)),
+      ]);
+      expect(writes.filter(Boolean)).toHaveLength(1);
+      expect((await store.getProviderRecord("instamart"))?.version).toBe(2);
+      expect((await store.getProviderRecord("instamart"))?.value).toBe(writes[0] ? "encrypted-checkout-a" : "encrypted-checkout-b");
+      expect(await store.getProviderRecord("blinkit")).toBeNull();
+    });
+
     it("persists public notes while discarding anonymous authors and toggling one reaction per employee", async () => {
       const note = await store.addNotice({ id: uid(), kind: "quote", title: "", body: "Make things that matter", attribution: "", color: "yellow", anonymous: true, authorEmail: "a@innovinlabs.com", authorName: "Asha", createdAt: iso() });
       expect(note.authorEmail).toBeNull();

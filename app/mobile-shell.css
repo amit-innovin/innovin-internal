@@ -1,0 +1,27 @@
+/* A mobile route keeps the same workspace skin after leaving the wallet. */
+.mobile-nav-only { display:none; }
+@media(max-width:768px) {
+ body:not(:has(.zip-workspace)) { background:#f5ecf0; }
+ body:not(:has(.zip-workspace)) .studio-nav.top-nav { flex-wrap:nowrap; gap:8px; padding:calc(8px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px)); min-height:60px; background:#f5ecf0f5; backdrop-filter:none; border-bottom:1px solid #e8dfe9; }
+ body:not(:has(.zip-workspace)) .zip-nav .nav-left { width:auto; flex:0 0 44px; gap:0; }
+ body:not(:has(.zip-workspace)) .nav-brand { width:44px; min-height:44px; justify-content:center; margin:0; padding:0; }
+ body:not(:has(.zip-workspace)) .brand-text-wrap,
+ body:not(:has(.zip-workspace)) .studio-nav-primary,
+ body:not(:has(.zip-workspace)) .nav-right > .wifi-status-pill { display:none; }
+ body:not(:has(.zip-workspace)) .zip-nav .nav-right { flex-wrap:nowrap; gap:2px; min-width:0; margin-left:auto; }
+ body:not(:has(.zip-workspace)) .studio-nav-tools { gap:2px; margin:0; }
+ body:not(:has(.zip-workspace)) .studio-nav-tools > a,
+ body:not(:has(.zip-workspace)) .studio-nav-tools > div > button,
+ body:not(:has(.zip-workspace)) .studio-account > summary,
+ body:not(:has(.zip-workspace)) .reference-more > summary { display:inline-flex; align-items:center; justify-content:center; min-width:44px; height:44px; padding:0; border-radius:50%; color:#475569; touch-action:manipulation; }
+ body:not(:has(.zip-workspace)) .reference-more > summary { font-size:11px; }
+ body:not(:has(.zip-workspace)) .studio-nav-more { top:48px; right:0; width:min(260px,calc(100vw - 32px)); max-height:calc(100svh - 90px); overflow-y:auto; border-radius:18px; padding:10px; }
+ body:not(:has(.zip-workspace)) .studio-nav-more a { min-height:44px; display:flex; align-items:center; font-size:14px; }
+ body:not(:has(.zip-workspace)) .studio-main { width:100%; max-width:480px; padding:24px max(20px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px)); }
+ .workspace-page-heading h1 { font-family:var(--font-jakarta); font-size:28px; line-height:1.15; font-weight:750; letter-spacing:-.045em; }
+ .workspace-page-heading p { color:#7b8298; font-size:13px; }
+ body:not(:has(.zip-workspace)) .studio-main :is(input,textarea,select) { font-size:16px; }
+ body:not(:has(.zip-workspace)) .studio-main :is(button,select,input:not([type=checkbox]):not([type=radio])) { min-height:44px; }
+ body:not(:has(.zip-workspace)) .studio-main [data-slot=card] { border-radius:20px; box-shadow:0 3px 14px #0f172a05; }
+ body:not(:has(.zip-workspace)) .studio-main :is(button,a) { touch-action:manipulation; }
+}

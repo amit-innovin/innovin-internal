@@ -30,17 +30,16 @@ test.describe("Studio workspace", () => {
     await expect.poll(async () => (await (await page.request.get("/api/workspace")).json()).profile.focus).toBe("☕");
     await page.getByRole("button", { name: "Zoom in arena" }).click();
     await expect(page.locator(".zoom-level-pill")).toHaveText("95%");
-    if (isMobile) await page.getByRole("button", { name: "Expand Pantry", exact: true }).click();
     await page.getByRole("button", { name: "Remote", exact: true }).click();
-    await expect(page.getByText("The pantry is an office perk.")).toBeVisible();
+    expect((await (await page.request.get("/api/pantry-shop")).json()).officeAllowed).toBe(false);
     const denied = await page.request.post("/api/snacks", { data: { items: ["tea"] } });
     expect(denied.status()).toBe(403);
     await page.getByRole("button", { name: "In office", exact: true }).click();
-    await page.getByRole("searchbox", { name: "Search pantry" }).fill("Tea");
-    await page.getByRole("button", { name: "Add Tea" }).click();
-    await expect(page.getByText("Tea", { exact: true }).first()).toBeVisible();
+    await page.goto("/snacks");
+    await page.getByRole("button", { name: /^Tea/ }).click();
+    await expect(page.getByText(/Request received.*Tea/)).toBeVisible();
 
-    await expect(page.getByRole("status").filter({ hasText: "Your tray is saved." })).toBeAttached();
+    await expect(page.getByText("Your pantry request is saved",{exact:true})).toBeVisible();
     const mine = await (await page.request.get("/api/snacks?scope=mine")).json();
     expect(mine.items).toHaveLength(1);
     expect(mine.items[0].orderedBy).toMatch(/@innovinlabs.com$/);
@@ -48,7 +47,7 @@ test.describe("Studio workspace", () => {
     expect((await (await otherDevice.request.get("http://localhost:3210/api/snacks?scope=mine")).json()).items).toHaveLength(1);
     await otherDevice.close();
     expect((await page.request.post("/api/snacks", { data: { items: ["tea", "snacks", "healthy", "lunch", "dinner"] } })).status()).toBe(400);
-    await page.reload();
+    await page.goto("/");
     await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText("Product Designer", { exact: true }).first()).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));

@@ -1,4 +1,5 @@
-import { randomUUID } from "node:crypto";
+import { SHOP_CATEGORIES,productKey,catalogFresh,productImage,type ShopCategory,type RequestedProduct } from "./shop";
+import { createHash, randomUUID } from "node:crypto";
 import { store as defaultStore } from "../store";
 import type { Store } from "../types";
 import { encryptionReady, seal, unseal } from "./crypto";
@@ -31,6 +32,53 @@ export class PantryPurchasing {
     if (!encryptionReady()) return this.public(empty(), null);
     const { state, version } = await this.read();
     return this.public(state, version);
+  }
+  private sourceKey(state:ProviderState) {
+    return createHash("sha256").update(JSON.stringify([state.connection?.generation,state.selectedAddress?.id])).digest("hex");
+  }
+  async shop() {
+    if(!encryptionReady())return {products:[],revision:"unavailable",ready:false};
+    const {state}=await this.read();const key=this.sourceKey(state);
+    const products=(state.connection&&state.selectedAddress?state.sharedCatalog??[]:[]).filter(p=>p.sourceKey===key).map(p=>({spinId:p.spinId,skuId:p.skuId,name:p.name,variant:p.variant,price:p.price,mrp:p.mrp,brand:p.brand,imageUrl:productImage(p.imageUrl),available:p.available&&catalogFresh(p),maxQuantity:p.maxQuantity,category:p.category,publishedAt:p.publishedAt,sourceKey:p.sourceKey}));
+    return {products,revision:createHash("sha256").update(JSON.stringify([key,products])).digest("hex"),ready:!!state.connection&&!!state.selectedAddress};
+  }
+  async publish(actor:string,spinId:string,skuId:string,category:string,expected:number|null) {
+    if(!SHOP_CATEGORIES.includes(category as ShopCategory))throw new PantryError("Choose an office category",400);
+    return this.work(actor,"publish",async state=>{
+      const product=state.catalogUntil>Date.now()?state.catalog.find(p=>p.spinId===spinId&&p.skuId===skuId):null;
+      if(!state.selectedAddress||!product)throw new PantryError("Search this exact product again before sharing it",409);
+      const other=(state.sharedCatalog??[]).filter(p=>productKey(p)!==productKey(product));
+      if(other.length>=100)throw new PantryError("Keep the office shop to 100 variants",400);
+      state.sharedCatalog=[...other,{...product,imageUrl:productImage(product.imageUrl),category:category as ShopCategory,publishedAt:new Date().toISOString(),sourceKey:this.sourceKey(state)}];
+    },{expected});
+  }
+  async unpublish(actor:string,spinId:string,skuId:string,expected:number|null) {
+    return this.work(actor,"publish",async state=>{state.sharedCatalog=(state.sharedCatalog??[]).filter(p=>p.spinId!==spinId||p.skuId!==skuId);},{expected});
+  }
+  async selection(input:unknown,revision:string):Promise<RequestedProduct[]> {
+    const shop=await this.shop();if(revision!==shop.revision)throw new PantryError("The office catalog changed. Refresh before submitting.",409);
+    if(!Array.isArray(input)||!input.length||input.length>4)throw new PantryError("Choose up to four exact products",400);
+    const seen=new Set<string>();return input.map(raw=>{
+      const row=object(raw),product=shop.products.find(p=>p.spinId===row.spinId&&p.skuId===row.skuId);
+      if(!product||!product.available||!Number.isInteger(row.quantity)||Number(row.quantity)<1||Number(row.quantity)>product.maxQuantity)throw new PantryError("Choose an available product and valid quantity",400);
+      if(seen.has(productKey(product)))throw new PantryError("Choose each variant only once",400);seen.add(productKey(product));
+      return {...product,quantity:Number(row.quantity)};
+    });
+  }
+  async teamDraft(actor:string,requests:RequestedProduct[],expected:number|null) {
+    return this.work(actor,"draft",async state=>{
+      if(!requests.length)throw new PantryError("Mark product requests Being prepared first",400);
+      const combined=new Map<string,typeof requests[number]>();
+      for(const row of requests){
+        const product=(state.sharedCatalog??[]).find(p=>productKey(p)===productKey(row));
+        if(!product||!product.available||!catalogFresh(product)||row.sourceKey!==this.sourceKey(state))throw new PantryError("The office catalog changed or expired. Refresh its products before building the basket.",409);
+        const key=productKey(product),quantity=(combined.get(key)?.quantity??0)+row.quantity;
+        if(!Number.isInteger(quantity)||quantity<1||quantity>product.maxQuantity)throw new PantryError(`Team quantity exceeds the available limit for ${product.name}. Review requests.`,409);
+        combined.set(key,{...product,quantity});
+      }
+      if(combined.size>50)throw new PantryError("Choose up to 50 variants for one supplier basket",400);
+      state.draft=[...combined.values()];
+    },{expected});
   }
   private async work(actor: string, kind: string, action: (state: ProviderState, invoke: Invoke, checkpoint: () => Promise<void>) => Promise<void>, options: { expected?: number | null; allowUnresolved?: boolean; connect?: boolean } = {}) {
     if (!encryptionReady()) throw new PantryError("Configure the pantry integration encryption key first", 503);
@@ -94,12 +142,12 @@ export class PantryPurchasing {
       if (unresolved(state) && !sameAccount) throw new PantryError("Reconnect the same Swiggy purchasing account while an order is unresolved.", 409);
       state.connection = { ...tokens, clientId, generation: sameAccount ? state.connection!.generation : randomUUID(), linkedBy: actor, linkedAt: new Date().toISOString() };
       state.addresses = addresses.addresses; state.addressPage = 1; state.moreAddresses = addresses.more;
-      if (!sameAccount) { state.selectedAddress = undefined; state.catalog = []; state.catalogUntil = 0; state.draft = []; }
+      if (!sameAccount) { state.selectedAddress = undefined; state.sharedCatalog=[]; state.catalog = []; state.catalogUntil = 0; state.draft = []; }
     }, { expected, connect: true, allowUnresolved: true });
   }
   async disconnect(actor: string, expected: number | null) {
     return this.work(actor, "disconnect", async state => {
-      state.connection = undefined; state.selectedAddress = undefined; state.addresses = []; state.catalog = []; state.draft = [];
+      state.connection = undefined; state.sharedCatalog=[]; state.selectedAddress = undefined; state.addresses = []; state.catalog = []; state.draft = [];
     }, { expected });
   }
   async addresses(actor: string, page: number) {
@@ -113,7 +161,7 @@ export class PantryPurchasing {
     return this.work(actor, "address", async state => {
       const address = state.addresses.find(a => a.id === id);
       if (!address) throw new PantryError("Choose an address returned by Instamart", 400);
-      state.selectedAddress = address; state.catalog = []; state.catalogUntil = 0; state.draft = [];
+      state.selectedAddress = address; state.sharedCatalog=[]; state.catalog = []; state.catalogUntil = 0; state.draft = [];
     }, { expected });
   }
   async search(actor: string, query: string, offset: number) {

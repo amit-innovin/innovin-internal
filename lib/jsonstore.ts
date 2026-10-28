@@ -1,3 +1,4 @@
+import { assertBasketRevision } from "./pantry/shop";
 import { assertRequestEditable, fulfillmentOf, nextFulfillment, canMoveFulfillment, sameTray } from "./order-state";
 import { promises as fs } from "fs";
 import path from "path";
@@ -216,8 +217,9 @@ export const jsonStore: Store = {
   listAttendance: (date) =>
     query((db) => db.attendance.filter((r) => r.date === date).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt))),
 
-  setDayOrders: (date, ref, rows) =>
+  setDayOrders: (date, ref, rows, expectedIds) =>
     mutate((db) => {
+      assertBasketRevision(db.orders.filter(o=>o.date===date&&o.submitterRef===ref),expectedIds);
       assertRequestEditable(db.orders.filter(o=>o.date===date&&o.submitterRef===ref));
       db.orders = db.orders.filter((o) => !(o.date === date && o.submitterRef === ref));
       db.orders.unshift(...rows);
@@ -240,6 +242,7 @@ export const jsonStore: Store = {
     ),
   deleteOrder: (ref, date) =>
     mutate((db) => {
+      assertBasketRevision(db.orders.filter(r=>r.submitterRef===ref&&r.date===date));
       assertRequestEditable(db.orders.filter(r=>r.submitterRef===ref&&r.date===date));
       const before = db.orders.length;
       db.orders = db.orders.filter((r) => !(r.submitterRef === ref && r.date === date));

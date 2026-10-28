@@ -1,3 +1,6 @@
+import { store } from "@/lib/store";
+import { todayIST } from "@/lib/time";
+import { fulfillmentOf } from "@/lib/order-state";
 import { NextRequest, NextResponse } from "next/server";
 import { purchasingActor, purchasingError } from "@/lib/pantry/access";
 import { enforce } from "@/lib/guard";
@@ -22,6 +25,9 @@ export async function POST(req: NextRequest) {
   try {
     let result;
     switch(body.action) {
+      case "publish": result=await pantry.publish(actor.email,str(body.spinId),str(body.skuId),str(body.category),version as number|null);break;
+      case "unpublish": result=await pantry.unpublish(actor.email,str(body.spinId),str(body.skuId),version as number|null);break;
+      case "team-draft": {if(body.confirmed!==true)return badRequest("Confirm replacing the office basket with prepared requests");const products=(await store.listOrders(todayIST())).filter(r=>fulfillmentOf(r)==="preparing").flatMap(r=>r.product?[r.product]:[]);result=await pantry.teamDraft(actor.email,products,version as number|null);break;}
       case "addresses": result = await pantry.addresses(actor.email, Number(body.page)); break;
       case "address": result = await pantry.selectAddress(actor.email, str(body.id), version as number | null); break;
       case "search": result = await pantry.search(actor.email, str(body.query), Number(body.offset ?? 0)); break;

@@ -15,6 +15,18 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       await resetData();
     });
 
+    it("persists exact product requests and rejects stale basket replacements atomically",async()=>{
+      const date="2026-10-28",ref="shop-cart",product={spinId:"spin",skuId:"sku",name:"Biscuits",variant:"200 g",price:40,available:true,maxQuantity:10,category:"Snacks" as const,publishedAt:iso(),sourceKey:"office-context",quantity:2};
+      const row={id:uid(),date,itemId:"instamart:spin:sku",preference:"anything",instructions:"For the team",submitterRef:ref,orderedBy:"member@innovinlabs.com",createdAt:iso(),product};
+      await store.setDayOrders(date,ref,[row],[]);
+      expect((await store.listOrders(date))[0]).toMatchObject({product});
+      await expect(store.deleteOrder(ref,date)).rejects.toThrow(/changed/i);
+      await expect(store.setDayOrders(date,ref,[],[])).rejects.toThrow(/changed/i);
+      expect((await store.listOrders(date))).toHaveLength(1);
+      await store.setDayOrders(date,ref,[{...row,id:uid(),product:{...product,quantity:3}}],[row.id]);
+      expect((await store.listOrdersByRef(ref,10))[0].product?.quantity).toBe(3);
+    });
+
     it("tracks pantry preparation against the exact reviewed tray and locks employee changes", async () => {
       const date="2026-10-27", ref="verified-tray", rows=[{id:uid(),date,itemId:"tea",preference:"anything",instructions:"",submitterRef:ref,orderedBy:"a@innovinlabs.com",createdAt:iso()}];
       await store.setDayOrders(date,ref,rows);

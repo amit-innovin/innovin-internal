@@ -160,3 +160,26 @@ it("recovers a crashed submitting checkout conservatively and rejects expired re
   expect((await restarted.status()).attempts[0].status).toBe("unknown");
   await expect(restarted.setDraft("admin@innovinlabs.com",[],(await restarted.status()).version)).rejects.toThrow(/unresolved/);
 });
+it("publishes exact variants for employees without exposing supplier account data and clears them on address change",async()=>{
+ const {service,state}=await connected();
+ await service.publish("admin@innovinlabs.com","spin-1","sku-1","Snacks",state.version);
+ const shop=await service.shop();expect(shop.products).toMatchObject([{name:"Biscuits",variant:"200 g",price:40,category:"Snacks"}]);
+ expect(JSON.stringify(shop)).not.toMatch(/private-token|private-refresh|Kerala|linkedBy|attempts|office-context/);
+ await expect(service.selection([{spinId:"spin-1",skuId:"sku-1",quantity:2,price:1}],shop.revision)).resolves.toMatchObject([{price:40,quantity:2}]);
+ await expect(service.selection([{spinId:"invented",skuId:"sku-1",quantity:2}],shop.revision)).rejects.toThrow(/available/i);
+ await service.selectAddress("admin@innovinlabs.com","office",(await service.status()).version);
+ expect((await service.shop()).products).toEqual([]);
+ await expect(service.selection([{spinId:"spin-1",skuId:"sku-1",quantity:2}],shop.revision)).rejects.toThrow(/changed|available/i);
+});
+it("expires employee listings and never accepts client prices or out-of-range quantities",async()=>{
+ const {service,state}=await connected();await service.publish("admin","spin-1","sku-1","Snacks",state.version);const shop=await service.shop();
+ await expect(service.selection([{spinId:"spin-1",skuId:"sku-1",quantity:51}],shop.revision)).rejects.toThrow(/quantity/);
+ await expect(service.selection([{spinId:"spin-1",skuId:"sku-1",quantity:1},{spinId:"spin-1",skuId:"sku-1",quantity:1}],shop.revision)).rejects.toThrow(/once/);
+ const realNow=Date.now();vi.spyOn(Date,"now").mockReturnValue(realNow+86400001);expect((await service.shop()).products[0].available).toBe(false);
+ await expect(service.selection([{spinId:"spin-1",skuId:"sku-1",quantity:1}],shop.revision)).rejects.toThrow(/changed/);
+});
+it("aggregates prepared exact requests into a reviewable basket and rejects other-office snapshots",async()=>{
+ const {service,state}=await connected();await service.publish("admin","spin-1","sku-1","Snacks",state.version);const shop=await service.shop();const rows=await service.selection([{spinId:"spin-1",skuId:"sku-1",quantity:2}],shop.revision);
+ const next=await service.teamDraft("admin",[rows[0],{...rows[0],quantity:3}],(await service.status()).version);expect(next.draft).toMatchObject([{spinId:"spin-1",skuId:"sku-1",quantity:5,price:40}]);
+ await expect(service.teamDraft("admin",[{...rows[0],sourceKey:"another-office"}],next.version)).rejects.toThrow(/catalog changed/);
+});

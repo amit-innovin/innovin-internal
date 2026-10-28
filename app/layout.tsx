@@ -12,6 +12,8 @@ import "./reference-integration.css";
 import "./zip-design.css";
 import "./ios.css";
 import "./workspace-polish.css";
+import "./mobile-shell.css";
+import "./pantry-shop.css";
 
 // Font families used by the supplied workspace design.
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });

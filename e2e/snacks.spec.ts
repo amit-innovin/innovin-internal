@@ -18,8 +18,7 @@ test.describe("Meals & Snacks (requests open)",()=>{
     await expect(page.getByRole("button",{name:/^Tea/})).toHaveAttribute("aria-pressed","false");
     await page.getByRole("tab",{name:"History"}).click();
     await expect(page.getByText("Today ·")).toBeVisible();await expect(page.getByText("less sugar",{exact:true})).toBeVisible();
-    await page.goto("/");if(isMobile)await page.getByRole("button",{name:"Expand Pantry",exact:true}).click();
-    await expect(page.getByRole("button",{name:"Remove Lunch from cart",exact:true})).toBeVisible();
+    await page.goto("/");await expect(page.locator(".home-shop-status,.phone-pantry-summary").filter({visible:true})).toContainText("Lunch");
     await page.goto("/snacks");await page.getByRole("button",{name:"Cancel today's request",exact:true}).click();
     await expect(page.getByRole("alertdialog")).toContainText("Lunch will be removed");
     await page.getByRole("alertdialog").getByRole("button",{name:"Cancel request",exact:true}).click();
@@ -47,7 +46,7 @@ test.describe("Meals & Snacks (after cutoff)",()=>{
   test("closed requests cannot be edited or cancelled",async({page,isMobile})=>{
     await signInOffice(page);await page.goto("/snacks");await expect(page.getByText("Orders are closed for today")).toBeVisible();
     await expect(page.getByRole("button",{name:/^Tea/})).toBeDisabled();await expect(page.getByLabel("Special instructions")).toBeDisabled();await expect(page.getByRole("button",{name:"Save pantry request",exact:true})).toBeDisabled();
-    await page.goto("/");if(isMobile)await page.getByRole("button",{name:"Expand Pantry",exact:true}).click();await expect(page.getByText("Requests closed",{exact:true})).toBeVisible();
-    await page.getByRole("searchbox",{name:"Search pantry"}).fill("Tea");await expect(page.getByRole("button",{name:"Add Tea",exact:true})).toBeDisabled();
+    await page.goto("/pantry");await expect(page.getByText("Requests are closed for today. You can still browse and see your saved status.")).toBeVisible();
+    await expect(page.getByRole("button",{name:"Send request",exact:true})).toBeDisabled();
   });
 });

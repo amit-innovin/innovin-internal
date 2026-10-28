@@ -44,6 +44,7 @@ export type AttendanceRow = {
 };
 
 export type OrderRow = {
+  product?: import("./pantry/shop").RequestedProduct;
   fulfillment?: import("./order-state").OrderFulfillment;
   fulfillmentAt?: string;
   fulfillmentBy?: string | null;
@@ -234,7 +235,7 @@ export interface Store {
   listSteps(): Promise<StepsRow[]>;
   listStepsByEmail(email: string, limit: number): Promise<StepsRow[]>;
   // Replaces the device's selection for the day (atomically in Postgres).
-  setDayOrders(date: string, ref: string, rows: OrderRow[]): Promise<OrderRow[]>;
+  setDayOrders(date: string, ref: string, rows: OrderRow[], expectedIds?: string[]): Promise<OrderRow[]>;
   setOrderFulfillment(date: string, ref: string, expectedIds: string[], expected: import("./order-state").OrderFulfillment, next: import("./order-state").OrderFulfillment, actor: string | null, at: string): Promise<boolean>;
   listOrders(date: string): Promise<OrderRow[]>;
   listOrdersByRef(ref: string, limit: number): Promise<OrderRow[]>;

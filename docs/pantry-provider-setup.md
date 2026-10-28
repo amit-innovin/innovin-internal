@@ -27,6 +27,18 @@ is needed. Tokens rotate and are saved before subsequent requests. Both JSON and
 stores persist encrypted provider records with versioned conditional writes. Production uses
 Postgres. Keep the database backups and integration key together in the recovery plan.
 
+## Publish the employee shop
+
+Employees open `/pantry` from Home or the pantry icon. This is the app's own office shopping page using returned Instamart product metadata, not an embedded Swiggy session. No sample products are shown in production.
+
+1. Connect the office account and select its delivery address as above.
+2. Search a product, verify the exact pack/variant and choose its office category. Select **Share with team**. Repeating search and **Refresh team listing** updates its price, stock and publication time. Optional images are accepted only from approved HTTPS Swiggy CDN hosts; other/missing images use a neutral package placeholder.
+3. Employees browse only the published variants, with no supplier addresses, credentials, cart or receipt data. They choose up to four distinct products and quantities allowed by the provider. A local draft is tied to their Google account, current day, catalog revision and unchanged request IDs. **Send request** makes it visible to the coordinator; browsing or drafting does not purchase anything.
+4. Review each exact request and mark it **Being prepared** before using **Use prepared team requests**. This explicitly replaces the coordinator's draft with aggregated prepared quantities. Changed office context, expired listings and quantities exceeding the provider cap are rejected. Refresh/reconcile the requests instead of silently reducing them.
+5. Continue with the existing provider-cart replacement, live bill and explicit checkout confirmation. Employee fulfillment remains a separate coordinator action.
+
+Published listings expire after 24 hours until refreshed from a new provider search. Changing the connected account or selected delivery address clears the published shop. Product prices are estimates; provider fees, final quantities, stock and payment are confirmed at review. A missing setup produces an honest empty shop; a temporarily unavailable catalog still permits reading/cancelling saved requests. Office check-in and the existing cutoff apply when sending requests. A saved meal request can be explicitly replaced with products; stale legacy meal saves/cancellations cannot overwrite a product basket.
+
 ## Employee request fulfillment
 
 The existing daily-demand rows in Admin and Purchasing show a coordinator status control.

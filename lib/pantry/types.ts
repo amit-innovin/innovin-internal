@@ -1,6 +1,6 @@
 import type { Tokens } from "./swiggy";
 export type Address = { id: string; addressLine: string; label: string };
-export type Product = { spinId: string; skuId: string; name: string; variant: string; price: number; available: boolean; maxQuantity: number; similar?: boolean };
+export type Product = { imageUrl?:string; brand?:string; mrp?:number; spinId: string; skuId: string; name: string; variant: string; price: number; available: boolean; maxQuantity: number; similar?: boolean };
 export type BasketItem = Product & { quantity: number };
 export type Bill = { label: string; value: string };
 export type Quote = { id: string; actor: string; expiresAt: number; fingerprint: string; address: Address; total: string; bill: Bill[]; items: BasketItem[]; paymentMethods: string[]; storeCount: number; cartId?: string };
@@ -9,6 +9,7 @@ export type ProviderOrder = { orderId?: string; status?: string; error?: string;
 export type Attempt = { id: string; actor: string; startedAt: string; status: AttemptStatus; generation: string; address: Address; items: BasketItem[]; total: string; paymentMethod: string; orders: ProviderOrder[]; message: string };
 export type Connection = Tokens & { clientId: string; generation: string; linkedBy: string; linkedAt: string };
 export type ProviderState = {
+  sharedCatalog?: import("./shop").ShopProduct[];
   connection?: Connection;
   operation?: { id: string; kind: string; until: number };
   addresses: Address[];

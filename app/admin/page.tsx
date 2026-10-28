@@ -1,3 +1,4 @@
+import {orderName,orderQuantity} from "@/lib/pantry/shop";
 import { cookies } from "next/headers";
 import { ADMIN_COOKIE,verifyAdminSession } from "@/lib/admin";
 import { PantryFulfillment } from "@/components/pantry-fulfillment";
@@ -119,7 +120,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   ]);
   const names = new Map(employees.map((e) => [e.email, e.name]));
 
-  const consolidated = MENU.map((m) => ({ ...m, count: orders.filter((o) => o.itemId === m.id).length }));
+  const consolidated = [...MENU.map((m) => ({ ...m, count: orders.filter((o) => o.itemId === m.id).length })),...[...new Set(orders.filter(o=>o.product).map(o=>o.itemId))].map(itemId=>{const group=orders.filter(o=>o.itemId===itemId),first=group[0];return {id:itemId,name:orderName(first),price:first.product!.price,icon:"cookie" as const,tone:"blue" as const,count:group.reduce((n,r)=>n+orderQuantity(r),0)};})];
   const total = consolidated.reduce((sum, m) => sum + m.count * (m.price ?? 0), 0);
   const hasUnpriced = consolidated.some((m) => m.price == null && m.count > 0);
   const openGrievances = grievances.filter((g) => g.status !== "resolved").length;
@@ -183,7 +184,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
               </li>
             ))}
           </ul>
-          {orders.some((o) => o.orderedBy) && <div className="mt-4 border-t pt-3"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Employee trays</p><ul className="mt-2 space-y-2 text-sm text-muted-foreground">{[...new Set(orders.flatMap((o) => o.orderedBy ? [o.orderedBy] : []))].map((email) => <li key={email}><span className="font-medium text-foreground">{employees.find((e) => e.email === email)?.name || email}</span><span className="ml-2">{orders.filter((o) => o.orderedBy === email).map((o) => MENU.find((m) => m.id === o.itemId)?.name || o.itemId).join(" + ")}</span><PantryFulfillment email={email} orders={orders.filter(o=>o.orderedBy===email)} /></li>)}</ul></div>}
+          {orders.some((o) => o.orderedBy) && <div className="mt-4 border-t pt-3"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Employee trays</p><ul className="mt-2 space-y-2 text-sm text-muted-foreground">{[...new Set(orders.flatMap((o) => o.orderedBy ? [o.orderedBy] : []))].map((email) => <li key={email}><span className="font-medium text-foreground">{employees.find((e) => e.email === email)?.name || email}</span><span className="ml-2">{orders.filter((o) => o.orderedBy === email).map((o) => `${orderName(o)} × ${orderQuantity(o)}`).join(" + ")}</span><PantryFulfillment email={email} orders={orders.filter(o=>o.orderedBy===email)} /></li>)}</ul></div>}
           {orders.some((o) => o.instructions) && (
             <div className="mt-4 border-t pt-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Instructions</p>
@@ -192,7 +193,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                   .filter((o) => o.instructions)
                   .map((o) => (
                     <li key={o.id}>
-                      • {MENU.find((m) => m.id === o.itemId)?.name}: {o.instructions}
+                      • {orderName(o)}: {o.instructions}
                     </li>
                   ))}
               </ul>

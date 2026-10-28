@@ -8,7 +8,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://images.swiggy.com https://media-assets.swiggy.com",
   "font-src 'self' data:",
   // The Wi-Fi speed test downloads from fast.com's nearest Netflix CDN node, which has to
   // happen in the browser to measure the office's own connection (api.fast.com itself is

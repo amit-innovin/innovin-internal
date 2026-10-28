@@ -55,7 +55,7 @@ export function IconTile({
 // regardless of history was promising back-navigation it didn't do.
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <header className="mb-6">
+    <header className="workspace-page-heading mb-6">
       <div className="flex items-center gap-2">
         <h1 className="flex-1 text-2xl font-medium">{title}</h1>
         {action}

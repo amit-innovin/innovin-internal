@@ -1,3 +1,4 @@
+import { productImage } from "./shop";
 import { createHash, randomUUID } from "node:crypto";
 import { object, PantryError } from "./swiggy";
 import type { Address, BasketItem, Product, Quote } from "./types";
@@ -27,7 +28,7 @@ export function parseCatalog(data: Record<string, unknown>) {
         if (typeof price !== "number" || !Number.isFinite(price) || price < 0) throw new PantryError("Instamart product price is unavailable");
         const name = text(v.displayName) || text(parent.displayName), variant = text(v.quantityDescription);
         if (!name) throw new PantryError("Instamart product details are missing");
-        products.push({ spinId: identifier(v.spinId), skuId: identifier(v.skuId), name, variant, price, available: v.isInStockAndAvailable === true, maxQuantity: typeof v.maxQuantity === "number" && Number.isInteger(v.maxQuantity) && v.maxQuantity > 0 ? Math.min(100, v.maxQuantity) : 100, similar });
+        products.push({ spinId: identifier(v.spinId), skuId: identifier(v.skuId), name, variant, price, available: v.isInStockAndAvailable === true, imageUrl:productImage(v.imageUrl),brand:text(v.brandName)||text(parent.brand),mrp:typeof object(v.price).mrp==="number"&&Number.isFinite(object(v.price).mrp)?Number(object(v.price).mrp):undefined, maxQuantity: typeof v.maxQuantity === "number" && Number.isInteger(v.maxQuantity) && v.maxQuantity > 0 ? Math.min(100, v.maxQuantity) : 100, similar });
       }
     }
   }

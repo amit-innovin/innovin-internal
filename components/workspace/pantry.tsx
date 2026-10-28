@@ -1,4 +1,5 @@
 "use client";
+import {orderName,orderQuantity} from "@/lib/pantry/shop";
 import Link from "next/link";
 import { fulfillmentOf,FULFILLMENT_LABELS } from "@/lib/order-state";
 import { useState } from "react";
@@ -11,7 +12,7 @@ import type { WorkspaceData } from "@/lib/workspace";
 const emoji: Record<string, string> = { tea: "☕", snacks: "🍪", healthy: "🥑", lunch: "🥗", dinner: "🍲" };
 export function Pantry({ data, onSaved, onOffice }: { data: WorkspaceData; onSaved: () => Promise<void>; onOffice: () => Promise<void> }) {
   const [busy, setBusy] = useState(false), [query, setQuery] = useState(""), [browse, setBrowse] = useState(false), [saved, setSaved] = useState(false);
-  const selected = data.snacks.items.map(r => r.itemId), locked = data.mode !== "office";
+  const selected = data.snacks.items.filter(r=>!r.product).map(r => r.itemId), locked = data.mode !== "office";
   const stage=fulfillmentOf(data.snacks.items[0]);
   const editable=stage==="requested";
   const menu = MENU.filter(m => m.name.toLowerCase().includes(query.trim().toLowerCase()));
@@ -23,8 +24,9 @@ export function Pantry({ data, onSaved, onOffice }: { data: WorkspaceData; onSav
     if (!res.ok) toast.error(await readError(res)); else { await onSaved(); setSaved(true); toast.success("Your pantry request is saved.",{id:"pantry-request"}); }
     setBusy(false);
   }
-  return <section className="widget-card snacks-widget reference-pantry"><div className="widget-header"><div className="widget-title-group"><span className="widget-icon-pill amber"><Coffee size={16} /></span><div><h2 className="widget-title">Pantry &amp; Snacks Bar</h2><span className="widget-sub">Pantry requests · prepared by the coordinator</span></div></div><div className="snacks-quota-badge">{selected.length} / {PANTRY_LIMIT} requested today</div></div>
-    {locked ? <div className="snacks-locked-overlay"><div className="locked-card-content"><div className="lock-icon-circle"><LockKeyhole size={28} /></div><h3>The pantry is an office perk.</h3><p>You are currently {data.mode === "remote" ? "Remote / WFH" : "not checked in"}. Check in when you are in the office to order.</p><button className="btn-coral-auth" disabled={busy} onClick={async () => { setBusy(true); await onOffice(); setBusy(false); }}>Check In to Office to Request</button></div></div> : <div className="snacks-body">
+  return <section className="widget-card snacks-widget reference-pantry"><div className="widget-header"><div className="widget-title-group"><span className="widget-icon-pill amber"><Coffee size={16} /></span><div><h2 className="widget-title">Office pantry</h2><span className="widget-sub">Exact products · ordered by the coordinator</span></div></div><div className="snacks-quota-badge">{data.snacks.items.length} / {PANTRY_LIMIT} requested today</div></div>
+    <div className="home-shop-entry"><Link className="home-shop-open" href="/pantry"><ShoppingCart size={22}/><span><strong>Browse the office shop</strong><small>Exact Instamart products · packs & quantities</small></span><span aria-hidden="true">↗</span></Link>{data.snacks.items.length>0&&<p className="home-shop-status">{FULFILLMENT_LABELS[stage]} · {data.snacks.items.map(r=>`${orderName(r)} × ${orderQuantity(r)}`).join(" + ")}</p>}</div>
+    {!data.snacks.items.some(r=>r.product)&&<details className="home-meals-disclosure"><summary>Office meals &amp; drinks</summary>{locked ? <div className="snacks-locked-overlay"><div className="locked-card-content"><div className="lock-icon-circle"><LockKeyhole size={28} /></div><h3>The pantry is an office perk.</h3><p>You are currently {data.mode === "remote" ? "Remote / WFH" : "not checked in"}. Check in when you are in the office to order.</p><button className="btn-coral-auth" disabled={busy} onClick={async () => { setBusy(true); await onOffice(); setBusy(false); }}>Check In to Office to Request</button></div></div> : <div className="snacks-body">
       <div className="pantry-search-container"><div className="pantry-search-box"><Search className="pantry-search-icon" size={14} /><input type="search" aria-label="Search pantry" placeholder="Search tea, snacks, treats..." value={query} onFocus={() => setBrowse(true)} onChange={e => { setQuery(e.target.value); setBrowse(true); }} /><button className="btn-clear-search" aria-label="Clear pantry search" onClick={() => { setQuery(""); setBrowse(false); }}><X size={15} /></button></div>
         {browse && <div className="pantry-search-dropdown"><div className="pantry-search-results">{menu.map(m => <div key={m.id} className="pantry-result-row"><span className="snack-emoji">{emoji[m.id]}</span><div><strong>{m.name}</strong><small>{m.price === null ? "Office menu" : `₹${m.price}`}</small></div><button className="btn-add-snack" aria-label={`${selected.includes(m.id) ? "Remove" : "Add"} ${m.name}`} disabled={busy || !editable || !data.snacks.open || (!selected.includes(m.id) && selected.length >= PANTRY_LIMIT)} onClick={() => save(selected.includes(m.id) ? selected.filter(v => v !== m.id) : [...selected, m.id])}>{selected.includes(m.id) ? "✓ Added" : "+ Add"}</button></div>)}{!menu.length && <p className="pantry-no-results">No menu items match. Try another search.</p>}</div></div>}
       </div>
@@ -33,6 +35,6 @@ export function Pantry({ data, onSaved, onOffice }: { data: WorkspaceData; onSav
         <div className="pantry-cart-items">{selected.length ? selected.map(id => <div key={id} className="pantry-result-row"><span>{emoji[id]}</span><strong>{MENU.find(m => m.id === id)?.name}</strong><span className="cart-item-count">1 selection</span><button className="btn-delete-cart-item" aria-label={`Remove ${MENU.find(m => m.id === id)?.name} from cart`} disabled={busy || !editable || !data.snacks.open} onClick={() => save(selected.filter(v => v !== id))}><Trash2 size={13} /></button></div>) : <div className="empty-cart-state"><span className="empty-cart-icon">🛒</span><p>Your cart is empty</p><span>Search or tap a suggestion to add an item</span></div>}</div>
         <div className="pantry-cart-footer"><div className="cart-delivery-loc"><span className="desk-dot" /><span>Office desk: <strong>{data.profile?.desk || "Set in profile"}</strong></span></div><span className="cart-save-state">{busy ? "Saving…" : selected.length ? FULFILLMENT_LABELS[stage] : !data.snacks.open ? "Requests closed" : "Up to 4 items"}</span></div>
       </div><Link className="reference-tray-history" href="/snacks">Notes &amp; request history ↗</Link>{saved && <span role="status" className="sr-only">Your tray is saved.</span>}
-    </div>}
+    </div>}</details>}
   </section>;
 }

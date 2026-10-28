@@ -1,4 +1,6 @@
 "use client";
+import { orderName,orderQuantity } from "@/lib/pantry/shop";
+import type {OrderRow} from "@/lib/types";
 import { fulfillmentOf,FULFILLMENT_LABELS, type OrderFulfillment } from "@/lib/order-state";
 import { useSearchParams,useRouter } from "next/navigation";
 import { LoadRecovery } from "@/components/load-recovery";
@@ -30,11 +32,11 @@ import { MENU } from "@/lib/menu";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-type Order = { id: string; date: string; itemId: string; instructions: string; createdAt: string; fulfillment?:OrderFulfillment };
+type Order = Omit<OrderRow,"submitterRef">;
 type Mine = { open: boolean; cutoffHour: number; items: Order[]; officeAllowed: boolean; limit: number };
 
 const itemFor = (id: string) => MENU.find((m) => m.id === id);
-const names = (items: Order[]) => items.map((o) => itemFor(o.itemId)?.name ?? o.itemId).join(" + ");
+const names = (items: Order[]) => items.map(orderName).join(" + ");
 
 export default function Snacks() {
   const params=useSearchParams(),router=useRouter();
@@ -96,6 +98,7 @@ export default function Snacks() {
   // Most recent past day's order — the "same as yesterday" shortcut.
   const yesterday = historyDays.length ? history!.filter((o) => o.date === historyDays[0]) : null;
 
+  if(tab==="today"&&mine?.items.some(r=>r.product))return <div className="mx-auto max-w-xl"><PageHeader title="Your pantry request" subtitle="Your exact-product request is managed in the office shop."/><p className="studio-notice">{FULFILLMENT_LABELS[stage]} — {names(mine.items)}</p><Link className="studio-button mt-5" href="/pantry">Open your product request ↗</Link><Link className="block mt-5 underline" href="/snacks?tab=history">Request history</Link></div>;
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title="Meals & Snacks" subtitle="Your pantry request — selections save automatically." />
@@ -144,7 +147,7 @@ export default function Snacks() {
                 Nothing ordered yet{mine.cutoffHour < 24 ? ` — closes at ${fmtHour(mine.cutoffHour)}` : ""}. Tap what you want below.
               </p>
             )}
-            {!mine.items.length && !closed && yesterday && (
+            {!mine.items.length && !closed && yesterday && !yesterday.some(o=>o.product) && (
               <button
                 type="button"
                 disabled={!mine.officeAllowed||!editable||writing.current}
@@ -155,6 +158,8 @@ export default function Snacks() {
               </button>
             )}
           </Card>
+
+          {!mine.items.length && yesterday?.some(o=>o.product) && <Link className="inline-flex min-h-11 items-center text-sm underline mt-3" href="/pantry">Browse the office shop to request products again ↗</Link>}
 
           {/* Menu as tap tiles — see it, tap it, done. */}
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5" style={stagger(1)}>
@@ -263,10 +268,10 @@ export default function Snacks() {
                         <li key={o.id} className="flex items-center gap-3 px-3 py-3" style={stagger(i)}>
                           <IconTile icon={MENU_ICONS[it?.icon ?? "coffee"]} tone={it?.tone ?? "sky"} size="sm" />
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium">{it?.name ?? o.itemId}</p>
+                            <p className="text-sm font-medium">{orderName(o)}{o.product?` × ${orderQuantity(o)}`:""}</p>
                             {o.instructions && <p className="truncate text-xs text-muted-foreground">{o.instructions}</p>}
                           </div>
-                          <span className="text-sm font-medium">{it?.price != null ? `₹${it.price}` : "—"}</span>
+                          <span className="text-sm font-medium">{o.product?`₹${o.product.price*o.product.quantity} estimate`:it?.price != null ? `₹${it.price}` : "—"}</span>
                         </li>
                       );
                     })}

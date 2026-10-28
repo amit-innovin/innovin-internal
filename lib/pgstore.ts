@@ -1,3 +1,4 @@
+import { assertBasketRevision } from "./pantry/shop";
 import { assertRequestEditable, fulfillmentOf, nextFulfillment, canMoveFulfillment, sameTray, type OrderFulfillment } from "./order-state";
 import { Pool } from "pg";
 import { pgConfig } from "./pgconfig";
@@ -76,6 +77,7 @@ CREATE TABLE IF NOT EXISTS orders (
   created_at timestamptz NOT NULL,
   UNIQUE (date, submitter_ref, item_id)
 );
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS product jsonb;
 CREATE TABLE IF NOT EXISTS grievances (
   id text PRIMARY KEY,
   body text NOT NULL,
@@ -264,6 +266,7 @@ const attendance = (r: any): AttendanceRow => ({
   accuracyM: r.accuracy_m ?? null,
 });
 const order = (r: any): OrderRow => ({
+  ...(r.product?{product:r.product}:{}),
   ...(r.fulfillment ? {fulfillment:r.fulfillment,fulfillmentAt:r.fulfillment_at?.toISOString?.()??r.fulfillment_at,fulfillmentBy:r.fulfillment_by??null} : {}),
   id: r.id,
   date: r.date,
@@ -528,21 +531,22 @@ class PgStore implements Store {
     const res = await this.q(`SELECT * FROM attendance WHERE date = $1 ORDER BY check_in_at`, [date]);
     return res.rows.map(attendance);
   }
-  async setDayOrders(date: string, ref: string, rows: OrderRow[]) {
+  async setDayOrders(date: string, ref: string, rows: OrderRow[], expectedIds?:string[]) {
     await this.init();
     const client = await this.db().connect();
     try {
       await client.query("BEGIN");
       await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`pantry:${date}:${ref}`]);
       const existing=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);
+      assertBasketRevision(existing.rows.map(order),expectedIds);
       assertRequestEditable(existing.rows.map(order));
       await client.query(`DELETE FROM orders WHERE date = $1 AND submitter_ref = $2`, [date, ref]);
       for (const row of rows) {
         await client.query(
-          `INSERT INTO orders (id, date, item_id, preference, instructions, submitter_ref, created_at, ordered_by)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+          `INSERT INTO orders (id, date, item_id, preference, instructions, submitter_ref, created_at, ordered_by,product)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
            ON CONFLICT (date, submitter_ref, item_id) DO UPDATE SET preference = $4, instructions = $5`,
-          [row.id, row.date, row.itemId, row.preference, row.instructions, row.submitterRef, row.createdAt, row.orderedBy ?? null],
+          [row.id, row.date, row.itemId, row.preference, row.instructions, row.submitterRef, row.createdAt, row.orderedBy ?? null,row.product?JSON.stringify(row.product):null],
         );
       }
       await client.query("COMMIT");
@@ -569,7 +573,7 @@ class PgStore implements Store {
   async deleteOrder(ref: string, date: string) {
     await this.init();const client=await this.db().connect();
     try {await client.query("BEGIN");await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,[`pantry:${date}:${ref}`]);
-      const rows=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);assertRequestEditable(rows.rows.map(order));
+      const rows=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);assertBasketRevision(rows.rows.map(order));assertRequestEditable(rows.rows.map(order));
       const result=await client.query(`DELETE FROM orders WHERE submitter_ref=$1 AND date=$2`,[ref,date]);await client.query("COMMIT");return !!result.rowCount;
     }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}finally{client.release();}
   }

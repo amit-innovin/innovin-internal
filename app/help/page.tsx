@@ -18,11 +18,8 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
   {
     icon: Coffee,
     tone: "sky",
-    q: "How do I order food or tea?",
-    a:
-      orderCutoffHour() >= 24
-        ? "When checked in to the office, pick up to four menu items. Selections save automatically as requests, not supplier purchases. The coordinator marks preparation, readiness and collection/delivery. Change or cancel before preparation starts; afterward contact the coordinator. Cancelling a request does not cancel a supplier order."
-        : `Pick up to four menu items before ${fmtHour(orderCutoffHour())}. Selections save automatically as requests. Change or cancel before preparation starts and the cutoff. Contact the coordinator afterward; request cancellation does not cancel supplier purchases.`,
+    q: "How do pantry requests and office meals work?",
+    a: "Open the office pantry to choose exact Instamart products and quantities from the coordinator’s catalog, then Send request. Your basket is a draft until sent. The coordinator starts preparation, reviews the combined basket and places the supplier order. Prices are estimates until checkout. You can change or cancel before preparation and the daily cutoff; cancelling a request never cancels a supplier order. Office meals and drinks remain a separate secondary tool. " + (orderCutoffHour() >= 24 ? "Requests are open throughout the day until preparation begins." : `Send requests before ${fmtHour(orderCutoffHour())}.`),
   },
   {
     icon: MessageSquare,

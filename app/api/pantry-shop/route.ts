@@ -17,7 +17,7 @@ export async function GET(req:NextRequest){
  const user=verifyUserSession(req.cookies.get(USER_COOKIE)?.value);if(!user)return NextResponse.json({error:"Sign in to browse the office pantry"},{status:401});
  try {
   const [shop,orders,allowed,actor]=await Promise.all([pantryPurchasing.shop().catch(()=>({products:[],revision:"unavailable",ready:false,unavailable:true})),store.listOrdersByRef(pantryRef(user.email),120),officePantryAllowed(user.email),currentActor()]);
-  return NextResponse.json({...shop,email:user.email,today:todayIST(),open:istHour()<orderCutoffHour(),cutoffHour:orderCutoffHour(),officeAllowed:allowed,canManage:actor?.role==="owner"||actor?.role==="admin",orders:orders.map(({submitterRef:_,...r})=>r)},{headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({...shop,email:user.email,today:todayIST(),open:istHour()<orderCutoffHour(),cutoffHour:orderCutoffHour(),officeAllowed:allowed,canManage:actor?.role==="admin",orders:orders.map(({submitterRef:_,...r})=>r)},{headers:{"Cache-Control":"no-store"}});
  }catch(error){return purchasingError(error);}
 }
 export async function POST(req:NextRequest){

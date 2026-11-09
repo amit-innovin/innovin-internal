@@ -50,6 +50,8 @@ type DB = {
   plannerDays: PlannerDay[];
 };
 
+// "owner" is the retired top role; such rows (old local data files) are admins now.
+const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0 });
 const empty = (): DB => ({ providerRecords: [], notices: [], noticeReactions: [], attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], pings: [], workspaceProfiles: [], plannerDays: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
@@ -310,7 +312,7 @@ export const jsonStore: Store = {
   getEmployee: (email) =>
     query((db) => {
       const e = db.employees.find((e) => e.email === email);
-      return e ? { ...e, stepsOffset: e.stepsOffset ?? 0 } : null;
+      return e ? readEmployee(e) : null;
     }),
   setRole: (email, role) =>
     mutate((db) => {
@@ -407,7 +409,7 @@ export const jsonStore: Store = {
   listEmployees: () =>
     query((db) =>
       db.employees
-        .map((e) => ({ ...e, stepsOffset: e.stepsOffset ?? 0 }))
+        .map(readEmployee)
         .sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email)),
     ),
 

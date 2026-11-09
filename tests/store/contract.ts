@@ -316,6 +316,12 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(mine.map((s) => s.date)).toEqual(["2026-09-23"]);
       });
 
+      it("legacy owner rows read back as admin", async () => {
+        await store.upsertEmployee(employee({ email: "o@innovinlabs.com", role: "owner" as never }));
+        expect((await store.getEmployee("o@innovinlabs.com"))!.role).toBe("admin");
+        expect((await store.listEmployees()).find((e) => e.email === "o@innovinlabs.com")!.role).toBe("admin");
+      });
+
       it("keeps a steps offset on the employee", async () => {
         expect(await store.setStepsOffset("ghost@innovinlabs.com", 10)).toBe(false);
         await store.upsertEmployee(employee());

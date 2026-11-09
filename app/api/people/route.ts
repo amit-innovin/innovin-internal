@@ -73,7 +73,6 @@ export async function PATCH(req: NextRequest) {
   if (!(await isOwner())) return NextResponse.json({ error: "Only the owner can change roles" }, { status: 403 });
   const role = body?.role as Role;
   if (role !== "admin" && role !== "member") return badRequest("Invalid role update");
-  if (target.role === "owner") return NextResponse.json({ error: "The owner's role can't be changed" }, { status: 403 });
 
   await store.setRole(email, role);
   return NextResponse.json({ ok: true });

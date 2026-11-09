@@ -43,11 +43,7 @@ export default function AccessList({ people }: { people: Person[] }) {
               <p className="truncate text-sm font-medium">{p.name || p.email}</p>
               <p className="truncate text-xs text-muted-foreground">{p.email}</p>
             </div>
-            {role === "owner" ? (
-              <Badge variant="secondary" className="shrink-0">
-                Owner
-              </Badge>
-            ) : (
+            {(
               <Button
                 size="sm"
                 variant="outline"

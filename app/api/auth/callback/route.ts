@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUserSession, OAUTH_COOKIE, USER_COOKIE, USER_SESSION_MS, verifyOauthState } from "@/lib/auth";
-import { ownerEmails } from "@/lib/config";
+import { adminEmails } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie, secureAuthCookie } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { clientIp } from "@/lib/http";
@@ -40,19 +40,19 @@ export async function GET(req: NextRequest) {
 
   const now = new Date().toISOString();
   // `role` applies to the insert only — upsert never overwrites a granted role. Bootstrap
-  // owners keep being promoted so a configured owner can't be locked out of their own org.
-  const owner = ownerEmails().includes(identity.email.toLowerCase());
+  // admins (ADMIN_EMAILS) are re-promoted on every sign-in, so they can't be locked out.
+  const bootstrapAdmin = adminEmails().includes(identity.email.toLowerCase());
   await store.upsertEmployee({
     email: identity.email,
     name: identity.name,
     picture: identity.picture,
-    role: owner ? "owner" : "member",
+    role: bootstrapAdmin ? "admin" : "member",
     joinedOn: null,
     stepsOffset: 0,
     createdAt: now,
     lastSeenAt: now,
   });
-  if (owner) await store.setRole(identity.email, "owner");
+  if (bootstrapAdmin) await store.setRole(identity.email, "admin");
 
   const res = NextResponse.redirect(new URL(next, req.nextUrl.origin));
   const token = createUserSession({ email: identity.email, name: identity.name });

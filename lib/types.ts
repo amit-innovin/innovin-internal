@@ -3,7 +3,7 @@ import type { LeaveType } from "./leave";
 // owner  — can grant/revoke admin; cannot be demoted by anyone else
 // admin  — the dashboard powers (approvals, publishing, order lists)
 // member — the default on first sign-in
-export type Role = "owner" | "admin" | "member";
+export type Role = "admin" | "member";
 
 export type EmployeeRow = {
   email: string;

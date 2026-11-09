@@ -6,10 +6,11 @@ export function orderCutoffHour() {
   return Number.isInteger(hour) && hour >= 0 && hour <= 24 ? hour : 24;
 }
 
-// Bootstrap owners. These emails are granted the owner role on sign-in, so the first
-// admin exists without anyone having to hand out the break-glass PIN.
-export function ownerEmails() {
-  return (process.env.OWNER_EMAILS || "")
+// Bootstrap admins. These emails are made admin on every sign-in and can't be demoted in-app,
+// so the first admin exists (and a lost admin can be restored) without any shared secret.
+// OWNER_EMAILS is the pre-two-role name, still read until deployments rename it.
+export function adminEmails() {
+  return (process.env.ADMIN_EMAILS || process.env.OWNER_EMAILS || "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);

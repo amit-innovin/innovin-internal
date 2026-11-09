@@ -144,7 +144,7 @@ export async function PATCH(req: NextRequest) {
       // An admin approved this and now it's undone — tell the admins so nobody plans around it.
       if (row.status === "approved") {
         const who = session?.name ?? row.email;
-        const admins = (await store.listEmployees()).filter((e) => e.role === "admin" || e.role === "owner");
+        const admins = (await store.listEmployees()).filter((e) => e.role === "admin");
         await Promise.all(admins.map((a) => notify(row, `${who} cancelled their approved ${what.toLowerCase()}`, a.email)));
       }
     } else {
@@ -158,7 +158,7 @@ export async function PATCH(req: NextRequest) {
   if (row.status !== "pending") return badRequest("This request was already decided");
   // Attribute the decision when the admin is a verified identity; break-glass PIN sessions
   // have nobody to attribute it to.
-  const decidedBy = actor?.role === "admin" || actor?.role === "owner" ? actor.name || actor.email : null;
+  const decidedBy = actor?.role === "admin" ? actor.name || actor.email : null;
   const updated = await store.setAwayStatus(rid, status, decidedBy, new Date().toISOString(), "pending");
   if (!updated) return NextResponse.json({ error: "This request changed. Refresh and try again." }, { status: 409 });
 

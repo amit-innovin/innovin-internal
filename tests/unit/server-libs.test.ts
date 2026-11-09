@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAdminSession, validAdminPasscode, verifyAdminSession } from "@/lib/admin";
 import { createOauthState, createUserSession, sanitizeNext, verifyOauthState, verifyUserSession } from "@/lib/auth";
-import { ADMIN_SESSION_MS, allowedEmailDomains, orderCutoffHour } from "@/lib/config";
+import { ADMIN_SESSION_MS, adminEmails, allowedEmailDomains, orderCutoffHour } from "@/lib/config";
 import { clientIp, readJSON } from "@/lib/http";
 import { distanceM, locationTag, officeLocation } from "@/lib/geo";
 import { pgConfig } from "@/lib/pgconfig";
@@ -242,5 +242,23 @@ describe("pgConfig", () => {
     const c = pgConfig("postgres://u:p@db.internal:5432/db?sslmode=disable", { DATABASE_POOL_MAX: "2" });
     expect(c.ssl).toEqual({ rejectUnauthorized: true });
     expect(c.max).toBe(2);
+  });
+});
+
+describe("adminEmails", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it("reads ADMIN_EMAILS, trimmed and lowercased", () => {
+    vi.stubEnv("ADMIN_EMAILS", " A@innovinlabs.com, b@innovinlabs.com ,");
+    expect(adminEmails()).toEqual(["a@innovinlabs.com", "b@innovinlabs.com"]);
+  });
+  it("falls back to OWNER_EMAILS when ADMIN_EMAILS is empty", () => {
+    vi.stubEnv("ADMIN_EMAILS", "");
+    vi.stubEnv("OWNER_EMAILS", "o@innovinlabs.com");
+    expect(adminEmails()).toEqual(["o@innovinlabs.com"]);
+  });
+  it("is empty when neither is set", () => {
+    vi.stubEnv("ADMIN_EMAILS", "");
+    vi.stubEnv("OWNER_EMAILS", "");
+    expect(adminEmails()).toEqual([]);
   });
 });

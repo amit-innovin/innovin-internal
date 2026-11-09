@@ -195,6 +195,7 @@ CREATE TABLE IF NOT EXISTS leave_balances (
   PRIMARY KEY (email, year)
 );
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'member';
+UPDATE employees SET role = 'admin' WHERE role = 'owner';
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS joined_on text;
 ALTER TABLE away ADD COLUMN IF NOT EXISTS decided_by text;
 ALTER TABLE away ADD COLUMN IF NOT EXISTS decided_at timestamptz;
@@ -303,11 +304,13 @@ const announcement = (r: any): AnnouncementRow => ({
   tag: r.tag,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
+// "owner" is the retired top role; such rows are admins now.
+const roleOf = (role: unknown): Role => (role === "admin" || role === "owner" ? "admin" : "member");
 const employee = (r: any): EmployeeRow => ({
   email: r.email,
   name: r.name,
   picture: r.picture,
-  role: r.role ?? "member",
+  role: roleOf(r.role),
   joinedOn: r.joined_on ?? null,
   stepsOffset: r.steps_offset ?? 0,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,

@@ -57,12 +57,12 @@ async function hasPin() {
 export async function isAdmin() {
   if (await hasPin()) return true;
   const role = (await currentActor())?.role;
-  return role === "admin" || role === "owner";
+  return role === "admin";
 }
 
 // Granting/revoking admin is owner-only. The break-glass PIN also qualifies, otherwise an
 // org with no owner yet (or a lost owner account) could never appoint one.
 export async function isOwner() {
   if (await hasPin()) return true;
-  return (await currentActor())?.role === "owner";
+  return (await currentActor())?.role === "admin";
 }

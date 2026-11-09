@@ -109,7 +109,7 @@ export async function PATCH(req:NextRequest) {
   const email=str(body.email),date=str(body.date),ids=body.ids;
   if(!email || date!==todayIST() || !Array.isArray(ids) || !ids.length || ids.length>50 || ids.some(x=>typeof x!=="string"||x.length>180) || !isFulfillment(body.expected) || !isFulfillment(body.status))return badRequest("Open today's exact request and choose its next status");
   const actor=await currentActor();
-  if(!await store.setOrderFulfillment(date,pantryRef(email),ids as string[],body.expected,body.status,actor&&(actor.role==="admin"||actor.role==="owner")?actor.email:null,new Date().toISOString()))return NextResponse.json({error:"This request changed. Reload and review the current items before updating it."},{status:409});
+  if(!await store.setOrderFulfillment(date,pantryRef(email),ids as string[],body.expected,body.status,actor&&actor.role==="admin"?actor.email:null,new Date().toISOString()))return NextResponse.json({error:"This request changed. Reload and review the current items before updating it."},{status:409});
   await sendPush({title:"Your pantry request was updated",body:"Open the app for its current status.",href:(await store.listOrders(date)).some(r=>r.orderedBy===email&&r.product)?"/pantry":"/snacks?tab=today",tag:`pantry-${date}`},email).catch(()=>{});
   return NextResponse.json({ok:true,status:body.status,label:FULFILLMENT_LABELS[body.status]});
 }

@@ -13,13 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getJSON, readError, send } from "@/lib/fetcher";
 import { firstName, initials } from "@/lib/format";
 
-type Auth = { signedIn: boolean; googleEnabled: boolean; email?: string; name?: string };
+type Auth = { signedIn: boolean; googleEnabled: boolean; email?: string; name?: string; role?: "admin" | "member" };
 
-const AUTH_ERRORS: Record<string, string> = {
-  failed: "Sign-in didn't complete. Use your Innovin Google account.",
-  unavailable: "Sign-in isn't configured on this deployment.",
-  busy: "Too many sign-in attempts — try again shortly.",
-};
 
 export default function Settings() {
   const [email, setEmail] = useState<string | null | undefined>(undefined);
@@ -31,8 +26,6 @@ export default function Settings() {
   };
   useEffect(() => {
     load();
-    const reason = new URLSearchParams(window.location.search).get("auth");
-    if (reason && AUTH_ERRORS[reason]) toast.error(AUTH_ERRORS[reason]);
   }, []);
 
   async function signOut() {
@@ -98,16 +91,16 @@ export default function Settings() {
         </p>
       )}
 
-      <Link href="/admin" className="group mt-4 block">
+      {auth?.role === "admin" && <Link href="/admin" className="group mt-4 block">
         <Card className="flex-row items-center gap-4 p-5 transition-[box-shadow,border-color] duration-200 ease-brand group-hover:border-brand-sky/60 group-hover:shadow-lift">
           <IconTile icon={Lock} tone="slate" />
           <div className="flex-1">
             <p className="text-sm font-medium">Admin dashboard</p>
-            <p className="text-xs text-muted-foreground">For office coordinators with admin access.</p>
+            <p className="text-xs text-muted-foreground">Approvals, pantry, Speak Up inbox and people.</p>
           </div>
           <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </Card>
-      </Link>
+      </Link>}
 
       <p className="mt-6 flex gap-2 px-1 text-xs leading-relaxed text-muted-foreground">
         <Info className="mt-0.5 size-4 shrink-0" />

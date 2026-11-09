@@ -1,14 +1,13 @@
 import {orderName,orderQuantity} from "@/lib/pantry/shop";
 import { PantryFulfillment } from "@/components/pantry-fulfillment";
 import Link from "next/link";
-import { currentActor } from "@/lib/admin";
+import { requireAdmin } from "@/lib/admin";
 import { store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
 import PantryPurchasing from "@/components/pantry-purchasing";
 export const dynamic = "force-dynamic";
 export default async function PantryPage({ searchParams }: { searchParams: Promise<{ connection?: string }> }) {
-  const actor = await currentActor();
-  if (!actor || actor.role !== "admin") return <div className="mx-auto max-w-xl space-y-4"><h1 className="text-2xl font-medium">Office purchasing</h1><p>Sign in with a Google account that has the admin role to connect a purchasing account and place orders.</p><a className="underline" href="/api/auth/google?next=/admin/pantry">Sign in with Google</a><p><Link href="/admin">Back to dashboard</Link></p></div>;
+  const actor = await requireAdmin();
   const orders = await store.listOrders(todayIST());
   const connection = (await searchParams).connection;
   return <div className="mx-auto max-w-4xl space-y-6"><Link className="text-sm underline" href="/admin">Back to dashboard</Link><div><h1 className="text-2xl font-medium">Office purchasing</h1><p className="mt-2 text-sm text-muted-foreground">Collect team requests, choose exact Instamart products, then review and confirm the office order.</p></div>

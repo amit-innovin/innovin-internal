@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/admin";
+import { adminEmails } from "@/lib/config";
 import { leaveOverview } from "@/lib/leave-data";
 import { fmtDay, fmtShortDate, fmtTime, relativeDay } from "@/lib/format";
 import { MENU } from "@/lib/menu";
@@ -238,15 +239,13 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         {overview && <LeaveOverview people={overview.people} />}
       </Card>
 
-      {(
-        <Card id="access" className={`mt-4 gap-0 p-5 ${tab === "people" ? "" : "hidden"}`}>
-          <SectionHeader title="Access" aside="Admins" />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Admins get this dashboard when they sign in with Google — their approvals are recorded against their name.
-          </p>
-          <AccessList people={employees.map((e) => ({ email: e.email, name: e.name, role: e.role }))} />
-        </Card>
-      )}
+      <Card id="access" className={`mt-4 gap-0 p-5 ${tab === "people" ? "" : "hidden"}`}>
+        <SectionHeader title="Access" aside="Admins" />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Admins get this dashboard when they sign in with Google — their approvals are recorded against their name.
+        </p>
+        <AccessList people={employees.map((e) => ({ email: e.email, name: e.name, role: e.role }))} locked={adminEmails()} me={actor.email} />
+      </Card>
 
       <Card id="events" className={`mt-4 gap-0 p-5 ${tab === "publish" ? "" : "hidden"}`}>
         <SectionHeader title="Post to the team" aside="Announcement or event" />

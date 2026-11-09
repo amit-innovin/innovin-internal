@@ -6,7 +6,7 @@ import type { PlannerKind } from "@/lib/types";
 import { attendanceHref } from "@/lib/journey";
 import { todayIST } from "@/lib/time";
 import { PLANNER_ICONS } from "@/lib/workspace-model";
-export function WorkspacePass({ name = "Innovin Team", designation, department, desk, mode, joined = false, flipToken = 0 }: { name?: string; designation?: string; department?: string; desk?: string; mode?: "office" | "remote" | null; joined?: boolean; flipToken?: number }) {
+export function WorkspacePass({ name = "Innovin Team", designation, department, desk, mode, role = "member", joined = false, flipToken = 0 }: { name?: string; role?: "admin" | "member"; designation?: string; department?: string; desk?: string; mode?: "office" | "remote" | null; joined?: boolean; flipToken?: number }) {
  const [flipped,setFlipped]=useState(false), [tilt,setTilt]=useState(0);
  const stageRef=useRef<HTMLDivElement>(null), badgeRef=useRef<HTMLDivElement>(null), canvasRef=useRef<HTMLCanvasElement>(null);
  const flipRef=useRef(flipped); flipRef.current=flipped;
@@ -102,7 +102,7 @@ export function WorkspacePass({ name = "Innovin Team", designation, department, 
 <span className="editorial-label">{"Status"}</span>
 <div className="editorial-pills-wrap">
 <span className="editorial-pill pill-presence in-office"><span className="dot" /><span className="text">{mode === "office" ? "IN OFFICE" : mode === "remote" ? "REMOTE / WFH" : "NOT CHECKED IN"}</span></span>
-<span className="editorial-pill pill-level">MEMBER</span>
+<span className="editorial-pill pill-level">{role === "admin" ? "ADMIN" : "MEMBER"}</span>
 </div>
 </div>
 </div>

@@ -6,10 +6,11 @@ import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
 import { workspaceData } from "@/lib/workspace";
+import { currentActor } from "@/lib/admin";
 import type { WorkspaceProfile } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
-  const user = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+  const user = await currentActor();
   if (!user) return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
   return NextResponse.json(await workspaceData(user, req.cookies.get(DEVICE_COOKIE)?.value));
 }

@@ -2,7 +2,8 @@ import { validPlannerDate } from "@/lib/workspace-model";
 import { attendanceLocation } from "@/lib/presence";
 import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
-import { isAdmin } from "@/lib/admin";
+import { currentActor, isAdmin } from "@/lib/admin";
+import { adminEmails } from "@/lib/config";
 import { enforce } from "@/lib/guard";
 import { firstName } from "@/lib/format";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
@@ -39,9 +40,9 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// Admins can set a joining date. Changing roles is owner-only, and an owner's own role is
-// immutable here — owners are set through OWNER_EMAILS, so nobody can demote the owner (or
-// promote themselves) via the API.
+// Admins set joining dates, steps offsets and roles. Any admin can promote or demote a member,
+// except admins listed in ADMIN_EMAILS (changed only there, so the org can't lose every admin)
+// and themselves (so nobody locks themselves out by accident).
 export async function PATCH(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const limited = enforce([["writeIp", clientIp(req)]]);
@@ -72,6 +73,8 @@ export async function PATCH(req: NextRequest) {
 
   const role = body?.role as Role;
   if (role !== "admin" && role !== "member") return badRequest("Invalid role update");
+  if (adminEmails().includes(email)) return NextResponse.json({ error: "Set in ADMIN_EMAILS — change it there" }, { status: 403 });
+  if (email === (await currentActor())?.email.toLowerCase()) return NextResponse.json({ error: "You can't change your own role" }, { status: 403 });
 
   await store.setRole(email, role);
   return NextResponse.json({ ok: true });

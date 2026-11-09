@@ -136,3 +136,77 @@ describe("allowed email domains", () => {
     expect(await verifyIdToken("t")).toBeNull();
   });
 });
+
+describe("role management (PATCH /api/people)", () => {
+  const setRole = async () => (await import("@/lib/store")).store.setRole as ReturnType<typeof vi.fn>;
+  const patch = async (json: unknown) => {
+    const { PATCH } = await import("@/app/api/people/route");
+    return PATCH(new NextRequest("https://internal.example/api/people", { method: "PATCH", headers: { "Content-Type": "application/json", "x-forwarded-for": `10.0.0.${Math.floor(Math.random() * 250)}` }, body: JSON.stringify(json) }));
+  };
+  const directory: Record<string, "admin" | "member"> = { "a@innovinlabs.com": "admin", "m@innovinlabs.com": "member", "b@innovinlabs.com": "admin", "env@innovinlabs.com": "admin" };
+  beforeEach(async () => {
+    vi.stubEnv("ADMIN_EMAILS", "env@innovinlabs.com");
+    getEmployee.mockImplementation(async (email: string) => (directory[email] ? row(email, directory[email]) : null));
+    (await setRole()).mockClear();
+    signIn(admin);
+  });
+
+  it("any admin can promote a member", async () => {
+    const res = await patch({ email: "m@innovinlabs.com", role: "admin" });
+    expect(res.status).toBe(200);
+    expect(await setRole()).toHaveBeenCalledWith("m@innovinlabs.com", "admin");
+  });
+
+  it("any admin can demote another admin", async () => {
+    expect((await patch({ email: "b@innovinlabs.com", role: "member" })).status).toBe(200);
+    expect(await setRole()).toHaveBeenCalledWith("b@innovinlabs.com", "member");
+  });
+
+  it("refuses to demote an ADMIN_EMAILS admin", async () => {
+    const res = await patch({ email: "env@innovinlabs.com", role: "member" });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("Set in ADMIN_EMAILS — change it there");
+    expect(await setRole()).not.toHaveBeenCalled();
+  });
+
+  it("refuses to change your own role", async () => {
+    const res = await patch({ email: "a@innovinlabs.com", role: "member" });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("You can't change your own role");
+  });
+
+  it("rejects the retired owner role", async () => {
+    expect((await patch({ email: "m@innovinlabs.com", role: "owner" })).status).toBe(400);
+  });
+
+  it("a member can't change roles", async () => {
+    signIn(member);
+    expect((await patch({ email: "m@innovinlabs.com", role: "admin" })).status).toBe(401);
+    expect(await setRole()).not.toHaveBeenCalled();
+  });
+});
+
+describe("admin-only APIs answer members with JSON errors", () => {
+  beforeEach(() => {
+    signIn(member);
+    getEmployee.mockResolvedValue(row(member.email, "member"));
+  });
+  const cookie = () => `innovin_user=${jar.get("innovin_user")}`;
+  const req = (path: string, method = "GET", body?: unknown) =>
+    new NextRequest(`https://internal.example${path}`, { method, headers: { cookie: cookie(), "Content-Type": "application/json", origin: "https://internal.example" }, body: body ? JSON.stringify(body) : undefined });
+
+  it.each([
+    ["GET /api/grievances", async () => (await import("@/app/api/grievances/route")).GET(req("/api/grievances"))],
+    ["PATCH /api/grievances", async () => (await import("@/app/api/grievances/route")).PATCH(req("/api/grievances", "PATCH", { id: "x", status: "resolved" }))],
+    ["GET /api/snacks", async () => (await import("@/app/api/snacks/route")).GET(req("/api/snacks"))],
+    ["PATCH /api/snacks", async () => (await import("@/app/api/snacks/route")).PATCH(req("/api/snacks", "PATCH", {}))],
+    ["GET /api/away", async () => (await import("@/app/api/away/route")).GET(req("/api/away"))],
+    ["PATCH /api/leave", async () => (await import("@/app/api/leave/route")).PATCH(req("/api/leave", "PATCH", {}))],
+    ["POST /api/announcements", async () => (await import("@/app/api/announcements/route")).POST(req("/api/announcements", "POST", { title: "t", body: "b" }))],
+    ["GET /api/pantry-provider", async () => (await import("@/app/api/pantry-provider/route")).GET()],
+  ])("%s", async (_name, call) => {
+    const res = (await call()) as Response;
+    expect([401, 403]).toContain(res.status);
+    expect(res.headers.get("content-type")).toContain("application/json");
+  });
+});

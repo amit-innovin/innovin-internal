@@ -1,4 +1,4 @@
-import { adminLogin, expect, test, uniqueText } from "./fixtures";
+import { adminLogin, expect, signInEmployee, test, uniqueText } from "./fixtures";
 
 async function publishEvent(page: import("@playwright/test").Page, title: string) {
   await adminLogin(page, "publish");
@@ -14,7 +14,7 @@ async function publishEvent(page: import("@playwright/test").Page, title: string
 
 test.describe("Events", () => {
   test("the events page loads and shows upcoming events", async ({ page }) => {
-    await page.goto("/events");
+    await signInEmployee(page, undefined, "/events");
     await expect(page.getByRole("heading", { level: 1, name: "Events" })).toBeVisible();
     await expect(page.locator("main")).toBeVisible();
   });
@@ -28,7 +28,7 @@ test.describe("Events", () => {
 
     const employee = await browser.newContext();
     const e = await employee.newPage();
-    await e.goto("/events");
+    await signInEmployee(e, undefined, "/events");
     const card = e.locator("li", { hasText: title });
     await expect(card).toContainText("Sports");
     await expect(card).toContainText("Common area");
@@ -61,13 +61,13 @@ test.describe("Events", () => {
 
     const employee = await browser.newContext();
     const e = await employee.newPage();
-    await e.goto("/events");
+    await signInEmployee(e, undefined, "/events");
     await expect(e.locator("li", { hasText: title })).toHaveCount(0);
     await employee.close();
   });
 
   test("the page has no horizontal overflow on mobile", async ({ page }) => {
-    await page.goto("/events");
+    await signInEmployee(page, undefined, "/events");
     await expect(page.getByRole("heading", { level: 1, name: "Events" })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);

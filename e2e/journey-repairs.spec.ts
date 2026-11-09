@@ -125,7 +125,7 @@ test("opening a teammate profile sends nothing until the user explicitly writes 
 });
 
 test("removing a public board post requires a deliberate confirmation",async({page,isMobile})=>{
-  const {uniqueText}=await import("./fixtures");await signInEmployee(page,"owner@innovinlabs.com","/");if(isMobile)await page.getByRole("button",{name:"Office Notice Board",exact:true}).click();
+  const {uniqueText}=await import("./fixtures");await signInEmployee(page,"admin@innovinlabs.com","/");if(isMobile)await page.getByRole("button",{name:"Office Notice Board",exact:true}).click();
   await page.getByRole("button",{name:"Post Note",exact:true}).click();const text=uniqueText("Removal confirmation");await page.getByLabel("Your board note").fill(text);await page.getByRole("button",{name:"Pin to board",exact:true}).click();
   const card=page.getByRole("article").filter({hasText:text});await expect(card).toBeVisible();page.once("dialog",d=>d.dismiss());await card.getByRole("button",{name:"Remove board note",exact:true}).click();await expect(card).toBeVisible();
   page.once("dialog",d=>d.accept());await card.getByRole("button",{name:"Remove board note",exact:true}).click();await expect(card).toHaveCount(0);

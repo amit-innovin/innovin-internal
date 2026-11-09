@@ -27,7 +27,7 @@ The MVP is successful when the team can use these four flows for one working wee
 ## Product decisions (from the discussion)
 
 - **Web app, mobile-friendly, PWA later** — lives as a pinned browser tab like Zoho. NOT a Chrome extension (store review + fee + not everyone uses Chrome) and NOT a native app (distribution hassle, especially iOS).
-- **Google sign-in (Workspace) verifies identity** — a signed-in device can't mark attendance for a different email, and admins see real names. Typed-email check-in still works for anyone who hasn't signed in. The admin dashboard is passcode-protected.
+- **Google sign-in (Workspace) verifies identity** — a signed-in device can't mark attendance for a different email, and admins see real names. Typed-email check-in still works for anyone who hasn't signed in. The admin dashboard is open only to employees with the admin role.
 - **Grievances are anonymous by design.** Identity is never exposed in the UI or admin dashboard; the backend keeps only a one-way browser reference for basic abuse tracing.
 - **Rollout discipline:** build quietly with a small team, reveal only in a common/demo meeting. Don't announce or gather big requirements upfront — past tools died that way.
 - **Scope discipline:** no integrations, no futuristic features. Day-to-day utilities only.
@@ -60,7 +60,7 @@ The MVP is successful when the team can use these four flows for one working wee
 
 Single view: today's attendance, consolidated snack orders, grievance inbox, Wi-Fi report feed.
 
-**Access model.** Three roles on the employee record: `owner` > `admin` > `member` (the default on first sign-in). Owners come from `OWNER_EMAILS` and grant/revoke admin from the Access card; admins open the dashboard by signing in with Google, which makes their actions attributable ("Approved by …") and individually revocable. The original shared passcode is retained as deliberate break-glass access — it carries no identity, so anything done through it is recorded unattributed. Titles/teams are intentionally *not* modelled yet: when they arrive they'll be directory metadata only and must never imply permissions.
+**Access model.** Two roles on the employee record: `admin` and `member` (the default on first sign-in). Admins handle every coordinator duty — pantry, Speak Up, leave approvals, announcements, people. `ADMIN_EMAILS` bootstraps admins (not demotable in-app); any admin grants or revokes admin for others from the Access card, never for themselves. Admin access is Google sign-in only, which makes every action attributable ("Approved by …") and individually revocable; there is no shared passcode. Members never see admin pages. Titles/teams are intentionally *not* modelled yet: when they arrive they'll be directory metadata only and must never imply permissions.
 
 ## Suggested stack
 

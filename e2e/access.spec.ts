@@ -27,16 +27,17 @@ test.describe("Access", () => {
     }
   });
 
-  test("the ID pass and settings reflect the real role", async ({ page, browser }) => {
+  test("the ID pass and settings reflect the real role", async ({ page, browser, isMobile }) => {
+    // The role pill lives on the desktop ID pass; the phone wallet card shows name and title only.
     await signInEmployee(page, uniqueEmail("member"), "/");
-    await expect(page.locator(".pill-level").first()).toHaveText("MEMBER");
+    if (!isMobile) await expect(page.locator(".pill-level").first()).toHaveText("MEMBER");
     await page.goto("/settings");
     await expect(page.getByText("Admin dashboard")).toHaveCount(0);
 
     const ctx = await browser.newContext();
     const admin = await ctx.newPage();
     await signInEmployee(admin, "admin@innovinlabs.com", "/");
-    await expect(admin.locator(".pill-level").first()).toHaveText("ADMIN");
+    if (!isMobile) await expect(admin.locator(".pill-level").first()).toHaveText("ADMIN");
     await admin.goto("/settings");
     await expect(admin.getByText("Admin dashboard")).toBeVisible();
     await admin.goto("/admin");

@@ -51,20 +51,16 @@ export async function signInOffice(page: Page, email?: string) {
   await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");
 }
 
-// The PIN input is disabled until hydrated (so early keystrokes can't be lost); wait for it.
-export async function typePin(page: Page, pin: string) {
-  const input = page.getByLabel("Admin passcode");
-  await expect(input).toBeEnabled();
-  await input.pressSequentially(pin);
-}
-
 export type AdminTab = "today" | "approvals" | "people" | "publish";
 
 // The dashboard groups its sections into URL-driven tabs and only queries the open one, so
 // tests have to say which tab they need. Defaults to Today, same as the dashboard.
+// Admin access is a Google identity with the admin role: admin@innovinlabs.com is listed in
+// ADMIN_EMAILS (playwright.config), so signing in as it lands on the dashboard.
+export const ADMIN_EMAIL = "admin@innovinlabs.com";
+
 export async function adminLogin(page: Page, tab: AdminTab = "today") {
-  await page.goto("/admin");
-  await typePin(page, "1704");
+  await signInEmployee(page, ADMIN_EMAIL, "/admin");
   await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
   if (tab !== "today") await adminTab(page, tab);
 }

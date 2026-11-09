@@ -1,16 +1,8 @@
-import { adminLogin, adminTab, expect, test, typePin, uniqueEmail, uniqueText, signInOffice, signInEmployee } from "./fixtures";
+import { adminLogin, adminTab, expect, test, uniqueEmail, uniqueText, signInOffice, signInEmployee } from "./fixtures";
 
 test.describe("Admin", () => {
-  test("wrong PIN is rejected with feedback; correct PIN opens the dashboard", async ({ page }) => {
-    await page.goto("/admin");
-    await expect(page.getByText("Enter the admin passcode")).toBeVisible();
-    await typePin(page, "0000");
-    await expect(page.getByText("Wrong passcode — try again")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Admin dashboard" })).toHaveCount(0);
-
-    await page.reload();
-    await typePin(page, "1704");
-    await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
+  test("an admin's Google sign-in opens the dashboard with today's stats", async ({ page }) => {
+    await adminLogin(page);
     for (const stat of ["Checked in today", "Pantry requests", "Open reports", "Poor Wi-Fi reports today"]) {
       await expect(page.getByText(stat,{exact:true})).toBeVisible();
     }
@@ -141,17 +133,17 @@ test.describe("Admin", () => {
     await adminLogin(page);
     await page.reload();
     await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
-    await page.getByRole("button", { name: "End passcode access" }).click();
-    await expect(page.getByText("Enter the admin passcode")).toBeVisible();
+    // Signing out of Google here is the only way out — there is no separate admin session.
+    await page.request.post("/api/auth/logout");
     await page.goto("/admin");
-    await expect(page.getByText("Enter the admin passcode")).toBeVisible();
+    await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin/);
   });
 
   test("a tampered session cookie is rejected", async ({ page, context }) => {
     await adminLogin(page);
-    const cookie = (await context.cookies()).find((c) => c.name === "innovin_admin")!;
+    const cookie = (await context.cookies()).find((c) => c.name === "innovin_user")!;
     await context.addCookies([{ ...cookie, value: cookie.value.replace(/.$/, (ch) => (ch === "a" ? "b" : "a")) }]);
     await page.reload();
-    await expect(page.getByText("Enter the admin passcode")).toBeVisible();
+    await expect(page).toHaveURL(/\/sign-in\?next=/);
   });
 });

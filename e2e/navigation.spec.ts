@@ -1,5 +1,5 @@
 import { CLOSED_URL } from "../playwright.config";
-import { expect, test, signInOffice } from "./fixtures";
+import { ADMIN_EMAIL, expect, test, signInEmployee, signInOffice } from "./fixtures";
 
 test.describe("Navigation & studio shell", () => {
   test("onboarding carries the studio brand and reference Plus Jakarta Sans font", async ({ page }) => {
@@ -46,7 +46,8 @@ test.describe("Navigation & studio shell", () => {
   });
 
   test("support pages remain reachable through the studio shell", async ({ page }) => {
-    await page.goto("/settings");
+    // An admin, so Settings also links to the dashboard.
+    await signInEmployee(page, ADMIN_EMAIL, "/settings");
     await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Admin dashboard/ })).toBeVisible();
     await page.locator(".reference-more summary").click();
@@ -56,6 +57,7 @@ test.describe("Navigation & studio shell", () => {
   });
 
   test("feature pages use the persistent shell without redundant back links", async ({ page }) => {
+    await signInEmployee(page, undefined, "/");
     for (const path of ["/pantry", "/events", "/people", "/settings", "/help", "/attendance", "/snacks", "/wifi"]) {
       await page.goto(path);
       await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
@@ -75,6 +77,7 @@ test.describe("Navigation & studio shell", () => {
   });
 
   test("unknown pages show the branded 404 with a way home", async ({ page }) => {
+    await signInEmployee(page, undefined, "/");
     const res = await page.goto("/profile");
     expect(res?.status()).toBe(404);
     await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
@@ -92,6 +95,8 @@ test.describe("Navigation & studio shell", () => {
   });
 
   test("help reflects the configured cutoff", async ({ page }) => {
+    // Session cookies are per host, not port, so signing in on the main server covers this one.
+    await signInEmployee(page, undefined, "/");
     await page.goto(`${CLOSED_URL}/help`);
     await expect(page.getByText(/Send requests before 12:00 AM/)).toBeVisible();
   });

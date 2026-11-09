@@ -9,7 +9,7 @@ test.describe("Attendance", () => {
   });
 
   test("Google rejects a non-company account before attendance access", async ({ page }) => {
-    await signInEmployee(page, "someone@gmail.com", "/settings?auth=failed");
+    await signInEmployee(page, "someone@gmail.com", "/sign-in?auth=failed");
     await expect(page.getByText("Sign-in didn't complete. Use your Innovin Google account.")).toBeVisible();
     expect((await page.request.get("/api/attendance")).status()).toBe(401);
   });

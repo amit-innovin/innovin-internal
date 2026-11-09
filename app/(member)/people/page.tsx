@@ -13,7 +13,7 @@ import { getJSON } from "@/lib/fetcher";
 import { LOCATION_LABEL, type LocationTag } from "@/lib/geo";
 import { fmtTime, relativeTime } from "@/lib/format";
 
-type Person = { name: string; email: string; picture: string; role: "owner" | "admin" | "member"; since: string };
+type Person = { name: string; email: string; picture: string; role: "admin" | "member"; since: string };
 type Present = { name: string; email?: string; since: string; where: LocationTag };
 type Directory = { people: Person[]; inToday: Present[] };
 type Thread = { email: string; name: string; picture: string; unread: number; last: { body: string; at: string; mine: boolean } };

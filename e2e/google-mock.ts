@@ -4,7 +4,7 @@ import http from "http";
 // GOOGLE_TOKEN_URL / GOOGLE_TOKENINFO_URL). Each sign-in gets a unique identity: /auth issues a
 // timestamped code, /token echoes it back as the id_token, /tokeninfo turns it into an email.
 export function startGoogleMock(port = 3999) {
-  // Role tests need a *fixed* identity (to match OWNER_EMAILS, or to grant admin to a known
+  // Role tests need a *fixed* identity (to match ADMIN_EMAILS, or to grant admin to a known
   // person), so `/as` pins who signs in next until `/as?reset=1` clears it. Runs are serial.
   let pinned: { email: string; name: string } | null = null;
 

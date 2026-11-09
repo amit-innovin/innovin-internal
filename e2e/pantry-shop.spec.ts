@@ -1,7 +1,7 @@
 import {test,expect,signInEmployee,signInOffice,uniqueEmail} from "./fixtures";
 test("employees request exact published products and coordinators import prepared quantities without exposing their account",async({page,browser,isMobile})=>{
  expect((await page.request.get("/api/pantry-shop")).status()).toBe(401);
- await signInEmployee(page,"owner@innovinlabs.com","/admin/pantry");
+ await signInEmployee(page,"admin@innovinlabs.com","/admin/pantry");
  await page.getByRole("link",{name:/^(Connect|Reconnect) Instamart$/}).click();
  await expect(page.getByText("Instamart account connected. Choose the office address below.")).toBeVisible();
  const address=page.getByRole("button",{name:"Use this address",exact:true});if(await address.count())await address.first().click();

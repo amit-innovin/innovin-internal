@@ -1,7 +1,7 @@
 # Agent notes — innovin-internal
 
 ## Commands
-- Dev: `npm run dev` (http://localhost:3000; admin PIN from `.env.local`, local default `1704`)
+- Dev: `npm run dev` (http://localhost:3000; admin = Google sign-in with your email in `ADMIN_EMAILS` in `.env.local`)
 - Typecheck: `npm run typecheck` (check the exit code — `tsc` prints errors but a chained `&& echo` can hide them)
 - Unit + store contract: `npm test`; add `TEST_DATABASE_URL=postgres://…` to include the Postgres contract
 - E2E: `npm run test:e2e` (builds, then Playwright on ports 3210 [orders open] and 3211 [orders closed]).

@@ -19,7 +19,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: Coffee,
     tone: "sky",
     q: "How do pantry requests and office meals work?",
-    a: "Open the office pantry to choose exact Instamart products and quantities from the coordinator’s catalog, then Send request. Your basket is a draft until sent. The coordinator starts preparation, reviews the combined basket and places the supplier order. Prices are estimates until checkout. You can change or cancel before preparation and the daily cutoff; cancelling a request never cancels a supplier order. Office meals and drinks remain a separate secondary tool. " + (orderCutoffHour() >= 24 ? "Requests are open throughout the day until preparation begins." : `Send requests before ${fmtHour(orderCutoffHour())}.`),
+    a: "Open the office pantry to choose exact Instamart products and quantities from the admins’ catalog, then Send request. Your basket is a draft until sent. An admin starts preparation, reviews the combined basket and places the supplier order. Prices are estimates until checkout. You can change or cancel before preparation and the daily cutoff; cancelling a request never cancels a supplier order. Office meals and drinks remain a separate secondary tool. " + (orderCutoffHour() >= 24 ? "Requests are open throughout the day until preparation begins." : `Send requests before ${fmtHour(orderCutoffHour())}.`),
   },
   {
     icon: MessageSquare,
@@ -31,7 +31,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: CalendarOff,
     tone: "amber",
     q: "How do leave and WFH requests work?",
-    a: "Open Attendance & Leave, choose Leave or Work from home, fill the dates and send. The coordinator approves or rejects the request in this app; its status appears under Your requests. Zoho People remains separate and must be updated there. Personal plans never submit a leave request.",
+    a: "Open Attendance & Leave, choose Leave or Work from home, fill the dates and send. An admin approves or rejects the request in this app; its status appears under Your requests. Zoho People remains separate and must be updated there. Personal plans never submit a leave request.",
   },
   {
     icon: Plane,
@@ -49,7 +49,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: Wifi,
     tone: "blue",
     q: "Why report Wi-Fi quality?",
-    a: "If nobody flags it, everyone assumes it's fine. Check Speed measures a download; Good or Poor submits the current note and any measured speed. Measuring alone does not submit a report. Reports help the coordinator spot recurring problems.",
+    a: "If nobody flags it, everyone assumes it's fine. Check Speed measures a download; Good or Poor submits the current note and any measured speed. Measuring alone does not submit a report. Reports help admins spot recurring problems.",
   },
 ];
 

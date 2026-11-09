@@ -10,11 +10,9 @@ async function device(baseURL = MAIN_URL, headers: Record<string, string> = {}) 
   return request.newContext({ baseURL, extraHTTPHeaders: { "x-forwarded-for": ip(), ...headers } });
 }
 
+// Admin is a Google identity with the admin role (ADMIN_EMAILS in playwright.config).
 async function admin(): Promise<APIRequestContext> {
-  const ctx = await device();
-  const res = await ctx.post("/api/admin/login", { data: { passcode: "1704" } });
-  expect(res.status()).toBe(200);
-  return ctx;
+  return signedIn("admin@innovinlabs.com", "Admin E2E");
 }
 
 const noRef = (body: unknown) => expect(JSON.stringify(body)).not.toContain("submitterRef");
@@ -45,8 +43,6 @@ test.describe("API: input validation", () => {
         expect(res.status(), `${path} ${body}`).toBe(400);
       }
     }
-    const login = await ctx.post("/api/admin/login", { data: "{bad", headers: { "Content-Type": "application/json" } });
-    expect(login.status()).toBe(401);
   });
 
   test("attendance requires identity and validates the action", async () => {
@@ -169,10 +165,10 @@ test.describe("API: behaviour", () => {
     const ctx = await device();
     expect(await (await ctx.get("/api/auth/me")).json()).toEqual({ signedIn: false, googleEnabled: true });
 
-    // A callback hit without the state cookie bounces to settings?auth=failed.
+    // A callback hit without the state cookie bounces to sign-in?auth=failed.
     const bad = await ctx.get("/api/auth/callback?code=x&state=bogus.abc", { maxRedirects: 0 });
     expect(bad.status()).toBe(307);
-    expect(bad.headers()["location"]).toContain("/settings?auth=failed");
+    expect(bad.headers()["location"]).toContain("/sign-in?auth=failed");
 
     // Full round-trip through the mock: google → mock auth → callback → session.
     const start = await ctx.get("/api/auth/google?next=/attendance", { maxRedirects: 0 });
@@ -511,26 +507,10 @@ test.describe("API: privacy & auth", () => {
     expect(del.headers().location).toBe("/admin?tab=publish&done=deleted#announcements");
   });
 
-  test("session cookie is HttpOnly, SameSite=Lax, 12h, and logout clears it", async () => {
+  test("the retired shared-passcode login no longer exists", async () => {
     const ctx = await device();
-    const res = await ctx.post("/api/admin/login", { data: { passcode: "1704" } });
-    const setCookie = res.headers()["set-cookie"];
-    expect(setCookie).toMatch(/innovin_admin=\d+\.[0-9a-f]{64}/);
-    expect(setCookie).toMatch(/HttpOnly/i);
-    expect(setCookie).toMatch(/SameSite=lax/i);
-    expect(setCookie).toMatch(/Max-Age=43200/);
-    expect((await ctx.get("/api/grievances")).status()).toBe(200);
-    const out = await ctx.post("/api/admin/logout", { maxRedirects: 0 });
-    expect(out.status()).toBe(303);
+    expect((await ctx.post("/api/admin/login", { data: { passcode: "1704" } })).status()).toBe(404);
     expect((await ctx.get("/api/grievances")).status()).toBe(401);
-  });
-
-  test("HTML form login works without JavaScript", async () => {
-    const ctx = await device();
-    const bad = await ctx.post("/api/admin/login", { form: { passcode: "0000" }, maxRedirects: 0 });
-    expect(bad.headers().location).toBe("/admin?error=1");
-    const good = await ctx.post("/api/admin/login", { form: { passcode: "1704" }, maxRedirects: 0 });
-    expect(good.headers().location).toBe("/admin");
   });
 
   test("security headers are set on pages and APIs", async () => {
@@ -547,23 +527,6 @@ test.describe("API: privacy & auth", () => {
 });
 
 test.describe("API: abuse limits", () => {
-  test("admin PIN brute force locks the IP after 5 failures — even the right PIN", async () => {
-    const attacker = await device();
-    for (let i = 0; i < 5; i++) expect((await attacker.post("/api/admin/login", { data: { passcode: `99${i}0` } })).status()).toBe(401);
-    const locked = await attacker.post("/api/admin/login", { data: { passcode: "1704" } });
-    expect(locked.status()).toBe(429);
-    expect(Number(locked.headers()["retry-after"])).toBeGreaterThan(0);
-    // Other IPs are unaffected.
-    expect((await (await device()).post("/api/admin/login", { data: { passcode: "1704" } })).status()).toBe(200);
-  });
-
-  test("a successful login clears earlier failures for that IP", async () => {
-    const ctx = await device();
-    for (let i = 0; i < 4; i++) await ctx.post("/api/admin/login", { data: { passcode: "0000" } });
-    expect((await ctx.post("/api/admin/login", { data: { passcode: "1704" } })).status()).toBe(200);
-    for (let i = 0; i < 4; i++) expect((await ctx.post("/api/admin/login", { data: { passcode: "0000" } })).status()).toBe(401);
-  });
-
   test("grievance spam from one device is capped at 10 per hour, others unaffected", async () => {
     const spammer = await device();
     for (let i = 0; i < 10; i++) expect((await spammer.post("/api/grievances", { data: { body: `spam ${i}` } })).status()).toBe(200);

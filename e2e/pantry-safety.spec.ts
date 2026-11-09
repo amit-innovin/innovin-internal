@@ -1,13 +1,11 @@
-import { test, expect, adminLogin, signInEmployee, uniqueEmail } from "./fixtures";
-test("a shared PIN or ordinary member cannot access supplier credentials or operations", async ({page})=>{
-  await adminLogin(page);
-  expect((await page.request.get("/api/pantry-provider")).status()).toBe(403);
-  expect((await page.request.post("/api/pantry-provider",{data:{action:"history",version:null}})).status()).toBe(403);
+import { test, expect, signInEmployee, uniqueEmail } from "./fixtures";
+test("an ordinary member cannot access supplier credentials or operations", async ({page})=>{
   await signInEmployee(page,uniqueEmail("pantry-member"),"/settings");
   expect((await page.request.get("/api/pantry-provider")).status()).toBe(403);
+  expect((await page.request.post("/api/pantry-provider",{data:{action:"history",version:null}})).status()).toBe(403);
 });
 test("a lost checkout response stays blocked after reload and is reconciled from matching live history", async ({page})=>{
-  await signInEmployee(page,"owner@innovinlabs.com","/admin/pantry");
+  await signInEmployee(page,"admin@innovinlabs.com","/admin/pantry");
   const link=page.getByRole("link",{name:/^(Connect|Reconnect) Instamart$/});await expect(link).toBeVisible();
   if(await page.getByRole("button",{name:"Disconnect account",exact:true}).isVisible()) {
     await page.getByRole("button",{name:"Disconnect account",exact:true}).click();

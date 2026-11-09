@@ -1,13 +1,13 @@
 import { expect, test } from "./fixtures";
 
-test("provider purchasing denies anonymous callers and shared-passcode-only access", async ({ page }) => {
+test("provider purchasing denies anonymous callers, and its page sends them to sign-in", async ({ page }) => {
   expect((await page.request.get("/api/pantry-provider")).status()).toBe(403);
   expect((await page.request.post("/api/pantry-provider", {data:{action:"checkout",version:null}})).status()).toBe(403);
   await page.goto("/admin/pantry");
-  await expect(page.getByText("Sign in with a Google account that has an admin or owner role")).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin%2Fpantry/);
 });
 test("coordinator connects, chooses variants, reviews the bill and places one provider order", async ({ page }, testInfo) => {
-  await page.request.get("http://localhost:3999/as?email=owner@innovinlabs.com&name=Pantry%20owner");
+  await page.request.get("http://localhost:3999/as?email=admin@innovinlabs.com&name=Pantry%20admin");
   await page.goto("/api/auth/google?next=/admin/pantry");
   await page.request.get("http://localhost:3999/as?reset=1");
   await expect(page.getByRole("heading",{name:"Office purchasing",exact:true})).toBeVisible();

@@ -8,7 +8,7 @@ import { exchangeCode, googleConfigured, verifyIdToken } from "@/lib/google";
 import { store } from "@/lib/store";
 
 const fail = (req: NextRequest, reason: string) => {
-  const url = new URL("/settings", req.nextUrl.origin);
+  const url = new URL("/sign-in", req.nextUrl.origin);
   url.searchParams.set("auth", reason);
   return NextResponse.redirect(url);
 };
@@ -56,7 +56,8 @@ export async function GET(req: NextRequest) {
 
   const res = NextResponse.redirect(new URL(next, req.nextUrl.origin));
   const token = createUserSession({ email: identity.email, name: identity.name });
-  if (token) res.cookies.set(USER_COOKIE, token, { ...longLivedCookie, secure: secureAuthCookie(req.nextUrl.origin), maxAge: USER_SESSION_MS / 1000 });
+  if (!token) return fail(req, "unavailable");
+  res.cookies.set(USER_COOKIE, token, { ...longLivedCookie, secure: secureAuthCookie(req.nextUrl.origin), maxAge: USER_SESSION_MS / 1000 });
   // Align the remembered-email cookie with the verified identity.
   res.cookies.set(EMAIL_COOKIE, identity.email, { ...longLivedCookie, secure: secureAuthCookie(req.nextUrl.origin) });
   res.cookies.delete(OAUTH_COOKIE);

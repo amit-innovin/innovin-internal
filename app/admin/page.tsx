@@ -1,14 +1,11 @@
 import {orderName,orderQuantity} from "@/lib/pantry/shop";
-import { cookies } from "next/headers";
-import { ADMIN_COOKIE,verifyAdminSession } from "@/lib/admin";
 import { PantryFulfillment } from "@/components/pantry-fulfillment";
 import { EventManageButton } from "@/components/event-editor";
 import { attendanceLocation } from "@/lib/presence";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarDays, Coffee, LogOut, Megaphone, MessageSquare, Trash2, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, Coffee, Megaphone, MessageSquare, Trash2, Wifi } from "lucide-react";
 import AccessList from "@/components/access-list";
-import AdminLogin from "@/components/admin-login";
 import { Flash } from "@/components/flash";
 import AwayList from "@/components/away-list";
 import PostComposer from "@/components/post-composer";
@@ -30,7 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { currentActor, isAdmin, isOwner } from "@/lib/admin";
+import { requireAdmin } from "@/lib/admin";
 import { leaveOverview } from "@/lib/leave-data";
 import { fmtDay, fmtShortDate, fmtTime, relativeDay } from "@/lib/format";
 import { MENU } from "@/lib/menu";
@@ -88,17 +85,12 @@ function AdminTabs({ active, pending }: { active: Tab; pending: number }) {
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ done?: string; error?: string; tab?: string }> }) {
   const params = await searchParams;
-  if (!(await isAdmin())) {
-    const pass = process.env.ADMIN_PASSCODE ?? "";
-    return <AdminLogin pinLength={/^\d{4,8}$/.test(pass) ? pass.length : null} initialError={params.error} />;
-  }
+  const actor = await requireAdmin();
 
   const tab: Tab = (TABS.find((t) => t.id === params.tab)?.id ?? "today") as Tab;
-  const pinSession=verifyAdminSession((await cookies()).get(ADMIN_COOKIE)?.value);
   const date = todayIST();
   const year = Number(date.slice(0, 4));
   const now = Date.now(); // frozen for hydration — client lists must render the same labels as the server
-  const [actor, owner] = await Promise.all([currentActor(), isOwner()]);
 
   // Always needed: the stat row, and the pending badge on the Approvals tab.
   const [attendance, orders, grievances, wifi, away, employees] = await Promise.all([
@@ -144,14 +136,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           <h1 className="text-2xl font-medium tracking-tight">Admin dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {fmtDay()}
-            {actor ? ` · ${actor.name || actor.email}` : " · signed in with the shared passcode"}
+            {` · ${actor.name || actor.email}`}
           </p>
         </div>
-        {pinSession && <form action="/api/admin/logout" method="post">
-          <Button type="submit" variant="outline" size="lg">
-            <LogOut /> End passcode access
-          </Button>
-        </form>}
       </div>
 
       <div className="t-stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -251,9 +238,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         {overview && <LeaveOverview people={overview.people} />}
       </Card>
 
-      {owner && (
+      {(
         <Card id="access" className={`mt-4 gap-0 p-5 ${tab === "people" ? "" : "hidden"}`}>
-          <SectionHeader title="Access" aside="Owner only" />
+          <SectionHeader title="Access" aside="Admins" />
           <p className="mt-1 text-xs text-muted-foreground">
             Admins get this dashboard when they sign in with Google — their approvals are recorded against their name.
           </p>

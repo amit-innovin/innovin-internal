@@ -2,7 +2,7 @@ import { validPlannerDate } from "@/lib/workspace-model";
 import { attendanceLocation } from "@/lib/presence";
 import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
-import { isAdmin, isOwner } from "@/lib/admin";
+import { isAdmin } from "@/lib/admin";
 import { enforce } from "@/lib/guard";
 import { firstName } from "@/lib/format";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
@@ -70,7 +70,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  if (!(await isOwner())) return NextResponse.json({ error: "Only the owner can change roles" }, { status: 403 });
   const role = body?.role as Role;
   if (role !== "admin" && role !== "member") return badRequest("Invalid role update");
 

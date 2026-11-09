@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAdminSession, validAdminPasscode, verifyAdminSession } from "@/lib/admin";
 import { createOauthState, createUserSession, sanitizeNext, verifyOauthState, verifyUserSession } from "@/lib/auth";
-import { ADMIN_SESSION_MS, adminEmails, allowedEmailDomains, orderCutoffHour } from "@/lib/config";
+import { adminEmails, allowedEmailDomains, orderCutoffHour } from "@/lib/config";
 import { clientIp, readJSON } from "@/lib/http";
 import { distanceM, locationTag, officeLocation } from "@/lib/geo";
 import { pgConfig } from "@/lib/pgconfig";
@@ -125,47 +124,9 @@ describe("rate limiter", () => {
   });
 });
 
-describe("admin auth", () => {
-  beforeEach(() => vi.stubEnv("ADMIN_PASSCODE", "1704"));
-
-  it("validates the passcode strictly", () => {
-    expect(validAdminPasscode("1704")).toBe(true);
-    for (const bad of ["1705", "17040", "", " 1704", 1704, null, undefined, ["1704"]]) expect(validAdminPasscode(bad)).toBe(false);
-    vi.stubEnv("ADMIN_PASSCODE", "");
-    expect(validAdminPasscode("")).toBe(false);
-  });
-
-  it("issues sessions that verify, expire, and resist tampering", () => {
-    const now = Date.now();
-    const token = createAdminSession(now);
-    expect(verifyAdminSession(token, now)).toBe(true);
-    expect(verifyAdminSession(token, now + ADMIN_SESSION_MS - 1000)).toBe(true);
-    expect(verifyAdminSession(token, now + ADMIN_SESSION_MS + 1000)).toBe(false);
-
-    const [issued, mac] = token.split(".");
-    expect(verifyAdminSession(`${Number(issued) + 1}.${mac}`, now)).toBe(false);
-    expect(verifyAdminSession(`${issued}.${mac.replace(/.$/, mac.endsWith("a") ? "b" : "a")}`, now)).toBe(false);
-    expect(verifyAdminSession(`${now + 3_600_000}.${mac}`, now)).toBe(false);
-    for (const bad of [undefined, "", "garbage", "123", ".abc", "NaN.abc"]) expect(verifyAdminSession(bad, now)).toBe(false);
-  });
-
-  it("invalidates every session when the passcode changes", () => {
-    const token = createAdminSession();
-    vi.stubEnv("ADMIN_PASSCODE", "a-new-long-passcode");
-    expect(verifyAdminSession(token)).toBe(false);
-  });
-
-  it("rejects sessions when admin is disabled", () => {
-    const token = createAdminSession();
-    vi.stubEnv("ADMIN_PASSCODE", "");
-    expect(verifyAdminSession(token)).toBe(false);
-  });
-});
-
 describe("employee sessions & oauth state", () => {
   beforeEach(() => {
     vi.stubEnv("SESSION_SECRET", "test-secret");
-    vi.stubEnv("ADMIN_PASSCODE", "");
   });
 
   const me = { email: "asha@innovinlabs.com", name: "Asha" };
@@ -186,7 +147,6 @@ describe("employee sessions & oauth state", () => {
 
   it("returns null when no signing secret exists", () => {
     vi.stubEnv("SESSION_SECRET", "");
-    vi.stubEnv("ADMIN_PASSCODE", "");
     expect(createUserSession(me)).toBeNull();
     expect(verifyUserSession("x.y")).toBeNull();
   });

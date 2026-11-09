@@ -8,7 +8,7 @@ import { googleAuthUrl, googleConfigured } from "@/lib/google";
 
 // Starts the Google sign-in flow. `next` is where the employee lands afterwards.
 export async function GET(req: NextRequest) {
-  const fallback = new URL("/settings", req.nextUrl.origin);
+  const fallback = new URL("/sign-in", req.nextUrl.origin);
   if (!googleConfigured()) {
     fallback.searchParams.set("auth", "unavailable");
     return NextResponse.redirect(fallback);

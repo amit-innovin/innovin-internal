@@ -21,7 +21,7 @@ test("mobile board URL and notification open the announcement itself",async({pag
   await page.getByRole("button",{name:"Post announcement",exact:true}).click();
   await page.waitForLoadState("networkidle");
   await signInEmployee(page,uniqueEmail("board-repair"),"/");
-  await page.getByRole("button",{name:/^Notifications/}).click();
+  await page.getByRole("link",{name:/^Notifications/}).filter({visible:true}).first().click();
   await page.getByRole("link").filter({hasText:"Journey announcement"}).first().click();
   await expect(page).toHaveURL(/view=board/);
   await expect(page.locator('[id^="announcement-"]').filter({hasText:"Journey announcement"})).toBeVisible();
@@ -56,7 +56,7 @@ test("same-route event notifications load the target omitted from the initial li
   await page.route("**/api/events*",async route=>{const url=new URL(route.request().url());const focused=url.searchParams.get("event");if(focused)targetReads++;await route.fulfill({json:focused?[target]:[first]});});
   await page.route("**/api/notifications",async route=>{await route.fulfill({json:route.request().method()==="POST"?{ok:true}:{items:[{id:"event-target",kind:"event",title:"Open target event",body:"Updated event",at:new Date().toISOString(),href:"/events?event=older-target#event-older-target"}],unread:1}});});
   await signInEmployee(page,uniqueEmail("event-link"),"/events");await expect(page.getByRole("heading",{name:"Initial event",exact:true})).toBeVisible();
-  await page.getByRole("button",{name:/^Notifications/}).click();await page.getByRole("link").filter({hasText:"Open target event"}).click();
+  await page.getByRole("link",{name:/^Notifications/}).filter({visible:true}).first().click();await page.getByRole("link").filter({hasText:"Open target event"}).click();
   await expect(page.getByRole("heading",{name:"Notification target event",exact:true})).toBeVisible();expect(targetReads).toBeGreaterThan(0);
   await page.goBack();await expect(page.getByRole("heading",{name:"Notification target event",exact:true})).toHaveCount(0);
   await page.goForward();await expect(page.getByRole("heading",{name:"Notification target event",exact:true})).toBeVisible();

@@ -1,8 +1,9 @@
 import { adminLogin, expect, test, uniqueText } from "./fixtures";
+import { MOCK_URL } from "./mock-url";
 import type { Browser } from "@playwright/test";
 
 // The mock Google provider pins who signs in, then the round-trip completes in the browser.
-const MOCK = "http://localhost:3999";
+const MOCK = MOCK_URL;
 async function signInAs(browser: Browser, email: string, name: string) {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();

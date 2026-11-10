@@ -1,9 +1,10 @@
 import { ADMIN_EMAIL, expect, signInEmployee, test } from "./fixtures";
+import { MOCK_URL } from "./mock-url";
 import type { Browser, Page } from "@playwright/test";
 
 // Roles: admin and member. ADMIN_EMAILS (playwright.config: admin@innovinlabs.com) bootstraps
 // admins, who can't be demoted in-app; any admin promotes or demotes other members.
-const MOCK = "http://localhost:3999";
+const MOCK = MOCK_URL;
 
 // Pins who the Google mock signs in as, then completes the round-trip in a fresh context.
 async function signInAs(browser: Browser, email: string, name: string) {

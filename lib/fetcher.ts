@@ -95,3 +95,11 @@ export async function send(url: string, init: RequestInit & { json?: unknown } =
     });
   }
 }
+
+// For TanStack Query: resolves with the JSON body, or throws an Error whose message is the
+// server's own explanation (see readError), so screens can show it as is.
+export async function fetchJSON<T>(url: string): Promise<T> {
+  const res = await send(url);
+  if (!res.ok) throw new Error(await readError(res));
+  return (await res.json()) as T;
+}

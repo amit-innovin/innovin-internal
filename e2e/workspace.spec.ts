@@ -1,4 +1,5 @@
 import { expect, test, uniqueText } from "./fixtures";
+import { MOCK_URL } from "./mock-url";
 
 test.describe("Studio workspace", () => {
   test("onboarding offers only company Google sign-in and a responsive badge", async ({ page }) => {
@@ -104,11 +105,11 @@ test.describe("Studio workspace", () => {
   });
 
   test("Google rejects accounts outside innovinlabs.com", async ({ page, request }) => {
-    await request.get("http://localhost:3999/as?email=outside@gmail.com&name=Outside");
+    await request.get(`${MOCK_URL}/as?email=outside@gmail.com&name=Outside`);
     try {
       await page.goto("/api/auth/google?next=/");
       await expect(page).toHaveURL(/auth=failed/);
       expect((await (await page.request.get("/api/auth/me")).json()).signedIn).toBe(false);
-    } finally { await request.get("http://localhost:3999/as?reset=1"); }
+    } finally { await request.get(`${MOCK_URL}/as?reset=1`); }
   });
 });

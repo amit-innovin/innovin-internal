@@ -1,4 +1,5 @@
 import { expect, request, test, type APIRequestContext } from "@playwright/test";
+import { MOCK_URL } from "./mock-url";
 import { MAIN_URL } from "../playwright.config";
 import { futureWorkday } from "./dates";
 import { LEGACY_WFH, LEGACY_WFH_CANCEL } from "./legacy-wfh";
@@ -24,10 +25,10 @@ const noRef = (body: unknown) => expect(JSON.stringify(body)).not.toContain("sub
 // features (leave balances) can be exercised. `/as` pins the mock's next identity.
 async function signedIn(who: string, name = who): Promise<APIRequestContext> {
   const ctx = await device();
-  await ctx.get(`http://localhost:3999/as?email=${encodeURIComponent(who)}&name=${encodeURIComponent(name)}`);
+  await ctx.get(`${MOCK_URL}/as?email=${encodeURIComponent(who)}&name=${encodeURIComponent(name)}`);
   const res = await ctx.get("/api/auth/google?next=/", { maxRedirects: 10 });
   expect(res.ok()).toBe(true);
-  await ctx.get("http://localhost:3999/as?reset=1");
+  await ctx.get(`${MOCK_URL}/as?reset=1`);
   return ctx;
 }
 
@@ -187,7 +188,7 @@ test.describe("API: behaviour", () => {
     // Full round-trip through the mock: google → mock auth → callback → session.
     const start = await ctx.get("/api/auth/google?next=/attendance", { maxRedirects: 0 });
     expect(start.status()).toBe(307);
-    expect(start.headers()["location"]).toContain("localhost:3999/auth");
+    expect(start.headers()["location"]).toContain(`${MOCK_URL.replace("http://", "")}/auth`);
     const bounced = await ctx.get(start.headers()["location"], { maxRedirects: 0 });
     expect(bounced.status()).toBe(302);
     const done = await ctx.get(bounced.headers()["location"], { maxRedirects: 0 });
@@ -243,9 +244,9 @@ test.describe("API: behaviour", () => {
     await ctx.post("/api/auth/logout");
     expect((await ctx.get("/api/away?scope=mine")).status()).toBe(401);
     expect((await ctx.patch("/api/away", { data: { id: created.id, status: "cancelled" } })).status()).toBe(403);
-    await ctx.get(`http://localhost:3999/as?email=${encodeURIComponent(email())}`);
+    await ctx.get(`${MOCK_URL}/as?email=${encodeURIComponent(email())}`);
     try { await ctx.get("/api/auth/google?next=/"); }
-    finally { await ctx.get("http://localhost:3999/as?reset=1"); }
+    finally { await ctx.get(`${MOCK_URL}/as?reset=1`); }
     expect((await (await ctx.get("/api/away?scope=mine")).json()).some((r: { id: string }) => r.id === created.id)).toBe(false);
     expect((await ctx.patch("/api/away", { data: { id: created.id, status: "cancelled" } })).status()).toBe(403);
     expect((await secondDevice.patch("/api/away", { data: { id: created.id, status: "cancelled" } })).status()).toBe(200);

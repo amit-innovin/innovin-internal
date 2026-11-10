@@ -1,7 +1,7 @@
 import { adminLogin, expect, test, uniqueEmail, uniqueText, signInEmployee } from "./fixtures";
 
 test.describe("Notifications", () => {
-  test("an announcement appears in the feed and clears the unread badge once opened", async ({ page, browser }) => {
+  test("the bell opens the Notifications page, and Mark all read clears the unread count", async ({ page, browser }) => {
     const title = uniqueText("Lift under maintenance");
     const admin = await browser.newContext();
     const a = await admin.newPage();
@@ -13,16 +13,30 @@ test.describe("Notifications", () => {
     await admin.close();
 
     await signInEmployee(page, undefined, "/");
-    const bell = page.getByRole("button", { name: /Notifications/ }).filter({ visible: true });
+    const bell = page.getByRole("link", { name: /Notifications/ }).filter({ visible: true });
     // Unread count shows in the accessible name, so it's announced not just coloured.
     await expect(bell).toHaveAccessibleName(/\d+ unread/);
     await bell.click();
-    const panel = page.getByRole("region", { name: "Notifications" }).filter({ visible: true }).filter({ visible: true });
-    await expect(panel).toContainText(title);
+    // The bell goes to its own page: not the Feed, not a popover.
+    await expect(page).toHaveURL(/\/notifications$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Notifications" })).toBeVisible();
+    const row = page.getByRole("link").filter({ hasText: title });
+    await expect(row).toHaveAttribute("data-unread", "true");
 
-    // Reopening after it's been seen shows no unread count.
-    await page.reload();
-    await expect(page.getByRole("button", { name: "Notifications" }).filter({ visible: true })).toBeVisible();
+    // The Unread filter is a link, so it survives a reload.
+    await page.getByRole("link", { name: /^Unread/ }).click();
+    await expect(page).toHaveURL(/filter=unread/);
+    await expect(row).toBeVisible();
+
+    await page.getByRole("button", { name: "Mark all read" }).click();
+    await expect(page.getByText("You're all caught up")).toBeVisible();
+    await expect(page.getByText("Nothing unread")).toBeVisible();
+    await page.goto("/notifications");
+    await expect(row).toHaveAttribute("data-unread", "false");
+
+    // Back on Home the bell no longer announces a count.
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: "Notifications", exact: true }).filter({ visible: true })).toBeVisible();
   });
 
   test("a published event reaches the feed and home", async ({ page, browser, isMobile }) => {
@@ -44,8 +58,8 @@ test.describe("Notifications", () => {
     if (isMobile) await page.getByRole("button", { name: "Expand Events", exact: true }).click();
     // Events used to be invisible on home; they now have their own card.
     await expect(page.locator(".events-card")).toContainText(title);
-    await page.getByRole("button", { name: /Notifications/ }).filter({ visible: true }).click();
-    await expect(page.getByRole("region", { name: "Notifications" }).filter({ visible: true }).filter({ visible: true })).toContainText(title);
+    await page.getByRole("link", { name: /Notifications/ }).filter({ visible: true }).click();
+    await expect(page.getByRole("link").filter({ hasText: title })).toBeVisible();
 
     // Clean up after ourselves — leftover rows would crowd tomorrow's run off the card.
     await a.goto("/admin?tab=publish");
@@ -74,9 +88,39 @@ test.describe("Notifications", () => {
     await expect(page.getByText("Request approved")).toBeVisible();
 
     await e.goto("/");
-    await e.getByRole("button", { name: /Notifications/ }).filter({ visible: true }).click();
-    await expect(e.getByRole("region", { name: "Notifications" }).filter({ visible: true })).toContainText(/leave approved/i);
+    await e.getByRole("link", { name: /Notifications/ }).filter({ visible: true }).click();
+    await expect(e.getByRole("link").filter({ hasText: /leave approved/i })).toBeVisible();
     await employee.close();
+  });
+
+  test("the Notifications page sits in the new shell: bottom bar on phones, sidebar on wider screens", async ({ page, isMobile }) => {
+    await signInEmployee(page, uniqueEmail("shell"), "/notifications");
+    await expect(page.getByRole("heading", { level: 1, name: "Notifications" })).toBeVisible();
+    // The legacy top bar is not rendered on a rebuilt screen.
+    await expect(page.getByRole("navigation", { name: "Workspace navigation" })).toHaveCount(0);
+    const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
+    await expect(main).toHaveCount(1);
+    if (isMobile) {
+      await expect(main.getByRole("link")).toHaveText(["Home", "Feed", "Days", "Account"]);
+      // A child screen on the phone has a way back to Home.
+      await expect(page.getByRole("link", { name: "Back to home" })).toBeVisible();
+    } else {
+      await expect(main.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
+      await main.getByRole("button", { name: "Account menu" }).click();
+      const menu = page.getByRole("menu", { name: "Account" });
+      await expect(menu.getByRole("menuitem")).toHaveText(["Settings", "Speak up", "Wi-Fi check", "Help", "Sign out"]);
+      // A member never sees Admin.
+      await expect(menu.getByRole("menuitem", { name: "Admin" })).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await expect(menu).toHaveCount(0);
+    }
+    // Home stays lit: Notifications belongs to Home.
+    await expect(main.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
+    await page.screenshot({ path: `output/playwright/duo-notifications-${test.info().project.name}.png`, fullPage: true });
+    if (!isMobile) {
+      await page.setViewportSize({ width: 834, height: 1100 });
+      await page.screenshot({ path: "output/playwright/duo-notifications-tablet.png" });
+    }
   });
 
   test("the feed is device-scoped for grievances and never leaks between devices", async ({ page, browser }) => {

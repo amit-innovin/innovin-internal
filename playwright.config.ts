@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { MOCK_URL } from "./e2e/mock-url";
 
 // E2E runs against production builds (`next build` first — see `npm run test:e2e`).
 //   one server on :3210
@@ -22,9 +23,9 @@ const serverEnv = (name: string) => ({
   // Google sign-in against the local OAuth mock (e2e/google-mock.ts, started in global-setup).
   GOOGLE_CLIENT_ID: "e2e-client",
   GOOGLE_CLIENT_SECRET: "e2e-secret",
-  GOOGLE_AUTH_URL: "http://localhost:3999/auth",
-  GOOGLE_TOKEN_URL: "http://localhost:3999/token",
-  GOOGLE_TOKENINFO_URL: "http://localhost:3999/tokeninfo",
+  GOOGLE_AUTH_URL: `${MOCK_URL}/auth`,
+  GOOGLE_TOKEN_URL: `${MOCK_URL}/token`,
+  GOOGLE_TOKENINFO_URL: `${MOCK_URL}/tokeninfo`,
   SESSION_SECRET: "e2e-session-secret",
   // The suite signs in far more than 30 times per run (desktop + mobile share one server),
   // so the per-IP auth ceiling needs headroom it wouldn't need in production.

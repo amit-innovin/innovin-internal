@@ -42,13 +42,11 @@ git checkout main && git pull        # next change starts here again
 Per the owner's instruction: every committed branch MUST ship as a pull request that is
 then merged into `main`. Never merge to `main` locally or push to `main` directly.
 
-Git access: the remote uses the `github.com-innovin` SSH host alias (work account), so
-push works. The `gh` CLI is authenticated as the *personal* `AmitJaison` account, which
-cannot resolve the private `amit-innovin/innovin-internal` — so `gh pr create` fails.
-Until `gh` is logged in as `amit-innovin` (or AmitJaison is added as a collaborator),
-the fallback is: push the branch, hand the owner the compare URL
-(`github.com/amit-innovin/innovin-internal/pull/new/<branch>`), and they open + merge
-the PR in the web UI. Do not self-merge to `main` even then.
+Git access: use the `gautham-inv` GitHub account for every push, PR and `gh` call (owner instruction).
+`gh` has more than one account logged in; check `gh auth status` shows `gautham-inv` as active, and
+`gh auth switch -u gautham-inv` if not. It has write access to `amit-innovin/innovin-internal`, so
+`gh pr create` works. Pushing, opening and merging a PR each need the owner's go-ahead; never
+self-merge to `main`.
 
 Then deploy (`npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"`, token in `.env`),
 smoke-test production, and delete any test rows created by the smoke test.

@@ -52,6 +52,8 @@ const nextConfig: NextConfig = {
   // (/snacks?tab=today → /?tab=today); Home reads no such parameters, so it is harmless.
   async redirects() {
     return [
+      // Old links to the notice board, from before Home was rebuilt.
+      { source: "/", has: [{ type: "query", key: "view", value: "board" }], destination: "/board", permanent: false },
       { source: "/leave", destination: "/attendance?tab=leave", permanent: false },
       { source: "/away", destination: "/attendance?tab=leave", permanent: false },
       ...["/pantry", "/snacks", "/planner", "/people", "/admin/pantry"].map((source) => ({ source, destination: "/", permanent: false })),

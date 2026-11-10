@@ -205,3 +205,12 @@ Matches the spec's delivery plan; each row lists what it depends on from this ma
 | 5 | Feed with all post types, New post (four kinds), event detail, celebrations, in-place admin powers | Not-drawn items 1 and 2 |
 | 6 | Steps league, Reading list, Wi-Fi, Speak up, Account, Admin area | Not-drawn items 4 and 5 |
 | 7 | Wellness | Not-drawn item 7 |
+
+## 9. Build status
+
+| Screen | Route | State | Not drawn, decided while building |
+|---|---|---|---|
+| Notifications | `/notifications` | Rebuilt (PR 2) | Push on/off sits at the bottom of this page until Account is rebuilt |
+| Home | `/` | Rebuilt (PR 3) | Reading tile, chai card and birthdays wait for those features; "Who's around" shows the next *working* day; the old Home moved to `/board` while it still hosts the notice board |
+| Days | `/days` | Rebuilt (PR 3) | Month arrows (needed to reach last month's fixable days early in a month); remote days get a sky tint and a legend entry; "Your office days" opens the weekday chips from the Account board in a sheet; "Swap a day" is not built (no board); "Request leave" opens the legacy leave form until the Zoho flow exists, and request statuses are the app's own, not Zoho's |
+

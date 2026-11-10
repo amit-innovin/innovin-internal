@@ -1,7 +1,6 @@
 import {test,expect,signInEmployee,uniqueEmail} from "./fixtures";
 test("top-button destinations retain a compact mobile workspace instead of wrapping desktop navigation",async({page,isMobile})=>{
- test.skip(!isMobile,"Mobile shell regression");await signInEmployee(page,uniqueEmail("mobile-shell"),"/");
- await page.getByRole("link",{name:"Attendance & Leave",exact:true}).click();
+ test.skip(!isMobile,"Mobile shell regression");await signInEmployee(page,uniqueEmail("mobile-shell"),"/attendance?tab=leave");
  for(const path of ["/attendance?tab=leave","/settings","/wifi","/help","/events"]){
   await page.waitForLoadState("networkidle");await page.goto(path);const bar=page.locator(".studio-nav");await expect(bar).toBeVisible();
   expect((await bar.boundingBox())!.height,"mobile toolbar stays one row").toBeLessThanOrEqual(80);

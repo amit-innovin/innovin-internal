@@ -44,7 +44,7 @@ test.describe("Supplied workspace design", () => {
       await expect(page.locator(".dashboard-grid > .dash-col")).toHaveCount(3);
       await expect(page.getByRole("heading", { name: "Office Notice Board", exact: true })).toBeVisible();
     }
-    await page.goto("/");
+    await page.goto("/board");
     await page.screenshot({ path: `output/playwright/zip-overview-${test.info().project.name}.png`, fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (!isMobile) {

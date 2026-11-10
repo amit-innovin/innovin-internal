@@ -23,8 +23,8 @@ type Item = {
 
 const ITEMS: Item[] = [
   { id: "home", label: { bar: "Home", side: "Home" }, icon: "home", href: "/", on: ["bar", "side"], owns: { bar: ["/", "/notifications", "/steps", "/reading"], side: ["/", "/notifications"] } },
-  { id: "feed", label: { bar: "Feed", side: "Feed" }, icon: "feed", href: "/?view=board", on: ["bar", "side"], owns: { bar: ["/feed", "/events"], side: ["/feed", "/events"] } },
-  { id: "days", label: { bar: "Days", side: "Days" }, icon: "days", href: "/attendance", on: ["bar", "side"], owns: { bar: ["/days", "/attendance"], side: ["/days", "/attendance"] } },
+  { id: "feed", label: { bar: "Feed", side: "Feed" }, icon: "feed", href: "/board?view=board", on: ["bar", "side"], owns: { bar: ["/feed", "/board", "/events"], side: ["/feed", "/board", "/events"] } },
+  { id: "days", label: { bar: "Days", side: "Days" }, icon: "days", href: "/days", on: ["bar", "side"], owns: { bar: ["/days", "/attendance"], side: ["/days", "/attendance"] } },
   { id: "snacks", label: { bar: "Snacks", side: "Tea & snacks" }, icon: "snacks", href: null, on: ["bar", "side"], owns: { bar: ["/snacks"], side: ["/snacks"] } },
   { id: "steps", label: { bar: "10K steps", side: "10K steps" }, icon: "steps", href: "/steps", on: ["side"], owns: { side: ["/steps"] } },
   { id: "reading", label: { bar: "Reading list", side: "Reading list" }, icon: "reading", href: null, on: ["side"], owns: { side: ["/reading"] } },
@@ -34,7 +34,7 @@ const ITEMS: Item[] = [
 const matches = (pathname: string, owned: string) => (owned === "/" ? pathname === "/" : pathname === owned || pathname.startsWith(`${owned}/`));
 
 // Routes that already render in the new shell. Everything else still gets the legacy nav.
-const DUO_ROUTES = ["/notifications"];
+const DUO_ROUTES = ["/", "/days", "/notifications"];
 export const isDuoRoute = (pathname: string) => DUO_ROUTES.some((r) => matches(pathname, r));
 
 export function navFor(surface: Surface) {

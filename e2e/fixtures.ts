@@ -43,10 +43,11 @@ export async function signInEmployee(page: Page, email?: string, next = "/attend
   } finally { if (email) await page.request.get(`${MOCK_URL}/as?reset=1`); }
 }
 
-// Signs in as a verified company employee and declares the day as in-office.
+// Signs in as a verified company employee and declares the day as in-office, using the legacy
+// workspace screen at /board (it still hosts the notice board, events card and ID pass).
 export async function signInOffice(page: Page, email?: string) {
   if (email) await page.request.get(`${MOCK_URL}/as?email=${encodeURIComponent(email)}&name=${encodeURIComponent(email)}`);
-  try { await page.goto("/api/auth/google?next=/"); await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible(); }
+  try { await page.goto("/api/auth/google?next=/board"); await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible(); }
   finally { if (email) await page.request.get(`${MOCK_URL}/as?reset=1`); }
   await page.getByRole("button", { name: "In office", exact: true }).click();
   await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");

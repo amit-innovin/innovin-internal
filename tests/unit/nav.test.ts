@@ -6,8 +6,10 @@ describe("new shell navigation", () => {
     expect(isDuoRoute("/notifications")).toBe(true);
     expect(isDuoRoute("/notifications/anything")).toBe(true);
     expect(isDuoRoute("/notificationsx")).toBe(false);
-    expect(isDuoRoute("/")).toBe(false);
+    expect(isDuoRoute("/")).toBe(true);
+    expect(isDuoRoute("/board")).toBe(false);
     expect(isDuoRoute("/attendance")).toBe(false);
+    expect(isDuoRoute("/days")).toBe(true);
   });
 
   it("phone bar: Home stays lit for the screens it owns", () => {

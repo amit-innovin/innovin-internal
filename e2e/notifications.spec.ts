@@ -55,9 +55,9 @@ test.describe("Notifications", () => {
     await expect(a.getByText("Event published")).toBeVisible();
 
     await signInEmployee(page, undefined, "/");
-    if (isMobile) await page.getByRole("button", { name: "Expand Events", exact: true }).click();
-    // Events used to be invisible on home; they now have their own card.
-    await expect(page.locator(".events-card")).toContainText(title);
+    // Laptop Home lists the next events in its right rail ("Coming up"); phone Home shows only
+    // the single next event, which other specs' events can outrank, so it isn't asserted there.
+    if (!isMobile) await expect(page.getByRole("complementary", { name: "Coming up" })).toContainText(title);
     await page.getByRole("link", { name: /Notifications/ }).filter({ visible: true }).click();
     await expect(page.getByRole("link").filter({ hasText: title })).toBeVisible();
 

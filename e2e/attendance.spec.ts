@@ -32,7 +32,7 @@ test.describe("Attendance", () => {
     await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
     await expect(page.getByText(/In since/)).toBeVisible();
 
-    await page.goto("/");
+    await page.goto("/board");
     await expect(page.getByRole("heading", { level: 1, name: "Your workspace" })).toBeVisible();
     expect((await (await page.request.get("/api/attendance")).json()).me.checkedIn).toBe(true);
   });

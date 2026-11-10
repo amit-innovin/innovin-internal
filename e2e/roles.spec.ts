@@ -1,4 +1,4 @@
-import { ADMIN_EMAIL, expect, signInEmployee, test } from "./fixtures";
+import { ADMIN_EMAIL, expect, signInEmployee, test, isMobile } from "./fixtures";
 import { MOCK_URL } from "./mock-url";
 import type { Browser, Page } from "@playwright/test";
 
@@ -91,11 +91,18 @@ test.describe("Roles & access", () => {
     await admin.ctx.close();
   });
 
-  test("the Admin link appears in the nav only for admins, and works", async ({ browser }) => {
+  test("the Admin entry appears only for admins, and works", async ({ browser }) => {
     const email = `nav.${Date.now().toString(36)}@innovinlabs.com`;
     const member = await signInAs(browser, email, "Member E2E");
-    await member.page.goto("/");
-    await expect(member.page.getByRole("link", { name: "Admin", exact: true })).toHaveCount(0);
+    // New shell: Admin sits in the account menu on laptops and tablets, and on the Account page on phones.
+    const openAccount = async () => {
+      await member.page.goto("/");
+      if (isMobile(member.page)) await member.page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).getByRole("link", { name: "Account" }).click();
+      else await member.page.getByRole("button", { name: "Account menu" }).click();
+    };
+    await openAccount();
+    await expect(member.page.getByRole("menuitem", { name: "Admin" })).toHaveCount(0);
+    await expect(member.page.getByRole("link", { name: /^Admin/ }).filter({ visible: true })).toHaveCount(0);
 
     const admin = await signInAs(browser, ADMIN_EMAIL, "Admin E2E");
     await admin.page.goto("/admin?tab=people");
@@ -103,11 +110,8 @@ test.describe("Roles & access", () => {
     await expect(admin.page.getByText("Admin access granted")).toBeVisible();
     await admin.ctx.close();
 
-    await member.page.goto("/");
-    if (!(await member.page.getByRole("link", { name: "Admin", exact: true }).filter({ visible: true }).count())) {
-      await member.page.locator(".reference-more summary").click();
-    }
-    const link = member.page.getByRole("link", { name: "Admin", exact: true }).filter({ visible: true });
+    await openAccount();
+    const link = isMobile(member.page) ? member.page.getByRole("link", { name: /Admin dashboard/ }) : member.page.getByRole("menuitem", { name: "Admin" });
     await expect(link).toHaveCount(1);
     await link.click();
     await expect(dashboard(member.page)).toBeVisible();

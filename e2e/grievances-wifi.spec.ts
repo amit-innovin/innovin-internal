@@ -91,9 +91,9 @@ test.describe("Speak Up", () => {
 });
 
 test.describe("Wi-Fi Quality", () => {
-  test("workspace Wi-Fi pulse runs the test immediately and cleans the URL", async ({ page }) => {
+  test("Home's Wi-Fi button runs the test immediately and cleans the URL", async ({ page }) => {
     await signInEmployee(page, undefined, "/");
-    await page.getByRole("link", { name: "Wi-Fi pulse", exact: true }).filter({ visible: true }).click();
+    await page.getByRole("link", { name: "Wi-Fi check", exact: true }).filter({ visible: true }).click();
     await expect(page).toHaveURL(/\/wifi$/);
     await expect(page.getByText(/^Download/)).toContainText("Mbps", { timeout: 20_000 });
   });

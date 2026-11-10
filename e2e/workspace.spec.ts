@@ -18,7 +18,7 @@ test.describe("Studio workspace", () => {
   });
 
   test("office mode and profile persist", async ({ page, isMobile }) => {
-    await page.goto("/api/auth/google?next=/");
+    await page.goto("/api/auth/google?next=/board");
     await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible();
     const profile = page.getByRole("button", { name: "Edit profile" }).first();
     await profile.click();
@@ -33,7 +33,7 @@ test.describe("Studio workspace", () => {
     await expect(page.locator(".zoom-level-pill")).toHaveText("95%");
     await page.getByRole("button", { name: "Remote", exact: true }).click();
     await page.getByRole("button", { name: "In office", exact: true }).click();
-    await page.goto("/");
+    await page.goto("/board");
     await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText("Product Designer", { exact: true }).first()).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -43,7 +43,7 @@ test.describe("Studio workspace", () => {
   });
 
   test("employees publish real events and RSVP", async ({ page, isMobile }) => {
-    await page.goto("/api/auth/google?next=/");
+    await page.goto("/api/auth/google?next=/board");
     if (isMobile) await page.getByRole("button", { name: "Expand Events", exact: true }).click();
     await page.getByRole("button", { name: "Add event" }).click();
     const title = uniqueText("Design sharing");
@@ -87,7 +87,7 @@ test.describe("Studio workspace", () => {
   });
 
   test("switching Google accounts clears the previous identity before the round trip", async ({ page, isMobile }) => {
-    await page.goto("/api/auth/google?next=/");
+    await page.goto("/api/auth/google?next=/board");
     const before=await (await page.request.get("/api/auth/me")).json();
     if (isMobile) {
       await expect(page.getByRole("link", { name: "Switch account", exact: true })).toBeVisible();

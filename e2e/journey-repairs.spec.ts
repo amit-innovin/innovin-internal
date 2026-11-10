@@ -31,7 +31,7 @@ test("mobile board URL and notification open the announcement itself",async({pag
 
 test("event organizers can correct and cancel their event without losing existing RSVPs",async({page,browser,isMobile})=>{
   const {uniqueText}=await import("./fixtures");const title=uniqueText("Organized event"),changed=`${title} corrected`;
-  await signInEmployee(page,uniqueEmail("organizer"),"/");if(isMobile)await page.getByRole("button",{name:"Expand Events",exact:true}).click();
+  await signInEmployee(page,uniqueEmail("organizer"),"/board");if(isMobile)await page.getByRole("button",{name:"Expand Events",exact:true}).click();
   await page.getByRole("button",{name:"Add event",exact:true}).click();
   const dialog=page.getByRole("dialog");await dialog.getByLabel("Event title").fill(title);await dialog.getByLabel("Date & time (IST)").fill("2026-12-30T17:00");
   await dialog.getByRole("button",{name:"Publish event",exact:true}).click();await expect(dialog).toHaveCount(0);
@@ -77,7 +77,7 @@ test("the pass shows recorded attendance counts and links each day to its record
 });
 
 test("removing a public board post requires a deliberate confirmation",async({page,isMobile})=>{
-  const {uniqueText}=await import("./fixtures");await signInEmployee(page,"admin@innovinlabs.com","/");if(isMobile)await page.getByRole("button",{name:"Office Notice Board",exact:true}).click();
+  const {uniqueText}=await import("./fixtures");await signInEmployee(page,"admin@innovinlabs.com","/board");if(isMobile)await page.getByRole("button",{name:"Office Notice Board",exact:true}).click();
   await page.getByRole("button",{name:"Post Note",exact:true}).click();const text=uniqueText("Removal confirmation");await page.getByLabel("Your board note").fill(text);await page.getByRole("button",{name:"Pin to board",exact:true}).click();
   const card=page.getByRole("article").filter({hasText:text});await expect(card).toBeVisible();page.once("dialog",d=>d.dismiss());await card.getByRole("button",{name:"Remove board note",exact:true}).click();await expect(card).toBeVisible();
   page.once("dialog",d=>d.accept());await card.getByRole("button",{name:"Remove board note",exact:true}).click();await expect(card).toHaveCount(0);
@@ -98,7 +98,7 @@ test("saving fitness history cannot swallow the separate Save balances action",a
 
 
 test("a populated board scrolls without squeezing text out of its note cards",async({page,isMobile})=>{
-  const {uniqueText}=await import("./fixtures");const title=uniqueText("Read the complete note");await signInEmployee(page,uniqueEmail("board-reading"),"/");
+  const {uniqueText}=await import("./fixtures");const title=uniqueText("Read the complete note");await signInEmployee(page,uniqueEmail("board-reading"),"/board");
   for(let i=0;i<4;i++)expect((await page.request.post("/api/notices",{data:{kind:"quote",body:uniqueText("A readable team note with enough detail to explain the whole idea. ".repeat(5)),title,color:"blue",anonymous:false}})).ok()).toBe(true);
   await page.reload();if(isMobile)await page.getByRole("button",{name:"Office Notice Board",exact:true}).click();
   const board=page.getByRole("region",{name:"Office Notice Board",exact:true});await expect(board.getByRole("article").filter({hasText:title})).toHaveCount(4);

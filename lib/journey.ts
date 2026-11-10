@@ -13,6 +13,6 @@ export function attendanceView(params: Pick<URLSearchParams,"get">, today: strin
   return { tab,date,month:date?.slice(0,7) ?? (month && /^\d{4}-(0[1-9]|1[0-2])$/.test(month)?month:today.slice(0,7)),request:params.get("request") };
 }
 export function boardHref(id?: string) {
-  return `/?view=board${id ? `&announcement=${encodeURIComponent(id)}#announcement-${encodeURIComponent(id)}` : ""}`;
+  return `/board?view=board${id ? `&announcement=${encodeURIComponent(id)}#announcement-${encodeURIComponent(id)}` : ""}`;
 }
 export function eventHref(id: string) { return `/events?event=${encodeURIComponent(id)}#event-${encodeURIComponent(id)}`; }

@@ -175,7 +175,7 @@ describe("employee sessions & oauth state", () => {
       const { cookie, state } = createOauthState(path);
       expect(verifyOauthState(cookie, state)).toBe("/");
     }
-    expect(sanitizeNext("/planner?month=2026-10#today")).toBe("/planner?month=2026-10#today");
+    expect(sanitizeNext("/attendance?month=2026-10#today")).toBe("/attendance?month=2026-10#today");
   });
 });
 

@@ -1,4 +1,4 @@
-import { adminLogin, adminTab, expect, test, uniqueEmail, uniqueText, signInOffice, signInEmployee } from "./fixtures";
+import { adminLogin, adminTab, expect, test, uniqueText, signInOffice, signInEmployee } from "./fixtures";
 
 test.describe("Admin", () => {
   test("an admin's Google sign-in opens the dashboard with today's stats", async ({ page }) => {

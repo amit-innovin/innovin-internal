@@ -1,4 +1,3 @@
-import { todayIST } from "./time";
 import { boardHref,attendanceHref,eventHref } from "./journey";
 import { fmtShortDate } from "./format";
 import { LEAVE_LABELS, needsApproval } from "./leave";

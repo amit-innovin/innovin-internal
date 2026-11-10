@@ -1,7 +1,7 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
 // Every browser test fails if the page logs an unexpected console error or throws.
-// Expected 4xx responses (validation, closed orders) are part of the flows being tested.
+// Expected 4xx responses (validation) are part of the flows being tested.
 const EXPECTED = /Failed to load resource: the server responded with a status of 4\d\d/;
 
 export const test = base.extend<{ consoleErrors: string[] }>({

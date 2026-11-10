@@ -16,7 +16,7 @@ test.describe("Studio workspace", () => {
     await page.screenshot({ path: `output/playwright/onboarding-${test.info().project.name}.png`, fullPage: true });
   });
 
-  test("office mode and profile persist", async ({ page, browser, isMobile }) => {
+  test("office mode and profile persist", async ({ page, isMobile }) => {
     await page.goto("/api/auth/google?next=/");
     await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible();
     const profile = page.getByRole("button", { name: "Edit profile" }).first();

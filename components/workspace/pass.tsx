@@ -1,8 +1,11 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { mountLanyard } from "@/lib/lanyard";
+import { getJSON } from "@/lib/fetcher";
 import { attendanceHref } from "@/lib/journey";
 import { todayIST } from "@/lib/time";
+type DayMark = "office" | "remote" | "vacation" | "sick" | "festival" | "holiday";
+const DAY_MARK_ICONS: Record<DayMark, string> = { office: "🏢", remote: "🏠", vacation: "🌴", sick: "🤒", festival: "🪔", holiday: "🎉" };
 export function WorkspacePass({ name = "Innovin Team", designation, department, desk, mode, role = "member", joined = false, flipToken = 0 }: { name?: string; role?: "admin" | "member"; designation?: string; department?: string; desk?: string; mode?: "office" | "remote" | null; joined?: boolean; flipToken?: number }) {
  const [flipped,setFlipped]=useState(false), [tilt,setTilt]=useState(0);
  const stageRef=useRef<HTMLDivElement>(null), badgeRef=useRef<HTMLDivElement>(null), canvasRef=useRef<HTMLCanvasElement>(null);
@@ -11,9 +14,10 @@ export function WorkspacePass({ name = "Innovin Team", designation, department, 
  useEffect(()=>{if(!joined||!stageRef.current||!badgeRef.current||!canvasRef.current)return; const mounted=mountLanyard(stageRef.current,badgeRef.current,canvasRef.current,()=>flipRef.current,()=>setFlipped(f=>!f));physics.current=mounted;return()=>{mounted.dispose();physics.current=null;};},[joined]);
  useEffect(()=>{physics.current?.sync();},[flipped]);
  const [first,...parts]=name.split(" "); const last=parts.join(" ") || "Team";
- const filterId=useId(); const [month,setMonth]=useState(()=>todayIST().slice(0,7));
+ const filterId=useId(); const [month,setMonth]=useState(()=>todayIST().slice(0,7)); const [marks,setMarks]=useState<{date:string;kind:DayMark}[]>([]);
  const year=Number(month.slice(0,4)), mon=Number(month.slice(5)); const monthDays=new Date(Date.UTC(year,mon,0)).getUTCDate(); const monthOffset=new Date(Date.UTC(year,mon-1,1)).getUTCDay(); const monthLabel=new Intl.DateTimeFormat("en",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(`${month}-01T00:00:00Z`)).toUpperCase();
  useEffect(()=>{if(flipToken) setFlipped(f=>!f);},[flipToken]);
+ useEffect(()=>{if(!joined||!flipped)return;let active=true;getJSON<{days:{date:string;present:boolean;location?:string;holiday?:string;leave?:{status:string;kind:string;type?:string}}[]}>(`/api/attendance?month=${month}`,"your attendance calendar",{fresh:true}).then(result=>{if(!result||!active)return;setMarks(result.days.flatMap(d=>{let kind:DayMark|undefined;if(d.present)kind=d.location==="remote"?"remote":d.location==="office"?"office":undefined;else if(d.leave?.status==="approved")kind=d.leave.kind==="wfh"?"remote":d.leave.type==="sl"?"sick":d.leave.type==="fl"?"festival":"vacation";else if(d.holiday)kind="holiday";return kind?[{date:d.date,kind}]:[];}));});return()=>{active=false;};},[joined,flipped,month,monthDays]);
  function shift(n:number){setMonth(new Date(Date.UTC(year,mon-1+n,1)).toISOString().slice(0,7));}
 
  return <div ref={stageRef} className={`reference-pass-stage ${joined ? "physics-pass-stage" : "preview-pass-stage"}`} onPointerMove={(e)=>{ if(!joined&&e.pointerType!=="touch") {const r=e.currentTarget.getBoundingClientRect();setTilt((e.clientX-r.left-r.width/2)/40);}}} onPointerLeave={()=>setTilt(0)}>
@@ -122,6 +126,39 @@ export function WorkspacePass({ name = "Innovin Team", designation, department, 
 </div>
 </div>
 
+<div className="card-back-summary-strip">
+<div className="cb-chip chip-office" title="Present in Office">
+<span className="cb-chip-dot"></span>
+<span className="cb-chip-count">{joined ? marks.filter(p=>p.kind==="office").length : "—"}</span>
+<span className="cb-chip-lbl">{"Office"}</span>
+</div>
+<div className="cb-chip chip-wfh" title="Work From Home">
+<span className="cb-chip-dot"></span>
+<span className="cb-chip-count">{joined ? marks.filter(p=>p.kind==="remote").length : "—"}</span>
+<span className="cb-chip-lbl">{"WFH"}</span>
+</div>
+<div className="cb-chip chip-casual" title="Other approved leave">
+<span className="cb-chip-dot"></span>
+<span className="cb-chip-count">{joined ? marks.filter(p=>p.kind==="vacation").length : "—"}</span>
+<span className="cb-chip-lbl">{"Leave"}</span>
+</div>
+<div className="cb-chip chip-sick" title="Sick Leave">
+<span className="cb-chip-dot"></span>
+<span className="cb-chip-count">{joined ? marks.filter(p=>p.kind==="sick").length : "—"}</span>
+<span className="cb-chip-lbl">{"Sick"}</span>
+</div>
+<div className="cb-chip chip-festival" title="Flexible Leave">
+<span className="cb-chip-dot"></span>
+<span className="cb-chip-count">{joined ? marks.filter(p=>p.kind==="festival").length : "—"}</span>
+<span className="cb-chip-lbl">{"Flexible"}</span>
+</div>
+<div className="cb-chip chip-holiday" title="Public Holiday">
+<span className="cb-chip-dot"></span>
+<span className="cb-chip-count">{joined ? marks.filter(p=>p.kind==="holiday").length : "—"}</span>
+<span className="cb-chip-lbl">{"Holiday"}</span>
+</div>
+</div>
+
 <div className="card-back-cal-weekdays">
 <span>{"S"}</span>
 <span>{"M"}</span>
@@ -132,7 +169,7 @@ export function WorkspacePass({ name = "Innovin Team", designation, department, 
 <span>{"S"}</span>
 </div>
 
-<div className="card-back-cal-grid">{Array.from({ length: monthOffset }, (_, i) => <span key={`e-${i}`} />)}{Array.from({ length: monthDays }, (_, i) => <a key={i} href={attendanceHref("calendar",`${month}-${String(i+1).padStart(2,"0")}`)} className="card-cal-day" aria-label={`View attendance for ${month}-${String(i+1).padStart(2,"0")}`}>{i + 1}</a>)}</div>
+<div className="card-back-cal-grid">{Array.from({ length: monthOffset }, (_, i) => <span key={`e-${i}`} />)}{Array.from({ length: monthDays }, (_, i) => <a key={i} href={attendanceHref("calendar",`${month}-${String(i+1).padStart(2,"0")}`)} className="card-cal-day" aria-label={`View attendance for ${month}-${String(i+1).padStart(2,"0")}`}>{i + 1}{marks.find(p=>p.date===`${month}-${String(i+1).padStart(2,"0")}`)?.kind ? <small>{DAY_MARK_ICONS[marks.find(p=>p.date===`${month}-${String(i+1).padStart(2,"0")}`)!.kind]}</small> : null}</a>)}</div>
 
 <div className="card-back-day-status">
 <span className="status-indicator-dot"></span>
@@ -140,6 +177,14 @@ export function WorkspacePass({ name = "Innovin Team", designation, department, 
 </div>
 
 <div className="card-back-footer">
+<div className="card-back-legend">
+<span className="legend-tag tag-office"><i className="dot"></i>{"Office"}</span>
+<span className="legend-tag tag-wfh"><i className="dot"></i>{"WFH"}</span>
+<span className="legend-tag tag-casual"><i className="dot"></i>{"Leave"}</span>
+<span className="legend-tag tag-sick"><i className="dot"></i>{"Sick"}</span>
+<span className="legend-tag tag-festival"><i className="dot"></i>{"Flexible"}</span>
+<span className="legend-tag tag-holiday"><i className="dot"></i>{"Holiday"}</span>
+</div>
 <div className="card-back-meta">
 <span className="meta-crypto-id">ATTENDANCE HISTORY</span>
 <button className="btn-flip-back-card" type="button" title="Flip to front face" onClick={() => setFlipped(false)}>

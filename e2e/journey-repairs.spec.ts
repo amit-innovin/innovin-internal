@@ -62,7 +62,7 @@ test("same-route event notifications load the target omitted from the initial li
   await page.goForward();await expect(page.getByRole("heading",{name:"Notification target event",exact:true})).toBeVisible();
 });
 
-test("the pass flip side lists the month and links each day to its attendance record",async({page,isMobile})=>{
+test("the pass shows recorded attendance counts and links each day to its record",async({page,isMobile})=>{
   const {signInOffice}=await import("./fixtures");await signInOffice(page,uniqueEmail("pass-record"));
   const {today}=await(await page.request.get("/api/workspace")).json();
   await page.reload();
@@ -71,7 +71,7 @@ test("the pass flip side lists the month and links each day to its attendance re
     const back=page.locator('.phone-id-back[aria-hidden="false"]');await expect(back.getByRole("button",{name:/In office/})).toHaveCount(1);
   }else{
     await page.getByRole("button",{name:"Flip ID card",exact:true}).click();
-    const back=page.locator('.face-back[aria-hidden="false"]');
+    const back=page.locator('.face-back[aria-hidden="false"]');await expect(back.locator(".chip-office .cb-chip-count")).toHaveText("1");await expect(back.locator(".chip-sick .cb-chip-count")).toHaveText("0");
     await back.getByRole("link",{name:`View attendance for ${today}`,exact:true}).click();await expect(page).toHaveURL(new RegExp(`tab=calendar&date=${today}`));
   }
 });

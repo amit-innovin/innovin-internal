@@ -1,7 +1,7 @@
 import { expect, request, test, type APIRequestContext } from "@playwright/test";
 import { MAIN_URL } from "../playwright.config";
 import { futureWorkday } from "./dates";
-import { LEGACY_WFH } from "./legacy-wfh";
+import { LEGACY_WFH, LEGACY_WFH_CANCEL } from "./legacy-wfh";
 
 // HTTP-level verification of validation, auth, privacy, idempotency and abuse limits.
 const FUTURE = futureWorkday();
@@ -273,16 +273,27 @@ test.describe("API: behaviour", () => {
     const queue = await (await adm.get("/api/away?scope=pending")).json();
     expect(queue.map((r: { id: string }) => r.id)).not.toContain(LEGACY_WFH.id);
 
+    // Positive control: a pending leave request does reach the admin feed, so the WFH row's
+    // absence below means it was filtered, not that the feed was empty.
+    const who = email();
+    const control = await (await (await signedIn(who)).post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE } })).json();
     const feed = await (await adm.get("/api/notifications")).json();
-    expect(JSON.stringify(feed.items)).not.toContain(LEGACY_WFH.id);
+    const ids = feed.items.map((i: { id: string }) => i.id);
+    expect(ids).toContain(`pending-away-${control.id}`);
+    expect(ids).not.toContain(`pending-away-${LEGACY_WFH.id}`);
+    expect((await adm.patch("/api/away", { data: { id: control.id, status: "cancelled" } })).status()).toBe(200);
 
     for (const status of ["approved", "rejected"]) {
       const res = await adm.patch("/api/away", { data: { id: LEGACY_WFH.id, status } });
       expect(res.status()).toBe(409);
       expect((await res.json()).error).toBe("WFH requests no longer need approval");
     }
+  });
 
-    expect((await owner.patch("/api/away", { data: { id: LEGACY_WFH.id, status: "cancelled" } })).status()).toBe(200);
+  test("the owner can still cancel their own pending WFH row", async () => {
+    test.skip(!!process.env.E2E_DATABASE_URL, "the legacy row is seeded into the JSON data file only");
+    const owner = await signedIn(LEGACY_WFH_CANCEL.email);
+    expect((await owner.patch("/api/away", { data: { id: LEGACY_WFH_CANCEL.id, status: "cancelled" } })).status()).toBe(200);
   });
 
   test("leave is charged in working days, skipping Sundays, 2nd/4th Saturdays and holidays", async () => {

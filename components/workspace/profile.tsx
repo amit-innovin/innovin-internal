@@ -7,7 +7,7 @@ import { StudioDialog } from "./dialog";
 
 export function ProfileEditor({ profile, onClose, onSaved, readOnly = false, personName }: { profile: WorkspaceProfile | null; onClose: () => void; onSaved: () => Promise<void>; readOnly?: boolean; personName?:string }) {
   const [busy, setBusy] = useState(false);
-  return <StudioDialog title={readOnly ? `${personName} · Team profile` : "Make this space yours"} description={readOnly ? "Shared office profile. Send a private note to get in touch." : "Let your teammates know where to find you and what you're working on."} onClose={()=>{if(!busy)onClose();}}>
+  return <StudioDialog title={readOnly ? `${personName} · Team profile` : "Make this space yours"} description={readOnly ? "Shared office profile." : "Let your teammates know where to find you and what you're working on."} onClose={()=>{if(!busy)onClose();}}>
     <form className="studio-form" onSubmit={async (e) => {
       e.preventDefault(); if (busy || readOnly) return;
       const json = Object.fromEntries(new FormData(e.currentTarget));

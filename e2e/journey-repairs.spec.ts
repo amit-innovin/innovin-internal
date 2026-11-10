@@ -62,16 +62,16 @@ test("same-route event notifications load the target omitted from the initial li
   await page.goForward();await expect(page.getByRole("heading",{name:"Notification target event",exact:true})).toBeVisible();
 });
 
-test("the pass shows recorded attendance rather than a conflicting private plan",async({page,isMobile})=>{
+test("the pass flip side lists the month and links each day to its attendance record",async({page,isMobile})=>{
   const {signInOffice}=await import("./fixtures");await signInOffice(page,uniqueEmail("pass-record"));
-  const {today}=await(await page.request.get("/api/workspace")).json();await page.request.post("/api/planner",{data:{date:today,kind:"sick"}});
+  const {today}=await(await page.request.get("/api/workspace")).json();
   await page.reload();
   if(isMobile){
     await page.getByRole("button",{name:"Flip workspace pass",exact:true}).click();
     const back=page.locator('.phone-id-back[aria-hidden="false"]');await expect(back.getByRole("button",{name:/In office/})).toHaveCount(1);
   }else{
     await page.getByRole("button",{name:"Flip ID card",exact:true}).click();
-    const back=page.locator('.face-back[aria-hidden="false"]');await expect(back.locator(".chip-office .cb-chip-count")).toHaveText("1");await expect(back.locator(".chip-sick .cb-chip-count")).toHaveText("0");
+    const back=page.locator('.face-back[aria-hidden="false"]');
     await back.getByRole("link",{name:`View attendance for ${today}`,exact:true}).click();await expect(page).toHaveURL(new RegExp(`tab=calendar&date=${today}`));
   }
 });
@@ -82,31 +82,6 @@ test("removing a public board post requires a deliberate confirmation",async({pa
   const card=page.getByRole("article").filter({hasText:text});await expect(card).toBeVisible();page.once("dialog",d=>d.dismiss());await card.getByRole("button",{name:"Remove board note",exact:true}).click();await expect(card).toBeVisible();
   page.once("dialog",d=>d.accept());await card.getByRole("button",{name:"Remove board note",exact:true}).click();await expect(card).toHaveCount(0);
 });
-
-test("a personal plan keeps its selected future month and date after reload",async({page})=>{
-  await signInEmployee(page,uniqueEmail("future-plan"),"/planner?date=2026-11-05");
-  await expect(page.getByRole("button",{name:"Select 2026-11-05",exact:true})).toBeVisible();
-  await page.getByRole("button",{name:"🌴 Vacation",exact:true}).click();await expect(page.getByText("Calendar updated",{exact:true})).toBeVisible();
-  await page.reload();await expect(page.getByRole("button",{name:"Select 2026-11-05",exact:true})).toContainText("Vacation");
-  await expect(page).toHaveURL(/date=2026-11-05/);await page.getByRole("button",{name:"Next month",exact:true}).click();await expect(page).toHaveURL(/date=2026-12-01/);
-  await page.goBack();await expect(page.getByRole("button",{name:"Select 2026-11-05",exact:true})).toContainText("Vacation");
-});
-
-
-test("browser Back during a personal-plan save cannot replace the visible month with stale plans",async({page})=>{
-  await signInEmployee(page,uniqueEmail("plan-race"),"/planner?date=2026-11-05");
-  await page.request.post("/api/planner",{data:{date:"2026-11-05",kind:"office"}});await page.waitForLoadState("networkidle");await page.reload();
-  await page.getByRole("button",{name:"Next month",exact:true}).click();await expect(page).toHaveURL(/date=2026-12-01/);
-  // Settle unrelated link prefetches before holding the actual save across Back.
-  await page.waitForLoadState("networkidle");
-  let release!:()=>void,arrived!:()=>void;const held=new Promise<void>(r=>release=r),started=new Promise<void>(r=>arrived=r);
-  await page.route("**/api/planner",async route=>{if(route.request().method()==="POST"){arrived();await held;}await route.continue();});
-  await page.getByRole("button",{name:"🌴 Vacation",exact:true}).click();await started;await page.goBack();
-  await expect(page.getByRole("heading",{name:"November 2026",exact:true})).toBeVisible();release();await expect(page.getByText("Calendar updated",{exact:true})).toBeVisible();
-  await expect(page.getByRole("button",{name:"Select 2026-11-05",exact:true})).toContainText("In office");
-  await expect(page.locator(".planner-stats").getByText("Vacation days planned").locator("..")).toContainText("0");
-});
-
 
 test("saving fitness history cannot swallow the separate Save balances action",async({page})=>{
   const email=uniqueEmail(`independent-admin-saves-${Date.now()}`);await signInEmployee(page,email,"/");

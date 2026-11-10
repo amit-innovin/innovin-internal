@@ -20,7 +20,7 @@ test.describe("Navigation & studio shell", () => {
     await page.getByRole("link",{name:"Innovin Internal home"}).click();
     await expect(page).toHaveURL("http://localhost:3210/");
     const more = page.getByRole("navigation", { name: "More workspace tools", exact: true });
-    for (const [label, heading] of [["Attendance", "Attendance"], ["People", "People"], ["Events", "Events"], ["Speak Up", "Speak Up"], ["Wi-Fi", "Wi-Fi Quality"]]) {
+    for (const [label, heading] of [["Attendance", "Attendance"], ["Events", "Events"], ["Speak Up", "Speak Up"], ["Wi-Fi", "Wi-Fi Quality"]]) {
       if (isMobile && new URL(page.url()).pathname === "/") {
         await page.getByRole("link", { name: "Attendance & leave", exact: true }).click();
       } else {
@@ -53,7 +53,7 @@ test.describe("Navigation & studio shell", () => {
 
   test("feature pages use the persistent shell without redundant back links", async ({ page }) => {
     await signInEmployee(page, undefined, "/");
-    for (const path of ["/events", "/people", "/settings", "/help", "/attendance", "/wifi"]) {
+    for (const path of ["/events", "/settings", "/help", "/attendance", "/wifi"]) {
       await page.goto(path);
       await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "Innovin Internal home" })).toBeVisible();
@@ -77,7 +77,7 @@ test.describe("Navigation & studio shell", () => {
 
   test("signed-in pages never overflow horizontally", async ({ page }) => {
     await signInOffice(page);
-    for (const path of ["/", "/steps", "/planner", "/attendance", "/grievances", "/wifi", "/events", "/people", "/settings", "/help", "/admin"]) {
+    for (const path of ["/", "/steps", "/attendance", "/grievances", "/wifi", "/events", "/settings", "/help", "/admin"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBeLessThanOrEqual(0);

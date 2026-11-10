@@ -18,7 +18,6 @@ import type {
   Store,
   WifiRow,
   WorkspaceProfile,
-  PlannerDay,
 } from "./types";
 
 // Postgres persistence — used when DATABASE_URL is set (Neon, Supabase, Vercel Postgres).
@@ -38,12 +37,6 @@ CREATE TABLE IF NOT EXISTS notice_reactions (
 CREATE TABLE IF NOT EXISTS workspace_profiles (
   email text PRIMARY KEY,
   data jsonb NOT NULL DEFAULT '{}'::jsonb
-);
-CREATE TABLE IF NOT EXISTS planner_days (
-  email text NOT NULL,
-  date text NOT NULL,
-  kind text NOT NULL CHECK (kind IN ('office','remote','vacation','sick','festival','holiday')),
-  PRIMARY KEY (email, date)
 );
 CREATE TABLE IF NOT EXISTS attendance (
   id text PRIMARY KEY,
@@ -365,17 +358,6 @@ class PgStore implements Store {
       ON CONFLICT (email) DO UPDATE SET data = workspace_profiles.data || $3::jsonb RETURNING data`,
       [email, JSON.stringify({ ...defaults, ...patch }), JSON.stringify(patch)]);
     return { ...res.rows[0].data, email };
-  }
-  async setPlannerDay(row: PlannerDay) {
-    await this.q(`INSERT INTO planner_days (email, date, kind) VALUES ($1,$2,$3)
-      ON CONFLICT (email, date) DO UPDATE SET kind = EXCLUDED.kind`, [row.email, row.date, row.kind]);
-  }
-  async deletePlannerDay(email: string, date: string) {
-    await this.q(`DELETE FROM planner_days WHERE email = $1 AND date = $2`, [email, date]);
-  }
-  async listPlannerDays(email: string, from: string, to: string): Promise<PlannerDay[]> {
-    const res = await this.q(`SELECT email, date, kind FROM planner_days WHERE email = $1 AND date >= $2 AND date <= $3 ORDER BY date`, [email, from, to]);
-    return res.rows;
   }
   private pool: Pool | null = null;
   private ready: Promise<void> | null = null;

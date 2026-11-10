@@ -162,9 +162,6 @@ export type WorkspaceProfile = {
   presenceDate: string;
 };
 
-export type PlannerKind = "office" | "remote" | "vacation" | "sick" | "festival" | "holiday";
-export type PlannerDay = { email: string; date: string; kind: PlannerKind };
-
 export type NoticeRow = {
   id: string;
   kind: "quote" | "feedback";
@@ -189,9 +186,6 @@ export interface Store {
   getWorkspaceProfile(email: string): Promise<WorkspaceProfile | null>;
   listWorkspaceProfiles(): Promise<WorkspaceProfile[]>;
   saveWorkspaceProfile(email: string, patch: Partial<Omit<WorkspaceProfile, "email">>): Promise<WorkspaceProfile>;
-  setPlannerDay(row: PlannerDay): Promise<void>;
-  deletePlannerDay(email: string, date: string): Promise<void>;
-  listPlannerDays(email: string, from: string, to: string): Promise<PlannerDay[]>;
   // Returns the open session if one exists, otherwise inserts a new one.
   checkIn(row: AttendanceRow): Promise<AttendanceRow>;
   // Closes the open session; null when there isn't one.

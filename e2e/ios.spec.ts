@@ -72,7 +72,7 @@ test.describe("iPhone workspace", () => {
     await capture(page, "ios-board");
   });
 
-  test("steps and planner work in Safari without losing edits", async ({ page }) => {
+  test("steps work in Safari without losing edits", async ({ page }) => {
     await signInOffice(page);
     await page.getByRole("link", { name: "Daily Steps", exact: true }).click();
     const count = page.getByLabel("Today's total steps");
@@ -84,14 +84,6 @@ test.describe("iPhone workspace", () => {
     await capture(page, "ios-steps");
     await page.getByRole("link", { name: "Attendance & Leave", exact: true }).click();
     await expect(page.getByRole("heading",{name:"Request time away"})).toBeVisible();
-    await page.locator(".reference-more summary").click();
-    await page.getByRole("link",{name:"Personal plans",exact:true}).click();
-    await page.getByRole("button", { name: /Select .*15$/ }).click();
-    await page.getByRole("button", { name: "🌴 Vacation", exact: true }).click();
-    await expect(page.getByText("Calendar updated")).toBeVisible();
-    await page.reload();
-    await expect(page.getByRole("button", { name: /Select .*15$/ })).toContainText("🌴");
     await withinViewport(page);
-    await capture(page, "ios-planner");
   });
 });

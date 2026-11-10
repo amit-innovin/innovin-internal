@@ -16,7 +16,6 @@ import type {
   Store,
   WifiRow,
   WorkspaceProfile,
-  PlannerDay,
 } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
@@ -38,12 +37,11 @@ type DB = {
   pushSubscriptions: PushSubscriptionRow[];
   steps: StepsRow[];
   workspaceProfiles: WorkspaceProfile[];
-  plannerDays: PlannerDay[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
 const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0 });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], plannerDays: [] });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -139,16 +137,6 @@ export const jsonStore: Store = {
     Object.assign(profile, patch, { email });
     return { result: profile, changed: true };
   }),
-  setPlannerDay: (row) => mutate((db) => {
-    db.plannerDays = db.plannerDays.filter((d) => d.email !== row.email || d.date !== row.date);
-    db.plannerDays.push(row);
-    return { result: undefined, changed: true };
-  }),
-  deletePlannerDay: (email, date) => mutate((db) => {
-    db.plannerDays = db.plannerDays.filter((d) => d.email !== email || d.date !== date);
-    return { result: undefined, changed: true };
-  }),
-  listPlannerDays: (email, from, to) => query((db) => db.plannerDays.filter((d) => d.email === email && d.date >= from && d.date <= to).sort((a, b) => a.date.localeCompare(b.date))),
   // One row per person per day: a fresh check-in reopens the day's row (back in = in again),
   // so the row's checkInAt is always the most recent arrival.
   checkIn: (row) =>

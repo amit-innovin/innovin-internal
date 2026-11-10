@@ -1,5 +1,5 @@
 import { attendanceHref } from "@/lib/journey";
-import { validPlannerDate } from "@/lib/workspace-model";
+import { validDate } from "@/lib/time";
 import { NextRequest, NextResponse } from "next/server";
 import { currentActor, isAdmin } from "@/lib/admin";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   }
   if (type !== "leave" && type !== "wfh") return badRequest("Choose Leave or WFH");
   if (type === "leave" && !leaveType) return badRequest("Choose a leave type");
-  if (!validPlannerDate(startDate) || !validPlannerDate(endDate)) return badRequest("Pick valid dates");
+  if (!validDate(startDate) || !validDate(endDate)) return badRequest("Pick valid dates");
   if (startDate > endDate) return badRequest("Start date can't be after the end date");
   if (dayDiff(startDate, endDate) > MAX_SPAN_DAYS) return badRequest("Requests can span at most 3 months");
   if (halfDay && (startDate !== endDate || leaveType !== "cl")) {

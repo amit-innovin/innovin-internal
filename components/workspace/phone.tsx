@@ -7,11 +7,10 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { CalendarDays, Expand, Footprints, House, Pin, RotateCw, Settings, UserRound, X } from "lucide-react";
 import type { WorkspaceData } from "@/lib/workspace";
 import type { WorkspaceView } from "./portal";
-import { WorkspacePlanner } from "./planner";
 import Notifications from "@/components/notifications";
 
-type Props = { data: WorkspaceData; view: WorkspaceView; presence: ReactNode; arena: ReactNode; events: ReactNode; board: ReactNode; steps: ReactNode; planner: ReactNode; onProfile: () => void; keyboardOpen: boolean };
-export function PhoneWorkspace({ data, view, presence, arena, events, board, steps, planner, onProfile, keyboardOpen }: Props) {
+type Props = { data: WorkspaceData; view: WorkspaceView; presence: ReactNode; arena: ReactNode; events: ReactNode; board: ReactNode; steps: ReactNode; onProfile: () => void; keyboardOpen: boolean };
+export function PhoneWorkspace({ data, view, presence, arena, events, board, steps, onProfile, keyboardOpen }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [flipped, setFlipped] = useState(false);
   const router=useRouter();
@@ -26,9 +25,9 @@ export function PhoneWorkspace({ data, view, presence, arena, events, board, ste
   }
 
   return <div className="phone-touchpoint-wrapper phone-workspace-polished" data-keyboard-open={keyboardOpen || undefined}><div className="phone-touchpoint-container">
-    <div className="phone-page-header"><div className="phone-heading-row"><h2 className="phone-brand-title">{notice ? "Notice Board" : view === "steps" ? "Activity & Steps" : view === "planner" ? "Your Planner" : "Innovin internal"}</h2><div className="phone-account-tools"><button aria-label="Edit profile" onClick={onProfile}><UserRound size={18} /></button><Notifications /><Link href="/attendance?tab=leave" aria-label="Attendance & Leave"><CalendarDays size={18} /></Link><Link href="/settings" aria-label="Settings"><Settings size={18} /></Link></div></div><span className="phone-page-subtitle">{notice ? "Company memos, quotes & team feedback" : view === "steps" ? "Daily movement · The team challenge" : view === "planner" ? "Your days, your rhythm" : "Personal Workspace & Passes"}</span></div>
+    <div className="phone-page-header"><div className="phone-heading-row"><h2 className="phone-brand-title">{notice ? "Notice Board" : view === "steps" ? "Activity & Steps" : "Innovin internal"}</h2><div className="phone-account-tools"><button aria-label="Edit profile" onClick={onProfile}><UserRound size={18} /></button><Notifications /><Link href="/attendance?tab=leave" aria-label="Attendance & Leave"><CalendarDays size={18} /></Link><Link href="/settings" aria-label="Settings"><Settings size={18} /></Link></div></div><span className="phone-page-subtitle">{notice ? "Company memos, quotes & team feedback" : view === "steps" ? "Daily movement · The team challenge" : "Personal Workspace & Passes"}</span></div>
     {!notice && view === "overview" && <div className="phone-presence-bar">{presence}</div>}
-    {notice ? <div className="phone-notice-body">{board}</div> : view === "steps" ? <div className="phone-steps-body">{steps}</div> : view === "planner" ? <div className="phone-planner-body">{planner}</div> : <div className={`phone-cards-stack ${expanded ? "has-expanded" : ""}`}>
+    {notice ? <div className="phone-notice-body">{board}</div> : view === "steps" ? <div className="phone-steps-body">{steps}</div> : <div className={`phone-cards-stack ${expanded ? "has-expanded" : ""}`}>
       <section className={`phone-stack-card card-innovin-pass ${flipped ? "is-flipped is-expanded" : ""}`}>
         <div className="phone-id-card-flipper"><div className="phone-id-face phone-id-front" aria-hidden={flipped} inert={flipped}><div className="phone-id-top"><span className="phone-id-label">DIGITAL INNOVIN ID PASS</span><button className="phone-btn-flip-card" aria-label="Flip workspace pass" onClick={() => setFlipped(true)}><RotateCw size={18} /></button></div><div className="phone-id-person"><h2 className="phone-id-name" title={data.user.name}>{data.user.name}</h2><span className="phone-id-role" title={data.profile?.designation || "Workspace member"}>{data.profile?.designation || "Workspace member"}</span></div></div>
           <div className="phone-id-face phone-id-back" aria-hidden={!flipped} inert={!flipped}><div className="phone-cal-top"><span className="phone-cal-month-label">YOUR ATTENDANCE CALENDAR</span><button className="phone-cal-close-btn" aria-label="Close pass calendar" onClick={() => setFlipped(false)}><X size={18} /></button></div>{flipped && <AttendanceCalendar navigate={false} />}</div></div>
@@ -37,7 +36,7 @@ export function PhoneWorkspace({ data, view, presence, arena, events, board, ste
         <div className="phone-card-header-bar"><div className="phone-card-title-wrap"><h3 className="phone-card-title">{title}</h3><span className={key === "arena" ? "phone-live-pulse-badge" : key === "events" ? "phone-card-badge-violet" : "phone-card-badge-amber"}>{subtitle}</span></div><div className="phone-card-header-actions">{<><button className="phone-btn-expand" aria-label={`Expand ${key === "arena" ? "People in Office" : "Events"}`} aria-expanded={expanded === key} aria-controls={`${cardId}-${key}`} ref={button => { expandButtons.current[key as string] = button; }} onClick={() => setExpanded(key as string)}><Expand size={18} /></button><button className="phone-btn-close-card" aria-label={`Close ${key}`} onClick={() => closeCard(key as string)}><X size={18} /></button></>}</div></div>
         <div className="phone-expanded-body" id={`${cardId}-${key}`} role="region" aria-label={title as string}>{expanded === key && content}</div>
       </section>)}
-      <div className="phone-wallet-links"><a href={`/api/auth/google?next=${encodeURIComponent(pathname+(params.size?`?${params}`:""))}`}>Switch account</a><Link href="/attendance">Attendance &amp; leave</Link><Link href="/people">Team directory</Link><Link href="/wifi?check=1">Wi-Fi pulse</Link><Link href="/grievances">Speak Up</Link><Link href="/help">Help</Link>{data.canModerate && <Link href="/admin">Admin</Link>}</div>
+      <div className="phone-wallet-links"><a href={`/api/auth/google?next=${encodeURIComponent(pathname+(params.size?`?${params}`:""))}`}>Switch account</a><Link href="/attendance">Attendance &amp; leave</Link><Link href="/wifi?check=1">Wi-Fi pulse</Link><Link href="/grievances">Speak Up</Link><Link href="/help">Help</Link>{data.canModerate && <Link href="/admin">Admin</Link>}</div>
     </div>}
     <nav className="phone-bottom-dock" aria-label="Phone workspace navigation">
       <Link className={`phone-dock-item ${view === "overview" && !notice ? "active" : ""}`} href="/" aria-label="Overview" aria-current={view === "overview" && !notice ? "page" : undefined} ><House size={22} /><span>Home</span></Link>

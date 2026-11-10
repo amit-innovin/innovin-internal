@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarDays, CircleHelp, Footprints, House, MessageSquare, Settings, ShieldCheck, Users, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CircleHelp, Footprints, House, MessageSquare, Settings, ShieldCheck, Wifi } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Logo, Wave } from "@/components/brand";
 import Notifications from "@/components/notifications";
@@ -24,7 +24,6 @@ const PRIMARY: Item[] = [
 const SECONDARY: Item[] = [
   { href: "/steps", label: "10K Steps", short: "Steps", icon: Footprints },
   { href: "/events", label: "Events", short: "Events", icon: CalendarDays },
-  { href: "/people", label: "People", short: "People", icon: Users },
   { href: "/settings", label: "Settings", short: "Settings", icon: Settings },
   { href: "/help", label: "Help", short: "Help", icon: CircleHelp },
 ];

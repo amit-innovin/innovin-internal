@@ -35,7 +35,7 @@ async function officeDevice() {
 }
 
 test.describe("API: removed features", () => {
-  for (const path of ["/api/snacks", "/api/pantry-shop", "/api/pantry-provider", "/api/pings"]) {
+  for (const path of ["/api/snacks", "/api/pantry-shop", "/api/pantry-provider", "/api/pings", "/api/planner"]) {
     test(`removed API ${path} is gone`, async ({ request }) => {
       expect((await request.get(path)).status()).toBe(404);
     });

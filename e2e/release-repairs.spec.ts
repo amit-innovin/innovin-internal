@@ -1,15 +1,5 @@
 import { expect, test, signInEmployee, uniqueEmail, uniqueText } from "./fixtures";
 
-test("a failed employee read offers recovery instead of an endless skeleton", async ({ page }) => {
-  await signInEmployee(page, uniqueEmail(), "/");
-  await page.route("**/api/people", route => route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "Try again" }) }));
-  await page.goto("/people");
-  await expect(page.getByRole("alert").filter({ hasText: "Try again" })).toContainText("couldn't load");
-  await page.unroute("**/api/people");
-  await page.getByRole("button", { name: "Try again", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Everyone", exact: false })).toBeVisible();
-});
-
 test("employee RSVP follows the account across devices", async ({ page, browser }) => {
   const email = uniqueEmail();
   await signInEmployee(page, email, "/");

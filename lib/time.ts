@@ -13,3 +13,8 @@ export function istHour() {
     10,
   );
 }
+
+// True only for a real calendar day written as YYYY-MM-DD ("2026-02-30" and "10-11-2026" are not).
+export function validDate(date: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(`${date}T00:00:00Z`)) && new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === date;
+}

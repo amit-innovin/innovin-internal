@@ -5,13 +5,24 @@ import { clientIp, readJSON } from "@/lib/http";
 import { distanceM, locationTag, officeLocation } from "@/lib/geo";
 import { pgConfig } from "@/lib/pgconfig";
 import { hit, peek, reset, resetAll } from "@/lib/rate-limit";
-import { istHour, todayIST } from "@/lib/time";
+import { istHour, todayIST, validDate } from "@/lib/time";
 
 const post = (body: string) => new Request("http://x/api", { method: "POST", body, headers: { "Content-Type": "application/json" } });
 
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.useRealTimers();
+});
+
+describe("validDate", () => {
+  it("accepts real ISO calendar dates and rejects impossible or non-ISO ones", () => {
+    expect(validDate("2026-11-10")).toBe(true);
+    expect(validDate("2028-02-29")).toBe(true);
+    expect(validDate("2026-02-30")).toBe(false);
+    expect(validDate("2026-02-29")).toBe(false);
+    expect(validDate("10-11-2026")).toBe(false);
+    expect(validDate("2026-10-15-extra")).toBe(false);
+  });
 });
 
 describe("IST time", () => {

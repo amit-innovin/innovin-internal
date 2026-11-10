@@ -9,14 +9,13 @@ import { WorkspacePass } from "./pass";
 import { ProfileEditor } from "./profile";
 import { OfficeArena } from "./arena";
 import { WorkspaceEvents } from "./events";
-import { WorkspacePlanner } from "./planner";
 import { WorkspaceSteps } from "./steps";
 import { NoticeBoard } from "./notice-board";
 import { LeaveChips } from "./leave-chips";
 import { PhoneWorkspace } from "./phone";
 import { useMobileViewport } from "@/lib/hooks/use-mobile-viewport";
 
-export type WorkspaceView = "overview" | "steps" | "planner";
+export type WorkspaceView = "overview" | "steps";
 export function WorkspacePortal({ initial, view = "overview" }: { initial: WorkspaceData; view?: WorkspaceView }) {
   const [flipToken, setFlipToken] = useState(0);
   const [data, setData] = useState(initial);
@@ -62,11 +61,10 @@ export function WorkspacePortal({ initial, view = "overview" }: { initial: Works
   const arena = <OfficeArena data={data} onSaved={reload} />;
   const events = <WorkspaceEvents initial={data.events} onSaved={reload} />;
   const steps = <WorkspaceSteps data={data} onSaved={reload} compact={!!phone} />;
-  const planner = <WorkspacePlanner today={data.today} />;
   const p = data.profile;
-  const phoneContent = <PhoneWorkspace data={data} view={view} presence={presenceControl} arena={arena} events={events} board={board} steps={steps} planner={planner} onProfile={() => setProfileOpen(true)} keyboardOpen={keyboardOpen} />;
+  const phoneContent = <PhoneWorkspace data={data} view={view} presence={presenceControl} arena={arena} events={events} board={board} steps={steps} onProfile={() => setProfileOpen(true)} keyboardOpen={keyboardOpen} />;
   return <div className={`studio-workspace zip-workspace ${phone ? "is-phone" : ""}`}>
-    <h1 className="sr-only">{view === "overview" ? "Your workspace" : view === "steps" ? "A little healthy competition" : "Your days, your rhythm"}</h1>
+    <h1 className="sr-only">{view === "overview" ? "Your workspace" : "A little healthy competition"}</h1>
     {phone === null ? <div role="status" className="workspace-loading">Loading your workspace…</div> : phone ? phoneContent : view === "overview" ? <div className="dashboard-grid">
       <div className="dash-col dash-col-personal">
         <section className="widget-card id-card-widget">
@@ -82,7 +80,7 @@ export function WorkspacePortal({ initial, view = "overview" }: { initial: Works
         <section className="widget-card quick-steps-banner"><div className="quick-steps-left"><div className="steps-fire-badge"><Flame size={18} /></div><div className="steps-text-wrap"><h4>Steps: <span className="highlight-steps">{(data.steps.me?.today?.steps ?? 0).toLocaleString()}</span> <span className="goal-dim">/ {data.steps.goal.toLocaleString()}</span></h4><p>{data.prize || `${Math.max(0, data.steps.goal - (data.steps.me?.today?.steps ?? 0)).toLocaleString()} steps to your daily goal`}</p></div></div><Link className="primary-btn btn-sm btn-jump-to-steps" href="/steps" aria-label="View Steps Leaderboard">Ranks →</Link></section>
         {events}
       </div>
-    </div> : view === "steps" ? steps : planner}
+    </div> : steps}
     {profileOpen && <ProfileEditor profile={p} onClose={() => setProfileOpen(false)} onSaved={reload} />}
   </div>;
 }

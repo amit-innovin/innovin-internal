@@ -60,25 +60,10 @@ test.describe("Studio workspace", () => {
     await expect(page.locator("article").filter({ hasText: title }).getByRole("button", { name: "Cancel RSVP" })).toBeVisible();
   });
 
-  test("calendar editing persists without rewriting attendance or HR approvals", async ({ page }) => {
-    await page.goto("/api/auth/google?next=/planner");
-    await page.getByRole("button", { name: /Select .*15$/ }).click();
-    await page.getByRole("button", { name: "🌴 Vacation", exact: true }).click();
-    await expect(page.getByText("Calendar updated")).toBeVisible();
-    await page.reload();
-    await expect(page.getByRole("button", { name: /Select .*15$/ })).toContainText("🌴");
-    await expect(page.getByText(/Personal plans.*HR approval/)).toBeVisible();
-    await page.getByRole("button", { name: /Select .*15$/ }).click();
-    await page.getByRole("button", { name: "Clear day", exact: true }).click();
-    await expect(page.getByText("Calendar updated")).toBeVisible();
-  });
-
-  test("new endpoints deny anonymous writes and reject invalid dates", async ({ request, page }) => {
+  test("new endpoints deny anonymous writes and reject invalid input", async ({ request, page }) => {
     expect((await request.post("/api/workspace", { data: { mode: "office" } })).status()).toBe(401);
-    expect((await request.post("/api/planner", { data: { date: "2026-10-15", kind: "office" } })).status()).toBe(401);
     expect((await request.post("/api/events", { data: { title: "Forged" } })).status()).toBe(401);
     await page.goto("/api/auth/google?next=/");
-    expect((await page.request.post("/api/planner", { data: { date: "2026-02-29", kind: "office" } })).status()).toBe(400);
     expect((await page.request.post("/api/workspace", { data: { mode: "admin" } })).status()).toBe(400);
   });
 

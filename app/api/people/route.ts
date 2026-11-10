@@ -1,4 +1,4 @@
-import { validPlannerDate } from "@/lib/workspace-model";
+import { validDate } from "@/lib/time";
 import { attendanceLocation } from "@/lib/presence";
 import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
@@ -66,7 +66,7 @@ export async function PATCH(req: NextRequest) {
   // Joining date drives Earned Leave accrual and Flexible Leave pro-rating; "" clears it.
   if (body?.joinedOn !== undefined) {
     const joinedOn = str(body.joinedOn).trim();
-    if (joinedOn && !validPlannerDate(joinedOn)) return badRequest("Pick a valid joining date");
+    if (joinedOn && !validDate(joinedOn)) return badRequest("Pick a valid joining date");
     await store.setJoinedOn(email, joinedOn || null);
     return NextResponse.json({ ok: true });
   }

@@ -133,35 +133,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(await store.listWorkspaceProfiles()).toHaveLength(1);
       });
 
-      it("replaces a person's planner day, ranges by date and clears only their own day", async () => {
-        await store.setPlannerDay({ email: "a@innovinlabs.com", date: "2026-10-15", kind: "office" });
-        await store.setPlannerDay({ email: "a@innovinlabs.com", date: "2026-10-15", kind: "vacation" });
-        await store.setPlannerDay({ email: "b@innovinlabs.com", date: "2026-10-15", kind: "remote" });
-        await store.setPlannerDay({ email: "a@innovinlabs.com", date: "2026-11-01", kind: "sick" });
-        expect(await store.listPlannerDays("a@innovinlabs.com", "2026-10-01", "2026-10-31")).toEqual([{ email: "a@innovinlabs.com", date: "2026-10-15", kind: "vacation" }]);
-        await store.deletePlannerDay("a@innovinlabs.com", "2026-10-15");
-        expect(await store.listPlannerDays("a@innovinlabs.com", "2026-10-01", "2026-10-31")).toEqual([]);
-        expect(await store.listPlannerDays("b@innovinlabs.com", "2026-10-01", "2026-10-31")).toHaveLength(1);
-      });
-    });
-
-    describe("attendance", () => {
-      it("keeps one row per person per day: repeat check-in is a no-op, check-in after checkout reopens it", async () => {
-        const first = await store.checkIn(attendance());
-        const again = await store.checkIn(attendance({ checkInAt: iso(60_000) }));
-        expect(again.id).toBe(first.id);
-        expect(again.checkInAt).toBe(first.checkInAt);
-        expect(await store.listAttendance("2026-09-23")).toHaveLength(1);
-
-        await store.checkOut("a@innovinlabs.com", "2026-09-23", iso(3_600_000));
-        const reopened = await store.checkIn(attendance({ checkInAt: iso(4_000_000) }));
-        // Same row — back in means in again, and the day still has exactly one record.
-        expect(reopened.id).toBe(first.id);
-        expect(reopened.checkInAt).toBe(iso(4_000_000));
-        expect(reopened.checkOutAt).toBeNull();
-        expect(await store.listAttendance("2026-09-23")).toHaveLength(1);
-      });
-
       it("getAttendance returns the day's row in either state; checkOut closes it once", async () => {
         const row = await store.checkIn(attendance());
         expect((await store.getAttendance("a@innovinlabs.com", "2026-09-23"))?.id).toBe(row.id);

@@ -1,6 +1,7 @@
-import { rmSync } from "fs";
+import { mkdirSync, rmSync, writeFileSync } from "fs";
 import { Client } from "pg";
 import { startGoogleMock } from "./google-mock";
+import { LEGACY_WFH } from "./legacy-wfh";
 
 // Fresh data for every run: wipe JSON test files, or truncate the Postgres E2E database.
 // Also starts the Google OAuth mock (port 3999) that the test servers are configured against.
@@ -8,6 +9,11 @@ export default async function globalSetup() {
   const stopMock = await startGoogleMock();
   rmSync(".test-data", { recursive: true, force: true });
   const url = process.env.E2E_DATABASE_URL;
+  // JSON mode only: the one pre-cut pending WFH row that api.spec.ts reads back.
+  if (!url) {
+    mkdirSync(".test-data", { recursive: true });
+    writeFileSync(".test-data/main.json", JSON.stringify({ away: [LEGACY_WFH] }));
+  }
   if (url) {
     const client = new Client({ connectionString: url });
     await client.connect();

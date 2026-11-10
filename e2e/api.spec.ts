@@ -1,7 +1,10 @@
 import { expect, request, test, type APIRequestContext } from "@playwright/test";
 import { MAIN_URL } from "../playwright.config";
+import { futureWorkday } from "./dates";
+import { LEGACY_WFH } from "./legacy-wfh";
 
 // HTTP-level verification of validation, auth, privacy, idempotency and abuse limits.
+const FUTURE = futureWorkday();
 let seq = 0;
 const ip = () => `203.0.113.${(++seq % 250) + 1}-${Date.now()}`;
 const email = () => `api.${Date.now().toString(36)}${++seq}@innovinlabs.com`;
@@ -98,7 +101,7 @@ test.describe("API: input validation", () => {
       [{ email: who, type: "leave", leaveType: "cl", startDate: "2026-10-08", endDate: "2026-10-07" }, 400],
       [{ email: who, type: "leave", leaveType: "cl", startDate: "2026-01-01", endDate: "2026-12-31" }, 400],
       [{ email: who, type: "leave", leaveType: "holiday", startDate: "2026-10-07", endDate: "2026-10-07" }, 400], // unknown bucket
-      [{ email: who, type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 200],
+      [{ email: who, type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 400],
     ];
     for (const [data, status] of cases) expect((await ctx.post("/api/away", { data })).status(), JSON.stringify(data)).toBe(status);
   });
@@ -200,7 +203,7 @@ test.describe("API: behaviour", () => {
     const att = await (await ctx.get("/api/attendance")).json();
     expect(att.email).toBe(me.email);
     const away = await (
-      await ctx.post("/api/away", { data: { email: "forged@innovinlabs.com", type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" } })
+      await ctx.post("/api/away", { data: { email: "forged@innovinlabs.com", type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE } })
     ).json();
     expect(away.email).toBe(me.email);
   });
@@ -234,7 +237,7 @@ test.describe("API: behaviour", () => {
   test("leave history and cancellation follow the employee across account switching", async () => {
     const who = email();
     const ctx = await signedIn(who);
-    const created = await (await ctx.post("/api/away", { data: { type: "wfh", startDate: "2026-11-09", endDate: "2026-11-09", reason: "private reason" } })).json();
+    const created = await (await ctx.post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE, reason: "private reason" } })).json();
     const secondDevice = await signedIn(who);
     expect((await (await secondDevice.get("/api/away?scope=mine")).json()).some((r: { id: string }) => r.id === created.id)).toBe(true);
     await ctx.post("/api/auth/logout");
@@ -246,6 +249,40 @@ test.describe("API: behaviour", () => {
     expect((await (await ctx.get("/api/away?scope=mine")).json()).some((r: { id: string }) => r.id === created.id)).toBe(false);
     expect((await ctx.patch("/api/away", { data: { id: created.id, status: "cancelled" } })).status()).toBe(403);
     expect((await secondDevice.patch("/api/away", { data: { id: created.id, status: "cancelled" } })).status()).toBe(200);
+  });
+
+  test("WFH requests are rejected; leave still works", async () => {
+    const ctx = await signedIn(email());
+    const wfh = await ctx.post("/api/away", { data: { type: "wfh", startDate: FUTURE, endDate: FUTURE, reason: "x" } });
+    expect(wfh.status()).toBe(400);
+    expect((await wfh.json()).error).toBe("WFH requests are gone — just tap Remote on Home");
+    const leave = await ctx.post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE, reason: "x" } });
+    expect(leave.status()).toBe(200);
+  });
+
+  // The row is written straight into the JSON data file by e2e/global-setup.ts: the API refuses
+  // to create one now, but rows from before the cut still exist in real stores.
+  test("a pre-cut pending WFH row is history for its owner, not work for the admin", async () => {
+    test.skip(!!process.env.E2E_DATABASE_URL, "the legacy row is seeded into the JSON data file only");
+    const owner = await signedIn(LEGACY_WFH.email);
+    const adm = await admin();
+
+    const mine = await (await owner.get("/api/away?scope=mine")).json();
+    expect(mine.find((r: { id: string }) => r.id === LEGACY_WFH.id)).toMatchObject({ type: "wfh", status: "pending" });
+
+    const queue = await (await adm.get("/api/away?scope=pending")).json();
+    expect(queue.map((r: { id: string }) => r.id)).not.toContain(LEGACY_WFH.id);
+
+    const feed = await (await adm.get("/api/notifications")).json();
+    expect(JSON.stringify(feed.items)).not.toContain(LEGACY_WFH.id);
+
+    for (const status of ["approved", "rejected"]) {
+      const res = await adm.patch("/api/away", { data: { id: LEGACY_WFH.id, status } });
+      expect(res.status()).toBe(409);
+      expect((await res.json()).error).toBe("WFH requests no longer need approval");
+    }
+
+    expect((await owner.patch("/api/away", { data: { id: LEGACY_WFH.id, status: "cancelled" } })).status()).toBe(200);
   });
 
   test("leave is charged in working days, skipping Sundays, 2nd/4th Saturdays and holidays", async () => {
@@ -274,10 +311,8 @@ test.describe("API: behaviour", () => {
     expect((await mk({ type: "leave", leaveType: "el", startDate: "2026-09-07", endDate: "2026-09-07", halfDay: true })).status()).toBe(400);
     expect((await mk({ type: "leave", leaveType: "cl", startDate: "2026-09-07", endDate: "2026-09-08", halfDay: true })).status()).toBe(400);
 
-    // A leave type is required, and WFH draws from no balance.
+    // A leave type is required.
     expect((await mk({ type: "leave", startDate: "2026-09-07", endDate: "2026-09-07" })).status()).toBe(400);
-    const wfh = await (await mk({ type: "wfh", startDate: "2026-09-07", endDate: "2026-09-08" })).json();
-    expect(wfh).toMatchObject({ leaveType: null, days: 0 });
   });
 
   test("leave balances are per identity and per type, and need a signed-in user", async () => {

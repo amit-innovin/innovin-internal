@@ -22,8 +22,8 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
   {
     icon: CalendarOff,
     tone: "amber",
-    q: "How do leave and WFH requests work?",
-    a: "Open Attendance & Leave, choose Leave or Work from home, fill the dates and send. An admin approves or rejects the request in this app; its status appears under Your requests. Zoho People remains separate and must be updated there. Personal plans never submit a leave request.",
+    q: "How do leave requests work?",
+    a: "Open Attendance & Leave, pick a leave type, fill the dates and send. An admin approves or rejects the request in this app; its status appears under Your requests. Zoho People remains separate and must be updated there. Personal plans never submit a leave request.",
   },
   {
     icon: Plane,

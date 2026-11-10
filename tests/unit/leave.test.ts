@@ -11,6 +11,7 @@ import {
   leaveCost,
   leaveLedger,
   leaveWorkingDays,
+  needsApproval,
   nonWorkingReason,
   workingDaysInMonth,
 } from "@/lib/leave";
@@ -269,5 +270,12 @@ describe("Zoho snapshot reconciliation", () => {
     expect(s.asOf).toBeNull();
     // Policy entitlement minus what this app knows about.
     expect(s.ledger.find((l) => l.type === "cl")).toMatchObject({ entitled: 4, used: 1, remaining: 3 });
+  });
+});
+
+describe("needsApproval", () => {
+  it("is true for leave and false for WFH rows left over from before the cut", () => {
+    expect(needsApproval({ type: "leave" })).toBe(true);
+    expect(needsApproval({ type: "wfh" })).toBe(false);
   });
 });

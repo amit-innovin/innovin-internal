@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CalendarOff, Palmtree } from "lucide-react";
 import { toast } from "sonner";
-import { AWAY_META, Empty, IconTile } from "@/components/kit";
+import { AWAY_META, AWAY_TYPE_LABEL, Empty, IconTile } from "@/components/kit";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { Button } from "@/components/ui/button";
 import { readError, send } from "@/lib/fetcher";
@@ -41,7 +41,7 @@ export default function AwayList({ items, names, now }: { items: Item[]; names: 
     router.refresh();
   }
 
-  if (items.length === 0) return <Empty>No leave or WFH requests yet.</Empty>;
+  if (items.length === 0) return <Empty>No leave requests yet.</Empty>;
 
   return (
     <ul className="mt-2 divide-y">
@@ -55,7 +55,7 @@ export default function AwayList({ items, names, now }: { items: Item[]; names: 
                 {names[r.email] ? `${names[r.email]} · ` : ""}{r.email}
               </p>
               <p className="text-xs text-muted-foreground">
-                {r.type === "leave" ? "Leave" : "WFH"} · {fmtDateRange(r.startDate, r.endDate)} · {relativeTime(r.createdAt, now)}
+                {AWAY_TYPE_LABEL[r.type]} · {fmtDateRange(r.startDate, r.endDate)} · {relativeTime(r.createdAt, now)}
               </p>
               {r.reason && <p className="mt-0.5 truncate text-xs text-muted-foreground">{r.reason}</p>}
               {status !== "pending" && r.decidedBy && (

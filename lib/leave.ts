@@ -10,7 +10,13 @@
 //
 // Leave year is the calendar year. CL/SL/FL lapse at year end.
 
+import type { AwayType } from "./types";
+
 export type LeaveType = "cl" | "sl" | "el" | "fl" | "ml";
+
+// Work-from-home requests were cut: stored rows still parse and show in history, but only leave
+// goes through approval. Every admin queue, count and decision uses this one rule.
+export const needsApproval = (row: { type: AwayType }) => row.type !== "wfh";
 
 export const LEAVE_TYPES: LeaveType[] = ["cl", "sl", "el", "fl", "ml"];
 

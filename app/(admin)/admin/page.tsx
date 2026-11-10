@@ -28,6 +28,7 @@ import { Card } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/admin";
 import { adminEmails } from "@/lib/config";
 import { leaveOverview } from "@/lib/leave-data";
+import { needsApproval } from "@/lib/leave";
 import { fmtDay, fmtShortDate, fmtTime, relativeDay } from "@/lib/format";
 import { store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
@@ -95,7 +96,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
     store.listAttendance(date),
     store.listGrievances(),
     store.listWifi(50),
-    Promise.all([store.listAway(50), store.listPendingAway()]).then(([history, pending]) => [...pending, ...history.filter(r => r.status !== "pending")]),
+    Promise.all([store.listAway(50), store.listPendingAway()]).then(([history, pending]) => [...pending.filter(needsApproval), ...history.filter(r => r.status !== "pending")]),
     store.listEmployees(),
   ]);
 

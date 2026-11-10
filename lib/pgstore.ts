@@ -18,6 +18,7 @@ import type {
   Store,
   WifiRow,
   WorkspaceProfile,
+  AttendanceChangeRow,
 } from "./types";
 
 // Postgres persistence — used when DATABASE_URL is set (Neon, Supabase, Vercel Postgres).
@@ -196,6 +197,22 @@ CREATE INDEX IF NOT EXISTS announcements_created_idx ON announcements (created_a
 CREATE INDEX IF NOT EXISTS away_created_idx ON away (created_at DESC);
 CREATE INDEX IF NOT EXISTS away_submitter_idx ON away (submitter_ref, created_at DESC);
 CREATE INDEX IF NOT EXISTS steps_date_idx ON steps (date);
+-- One-tap attendance: how the day was marked, each person's regular office days, and a log
+-- of days changed after the fact.
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS source text;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS office_days jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS office_exempt boolean NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS attendance_changes (
+  id text PRIMARY KEY,
+  email text NOT NULL,
+  date text NOT NULL,
+  from_mode text,
+  to_mode text,
+  changed_by text NOT NULL,
+  kind text NOT NULL,
+  at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS attendance_changes_email_idx ON attendance_changes (email, at DESC);
 ALTER TABLE events ADD COLUMN IF NOT EXISTS updated_at timestamptz;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled_at timestamptz;
 CREATE INDEX IF NOT EXISTS events_starts_idx ON events (starts_at);
@@ -215,6 +232,17 @@ const attendance = (r: any): AttendanceRow => ({
   lng: r.lng ?? null,
   declaredMode: r.declared_mode ?? null,
   accuracyM: r.accuracy_m ?? null,
+  source: r.source ?? null,
+});
+const attendanceChange = (r: any): AttendanceChangeRow => ({
+  id: r.id,
+  email: r.email,
+  date: r.date,
+  from: r.from_mode ?? null,
+  to: r.to_mode ?? null,
+  by: r.changed_by,
+  kind: r.kind,
+  at: r.at?.toISOString?.() ?? r.at,
 });
 const grievance = (r: any): GrievanceRow => ({
   id: r.id,
@@ -251,6 +279,8 @@ const employee = (r: any): EmployeeRow => ({
   role: roleOf(r.role),
   joinedOn: r.joined_on ?? null,
   stepsOffset: r.steps_offset ?? 0,
+  officeDays: Array.isArray(r.office_days) ? r.office_days : [],
+  officeExempt: r.office_exempt ?? false,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
 });
@@ -418,6 +448,34 @@ class PgStore implements Store {
     );
     // Repeated check-in preserves arrival/evidence while allowing an explicit declaration change.
     return res.rows[0] ? attendance(res.rows[0]) : (await this.getAttendance(row.email, row.date))!;
+  }
+  async markDay(row: AttendanceRow) {
+    const res = await this.q(
+      `INSERT INTO attendance (id, email, date, check_in_at, lat, lng, accuracy_m, declared_mode, source)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       ON CONFLICT (email, date) DO UPDATE
+       SET check_in_at = EXCLUDED.check_in_at, check_out_at = NULL, lat = EXCLUDED.lat, lng = EXCLUDED.lng,
+           accuracy_m = EXCLUDED.accuracy_m, declared_mode = EXCLUDED.declared_mode, source = EXCLUDED.source
+       RETURNING *`,
+      [row.id, row.email, row.date, row.checkInAt, row.lat, row.lng, row.accuracyM, row.declaredMode ?? null, row.source ?? null],
+    );
+    return attendance(res.rows[0]);
+  }
+  async clearDay(email: string, date: string) {
+    const res = await this.q(`DELETE FROM attendance WHERE email = $1 AND date = $2`, [email, date]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async addAttendanceChange(row: AttendanceChangeRow) {
+    await this.q(`INSERT INTO attendance_changes (id, email, date, from_mode, to_mode, changed_by, kind, at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [row.id, row.email, row.date, row.from, row.to, row.by, row.kind, row.at]);
+    return row;
+  }
+  async listAttendanceChanges(email: string, limit: number) {
+    const res = await this.q(`SELECT * FROM attendance_changes WHERE email = $1 ORDER BY at DESC LIMIT $2`, [email, limit]);
+    return res.rows.map(attendanceChange);
+  }
+  async setOfficeDays(email: string, days: number[]) {
+    const res = await this.q(`UPDATE employees SET office_days = $2::jsonb WHERE email = $1`, [email, JSON.stringify([...days].sort((a, b) => a - b))]);
+    return (res.rowCount ?? 0) > 0;
   }
   async checkOut(email: string, date: string, at: string) {
     const res = await this.q(

@@ -15,8 +15,30 @@ export type EmployeeRow = {
   joinedOn: string | null;
   // Days hit before the app took over the 10K challenge — copied from the sheet by an admin.
   stepsOffset: number;
+  // Regular office weekdays, Monday = 0. Empty until the person picks them. Stores always
+  // return both fields; they are optional only so a first sign-in doesn't have to supply them.
+  officeDays?: number[];
+  // Exempt from the 8-office-days target (e.g. fully remote). Admin-set.
+  officeExempt?: boolean;
   createdAt: string;
   lastSeenAt: string;
+};
+
+// How a day got its mark. wifi / location: verified at the office. self: declared remote.
+// late: added afterwards by the person (no location check). admin: fixed by an admin.
+export type AttendanceSource = "wifi" | "location" | "self" | "late" | "admin";
+export type DayMode = "office" | "remote";
+
+// One entry per day changed after the fact, by the person or by an admin.
+export type AttendanceChangeRow = {
+  id: string;
+  email: string;
+  date: string;
+  from: DayMode | null;
+  to: DayMode | null;
+  by: string;
+  kind: "late" | "admin";
+  at: string;
 };
 
 // 10K steps challenge: one row per person per day. `hit` is the toggle; `steps` is the
@@ -41,6 +63,7 @@ export type AttendanceRow = {
   lng: number | null;
   accuracyM: number | null;
   declaredMode?: "office" | "remote" | null;
+  source?: AttendanceSource | null;
 };
 
 export type AwayType = "leave" | "wfh";
@@ -190,6 +213,14 @@ export interface Store {
   checkIn(row: AttendanceRow): Promise<AttendanceRow>;
   // Closes the open session; null when there isn't one.
   checkOut(email: string, date: string, at: string): Promise<AttendanceRow | null>;
+  // One tap = the day's mark. Creates or replaces that person's row for the date (mode, source,
+  // position, time) and clears any old check-out.
+  markDay(row: AttendanceRow): Promise<AttendanceRow>;
+  // Removes the day's mark; false when there was none.
+  clearDay(email: string, date: string): Promise<boolean>;
+  addAttendanceChange(row: AttendanceChangeRow): Promise<AttendanceChangeRow>;
+  listAttendanceChanges(email: string, limit: number): Promise<AttendanceChangeRow[]>;
+  setOfficeDays(email: string, days: number[]): Promise<boolean>;
   // The currently open session, or null.
   getAttendance(email: string, date: string): Promise<AttendanceRow | null>;
   // One person's day rows across a date range (inclusive), for the attendance calendar.

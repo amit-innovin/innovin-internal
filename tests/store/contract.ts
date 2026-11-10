@@ -342,6 +342,59 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       });
     });
 
+    describe("office days", () => {
+      it("markDay sets the day's mode once per person per day, and a later mark replaces it", async () => {
+        const first = await store.markDay(attendance({ declaredMode: "office", source: "wifi" }));
+        expect(first).toMatchObject({ declaredMode: "office", source: "wifi", checkOutAt: null });
+        const changed = await store.markDay(attendance({ id: uid(), declaredMode: "remote", source: "self", checkInAt: iso(60_000) }));
+        expect(changed.id).toBe(first.id);
+        expect(changed).toMatchObject({ declaredMode: "remote", source: "self", checkInAt: iso(60_000) });
+        expect(await store.listAttendance("2026-09-23")).toHaveLength(1);
+      });
+
+      it("markDay reopens a day that was checked out under the old flow", async () => {
+        await store.checkIn(attendance({ declaredMode: "office" }));
+        await store.checkOut("a@innovinlabs.com", "2026-09-23", iso(3_600_000));
+        const marked = await store.markDay(attendance({ id: uid(), declaredMode: "office", source: "location", lat: 12.9, lng: 77.6, accuracyM: 20 }));
+        expect(marked).toMatchObject({ checkOutAt: null, declaredMode: "office", source: "location", lat: 12.9, lng: 77.6 });
+      });
+
+      it("clearDay removes only that person's day", async () => {
+        await store.markDay(attendance({ declaredMode: "office", source: "wifi" }));
+        await store.markDay(attendance({ id: uid(), email: "b@innovinlabs.com", declaredMode: "office", source: "wifi" }));
+        expect(await store.clearDay("a@innovinlabs.com", "2026-09-23")).toBe(true);
+        expect(await store.clearDay("a@innovinlabs.com", "2026-09-23")).toBe(false);
+        expect(await store.getAttendance("a@innovinlabs.com", "2026-09-23")).toBeNull();
+        expect(await store.getAttendance("b@innovinlabs.com", "2026-09-23")).not.toBeNull();
+      });
+
+      it("old rows without a source read as null", async () => {
+        const row = await store.checkIn(attendance());
+        expect(row.source ?? null).toBeNull();
+      });
+
+      it("keeps a log of changed days, newest first, per person", async () => {
+        await store.addAttendanceChange({ id: uid(), email: "a@innovinlabs.com", date: "2026-09-21", from: null, to: "office", by: "a@innovinlabs.com", kind: "late", at: iso() });
+        await store.addAttendanceChange({ id: uid(), email: "a@innovinlabs.com", date: "2026-09-22", from: "remote", to: null, by: "admin@innovinlabs.com", kind: "admin", at: iso(60_000) });
+        await store.addAttendanceChange({ id: uid(), email: "b@innovinlabs.com", date: "2026-09-22", from: null, to: "remote", by: "b@innovinlabs.com", kind: "late", at: iso(120_000) });
+        const mine = await store.listAttendanceChanges("a@innovinlabs.com", 10);
+        expect(mine.map((c) => c.date)).toEqual(["2026-09-22", "2026-09-21"]);
+        expect(mine[0]).toMatchObject({ from: "remote", to: null, by: "admin@innovinlabs.com", kind: "admin", at: iso(60_000) });
+        expect(await store.listAttendanceChanges("a@innovinlabs.com", 1)).toHaveLength(1);
+      });
+
+      it("a person has regular office days: none by default, and they survive a re-sign-in", async () => {
+        const created = await store.upsertEmployee(employee());
+        expect(created.officeDays).toEqual([]);
+        expect(created.officeExempt).toBe(false);
+        expect(await store.setOfficeDays("a@innovinlabs.com", [2, 0])).toBe(true);
+        expect(await store.setOfficeDays("nobody@innovinlabs.com", [1])).toBe(false);
+        await store.upsertEmployee(employee({ lastSeenAt: iso(60_000) }));
+        expect((await store.getEmployee("a@innovinlabs.com"))?.officeDays).toEqual([0, 2]);
+        expect((await store.listEmployees())[0].officeDays).toEqual([0, 2]);
+      });
+    });
+
     describe("employees", () => {
       it("creates on first sign-in, then refreshes name/picture/lastSeenAt but keeps createdAt", async () => {
         const first = await store.upsertEmployee(employee({ name: "Asha R" }));

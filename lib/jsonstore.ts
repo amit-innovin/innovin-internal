@@ -16,7 +16,7 @@ import type {
   Store,
   WifiRow,
   WorkspaceProfile,
-} from "./types";
+ AttendanceChangeRow } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -37,11 +37,12 @@ type DB = {
   pushSubscriptions: PushSubscriptionRow[];
   steps: StepsRow[];
   workspaceProfiles: WorkspaceProfile[];
+  attendanceChanges: AttendanceChangeRow[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
-const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0 });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [] });
+const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -161,6 +162,37 @@ export const jsonStore: Store = {
       db.attendance.unshift(normalized);
       return { result: normalized, changed: true };
     }),
+  markDay: (row) =>
+    mutate((db) => {
+      const next = { checkInAt: row.checkInAt, checkOutAt: null, lat: row.lat, lng: row.lng, accuracyM: row.accuracyM, declaredMode: row.declaredMode ?? null, source: row.source ?? null };
+      const existing = db.attendance.find((r) => r.email === row.email && r.date === row.date);
+      if (existing) {
+        Object.assign(existing, next);
+        return { result: existing, changed: true };
+      }
+      const created = { ...row, ...next };
+      db.attendance.unshift(created);
+      return { result: created, changed: true };
+    }),
+  clearDay: (email, date) =>
+    mutate((db) => {
+      const before = db.attendance.length;
+      db.attendance = db.attendance.filter((r) => !(r.email === email && r.date === date));
+      return { result: db.attendance.length < before, changed: db.attendance.length < before };
+    }),
+  addAttendanceChange: (row) =>
+    mutate((db) => {
+      db.attendanceChanges.unshift(row);
+      return { result: row, changed: true };
+    }),
+  listAttendanceChanges: (email, limit) =>
+    query((db) => db.attendanceChanges.filter((c) => c.email === email).sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit)),
+  setOfficeDays: (email, days) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.officeDays = [...days].sort((a, b) => a - b);
+      return { result: !!row, changed: !!row };
+    }),
   checkOut: (email, date, at) =>
     mutate((db) => {
       const open = db.attendance.find((r) => r.email === email && r.date === date && !r.checkOutAt);
@@ -235,10 +267,10 @@ export const jsonStore: Store = {
         existing.name = row.name;
         existing.picture = row.picture;
         existing.lastSeenAt = row.lastSeenAt;
-        return { result: existing, changed: true };
+        return { result: readEmployee(existing), changed: true };
       }
       db.employees.unshift(row);
-      return { result: row, changed: true };
+      return { result: readEmployee(row), changed: true };
     }),
   getEmployee: (email) =>
     query((db) => {

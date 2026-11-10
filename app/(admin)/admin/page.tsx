@@ -1,17 +1,15 @@
-import {orderName,orderQuantity} from "@/lib/pantry/shop";
-import { PantryFulfillment } from "@/components/pantry-fulfillment";
 import { EventManageButton } from "@/components/event-editor";
 import { attendanceLocation } from "@/lib/presence";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarDays, Coffee, Megaphone, MessageSquare, Trash2, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, Megaphone, MessageSquare, Trash2, Wifi } from "lucide-react";
 import AccessList from "@/components/access-list";
 import { Flash } from "@/components/flash";
 import AwayList from "@/components/away-list";
 import PostComposer from "@/components/post-composer";
 import LeaveOverview from "@/components/leave-overview";
 import GrievanceList from "@/components/grievance-list";
-import { Empty, IconTile, MENU_ICONS, QualityDot, SectionHeader, stagger, type Tone } from "@/components/kit";
+import { Empty, IconTile, QualityDot, SectionHeader, stagger, type Tone } from "@/components/kit";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import {
   AlertDialog,
@@ -31,7 +29,6 @@ import { requireAdmin } from "@/lib/admin";
 import { adminEmails } from "@/lib/config";
 import { leaveOverview } from "@/lib/leave-data";
 import { fmtDay, fmtShortDate, fmtTime, relativeDay } from "@/lib/format";
-import { MENU } from "@/lib/menu";
 import { store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
 
@@ -94,9 +91,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const now = Date.now(); // frozen for hydration — client lists must render the same labels as the server
 
   // Always needed: the stat row, and the pending badge on the Approvals tab.
-  const [attendance, orders, grievances, wifi, away, employees] = await Promise.all([
+  const [attendance, grievances, wifi, away, employees] = await Promise.all([
     store.listAttendance(date),
-    store.listOrders(date),
     store.listGrievances(),
     store.listWifi(50),
     Promise.all([store.listAway(50), store.listPendingAway()]).then(([history, pending]) => [...pending, ...history.filter(r => r.status !== "pending")]),
@@ -113,9 +109,6 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   ]);
   const names = new Map(employees.map((e) => [e.email, e.name]));
 
-  const consolidated = [...MENU.map((m) => ({ ...m, count: orders.filter((o) => o.itemId === m.id).length })),...[...new Set(orders.filter(o=>o.product).map(o=>o.itemId))].map(itemId=>{const group=orders.filter(o=>o.itemId===itemId),first=group[0];return {id:itemId,name:orderName(first),price:first.product!.price,icon:"cookie" as const,tone:"blue" as const,count:group.reduce((n,r)=>n+orderQuantity(r),0)};})];
-  const total = consolidated.reduce((sum, m) => sum + m.count * (m.price ?? 0), 0);
-  const hasUnpriced = consolidated.some((m) => m.price == null && m.count > 0);
   const openGrievances = grievances.filter((g) => g.status !== "resolved").length;
   const poorToday = wifi.filter((w) => w.quality === "poor" && relativeDay(w.createdAt) === "Today").length;
   const pendingAway = away.filter((r) => r.status === "pending").length;
@@ -142,17 +135,14 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         </div>
       </div>
 
-      <div className="t-stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="t-stagger grid grid-cols-2 gap-3 lg:grid-cols-3">
         <div style={stagger(0)}>
           <Stat icon={CalendarCheck} tone="blue" label="Checked in today" value={people.length} href="/admin?tab=today#attendance" />
         </div>
         <div style={stagger(1)}>
-          <Stat icon={Coffee} tone="sky" label="Pantry requests" value={orders.length} href="/admin?tab=today#orders" />
-        </div>
-        <div style={stagger(2)}>
           <Stat icon={MessageSquare} tone="ink" label="Open reports" value={openGrievances} href="/admin?tab=approvals#grievances" />
         </div>
-        <div style={stagger(3)}>
+        <div style={stagger(2)}>
           <Stat icon={Wifi} tone="blue" label="Poor Wi-Fi reports today" value={poorToday} href="/admin?tab=today#wifi" />
         </div>
       </div>
@@ -160,36 +150,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <AdminTabs active={tab} pending={pendingAway} />
 
       <div className={`mt-4 grid gap-4 md:grid-cols-2 ${tab === "today" ? "" : "hidden"}`}>
-        <Card id="orders" className="gap-0 p-5">
-          <Link href="/admin/pantry" className="mb-3 inline-flex min-h-11 items-center text-sm underline">Order pantry supplies with Instamart</Link>
-          <SectionHeader title="Today's pantry requests" aside={`Menu estimate ₹${total}${hasUnpriced ? "+" : ""}`} />
-          <ul className="mt-3 space-y-2">
-            {consolidated.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 text-sm">
-                <IconTile icon={MENU_ICONS[c.icon]} tone={c.tone} size="sm" />
-                <span className="flex-1">{c.name}</span>
-                <span className="font-medium tabular-nums">× {c.count}</span>
-              </li>
-            ))}
-          </ul>
-          {orders.some((o) => o.orderedBy) && <div className="mt-4 border-t pt-3"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Employee trays</p><ul className="mt-2 space-y-2 text-sm text-muted-foreground">{[...new Set(orders.flatMap((o) => o.orderedBy ? [o.orderedBy] : []))].map((email) => <li key={email}><span className="font-medium text-foreground">{employees.find((e) => e.email === email)?.name || email}</span><span className="ml-2">{orders.filter((o) => o.orderedBy === email).map((o) => `${orderName(o)} × ${orderQuantity(o)}`).join(" + ")}</span><PantryFulfillment email={email} orders={orders.filter(o=>o.orderedBy===email)} /></li>)}</ul></div>}
-          {orders.some((o) => o.instructions) && (
-            <div className="mt-4 border-t pt-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Instructions</p>
-              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                {orders
-                  .filter((o) => o.instructions)
-                  .map((o) => (
-                    <li key={o.id}>
-                      • {orderName(o)}: {o.instructions}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          )}
-        </Card>
-
-        <Card className="gap-0 p-5">
+        <Card id="attendance" className="gap-0 p-5">
           <SectionHeader title="Attendance" />
           {people.length === 0 ? (
             <Empty>No one has checked in yet.</Empty>

@@ -29,41 +29,6 @@ test("mobile board URL and notification open the announcement itself",async({pag
   await expect(page.getByRole("heading",{name:"Notice Board",exact:true})).toBeVisible();
 });
 
-test("a coordinator fulfills an exact pantry request and the employee sees the result",async({page,browser},testInfo)=>{
-  const email=uniqueEmail("fulfillment");const {signInOffice}=await import("./fixtures");
-  await signInOffice(page,email);await page.goto("/snacks");await page.getByRole("button",{name:/^Tea/}).click();
-  await expect(page.getByText(/Request received.*Tea/)).toBeVisible();
-  const context=await browser.newContext({viewport:page.viewportSize()??{width:1280,height:900}}),admin=await context.newPage();await adminLogin(admin);
-  const control=admin.getByRole("combobox",{name:`Pantry status for ${email}`});
-  admin.on("dialog",d=>d.accept());
-  await control.selectOption("preparing");await expect(control).toHaveValue("preparing");
-  await page.reload();await expect(page.getByText(/Being prepared.*Tea/)).toBeVisible();await expect(page.getByRole("button",{name:/^Tea/})).toBeDisabled();
-  expect((await page.request.post("/api/snacks",{data:{items:["lunch"]}})).status()).toBe(409);
-  expect((await page.request.delete("/api/snacks")).status()).toBe(409);
-  await control.selectOption("requested");await expect(control).toHaveValue("requested");
-  await page.reload();await expect(page.getByRole("button",{name:/^Tea/})).toBeEnabled();
-  await control.selectOption("preparing");await expect(control).toHaveValue("preparing");
-  await control.selectOption("ready");await expect(control).toHaveValue("ready");
-  await page.reload();await expect(page.getByText(/Ready for collection.*Tea/)).toBeVisible();
-  await control.scrollIntoViewIfNeeded();await admin.screenshot({path:testInfo.outputPath("coordinator-fulfillment.png"),animations:"disabled"});await page.screenshot({path:testInfo.outputPath("employee-fulfillment.png"),animations:"disabled"});
-  await control.selectOption("fulfilled");await expect(control).toHaveValue("fulfilled");
-  await page.reload();await expect(page.getByText(/Collected \/ delivered.*Tea/)).toBeVisible();
-  await context.close();
-});
-
-test("cancelling waits for a pending note autosave and cannot recreate the request",async({page})=>{
-  const {signInOffice}=await import("./fixtures");await signInOffice(page);await page.goto("/snacks");await page.getByRole("button",{name:/^Tea/}).click();
-  await expect(page.getByText(/Request received.*Tea/)).toBeVisible();
-  let release!:()=>void,arrived!:()=>void;const held=new Promise<void>(r=>release=r),started=new Promise<void>(r=>arrived=r);
-  await page.route("**/api/snacks",async route=>{if(route.request().method()==="POST"&&route.request().postDataJSON()?.instructions==="Pending note"){arrived();await held;}await route.continue();});
-  await page.getByLabel("Special instructions").fill("Pending note");await page.getByLabel("Special instructions").press("Tab");await started;
-  const cancel=page.getByRole("button",{name:"Cancel today's request",exact:true});await expect(cancel).toBeDisabled();
-  release();await expect(cancel).toBeEnabled();await cancel.click();
-  await page.getByRole("alertdialog").getByRole("button",{name:"Cancel request",exact:true}).click();
-  await expect(page.getByText("Pantry request cancelled",{exact:true})).toBeVisible();await page.reload();
-  expect((await(await page.request.get("/api/snacks?scope=mine")).json()).items).toEqual([]);
-});
-
 test("event organizers can correct and cancel their event without losing existing RSVPs",async({page,browser,isMobile})=>{
   const {uniqueText}=await import("./fixtures");const title=uniqueText("Organized event"),changed=`${title} corrected`;
   await signInEmployee(page,uniqueEmail("organizer"),"/");if(isMobile)await page.getByRole("button",{name:"Expand Events",exact:true}).click();

@@ -1,5 +1,3 @@
-import { assertBasketRevision } from "./pantry/shop";
-import { assertRequestEditable, fulfillmentOf, nextFulfillment, canMoveFulfillment, sameTray } from "./order-state";
 import { promises as fs } from "fs";
 import path from "path";
 import type {
@@ -14,14 +12,12 @@ import type {
   LeaveBalanceRow,
   PingRow,
   PushSubscriptionRow,
-  OrderRow,
   RsvpRow,
   StepsRow,
   Store,
   WifiRow,
   WorkspaceProfile,
   PlannerDay,
-  ProviderRecord,
 } from "./types";
 import { pingExpired } from "./pings";
 
@@ -30,11 +26,9 @@ import { pingExpired } from "./pings";
 const file = () => process.env.DATA_FILE || path.join(process.cwd(), "data", "store.json");
 
 type DB = {
-  providerRecords: ProviderRecord[];
   notices: NoticeRow[];
   noticeReactions: NoticeReaction[];
   attendance: AttendanceRow[];
-  orders: OrderRow[];
   grievances: GrievanceRow[];
   wifi: WifiRow[];
   announcements: AnnouncementRow[];
@@ -52,7 +46,7 @@ type DB = {
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
 const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0 });
-const empty = (): DB => ({ providerRecords: [], notices: [], noticeReactions: [], attendance: [], orders: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], pings: [], workspaceProfiles: [], plannerDays: [] });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], pings: [], workspaceProfiles: [], plannerDays: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -67,7 +61,7 @@ async function read(): Promise<DB> {
   }
   const db: DB = { ...empty(), ...JSON.parse(raw) };
   // One-time migration: scrub any device-linked submitter refs ever written, so the
-  // file can't be joined against away/orders to de-anonymize old submissions.
+  // file can't be joined against away to de-anonymize old submissions.
   let dirty = false;
   // Upgrade old workspace declarations once. Explicit null means intentionally cleared.
   for (const row of db.attendance) {
@@ -123,15 +117,6 @@ const mutate = <T>(fn: (db: DB) => { result: T; changed: boolean }) =>
 const query = <T>(fn: (db: DB) => T) => locked(async () => fn(await read()));
 
 export const jsonStore: Store = {
-  getProviderRecord: key => query(db => db.providerRecords.find(r => r.key === key) ?? null),
-  putProviderRecord: (key, expectedVersion, value, updatedAt) => mutate(db => {
-    const row = db.providerRecords.find(r => r.key === key);
-    if ((!row && expectedVersion !== null) || (row && row.version !== expectedVersion)) return { result: false, changed: false };
-    if (row) { row.version++; row.value = value; row.updatedAt = updatedAt; }
-    else db.providerRecords.push({ key, version: 1, value, updatedAt });
-    return { result: true, changed: true };
-  }),
-
   addNotice: (row) => mutate((db) => {
     const safe = row.anonymous ? { ...row, authorEmail: null, authorName: null } : row;
     db.notices.push(safe);
@@ -218,39 +203,6 @@ export const jsonStore: Store = {
     ),
   listAttendance: (date) =>
     query((db) => db.attendance.filter((r) => r.date === date).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt))),
-
-  setDayOrders: (date, ref, rows, expectedIds) =>
-    mutate((db) => {
-      assertBasketRevision(db.orders.filter(o=>o.date===date&&o.submitterRef===ref),expectedIds);
-      assertRequestEditable(db.orders.filter(o=>o.date===date&&o.submitterRef===ref));
-      db.orders = db.orders.filter((o) => !(o.date === date && o.submitterRef === ref));
-      db.orders.unshift(...rows);
-      return { result: rows, changed: true };
-    }),
-  setOrderFulfillment: (date,ref,expectedIds,expected,next,actor,at) => mutate(db=>{
-    const rows=db.orders.filter(o=>o.date===date&&o.submitterRef===ref);
-    if(!canMoveFulfillment(expected,next) || !sameTray(rows,expectedIds) || rows.some(r=>fulfillmentOf(r)!==expected))return {result:false,changed:false};
-    for(const row of rows)Object.assign(row,{fulfillment:next,fulfillmentAt:at,fulfillmentBy:actor});
-    return {result:true,changed:true};
-  }),
-  listOrders: (date) =>
-    query((db) => db.orders.filter((r) => r.date === date).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
-  listOrdersByRef: (ref, limit) =>
-    query((db) =>
-      db.orders
-        .filter((r) => r.submitterRef === ref)
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, limit),
-    ),
-  deleteOrder: (ref, date) =>
-    mutate((db) => {
-      assertBasketRevision(db.orders.filter(r=>r.submitterRef===ref&&r.date===date));
-      assertRequestEditable(db.orders.filter(r=>r.submitterRef===ref&&r.date===date));
-      const before = db.orders.length;
-      db.orders = db.orders.filter((r) => !(r.submitterRef === ref && r.date === date));
-      const changed = db.orders.length < before;
-      return { result: changed, changed };
-    }),
 
   addGrievance: (row) =>
     mutate((db) => {

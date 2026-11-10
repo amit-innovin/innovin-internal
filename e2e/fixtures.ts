@@ -42,7 +42,7 @@ export async function signInEmployee(page: Page, email?: string, next = "/attend
   } finally { if (email) await page.request.get("http://localhost:3999/as?reset=1"); }
 }
 
-// Pantry rules now require a verified company employee and a daily office declaration.
+// Signs in as a verified company employee and declares the day as in-office.
 export async function signInOffice(page: Page, email?: string) {
   if (email) await page.request.get(`http://localhost:3999/as?email=${encodeURIComponent(email)}&name=${encodeURIComponent(email)}`);
   try { await page.goto("/api/auth/google?next=/"); await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible(); }

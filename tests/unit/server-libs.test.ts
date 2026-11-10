@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createOauthState, createUserSession, sanitizeNext, verifyOauthState, verifyUserSession } from "@/lib/auth";
-import { adminEmails, allowedEmailDomains, orderCutoffHour } from "@/lib/config";
+import { adminEmails, allowedEmailDomains } from "@/lib/config";
 import { clientIp, readJSON } from "@/lib/http";
 import { distanceM, locationTag, officeLocation } from "@/lib/geo";
 import { pgConfig } from "@/lib/pgconfig";
@@ -27,16 +27,6 @@ describe("IST time", () => {
 });
 
 describe("config", () => {
-  it("parses ORDER_CUTOFF_HOUR, defaulting to open all day", () => {
-    expect(orderCutoffHour()).toBe(24);
-    vi.stubEnv("ORDER_CUTOFF_HOUR", "15");
-    expect(orderCutoffHour()).toBe(15);
-    for (const bad of ["abc", "-1", "25", "10.5"]) {
-      vi.stubEnv("ORDER_CUTOFF_HOUR", bad);
-      expect(orderCutoffHour()).toBe(24);
-    }
-  });
-
   it("normalises allowed email domains", () => {
     expect(allowedEmailDomains()).toEqual(["innovinlabs.com"]);
     vi.stubEnv("ALLOWED_EMAIL_DOMAINS", " InnovinLabs.com , partner.io ,");
@@ -220,5 +210,14 @@ describe("adminEmails", () => {
     vi.stubEnv("ADMIN_EMAILS", "");
     vi.stubEnv("OWNER_EMAILS", "");
     expect(adminEmails()).toEqual([]);
+  });
+});
+
+describe("the cut", () => {
+  it("no pantry, snack-order or Swiggy code is reachable", async () => {
+    expect(Object.keys(await import("@/lib/submitter"))).not.toContain("pantryRef");
+    expect(Object.keys(await import("@/lib/config"))).not.toContain("orderCutoffHour");
+    const { existsSync } = await import("fs");
+    for (const p of ["lib/pantry", "lib/menu.ts", "lib/order-state.ts", "app/api/snacks", "app/api/pantry-shop", "app/api/pantry-provider"]) expect(existsSync(p), p).toBe(false);
   });
 });

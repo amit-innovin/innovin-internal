@@ -198,12 +198,9 @@ describe("admin-only APIs answer members with JSON errors", () => {
   it.each([
     ["GET /api/grievances", async () => (await import("@/app/api/grievances/route")).GET(req("/api/grievances"))],
     ["PATCH /api/grievances", async () => (await import("@/app/api/grievances/route")).PATCH(req("/api/grievances", "PATCH", { id: "x", status: "resolved" }))],
-    ["GET /api/snacks", async () => (await import("@/app/api/snacks/route")).GET(req("/api/snacks"))],
-    ["PATCH /api/snacks", async () => (await import("@/app/api/snacks/route")).PATCH(req("/api/snacks", "PATCH", {}))],
     ["GET /api/away", async () => (await import("@/app/api/away/route")).GET(req("/api/away"))],
     ["PATCH /api/leave", async () => (await import("@/app/api/leave/route")).PATCH(req("/api/leave", "PATCH", {}))],
     ["POST /api/announcements", async () => (await import("@/app/api/announcements/route")).POST(req("/api/announcements", "POST", { title: "t", body: "b" }))],
-    ["GET /api/pantry-provider", async () => (await import("@/app/api/pantry-provider/route")).GET()],
   ])("%s", async (_name, call) => {
     const res = (await call()) as Response;
     expect([401, 403]).toContain(res.status);

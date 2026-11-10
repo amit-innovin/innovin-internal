@@ -2,12 +2,10 @@ import { attendanceLocation } from "@/lib/presence";
 // The shapes behind home's three action cards — shared between the API routes and the
 // server-rendered home page, so first paint already carries the data instead of the client
 // fetching it again after hydration.
-import { orderCutoffHour } from "./config";
 import { officeLocation, onOfficeNetwork } from "./geo";
 import { STEP_GOAL, stepBoard, stepStreak } from "./steps";
 import { store } from "./store";
-import { ordersForDeviceOn, pantryRef } from "./submitter";
-import { istHour, todayIST } from "./time";
+import { todayIST } from "./time";
 
 export type SessionLite = { email: string; name: string };
 
@@ -33,11 +31,6 @@ export async function attendanceStatus(email: string | null, ip: string | null) 
         }
       : null,
   };
-}
-
-export async function snacksMine(deviceId: string | undefined, email?: string) {
-  const items = email ? (await store.listOrders(todayIST())).filter((o) => o.submitterRef === pantryRef(email)).map(({ submitterRef: _, ...o }) => o) : await ordersForDeviceOn(deviceId, todayIST());
-  return { open: istHour() < orderCutoffHour(), cutoffHour: orderCutoffHour(), items };
 }
 
 export async function stepsBoard(session: SessionLite | null) {

@@ -4,9 +4,10 @@ import { DEVICE_COOKIE, longLivedCookie } from "./cookies";
 import { store } from "./store";
 
 const refFor = (deviceId: string) => crypto.createHash("sha256").update(deviceId).digest("hex").slice(0, 32);
-// Pantry ownership follows the verified employee across devices. Kept separate from device
-// identity so this never changes the anonymity boundary for grievances.
-export const pantryRef = (email: string) => refFor(`pantry-account:${email.toLowerCase()}`);
+// A ref that follows the verified employee across devices (event RSVPs). Kept separate from
+// device identity so this never changes the anonymity boundary for grievances. The
+// "pantry-account:" prefix is historical: changing it would orphan existing RSVPs.
+export const accountRef = (email: string) => refFor(`pantry-account:${email.toLowerCase()}`);
 
 const strip = <T extends { submitterRef: string }>({ submitterRef: _r, ...rest }: T) => rest;
 
@@ -18,21 +19,6 @@ export function submitterIdentity(req: NextRequest) {
 
 export function setSubmitterCookie(res: NextResponse, deviceId: string | null) {
   if (deviceId) res.cookies.set(DEVICE_COOKIE, deviceId, longLivedCookie);
-}
-
-// The device's item rows for one day — an order can hold several items (tea + lunch + ...).
-export async function ordersForDeviceOn(deviceId: string | undefined, date: string) {
-  if (!deviceId) return [];
-  const ref = refFor(deviceId);
-  return (await store.listOrders(date)).filter((o) => o.submitterRef === ref).map(strip);
-}
-
-export async function cancelOrderForDevice(deviceId: string | undefined, date: string) {
-  return deviceId ? store.deleteOrder(refFor(deviceId), date) : false;
-}
-
-export async function ordersForDevice(deviceId: string | undefined, limit: number) {
-  return deviceId ? (await store.listOrdersByRef(refFor(deviceId), limit)).map(strip) : [];
 }
 
 // Grievance ids live only in the device's own cookie — the DB stores no link at all.

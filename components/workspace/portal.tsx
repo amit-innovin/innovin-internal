@@ -7,7 +7,6 @@ import { getJSON, readError, send } from "@/lib/fetcher";
 import type { WorkspaceData } from "@/lib/workspace";
 import { WorkspacePass } from "./pass";
 import { ProfileEditor } from "./profile";
-import { Pantry } from "./pantry";
 import { OfficeArena } from "./arena";
 import { WorkspaceEvents } from "./events";
 import { WorkspacePlanner } from "./planner";
@@ -62,13 +61,12 @@ export function WorkspacePortal({ initial, view = "overview" }: { initial: Works
     {data.mode && <button aria-label="Check out" disabled={busy} onClick={() => presence("out")}><LogOut size={12} /></button>}
   </div>;
   const board = <NoticeBoard compact={!!phone} initial={data.notices} announcements={data.announcements} canModerate={data.canModerate} />;
-  const pantry = <Pantry data={data} onSaved={reload} onOffice={() => presence("office")} />;
   const arena = <OfficeArena data={data} onSaved={reload} />;
   const events = <WorkspaceEvents initial={data.events} onSaved={reload} />;
   const steps = <WorkspaceSteps data={data} onSaved={reload} compact={!!phone} />;
   const planner = <WorkspacePlanner today={data.today} />;
   const p = data.profile;
-  const phoneContent = <PhoneWorkspace data={data} view={view} presence={presenceControl} pantry={pantry} arena={arena} events={events} board={board} steps={steps} planner={planner} onProfile={() => setProfileOpen(true)} onComposeNote={() => setNoteOpen(true)} keyboardOpen={keyboardOpen} />;
+  const phoneContent = <PhoneWorkspace data={data} view={view} presence={presenceControl} arena={arena} events={events} board={board} steps={steps} planner={planner} onProfile={() => setProfileOpen(true)} onComposeNote={() => setNoteOpen(true)} keyboardOpen={keyboardOpen} />;
   return <div className={`studio-workspace zip-workspace ${phone ? "is-phone" : ""}`}>
     <h1 className="sr-only">{view === "overview" ? "Your workspace" : view === "steps" ? "A little healthy competition" : "Your days, your rhythm"}</h1>
     {phone === null ? <div role="status" className="workspace-loading">Loading your workspace…</div> : phone ? phoneContent : view === "overview" ? <div className="dashboard-grid">
@@ -84,7 +82,7 @@ export function WorkspacePortal({ initial, view = "overview" }: { initial: Works
       <div className="dash-col dash-col-middle dash-col-team">{arena}{board}</div>
       <div className="dash-col dash-col-activity">
         <section className="widget-card quick-steps-banner"><div className="quick-steps-left"><div className="steps-fire-badge"><Flame size={18} /></div><div className="steps-text-wrap"><h4>Steps: <span className="highlight-steps">{(data.steps.me?.today?.steps ?? 0).toLocaleString()}</span> <span className="goal-dim">/ {data.steps.goal.toLocaleString()}</span></h4><p>{data.prize || `${Math.max(0, data.steps.goal - (data.steps.me?.today?.steps ?? 0)).toLocaleString()} steps to your daily goal`}</p></div></div><Link className="primary-btn btn-sm btn-jump-to-steps" href="/steps" aria-label="View Steps Leaderboard">Ranks →</Link></section>
-        {pantry}{events}
+        {events}
       </div>
     </div> : view === "steps" ? steps : planner}
     <PaperNotes people={data.people} email={data.user.email} open={noteOpen} onOpenChange={setNoteOpen} floatingTrigger={phone === false} onSaved={reload} />

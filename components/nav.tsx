@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarDays, CircleHelp, Coffee, Footprints, House, MessageSquare, Settings, ShieldCheck, Users, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CircleHelp, Footprints, House, MessageSquare, Settings, ShieldCheck, Users, Wifi } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Logo, Wave } from "@/components/brand";
 import Notifications from "@/components/notifications";
@@ -16,7 +16,6 @@ type Item = { href: string; label: string; short: string; icon: LucideIcon };
 const PRIMARY: Item[] = [
   { href: "/", label: "Home", short: "Home", icon: House },
   { href: "/attendance", label: "Attendance", short: "Attendance", icon: CalendarCheck },
-  { href: "/snacks", label: "Meals & Snacks", short: "Meals", icon: Coffee },
   { href: "/grievances", label: "Speak Up", short: "Speak Up", icon: MessageSquare },
   { href: "/wifi", label: "Wi-Fi Quality", short: "Wi-Fi", icon: Wifi },
 ];

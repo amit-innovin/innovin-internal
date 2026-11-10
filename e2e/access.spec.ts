@@ -3,7 +3,7 @@ import { expect, signInEmployee, test, uniqueEmail } from "./fixtures";
 // Two roles. Signed-out visitors see only sign-in (and anonymous Speak Up); members never see
 // an admin page or a passcode prompt. ADMIN_EMAILS (playwright.config) lists admin@innovinlabs.com.
 test.describe("Access", () => {
-  for (const path of ["/", "/admin", "/pantry", "/attendance?tab=leave"]) {
+  for (const path of ["/", "/admin", "/attendance?tab=leave"]) {
     test(`a signed-out visit to ${path} lands on sign-in`, async ({ page }) => {
       await page.goto(path);
       await expect(page).toHaveURL(/\/sign-in\?next=/);
@@ -20,7 +20,7 @@ test.describe("Access", () => {
 
   test("a member is sent home from admin pages and never sees a passcode prompt", async ({ page }) => {
     await signInEmployee(page, uniqueEmail("member"), "/");
-    for (const path of ["/admin", "/admin?tab=people", "/admin/pantry"]) {
+    for (const path of ["/admin", "/admin?tab=people"]) {
       await page.goto(path);
       await expect(page).toHaveURL(/\/$/);
       await expect(page.getByText(/passcode/i)).toHaveCount(0);

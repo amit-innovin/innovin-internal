@@ -3,27 +3,9 @@ import { adminLogin, adminTab, expect, test, uniqueEmail, uniqueText, signInOffi
 test.describe("Admin", () => {
   test("an admin's Google sign-in opens the dashboard with today's stats", async ({ page }) => {
     await adminLogin(page);
-    for (const stat of ["Checked in today", "Pantry requests", "Open reports", "Poor Wi-Fi reports today"]) {
+    for (const stat of ["Checked in today", "Open reports", "Poor Wi-Fi reports today"]) {
       await expect(page.getByText(stat,{exact:true})).toBeVisible();
     }
-  });
-
-  test("sees employee activity: attendance and consolidated orders with instructions", async ({ page, browser }) => {
-    const email = uniqueEmail("ops");
-    const instructions = uniqueText("extra hot");
-    const employee = await browser.newContext();
-    const e = await employee.newPage();
-    await signInOffice(e, email);
-    await e.goto("/snacks");
-    await e.getByRole("button", { name: /^Tea/ }).click();
-    await e.getByLabel("Special instructions").fill(instructions);
-    await e.getByRole("button", { name: "Save request notes" }).click();
-    await expect(e.getByText("Your pantry request is saved")).toBeVisible();
-    await employee.close();
-
-    await adminLogin(page);
-    await expect(page.locator("#orders").getByText(email, { exact: true })).toBeVisible();
-    await expect(page.getByText(`Tea: ${instructions}`)).toBeVisible();
   });
 
   test("groups sections into tabs, badges pending work, and stats jump to their section", async ({ page, browser }) => {
@@ -39,8 +21,8 @@ test.describe("Admin", () => {
     await employee.close();
 
     await adminLogin(page);
-    // Today is the default: orders and attendance are here, the rest is not.
-    await expect(page.locator("#orders")).toBeVisible();
+    // Today is the default: attendance is here, the rest is not.
+    await expect(page.locator("#attendance")).toBeVisible();
     await expect(page.locator("#away")).toBeHidden();
     await expect(page.locator("#announcements")).toBeHidden();
 
@@ -53,7 +35,7 @@ test.describe("Admin", () => {
     await expect(page).toHaveURL(/tab=approvals/);
     await expect(page.locator("#grievances")).toBeVisible();
     await expect(page.locator("#away")).toBeVisible();
-    await expect(page.locator("#orders")).toBeHidden();
+    await expect(page.locator("#attendance")).toBeHidden();
 
     await adminTab(page, "people");
     await expect(page.locator("#leave")).toBeVisible();

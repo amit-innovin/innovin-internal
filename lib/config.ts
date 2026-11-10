@@ -1,11 +1,5 @@
 // Runtime configuration read from environment variables (server-side only).
 
-// Orders are open all day by default (24); set ORDER_CUTOFF_HOUR to enforce a daily deadline.
-export function orderCutoffHour() {
-  const hour = Number(process.env.ORDER_CUTOFF_HOUR ?? 24);
-  return Number.isInteger(hour) && hour >= 0 && hour <= 24 ? hour : 24;
-}
-
 // Bootstrap admins. These emails are made admin on every sign-in and can't be demoted in-app,
 // so the first admin exists (and a lost admin can be restored) without any shared secret.
 // OWNER_EMAILS is the pre-two-role name, still read until deployments rename it.

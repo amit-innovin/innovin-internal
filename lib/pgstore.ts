@@ -1,5 +1,3 @@
-import { assertBasketRevision } from "./pantry/shop";
-import { assertRequestEditable, fulfillmentOf, nextFulfillment, canMoveFulfillment, sameTray, type OrderFulfillment } from "./order-state";
 import { Pool } from "pg";
 import { pgConfig } from "./pgconfig";
 import { PING_TTL_MS } from "./pings";
@@ -18,23 +16,15 @@ import type {
   PingRow,
   PushSubscriptionRow,
   StepsRow,
-  OrderRow,
   Role,
   Store,
   WifiRow,
   WorkspaceProfile,
   PlannerDay,
-  ProviderRecord,
 } from "./types";
 
 // Postgres persistence — used when DATABASE_URL is set (Neon, Supabase, Vercel Postgres).
 const SCHEMA = `
-CREATE TABLE IF NOT EXISTS provider_records (
-  key text PRIMARY KEY,
-  version integer NOT NULL,
-  value text NOT NULL,
-  updated_at timestamptz NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS notices (
   id text PRIMARY KEY,
@@ -67,17 +57,6 @@ CREATE TABLE IF NOT EXISTS attendance (
   lng double precision,
   accuracy_m real
 );
-CREATE TABLE IF NOT EXISTS orders (
-  id text PRIMARY KEY,
-  date text NOT NULL,
-  item_id text NOT NULL,
-  preference text NOT NULL,
-  instructions text NOT NULL DEFAULT '',
-  submitter_ref text NOT NULL,
-  created_at timestamptz NOT NULL,
-  UNIQUE (date, submitter_ref, item_id)
-);
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS product jsonb;
 CREATE TABLE IF NOT EXISTS grievances (
   id text PRIMARY KEY,
   body text NOT NULL,
@@ -138,14 +117,12 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
   created_at timestamptz NOT NULL,
   PRIMARY KEY (event_id, submitter_ref)
 );
--- Migrations for databases created before sessions/multi-item orders/images existed:
+-- Migrations for databases created before sessions/images existed:
 ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
-ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS ordered_by text;
 ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
 ALTER TABLE grievances ADD COLUMN IF NOT EXISTS urgent boolean NOT NULL DEFAULT false;
 -- Scrub device-linked refs written before hard anonymity: the DB must not be joinable
--- against away/orders to de-anonymize a submission.
+-- against away to de-anonymize a submission.
 UPDATE grievances SET submitter_ref = 'anon' WHERE submitter_ref <> 'anon';
 -- Leave balances copied from Zoho People (the system of record) by an admin. One row per
 -- person per leave year; as_of is what makes app-side requests countable on top.
@@ -232,13 +209,7 @@ DELETE FROM attendance a USING attendance b
   WHERE a.email = b.email AND a.date = b.date
     AND (a.check_in_at > b.check_in_at OR (a.check_in_at = b.check_in_at AND a.ctid > b.ctid));
 ALTER TABLE attendance ADD CONSTRAINT attendance_email_date_key UNIQUE (email, date);
-CREATE UNIQUE INDEX IF NOT EXISTS orders_day_ref_item ON orders (date, submitter_ref, item_id);
 CREATE INDEX IF NOT EXISTS attendance_date_idx ON attendance (date);
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment text;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_at timestamptz;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_by text;
-CREATE INDEX IF NOT EXISTS orders_date_idx ON orders (date);
-CREATE INDEX IF NOT EXISTS orders_submitter_idx ON orders (submitter_ref, date DESC);
 CREATE INDEX IF NOT EXISTS grievances_created_idx ON grievances (created_at DESC);
 CREATE INDEX IF NOT EXISTS grievances_submitter_idx ON grievances (submitter_ref, created_at DESC);
 CREATE INDEX IF NOT EXISTS wifi_created_idx ON wifi (created_at DESC);
@@ -265,18 +236,6 @@ const attendance = (r: any): AttendanceRow => ({
   lng: r.lng ?? null,
   declaredMode: r.declared_mode ?? null,
   accuracyM: r.accuracy_m ?? null,
-});
-const order = (r: any): OrderRow => ({
-  ...(r.product?{product:r.product}:{}),
-  ...(r.fulfillment ? {fulfillment:r.fulfillment,fulfillmentAt:r.fulfillment_at?.toISOString?.()??r.fulfillment_at,fulfillmentBy:r.fulfillment_by??null} : {}),
-  id: r.id,
-  date: r.date,
-  itemId: r.item_id,
-  preference: r.preference,
-  instructions: r.instructions,
-  submitterRef: r.submitter_ref,
-  ...(r.ordered_by ? { orderedBy: r.ordered_by } : {}),
-  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const grievance = (r: any): GrievanceRow => ({
   id: r.id,
@@ -382,18 +341,6 @@ const event = (r: any): EventRow => ({
 });
 
 class PgStore implements Store {
-  async getProviderRecord(key: string): Promise<ProviderRecord | null> {
-    const result = await this.q(`SELECT key, version, value, updated_at AS "updatedAt" FROM provider_records WHERE key=$1`, [key]);
-    const row = result.rows[0];
-    return row ? { ...row, updatedAt: row.updatedAt?.toISOString?.() ?? row.updatedAt } : null;
-  }
-  async putProviderRecord(key: string, expectedVersion: number | null, value: string, updatedAt: string) {
-    const result = expectedVersion === null
-      ? await this.q(`INSERT INTO provider_records(key,version,value,updated_at) VALUES($1,1,$2,$3) ON CONFLICT(key) DO NOTHING`, [key,value,updatedAt])
-      : await this.q(`UPDATE provider_records SET version=version+1, value=$3, updated_at=$4 WHERE key=$1 AND version=$2`, [key,expectedVersion,value,updatedAt]);
-    return !!result.rowCount;
-  }
-
   async addNotice(row: NoticeRow): Promise<NoticeRow> {
     const safe = row.anonymous ? { ...row, authorEmail: null, authorName: null } : row;
     await this.q(`INSERT INTO notices (id, data, created_at) VALUES ($1,$2::jsonb,$3)`, [safe.id, JSON.stringify(safe), safe.createdAt]);
@@ -533,56 +480,6 @@ class PgStore implements Store {
   async listAttendance(date: string) {
     const res = await this.q(`SELECT * FROM attendance WHERE date = $1 ORDER BY check_in_at`, [date]);
     return res.rows.map(attendance);
-  }
-  async setDayOrders(date: string, ref: string, rows: OrderRow[], expectedIds?:string[]) {
-    await this.init();
-    const client = await this.db().connect();
-    try {
-      await client.query("BEGIN");
-      await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`pantry:${date}:${ref}`]);
-      const existing=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);
-      assertBasketRevision(existing.rows.map(order),expectedIds);
-      assertRequestEditable(existing.rows.map(order));
-      await client.query(`DELETE FROM orders WHERE date = $1 AND submitter_ref = $2`, [date, ref]);
-      for (const row of rows) {
-        await client.query(
-          `INSERT INTO orders (id, date, item_id, preference, instructions, submitter_ref, created_at, ordered_by,product)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
-           ON CONFLICT (date, submitter_ref, item_id) DO UPDATE SET preference = $4, instructions = $5`,
-          [row.id, row.date, row.itemId, row.preference, row.instructions, row.submitterRef, row.createdAt, row.orderedBy ?? null,row.product?JSON.stringify(row.product):null],
-        );
-      }
-      await client.query("COMMIT");
-    } catch (err) {
-      await client.query("ROLLBACK").catch(() => undefined);
-      throw err;
-    } finally {
-      client.release();
-    }
-    return rows;
-  }
-  async listOrders(date: string) {
-    const res = await this.q(`SELECT * FROM orders WHERE date = $1 ORDER BY created_at`, [date]);
-    return res.rows.map(order);
-  }
-  async setOrderFulfillment(date:string,ref:string,expectedIds:string[],expected:OrderFulfillment,next:OrderFulfillment,actor:string|null,at:string) {
-    await this.init();const client=await this.db().connect();
-    try {await client.query("BEGIN");await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,[`pantry:${date}:${ref}`]);
-      const result=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);const rows=result.rows.map(order);
-      if(!canMoveFulfillment(expected,next) || !sameTray(rows,expectedIds) || rows.some(r=>fulfillmentOf(r)!==expected)){await client.query("COMMIT");return false;}
-      await client.query(`UPDATE orders SET fulfillment=$3,fulfillment_at=$4,fulfillment_by=$5 WHERE date=$1 AND submitter_ref=$2`,[date,ref,next,at,actor]);await client.query("COMMIT");return true;
-    } catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}finally{client.release();}
-  }
-  async deleteOrder(ref: string, date: string) {
-    await this.init();const client=await this.db().connect();
-    try {await client.query("BEGIN");await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,[`pantry:${date}:${ref}`]);
-      const rows=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);assertBasketRevision(rows.rows.map(order));assertRequestEditable(rows.rows.map(order));
-      const result=await client.query(`DELETE FROM orders WHERE submitter_ref=$1 AND date=$2`,[ref,date]);await client.query("COMMIT");return !!result.rowCount;
-    }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}finally{client.release();}
-  }
-  async listOrdersByRef(ref: string, limit: number) {
-    const res = await this.q(`SELECT * FROM orders WHERE submitter_ref = $1 ORDER BY date DESC LIMIT $2`, [ref, limit]);
-    return res.rows.map(order);
   }
   async addGrievance(row: GrievanceRow) {
     const res = await this.q(

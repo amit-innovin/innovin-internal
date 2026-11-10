@@ -27,7 +27,6 @@ test.describe("iPhone workspace", () => {
       expect(size!.width, `${name} width`).toBeGreaterThanOrEqual(44);
       expect(size!.height, `${name} height`).toBeGreaterThanOrEqual(44);
     }
-    const shopLink=page.getByRole("link",{name:"Open pantry shop",exact:true});await expect(shopLink).toBeVisible();expect((await shopLink.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     const headers = page.locator(".phone-card-header-bar");
     for (const header of await headers.all()) {
       expect(await header.evaluate(e => e.scrollWidth <= e.clientWidth), "card header does not clip").toBe(true);
@@ -47,16 +46,6 @@ test.describe("iPhone workspace", () => {
     await expect(page.locator(".phone-id-back")).toHaveCSS("visibility", "hidden");
     await expect(page.locator(".phone-id-name")).toBeVisible();
     await withinViewport(page);
-  });
-
-  test("pantry opens its dedicated shop and keeps meal requests reachable",async({page})=>{
-    await signInOffice(page);await page.getByRole("link",{name:"Open pantry shop",exact:true}).click();
-    await expect(page.getByRole("heading",{name:"Office pantry",exact:true})).toBeVisible();
-    const search=page.getByRole("searchbox",{name:"Search office products"});expect(await search.evaluate(e=>parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(16);
-    await withinViewport(page);await capture(page,"ios-product-shop");
-    await page.getByRole("link",{name:/Office meals.*drinks/}).click();await page.getByRole("button",{name:/^Tea/}).click();await expect(page.getByText(/Request received.*Tea/)).toBeVisible();await page.reload();
-    expect((await(await page.request.get("/api/snacks?scope=mine")).json()).items.some((r:{itemId:string})=>r.itemId==="tea")).toBe(true);
-    await page.getByRole("link",{name:"Innovin Internal home",exact:true}).click();await expect(page.locator(".phone-pantry-summary")).toContainText("Tea");await withinViewport(page);
   });
 
   test("profile and note dialogs stay inside the viewport and dismiss cleanly", async ({ page }) => {

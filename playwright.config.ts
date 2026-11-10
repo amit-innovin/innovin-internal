@@ -1,22 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // E2E runs against production builds (`next build` first — see `npm run test:e2e`).
-//   main   :3210 — orders always open (ORDER_CUTOFF_HOUR=24) so results don't depend on time of day
-//   closed :3211 — orders always closed (ORDER_CUTOFF_HOUR=0) to cover the after-cutoff flow
+//   one server on :3210
 // Storage: E2E_DATABASE_URL → Postgres; otherwise isolated JSON files under .test-data/.
 // Browser: CHROME_PATH → use a local Chromium-based browser instead of Playwright's download.
 export const MAIN_URL = "http://localhost:3210";
-export const CLOSED_URL = "http://localhost:3211";
 
 const db = process.env.E2E_DATABASE_URL;
 // Fake office at 12.935,77.624 — e2e geolocation tests check in from inside/outside this geofence.
-const serverEnv = (name: string, cutoff: string) => ({
+const serverEnv = (name: string) => ({
   ADMIN_PASSCODE: "1704",
-  PANTRY_INTEGRATION_KEY: "b".repeat(64),
-  PANTRY_ORDERING_ENABLED: "true",
-  PANTRY_SWIGGY_TEST_URL: "http://localhost:3998",
-  PANTRY_SWIGGY_REDIRECT_URI: `http://localhost:${name === "main" ? 3210 : 3211}/api/pantry-provider/callback`,
-  ORDER_CUTOFF_HOUR: cutoff,
   ALLOWED_EMAIL_DOMAINS: "innovinlabs.com",
   // Never reach out to fast.com from tests — the speed test falls back to our own payload,
   // and the fast.com path is exercised with a stubbed target instead.
@@ -64,7 +57,6 @@ export default defineConfig({
     { name: "mobile", testIgnore: /(?:api|ios)\.spec/, use: { ...devices["Pixel 7"], launchOptions } },
     ...(process.env.E2E_IOS ? [
       { name: "ios-journeys", testMatch: /journey-repairs\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
-      { name: "ios-pantry", testMatch: /pantry(?:-safety|-shop)?\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
       { name: "ios-small", testMatch: /(?:ios|mobile-shell)\.spec/, use: { ...devices["iPhone SE (3rd gen)"], browserName: "webkit" as const } },
       { name: "ios", testMatch: /(?:ios|mobile-shell)\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
       { name: "ios-large", testMatch: /(?:ios|mobile-shell)\.spec/, use: { ...devices["iPhone 16 Pro Max"], browserName: "webkit" as const } },
@@ -73,7 +65,6 @@ export default defineConfig({
     { name: "api", testMatch: /api\.spec/, dependencies: ["desktop", "mobile"] },
   ],
   webServer: [
-    { command: "npm run start -- -p 3210", url: MAIN_URL, env: serverEnv("main", "24"), reuseExistingServer: false, timeout: 60_000 },
-    { command: "npm run start -- -p 3211", url: CLOSED_URL, env: serverEnv("closed", "0"), reuseExistingServer: false, timeout: 60_000 },
+    { command: "npm run start -- -p 3210", url: MAIN_URL, env: serverEnv("main"), reuseExistingServer: false, timeout: 60_000 },
   ],
 });

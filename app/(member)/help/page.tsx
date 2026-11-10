@@ -1,11 +1,9 @@
 import type { LucideIcon } from "lucide-react";
-import { CalendarCheck, CalendarDays, CalendarOff, Coffee, MessageSquare, Plane, Wifi } from "lucide-react";
+import { CalendarCheck, CalendarDays, CalendarOff, MessageSquare, Plane, Wifi } from "lucide-react";
 import { IconTile, PageHeader, stagger, type Tone } from "@/components/kit";
 import { Card } from "@/components/ui/card";
-import { orderCutoffHour } from "@/lib/config";
 import { fmtHour } from "@/lib/format";
 
-// Rendered per request so the cutoff always matches the runtime ORDER_CUTOFF_HOUR the API enforces.
 export const dynamic = "force-dynamic";
 
 const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
@@ -14,12 +12,6 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     tone: "blue",
     q: "How does attendance work?",
     a: "Sign in with your Innovin Google account. On Home, choose In office or Remote to record today’s presence; Attendance also has Check In and Check Out. Check out when you leave. Attendance may ask for location, which you can decline. Personal plans do not change attendance.",
-  },
-  {
-    icon: Coffee,
-    tone: "sky",
-    q: "How do pantry requests and office meals work?",
-    a: "Open the office pantry to choose exact Instamart products and quantities from the admins’ catalog, then Send request. Your basket is a draft until sent. An admin starts preparation, reviews the combined basket and places the supplier order. Prices are estimates until checkout. You can change or cancel before preparation and the daily cutoff; cancelling a request never cancels a supplier order. Office meals and drinks remain a separate secondary tool. " + (orderCutoffHour() >= 24 ? "Requests are open throughout the day until preparation begins." : `Send requests before ${fmtHour(orderCutoffHour())}.`),
   },
   {
     icon: MessageSquare,

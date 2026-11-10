@@ -16,7 +16,7 @@ test.describe("Studio workspace", () => {
     await page.screenshot({ path: `output/playwright/onboarding-${test.info().project.name}.png`, fullPage: true });
   });
 
-  test("office mode persists and pantry enforces remote and office rules on the server", async ({ page, browser, isMobile }) => {
+  test("office mode and profile persist", async ({ page, browser, isMobile }) => {
     await page.goto("/api/auth/google?next=/");
     await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible();
     const profile = page.getByRole("button", { name: "Edit profile" }).first();
@@ -31,29 +31,13 @@ test.describe("Studio workspace", () => {
     await page.getByRole("button", { name: "Zoom in arena" }).click();
     await expect(page.locator(".zoom-level-pill")).toHaveText("95%");
     await page.getByRole("button", { name: "Remote", exact: true }).click();
-    expect((await (await page.request.get("/api/pantry-shop")).json()).officeAllowed).toBe(false);
-    const denied = await page.request.post("/api/snacks", { data: { items: ["tea"] } });
-    expect(denied.status()).toBe(403);
     await page.getByRole("button", { name: "In office", exact: true }).click();
-    await page.goto("/snacks");
-    await page.getByRole("button", { name: /^Tea/ }).click();
-    await expect(page.getByText(/Request received.*Tea/)).toBeVisible();
-
-    await expect(page.getByText("Your pantry request is saved",{exact:true})).toBeVisible();
-    const mine = await (await page.request.get("/api/snacks?scope=mine")).json();
-    expect(mine.items).toHaveLength(1);
-    expect(mine.items[0].orderedBy).toMatch(/@innovinlabs.com$/);
-    const otherDevice = await browser.newContext({ storageState: { cookies: (await page.context().cookies()).filter((c) => c.name === "innovin_user"), origins: [] } });
-    expect((await (await otherDevice.request.get("http://localhost:3210/api/snacks?scope=mine")).json()).items).toHaveLength(1);
-    await otherDevice.close();
-    expect((await page.request.post("/api/snacks", { data: { items: ["tea", "snacks", "healthy", "lunch", "dinner"] } })).status()).toBe(400);
     await page.goto("/");
     await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText("Product Designer", { exact: true }).first()).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `output/playwright/workspace-${test.info().project.name}.png`, fullPage: true });
     await page.getByRole("button", { name: "Check out", exact: true }).click();
-    expect((await page.request.post("/api/snacks", { data: { items: ["tea"] } })).status()).toBe(403);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 

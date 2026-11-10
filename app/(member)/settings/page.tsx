@@ -96,7 +96,7 @@ export default function Settings() {
           <IconTile icon={Lock} tone="slate" />
           <div className="flex-1">
             <p className="text-sm font-medium">Admin dashboard</p>
-            <p className="text-xs text-muted-foreground">Approvals, pantry, Speak Up inbox and people.</p>
+            <p className="text-xs text-muted-foreground">Approvals, Speak Up inbox and people.</p>
           </div>
           <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </Card>

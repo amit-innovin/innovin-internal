@@ -23,7 +23,7 @@ describe("proxy", () => {
     },
   );
 
-  it.each(["/", "/admin", "/pantry", "/settings", "/grievances-admin", "/sign-inx"])("%s needs a session", (path) => {
+  it.each(["/", "/admin", "/steps", "/settings", "/grievances-admin", "/sign-inx"])("%s needs a session", (path) => {
     expect(isPublicPath(path)).toBe(false);
   });
 

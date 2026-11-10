@@ -1,4 +1,3 @@
-import { fulfillmentOf,FULFILLMENT_LABELS } from "./order-state";
 import { todayIST } from "./time";
 import { boardHref,attendanceHref,eventHref } from "./journey";
 import { fmtShortDate } from "./format";
@@ -16,7 +15,7 @@ import type { GrievanceRow } from "./types";
 
 export type Notification = {
   id: string;
-  kind: "announcement" | "event" | "away" | "grievance" | "ping" | "pantry";
+  kind: "announcement" | "event" | "away" | "grievance" | "ping";
   title: string;
   body: string;
   at: string;
@@ -58,8 +57,6 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
   }
 
   if(opts.email) {
-    const trays=(await store.listOrders(todayIST())).filter(r=>r.orderedBy===opts.email&&r.fulfillmentAt);
-    const first=trays[0];if(first?.fulfillmentAt)items.push({id:`pantry-${first.date}-${fulfillmentOf(first)}`,kind:"pantry",title:FULFILLMENT_LABELS[fulfillmentOf(first)],body:"Your pantry request",at:first.fulfillmentAt,href:trays.some(r=>r.product)?"/pantry":"/snacks?tab=today"});
     const me=employees.find(e=>e.email===opts.email);
     if(me?.role==="admin")for(const r of await store.listPendingAway())items.push({id:`pending-away-${r.id}`,kind:"away",title:"Time-away request awaiting review",body:"Open Approvals to review it.",at:r.createdAt,href:"/admin?tab=approvals#away"});
   }

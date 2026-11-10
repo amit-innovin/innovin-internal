@@ -1,5 +1,5 @@
 import { expect, request, test, type APIRequestContext } from "@playwright/test";
-import { CLOSED_URL, MAIN_URL } from "../playwright.config";
+import { MAIN_URL } from "../playwright.config";
 
 // HTTP-level verification of validation, auth, privacy, idempotency and abuse limits.
 let seq = 0;
@@ -34,10 +34,18 @@ async function officeDevice() {
   return ctx;
 }
 
+test.describe("API: removed features", () => {
+  for (const path of ["/api/snacks", "/api/pantry-shop", "/api/pantry-provider"]) {
+    test(`removed API ${path} is gone`, async ({ request }) => {
+      expect((await request.get(path)).status()).toBe(404);
+    });
+  }
+});
+
 test.describe("API: input validation", () => {
   test("malformed or non-object JSON bodies return 400, never 500", async () => {
     const ctx = await officeDevice();
-    for (const path of ["/api/attendance", "/api/snacks", "/api/grievances", "/api/wifi", "/api/away"]) {
+    for (const path of ["/api/attendance", "/api/grievances", "/api/wifi", "/api/away"]) {
       for (const body of ["{bad", "[1,2]", "null", '"text"']) {
         const res = await ctx.post(path, { data: body, headers: { "Content-Type": "application/json" } });
         expect(res.status(), `${path} ${body}`).toBe(400);
@@ -58,12 +66,8 @@ test.describe("API: input validation", () => {
     expect((await ctx.post("/api/attendance", { data: { action: "out" } })).status()).toBe(404);
   });
 
-  test("snacks, wifi, and grievances reject invalid payloads", async () => {
+  test("wifi and grievances reject invalid payloads", async () => {
     const ctx = await officeDevice();
-    expect((await ctx.post("/api/snacks", { data: { items: ["caviar"] } })).status()).toBe(400);
-    expect((await ctx.post("/api/snacks", { data: { items: [] } })).status()).toBe(400);
-    expect((await ctx.post("/api/snacks", { data: { items: ["tea"], preference: "spicy" } })).status()).toBe(400);
-    expect((await ctx.post("/api/snacks", { data: { itemId: "tea" } })).status()).toBe(400);
     expect((await ctx.post("/api/wifi", { data: { quality: "meh" } })).status()).toBe(400);
     expect((await ctx.post("/api/wifi", { data: { quality: "good", downMbps: -1 } })).status()).toBe(400);
     expect((await ctx.post("/api/wifi", { data: { quality: "good", downMbps: "fast" } })).status()).toBe(400);
@@ -71,7 +75,6 @@ test.describe("API: input validation", () => {
     expect((await ctx.post("/api/grievances", { data: { body: 123 } })).status()).toBe(400);
     expect((await ctx.post("/api/grievances", { data: { body: "x", image: "data:text/html;base64,PGI+" } })).status()).toBe(400);
     expect((await ctx.post("/api/grievances", { data: { body: "x", image: "not-a-data-url" } })).status()).toBe(400);
-    expect((await ctx.delete("/api/snacks")).status()).toBe(404);
   });
 
   test("time away requires identity and validates type and the date range", async () => {
@@ -95,8 +98,6 @@ test.describe("API: input validation", () => {
     const g = await (await ctx.post("/api/grievances", { data: { body: "x".repeat(5000), displayName: "n".repeat(500) } })).json();
     expect(g.body).toHaveLength(2000);
     expect(g.displayName).toHaveLength(100);
-    const o = await (await ctx.post("/api/snacks", { data: { items: ["tea"], instructions: "i".repeat(900) } })).json();
-    expect(o.items[0].instructions).toHaveLength(500);
   });
 });
 
@@ -192,24 +193,6 @@ test.describe("API: behaviour", () => {
       await ctx.post("/api/away", { data: { email: "forged@innovinlabs.com", type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" } })
     ).json();
     expect(away.email).toBe(me.email);
-  });
-
-  test("a day's order can hold several items, is replaceable and cancellable", async () => {
-    const ctx = await officeDevice();
-    const placed = await (await ctx.post("/api/snacks", { data: { items: ["tea", "lunch"], instructions: "i" } })).json();
-    expect(placed.items).toHaveLength(2);
-    noRef(placed);
-    await ctx.post("/api/snacks", { data: { items: ["healthy"], preference: "healthy" } });
-    const mine = await (await ctx.get("/api/snacks?scope=mine")).json();
-    expect(mine).toMatchObject({ open: true, cutoffHour: 24 });
-    expect(mine.items.map((o: { itemId: string }) => o.itemId)).toEqual(["healthy"]);
-    noRef(mine);
-    expect(await (await ctx.get("/api/snacks?scope=history")).json()).toHaveLength(1);
-    expect((await ctx.delete("/api/snacks")).status()).toBe(200);
-    expect((await (await ctx.get("/api/snacks?scope=mine")).json()).items).toEqual([]);
-
-    const other = await device();
-    expect((await (await other.get("/api/snacks?scope=mine")).json()).items).toEqual([]);
   });
 
   test("time away: a request is visible to its device and admin, and approval flows through", async () => {
@@ -435,13 +418,6 @@ test.describe("API: behaviour", () => {
     expect(all.find((x: { id: string }) => x.id === g.id).image).toBe(img);
   });
 
-  test("after the cutoff, ordering and cancelling are refused", async () => {
-    const ctx = await device(CLOSED_URL);
-    expect((await (await ctx.get("/api/snacks?scope=mine")).json()).open).toBe(false);
-    expect((await ctx.post("/api/snacks", { data: { items: ["tea"] } })).status()).toBe(403);
-    expect((await ctx.delete("/api/snacks")).status()).toBe(403);
-  });
-
   test("speed test serves 2 MB of uncached bytes", async () => {
     const ctx = await device();
     const res = await ctx.get("/api/wifi/speedtest");
@@ -455,7 +431,6 @@ test.describe("API: privacy & auth", () => {
   test("admin-only endpoints reject anonymous callers", async () => {
     const ctx = await device();
     expect((await ctx.get("/api/grievances")).status()).toBe(401);
-    expect((await ctx.get("/api/snacks")).status()).toBe(401);
     expect((await ctx.get("/api/away")).status()).toBe(401);
     expect((await ctx.patch("/api/grievances", { data: { id: "x", status: "resolved" } })).status()).toBe(401);
     expect((await ctx.patch("/api/away", { data: { id: "x", status: "approved" } })).status()).toBe(401);
@@ -481,7 +456,6 @@ test.describe("API: privacy & auth", () => {
     const all = await (await adm.get("/api/grievances")).json();
     expect(all.find((x: { id: string }) => x.id === g.id)).toMatchObject({ displayName: null, status: "open" });
     noRef(all);
-    noRef(await (await adm.get("/api/snacks")).json());
   });
 
   test("admin status updates validate input and report unknown ids", async () => {

@@ -43,21 +43,6 @@ export type AttendanceRow = {
   declaredMode?: "office" | "remote" | null;
 };
 
-export type OrderRow = {
-  product?: import("./pantry/shop").RequestedProduct;
-  fulfillment?: import("./order-state").OrderFulfillment;
-  fulfillmentAt?: string;
-  fulfillmentBy?: string | null;
-  id: string;
-  date: string;
-  itemId: string;
-  preference: string;
-  instructions: string;
-  submitterRef: string;
-  orderedBy?: string;
-  createdAt: string;
-};
-
 export type AwayType = "leave" | "wfh";
 export type AwayStatus = "pending" | "approved" | "rejected" | "cancelled";
 
@@ -205,11 +190,8 @@ export type NoticeRow = {
 };
 export type NoticeReaction = { noticeId: string; email: string; emoji: string };
 
-export type ProviderRecord = { key: string; version: number; value: string; updatedAt: string };
 
 export interface Store {
-  getProviderRecord(key: string): Promise<ProviderRecord | null>;
-  putProviderRecord(key: string, expectedVersion: number | null, value: string, updatedAt: string): Promise<boolean>;
   addNotice(row: NoticeRow): Promise<NoticeRow>;
   listNotices(limit: number): Promise<NoticeRow[]>;
   deleteNotice(id: string): Promise<boolean>;
@@ -234,12 +216,6 @@ export interface Store {
   setSteps(row: StepsRow): Promise<StepsRow>;
   listSteps(): Promise<StepsRow[]>;
   listStepsByEmail(email: string, limit: number): Promise<StepsRow[]>;
-  // Replaces the device's selection for the day (atomically in Postgres).
-  setDayOrders(date: string, ref: string, rows: OrderRow[], expectedIds?: string[]): Promise<OrderRow[]>;
-  setOrderFulfillment(date: string, ref: string, expectedIds: string[], expected: import("./order-state").OrderFulfillment, next: import("./order-state").OrderFulfillment, actor: string | null, at: string): Promise<boolean>;
-  listOrders(date: string): Promise<OrderRow[]>;
-  listOrdersByRef(ref: string, limit: number): Promise<OrderRow[]>;
-  deleteOrder(ref: string, date: string): Promise<boolean>;
   addGrievance(row: GrievanceRow): Promise<GrievanceRow>;
   setGrievanceStatus(id: string, status: GrievanceStatus): Promise<boolean>;
   listGrievances(): Promise<GrievanceRow[]>;

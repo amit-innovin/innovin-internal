@@ -1,6 +1,5 @@
 import type { PlannerKind, WorkspaceProfile } from "./types";
 
-export const PANTRY_LIMIT = 4;
 export const PLANNER_LABELS: Record<PlannerKind, string> = {
   office: "In office", remote: "Work from home", vacation: "Vacation", sick: "Sick leave", festival: "Festival leave", holiday: "Public holiday",
 };

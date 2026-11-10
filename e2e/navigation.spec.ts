@@ -1,4 +1,3 @@
-import { CLOSED_URL } from "../playwright.config";
 import { ADMIN_EMAIL, expect, test, signInEmployee, signInOffice } from "./fixtures";
 
 test.describe("Navigation & studio shell", () => {
@@ -32,12 +31,9 @@ test.describe("Navigation & studio shell", () => {
     }
   });
 
-  test("overview links lead to ordering, reporting and settings", async ({ page, isMobile }) => {
+  test("overview links lead to reporting and settings", async ({ page, isMobile }) => {
     await signInOffice(page);
     await page.goto("/");
-    await page.getByRole("link",{name:isMobile?"Open pantry shop":/Browse the office shop/}).click();
-    await expect(page).toHaveURL(/pantry/);
-    await expect(page.getByRole("heading",{name:"Office pantry",exact:true})).toBeVisible();
     for (const [label, url] of [["Wi-Fi pulse", /wifi/], [isMobile ? "Speak Up" : "Send private feedback", /grievances/], ["Settings", /settings/]] as const) {
       await page.goto("/");
       await page.getByRole("link", { name: new RegExp(label) }).click();
@@ -53,27 +49,21 @@ test.describe("Navigation & studio shell", () => {
     await page.locator(".reference-more summary").click();
     await page.getByRole("navigation", { name: "More workspace tools" }).getByRole("link", { name: "Help", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Is Speak Up really anonymous?" })).toBeVisible();
-    await expect(page.getByText(/Your basket is a draft until sent/)).toBeVisible();
   });
 
   test("feature pages use the persistent shell without redundant back links", async ({ page }) => {
     await signInEmployee(page, undefined, "/");
-    for (const path of ["/pantry", "/events", "/people", "/settings", "/help", "/attendance", "/snacks", "/wifi"]) {
+    for (const path of ["/events", "/people", "/settings", "/help", "/attendance", "/wifi"]) {
       await page.goto(path);
       await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "Innovin Internal home" })).toBeVisible();
     }
   });
 
-  test("overview reflects saved attendance and pantry selection", async ({ page, isMobile }) => {
+  test("overview reflects saved attendance", async ({ page }) => {
     await signInOffice(page);
-    await page.goto("/snacks");
-    await page.getByRole("button", { name: /^Tea/ }).click();
-    await page.getByRole("button", { name: "Save request notes" }).click();
-    await expect(page.getByText("Your pantry request is saved")).toBeVisible();
     await page.goto("/");
     await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.locator(".home-shop-status,.phone-pantry-summary").filter({visible:true})).toContainText("Tea");
   });
 
   test("unknown pages show the branded 404 with a way home", async ({ page }) => {
@@ -87,17 +77,11 @@ test.describe("Navigation & studio shell", () => {
 
   test("signed-in pages never overflow horizontally", async ({ page }) => {
     await signInOffice(page);
-    for (const path of ["/", "/pantry", "/steps", "/planner", "/attendance", "/snacks", "/grievances", "/wifi", "/events", "/people", "/settings", "/help", "/admin"]) {
+    for (const path of ["/", "/steps", "/planner", "/attendance", "/grievances", "/wifi", "/events", "/people", "/settings", "/help", "/admin"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBeLessThanOrEqual(0);
     }
   });
 
-  test("help reflects the configured cutoff", async ({ page }) => {
-    // Session cookies are per host, not port, so signing in on the main server covers this one.
-    await signInEmployee(page, undefined, "/");
-    await page.goto(`${CLOSED_URL}/help`);
-    await expect(page.getByText(/Send requests before 12:00 AM/)).toBeVisible();
-  });
 });

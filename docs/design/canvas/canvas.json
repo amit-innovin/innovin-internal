@@ -219,6 +219,20 @@
       "w": 834,
       "h": 900,
       "title": "Notifications on tablet"
+    },
+    "D-CheckIn-Location.dc.html": {
+      "x": 1680,
+      "y": 0,
+      "w": 2174,
+      "h": 930,
+      "title": "Check-in on the phone — location verification states"
+    },
+    "D-Days-Backfill.dc.html": {
+      "x": 3934,
+      "y": 0,
+      "w": 1744,
+      "h": 930,
+      "title": "Days on the phone — fixing one of your last 7 days"
     }
   },
   "createdOnFiles": {
@@ -235,7 +249,8 @@
     "adminNote",
     "deskNote",
     "tabNote",
-    "adminDeskNote"
+    "adminDeskNote",
+    "statesNote"
   ],
   "notes": {
     "protoNote": {
@@ -279,6 +294,13 @@
       "x": 0,
       "y": 10850,
       "text": "Admin sub-pages on a laptop: People & office days, Speak up inbox, Snack shelf, Wi-Fi reports. Overview is the board above. Still no leave approvals: leave is decided in Zoho People."
+    },
+    "statesNote": {
+      "fill": "blue",
+      "w": 900,
+      "x": 1680,
+      "y": -240,
+      "text": "Phone states the prototype doesn't show, added 11 Nov. Check-in: office Wi-Fi is tried first; location is asked for only when Wi-Fi can't prove it; there is no check-out. Remote days never ask for location. Fixing a day: you can change your own last 7 days (no location check, flagged for admins, logged); older days need an admin."
     }
   },
   "order": [
@@ -312,7 +334,9 @@
     "D-AdminDesk-Shelf.dc.html",
     "D-AdminDesk-Wifi.dc.html",
     "D-Desk-Notifications.dc.html",
-    "D-Tab-Notifications.dc.html"
+    "D-Tab-Notifications.dc.html",
+    "D-CheckIn-Location.dc.html",
+    "D-Days-Backfill.dc.html"
   ],
   "pages": [],
   "title": "Innovin Internal — app design"

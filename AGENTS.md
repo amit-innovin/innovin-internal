@@ -6,6 +6,7 @@
 - Unit + store contract: `npm test`; add `TEST_DATABASE_URL=postgres://…` to include the Postgres contract
 - E2E: `npm run test:e2e` (builds, then Playwright on port 3210).
   `E2E_DATABASE_URL=postgres://…` runs against Postgres; `CHROME_PATH=/path/to/chromium` avoids the Playwright browser download.
+  `E2E_MOCK_PORT=3998` moves the Google sign-in mock off port 3999 when another checkout or session is already using it.
 - Full gate: `npm run test:all`
 
 ## How much to verify, and when
@@ -52,9 +53,24 @@ the PR in the web UI. Do not self-merge to `main` even then.
 Then deploy (`npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"`, token in `.env`),
 smoke-test production, and delete any test rows created by the smoke test.
 
+## Design: the canvas is the source of truth
+- Every screen is built from the design canvas, not from spec prose: https://claude.ai/artifact/DEsTmRtTRB5vP2G5ugddyE.
+  A snapshot of its boards is in `docs/design/canvas/`; `docs/design/canvas-map.md` maps each board to routes, components and APIs.
+  Read the board (and refresh the snapshot if the canvas changed) before planning or building a screen. If a state is not drawn,
+  add a board first; don't invent it in code.
+- The app is being rebuilt screen by screen. Rebuilt screens live in `app/(member)/(duo)/` and render inside the new shell
+  (`components/shell/app-shell.tsx`); `lib/nav.ts` lists which routes those are. Everything else still uses the legacy nav and CSS.
+  When a screen is rebuilt: move its route into `(duo)`, add it to `DUO_ROUTES` and point its nav item at it in `lib/nav.ts`.
+- New-design UI uses the Duo primitives in `components/duo` and the classes and tokens in `app/duo.css` (all scoped under `.duo`),
+  and `Lappy` for the mascot. Rule: a solid bottom edge means tappable, flat means information. Don't use the legacy
+  stylesheets or shadcn styling on a rebuilt screen.
+
 ## Conventions
-- UI: shadcn/ui primitives in `components/ui`, beUI motion components in `components/motion`, shared blocks in `components/kit.tsx`, transitions.dev CSS in `app/transitions.css`. Brand tokens (innovinlabs.com) live in `app/globals.css`.
-- Client network calls go through `lib/fetcher.ts` (`getJSON`, `send`, `readError`) — never raw `fetch` + `res.json().error`.
+- Legacy UI (screens not rebuilt yet): shadcn/ui primitives in `components/ui`, beUI motion components in `components/motion`, shared blocks in `components/kit.tsx`, transitions.dev CSS in `app/transitions.css`. Brand tokens (innovinlabs.com) live in `app/globals.css`.
+- Client network calls go through `lib/fetcher.ts` — never raw `fetch` + `res.json().error`.
+  Rebuilt screens read server data with TanStack Query: hooks and query keys live in `lib/queries.ts`, use `fetchJSON` as the
+  query function and `send` + `readError` in mutations, and update or invalidate the query cache after a write. No Zustand or
+  other client store; filters and tabs belong in the URL. Legacy screens keep `getJSON`/`send` until they are rebuilt.
 - API routes parse bodies with `readJSON` (400 on bad input) and apply limits via `enforce` (`lib/guard.ts`).
 - Any Store change must be implemented in both `lib/jsonstore.ts` and `lib/pgstore.ts` and covered in `tests/store/contract.ts`.
 - Leave rules live in `lib/leave.ts` (pure, unit-tested against the company policy and the 2026

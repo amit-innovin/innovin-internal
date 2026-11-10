@@ -428,6 +428,90 @@ def notifs(wide):
     top = row(chip('All', True, 5) + chip('Unread', False, 2) + div('', 'flex-grow: 1;') + mark, 8)
     return top + card(col(notif_items(), 4), pad=8) + flat(sub('Push alerts are set in Account. Speak up updates never leave this device.', size=13)), None
 
+# ---------------------------------------------------------------- phone strips (states that the prototype does not show)
+PH_NAV = [('home', 'Home'), ('feed', 'Feed'), ('days', 'Days'), ('snacks', 'Snacks'), ('account', 'Account')]
+I['account'] = 'M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'
+I['spin'] = 'M21 12a9 9 0 1 1-6.2-8.6'
+I['lock'] = 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4'
+def phone(caption, inner, active='home', sheet=None, toast=None):
+    bar = ''.join(f'<button{" aria-current=" + chr(34) + "page" + chr(34) if k == active else ""} style="cursor: pointer; flex: 1 1 0; border: 2px solid {P["skyEdge"] if k == active else "transparent"}; background: {P["sky"] if k == active else "transparent"}; color: {P["brand"] if k == active else P["muted"]}; border-radius: 14px; padding: 6px 0; display: flex; flex-direction: column; align-items: center; gap: 2px; {FR} font-size: 12px; font-weight: 600;">{ic(k, 22)}{l}</button>' for k, l in PH_NAV)
+    nav = f'<nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 4px; padding: 8px; border-top: 2.5px solid {P["line"]}; background: #ffffff;">{bar}</nav>'
+    over = ''
+    if sheet:
+        over = (f'<div style="position: absolute; inset: 0; background: rgba(15,20,30,.45); display: flex; align-items: flex-end;"><div role="dialog" aria-label="{esc(sheet[0])}" style="width: 100%; box-sizing: border-box; background: #ffffff; border-radius: 28px 28px 0 0; padding: 18px 18px 26px; display: flex; flex-direction: column; gap: 12px;">{sheet[1]}</div></div>')
+    if toast:
+        over += f'<div role="status" style="position: absolute; left: 18px; right: 18px; bottom: 96px; background: {P["ink"]}; color: #ffffff; border-radius: 16px; padding: 12px 16px; {FR} font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px;">{ic("check", 20)}{esc(toast)}</div>'
+    frame = div(div(inner, 'position: absolute; inset: 0; padding: 18px 18px 104px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px;') + nav + over,
+                f'position: relative; width: 390px; height: 800px; flex-shrink: 0; border: 2.5px solid {P["line"]}; border-radius: 36px; overflow: hidden; background: #ffffff;')
+    return col(span(esc(caption), f'{FR} font-size: 17px; font-weight: 600; color: {P["muted"]};') + frame, 12)
+def strip(fname, title, phones):
+    w = 64 + len(phones) * 390 + (len(phones) - 1) * 40
+    return fname, title, w, 930, div(''.join(phones), f"width: {w}px; min-height: 930px; box-sizing: border-box; background: {P['soft']}; font-family: 'Nunito', system-ui, sans-serif; color: {P['ink']}; padding: 32px; display: flex; gap: 40px; align-items: flex-start;")
+
+def home_base(state):
+    sq = lambda name, aria: f'<button aria-label="{aria}" style="cursor: pointer; width: 46px; height: 46px; border-radius: 14px; background: #ffffff; color: {P["ink"]}; border: 2.5px solid {P["line"]}; box-shadow: 0 4px 0 {P["line"]}; display: flex; align-items: center; justify-content: center;">{ic(name, 22)}</button>'
+    head = row(col(sub('Mon, 9 Nov') + span('Morning, Meera', f'{FR} font-size: 26px; font-weight: 700; line-height: 1.05;'), 2, 'flex-grow: 1;') + sq('wifi', 'Wi-Fi check') + sq('bell', 'Notifications'), 8)
+    say = {'idle': 'It’s Monday, one of your days. Coming in?', 'checking': 'One sec, checking you’re at the office…', 'in': 'Checked in! That’s 4 of your 8 office days this month.'}[state]
+    mascot = row(div(lappy('Lappy ticking today' if state == 'in' else 'Lappy the laptop mascot', 150 if state == 'in' else 124), 'flex-shrink: 0;') + card(span(say, 'font-size: 15px; font-weight: 800; line-height: 1.3;'), 'flex-grow: 1;', 12), 6, 'align-items: flex-end;')
+    if state == 'in':
+        main = div(row(span(ic('check', 22), f'width: 40px; height: 40px; border-radius: 20px; background: {P["segOn"]}; color: {P["greenText"]}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;') + col(span('You’re in today', f'{FR} font-size: 20px; font-weight: 700;') + span('Verified on office Wi-Fi · 9:12', 'font-size: 12px; font-weight: 800;'), 0, 'flex-grow: 1;') + f'<button style="cursor: pointer; border: none; background: none; color: {P["greenText"]}; {FR} font-size: 15px; font-weight: 600; text-decoration: underline; min-height: 44px;">Change</button>', 10),
+                   f'background: {P["green"]}; color: {P["greenText"]}; border-radius: 22px; padding: 14px;')
+    elif state == 'checking':
+        main = f'<button disabled aria-busy="true" style="border: none; background: {P["primary"]}; color: {P["onPrimary"]}; box-shadow: 0 5px 0 {P["primaryEdge"]}; opacity: .75; {FR} height: 76px; border-radius: 22px; font-size: 21px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px;">{ic("spin", 24)}Checking…</button>'
+    else:
+        main = f'<button style="cursor: pointer; border: none; background: {P["primary"]}; color: {P["onPrimary"]}; box-shadow: 0 5px 0 {P["primaryEdge"]}; {FR} height: 76px; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center;"><span style="font-size: 22px; font-weight: 700;">I’m in the office</span><span style="font-family: \'Nunito\', sans-serif; font-size: 13px; font-weight: 800;">tap to mark today</span></button>'
+    remote = btn('Working remote today', 'g', 50, extra='width: 100%;') if state != 'in' else ''
+    return head + mascot + main + remote + battery(4 if state == 'in' else 3)
+
+def sheet_body(title, text, buttons, note=None, icon='pin', tone='sky'):
+    bg, fg, _ = TONE[tone]
+    return (row(span(ic(icon, 22), f'width: 46px; height: 46px; border-radius: 15px; background: {bg}; color: {fg}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;') + span(esc(title), f'{FR} font-size: 21px; font-weight: 700; line-height: 1.15;'), 12)
+            + span(esc(text), 'font-size: 15px; font-weight: 700; line-height: 1.45;') + buttons + (flat(sub(note, size=12), pad=12) if note else ''))
+
+def checkin_strip():
+    full = 'width: 100%;'
+    ask = sheet_body('Quick check that you’re at the office', 'You’re not on office Wi-Fi, so we need your location once to mark an office day. It’s checked against the office and not stored as a trail.',
+                     btn('Allow location', 'p', 52, 'pin', full, fs=18) + btn('Working remote today', 'g', 50, extra=full), 'On office Wi-Fi you’re never asked: the network is the proof.')
+    away = sheet_body('You don’t look like you’re at the office', 'Your location puts you about 4.2 km away, so today can’t be marked as an office day from here.',
+                      btn('Working remote today', 'p', 52, extra=full, fs=18) + btn('Try again', 'g', 50, 'spin', full), 'At your desk and it still won’t verify? Join office Wi-Fi and try again, or ask an admin to fix your day.', 'pin', 'pink')
+    blocked = sheet_body('Location is blocked for this site', 'We can’t check where you are. Join office Wi-Fi and tap again, or allow location for this site in your browser settings.',
+                         btn('Try again', 'p', 52, 'spin', full, fs=18) + btn('Working remote today', 'g', 50, extra=full), 'Remote days never need your location.', 'lock', 'gold')
+    return [phone('1 · Tap: checking Wi-Fi first', home_base('checking')), phone('2 · Not on office Wi-Fi: ask once', home_base('idle'), sheet=('Location check', ask)),
+            phone('3 · Verified', home_base('in')), phone('4 · Outside the office', home_base('idle'), sheet=('Not at the office', away)),
+            phone('5 · Location blocked', home_base('idle'), sheet=('Location blocked', blocked))]
+
+def days_base(edited=False):
+    attended, leave, today = {2, 4, 5}, 20, 9
+    if edited: attended = attended | {3}
+    cells = ''.join(span(l, f'text-align: center; font-size: 12px; font-weight: 800; color: {P["muted"]};') for l in 'MTWTFSS') + ''.join('<span></span>' for _ in range(6))
+    for d in range(1, 31):
+        wd = (6 + d - 1) % 7
+        base = f'height: 42px; border-radius: 12px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; position: relative; {FR} font-size: 15px; font-weight: 600;'
+        fixable = 2 <= d <= 8 and wd < 5
+        st = f'color: {P["ink"]}; border: 2.5px solid transparent;'
+        if wd >= 5: st = f'color: {P["muted"]}; opacity: .55; border: 2.5px solid transparent;'
+        if d > today and wd in {0, 2} and d != leave: st = f'color: {P["ink"]}; border: 2.5px dashed {P["primary"]};'
+        if fixable and d not in attended: st = f'color: {P["ink"]}; background: #ffffff; border: 2.5px solid {P["line"]}; box-shadow: 0 3px 0 {P["line"]};'
+        if d in attended: st = f'background: {P["green"]}; color: {P["greenText"]}; border: 2.5px solid {P["greenEdge"]};' + (f' box-shadow: 0 3px 0 {P["greenEdge"]};' if fixable else '')
+        if d == leave: st = f'background: {P["pink"]}; color: {P["pinkText"]}; border: 2.5px solid {P["pinkEdge"]};'
+        if d == today: st = f'color: {P["ink"]}; border: 2.5px solid {P["ink"]};'
+        dot = f'<span style="position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 4px; background: {P["gold"]};"></span>' if edited and d == 3 else ''
+        cells += (f'<button aria-label="{d} November, fix this day" style="cursor: pointer; padding: 0; {base} {st}">{d}{dot}</button>' if fixable else span(str(d), base + ' ' + st))
+    cal = card(col(row(h2('November 2026') + div('', 'flex-grow: 1;') + pill(f'{4 if edited else 3} of 8', 'sky')) + div(cells, 'display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px;'), 10), pad=12)
+    hint = flat(row(span(ic('pencil', 18), f'color: {P["muted"]}; display: flex;') + sub('Missed a day? Tap any of your last 7 days to fix it. Raised days are the ones you can change.', size=12), 10), pad=12)
+    return f'<h1 style="margin: 0; {FR} font-size: 30px; font-weight: 700;">Days</h1>' + cal + hint + card(row(col(span('Your office days', f'{FR} font-size: 16px; font-weight: 600;') + span('Mon + Wed', f'{FR} font-size: 20px; font-weight: 700; color: {P["brand"]};'), 0, 'flex-grow: 1;') + btn('Swap a day', 'g', 44, fs=14)), pad=12)
+
+def backfill_strip():
+    full = 'width: 100%;'
+    pick = (row(span('Tue 3 Nov', f'{FR} font-size: 22px; font-weight: 700; flex-grow: 1;') + f'<button aria-label="Close" style="cursor: pointer; width: 40px; height: 40px; border-radius: 12px; border: none; background: {P["soft"]}; color: {P["ink"]}; display: flex; align-items: center; justify-content: center;">{ic("x", 18)}</button>')
+            + sub('Nothing is marked for this day. Where were you?') + div(chip('In office', True) + chip('Remote') + chip('Not working'), 'display: flex; flex-wrap: wrap; gap: 8px;')
+            + flat(sub('Marked later, so there’s no location check. Admins can see it was added after the day. Every change is logged.', size=12), pad=12) + btn('Save Tue 3 Nov', 'p', 52, extra=full, fs=18))
+    locked = sheet_body('Fri 23 Oct is locked', 'You can fix your own last 7 days. Anything older needs an admin, who can change it from People & office days.',
+                        btn('OK', 'p', 52, extra=full, fs=18), 'Admins are Priya and Arjun.', 'lock', 'gold')
+    return [phone('1 · Days: last 7 days are tappable', days_base(), active='days'), phone('2 · Fix a day', days_base(), active='days', sheet=('Fix a day', pick)),
+            phone('3 · Saved: count goes up, day is flagged', days_base(True), active='days', toast='Tue 3 Nov marked In office'), phone('4 · Older than 7 days', days_base(), active='days', sheet=('Day locked', locked))]
+
+
 # ---------------------------------------------------------------- assemble
 MEMBER = [('Feed', 'feed', feed, 'Feed', '12 posts this week', lambda: btn('New post', 'p', 46, 'plus', 'flex-shrink: 0;'), None, 1420, 1460),
           ('Days', 'days', days, 'Days', 'Your office days, calendar and leave', None, None, 980, 1500),
@@ -455,6 +539,8 @@ for key, active, fn, title, subtitle, actions, back, hd, ht in MEMBER:
 for key, sub_id, fn, title, subtitle in ADMIN:
     main, rail = fn(True)
     boards.append(page(f'D-AdminDesk-{key}.dc.html', f'Admin on desktop — {title}', 1280, 900, None, header(title, subtitle), main, rail, admin=sub_id, who=('PR', 'Priya S')))
+boards.append(strip('D-CheckIn-Location.dc.html', 'Check-in on the phone — location verification states', checkin_strip()))
+boards.append(strip('D-Days-Backfill.dc.html', 'Days on the phone — fixing one of your last 7 days', backfill_strip()))
 boards.append(bare('D-NewPost.dc.html', 'New post — Kudos and Poll (dialog on desktop and tablet, sheet on phone)', 1090, 860, newpost()))
 
 os.makedirs(os.path.join(OUT, 'project'), exist_ok=True)

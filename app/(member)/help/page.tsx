@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react";
 import { CalendarCheck, CalendarDays, CalendarOff, MessageSquare, Plane, Wifi } from "lucide-react";
 import { IconTile, PageHeader, stagger, type Tone } from "@/components/kit";
 import { Card } from "@/components/ui/card";
-import { fmtHour } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +10,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: CalendarCheck,
     tone: "blue",
     q: "How does attendance work?",
-    a: "Sign in with your Innovin Google account. On Home, choose In office or Remote to record today’s presence; Attendance also has Check In and Check Out. Check out when you leave. Attendance may ask for location, which you can decline. Personal plans do not change attendance.",
+    a: "Sign in with your Innovin Google account. On Home, choose In office or Remote to record today’s presence; Attendance also has Check In and Check Out. Check out when you leave. Attendance may ask for location, which you can decline. Working from home needs no request — just choose Remote for the day.",
   },
   {
     icon: MessageSquare,
@@ -23,7 +22,7 @@ const faq = (): { icon: LucideIcon; tone: Tone; q: string; a: string }[] => [
     icon: CalendarOff,
     tone: "amber",
     q: "How do leave requests work?",
-    a: "Open Attendance & Leave, pick a leave type, fill the dates and send. An admin approves or rejects the request in this app; its status appears under Your requests. Zoho People remains separate and must be updated there. Personal plans never submit a leave request.",
+    a: "Open Attendance & Leave, pick a leave type, fill the dates and send. An admin approves or rejects the request in this app; its status appears under Your requests. Zoho People remains separate and must be updated there. Only leave needs approval; there are no work-from-home requests.",
   },
   {
     icon: Plane,

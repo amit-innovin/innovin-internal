@@ -219,7 +219,9 @@ The owner wants the app to help people stay fit at work, not just track attendan
 ## Left to the builder
 
 - Data migration: whether to drop or keep (unused) the tables for removed features. Production is Postgres, so pick a safe approach.
+  - **Decided (PR 1): keep.** `orders`, `pings`, `planner_days` and `provider_records` stay in Postgres with their rows; the app no longer creates or reads them and no app code drops them. Pre-cut WFH rows stay in `away` (owner history only). Archiving or dropping is a separate, deliberate operation later, if ever.
 - Whether removed URLs 404 or redirect Home.
+  - **Decided (PR 1): redirect Home.** `/pantry`, `/snacks`, `/planner`, `/people` and `/admin/pantry` redirect to `/` with a temporary 307 (`next.config.ts` `redirects()`), never a 404 — `/snacks` returns in PR 4 as "Tea & snacks", and a temporary redirect is not cached by browsers. Redirects run before the sign-in proxy, so a signed-out visitor reaches `/sign-in`. Next passes the old query string through (`/snacks?tab=today` → `/?tab=today`); Home ignores it. Removed API routes simply 404; `/api/people` stays.
 - Fuzzy-match rule for duplicate suggestions.
 - Exact copy, and how the ID card shows 8-day progress.
 - Whether the location hint survives at all.

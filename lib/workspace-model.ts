@@ -1,6 +1,5 @@
 import type { WorkspaceProfile } from "./types";
 
-
 export function activeMode(profile: Pick<WorkspaceProfile, "mode" | "presenceDate"> | null, checkedIn: boolean, today: string) {
   return checkedIn && profile?.presenceDate === today ? profile.mode : null;
 }

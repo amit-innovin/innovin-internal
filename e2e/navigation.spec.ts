@@ -20,13 +20,14 @@ test.describe("Navigation & studio shell", () => {
     await page.getByRole("link",{name:"Innovin Internal home"}).click();
     await expect(page).toHaveURL("http://localhost:3210/");
     const more = page.getByRole("navigation", { name: "More workspace tools", exact: true });
-    for (const [label, heading] of [["Attendance", "Attendance"], ["Events", "Events"], ["Speak Up", "Speak Up"], ["Wi-Fi", "Wi-Fi Quality"]]) {
-      if (isMobile && new URL(page.url()).pathname === "/") {
-        await page.getByRole("link", { name: "Attendance & leave", exact: true }).click();
-      } else {
-        if (!(await more.isVisible())) await page.locator(".reference-more summary").click();
-        await more.getByRole("link", { name: label, exact: true }).click();
-      }
+    // The phone home screen has no top bar; its wallet links lead into the shell that has one.
+    if (isMobile) {
+      await page.getByRole("link", { name: "Attendance & leave", exact: true }).click();
+      await expect(page.getByRole("heading", { level: 1, name: "Attendance" })).toBeVisible();
+    }
+    for (const [label, heading] of [["Events", "Events"], ["Speak Up", "Speak Up"], ["Wi-Fi", "Wi-Fi Quality"], ["Help", "Help"]]) {
+      if (!(await more.isVisible())) await page.locator(".reference-more summary").click();
+      await more.getByRole("link", { name: label, exact: true }).click();
       await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
     }
   });
@@ -73,6 +74,41 @@ test.describe("Navigation & studio shell", () => {
     await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
     await page.getByRole("link", { name: "Back to home" }).click();
     await expect(page).toHaveURL(/\/$/);
+  });
+
+  // Removed features: their old links (bookmarks, notifications, chat messages) go Home with a
+  // temporary redirect — never a 404. The old query string rides along (Next passes it
+  // through) and Home ignores it, so the assertion is on the path.
+  for (const old of ["/pantry", "/snacks?tab=today", "/planner", "/people?ping=a%40innovinlabs.com", "/admin/pantry"]) {
+    test(`old link ${old} lands on Home when signed in`, async ({ page }) => {
+      await signInEmployee(page, undefined, "/");
+      const res = await page.goto(old);
+      expect(res?.status()).toBe(200);
+      await expect(page).toHaveURL((url) => url.pathname === "/");
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    });
+    test(`old link ${old} asks a signed-out visitor to sign in`, async ({ page }) => {
+      await page.goto(old);
+      await expect(page).toHaveURL(/\/sign-in/);
+    });
+  }
+
+  test("navigation offers no removed feature and no Admin link to a member", async ({ page }) => {
+    await signInEmployee(page, undefined, "/");
+    // includeHidden: the More list sits in a closed <details>, and the phone hides the top bar.
+    const nav = (name?: string) => page.getByRole("navigation", { includeHidden: true, ...(name ? { name, exact: true } : {}) });
+    await expect(nav().getByRole("link", { includeHidden: true }).first()).toBeAttached();
+    await expect(nav("Workspace navigation").getByRole("link", { includeHidden: true })).toHaveText(["Overview", "Daily Steps", "Attendance & Leave"]);
+    await expect(nav("More workspace tools").getByRole("link", { includeHidden: true })).toHaveText(["Events", "Speak Up", "Wi-Fi", "Help"]);
+    await expect(nav().getByRole("link", { name: /pantry|snack|plans|people/i, includeHidden: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Admin", exact: true, includeHidden: true })).toHaveCount(0);
+  });
+
+  test("an admin finds Admin under More", async ({ page }) => {
+    await signInEmployee(page, ADMIN_EMAIL, "/events");
+    await page.locator(".reference-more summary").click();
+    await page.getByRole("navigation", { name: "More workspace tools" }).getByRole("link", { name: "Admin", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
   });
 
   test("signed-in pages never overflow horizontally", async ({ page }) => {

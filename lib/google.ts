@@ -6,7 +6,9 @@ const authEndpoint = () => process.env.GOOGLE_AUTH_URL || "https://accounts.goog
 const tokenEndpoint = () => process.env.GOOGLE_TOKEN_URL || "https://oauth2.googleapis.com/token";
 const tokeninfoEndpoint = () => process.env.GOOGLE_TOKENINFO_URL || "https://oauth2.googleapis.com/tokeninfo";
 
-export const googleConfigured = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+// Sign-in also needs SESSION_SECRET: without it no session (or OAuth state) can be signed, so
+// treat the deployment as unconfigured and say so rather than failing mid-flow.
+export const googleConfigured = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.SESSION_SECRET);
 
 export function googleAuthUrl(redirectUri: string, state: string) {
   const url = new URL(authEndpoint());
@@ -52,6 +54,6 @@ export async function verifyIdToken(idToken: string): Promise<GoogleIdentity | n
   if (Number.isFinite(exp) && exp * 1000 < Date.now()) return null;
   const email = String(t.email ?? "").toLowerCase();
   const domain = email.split("@")[1] ?? "";
-  if (!email || domain !== "innovinlabs.com" || !allowedEmailDomains().includes(domain)) return null;
+  if (!email || !allowedEmailDomains().includes(domain)) return null;
   return { email, name: String(t.name || email.split("@")[0]), picture: String(t.picture || "") };
 }

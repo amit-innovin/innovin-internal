@@ -14,5 +14,6 @@ export async function GET(req: NextRequest) {
     email: session.email,
     name: employee?.name || session.name,
     picture: employee?.picture ?? "",
+    role: employee?.role ?? "member",
   });
 }

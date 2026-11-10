@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeMode, arenaRankings, validPlannerDate } from "@/lib/workspace-model";
+import { activeMode, arenaRankings } from "@/lib/workspace-model";
 
 describe("workspace rules", () => {
   it("unlocks office presence only for a current declaration and active attendance", () => {
@@ -8,11 +8,6 @@ describe("workspace rules", () => {
     expect(activeMode(profile, false, "2026-10-15")).toBeNull();
     expect(activeMode(profile, true, "2026-10-16")).toBeNull();
     expect(activeMode(null, true, "2026-10-15")).toBeNull();
-  });
-  it("rejects impossible and malformed planner dates", () => {
-    expect(validPlannerDate("2026-02-29")).toBe(false);
-    expect(validPlannerDate("2028-02-29")).toBe(true);
-    expect(validPlannerDate("2026-10-15-extra")).toBe(false);
   });
   it("ranks actual weekly logs and does not invent counts for hit-only entries", () => {
     const people = [{ email: "a", name: "A", department: "Design" }, { email: "b", name: "B", department: "Design" }];

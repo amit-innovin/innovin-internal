@@ -5,22 +5,18 @@ Simple tools for everyday needs. Built for our team. See [PRODUCT.md](PRODUCT.md
 ## Modules
 
 - **Attendance** — check in/out with your verified Google identity as often as you step out and back; one status per day, reopened when you return; one-time browser location on check-in tags the day In office / Working remotely / Location not shared (configurable `OFFICE_*` geofence); verified identity required
-- **Office pantry** (`/pantry`) — employees browse coordinator-published Instamart variants, pack sizes and estimated prices, choose quantities and explicitly send an office request. The coordinator starts preparation, imports prepared quantities and confirms the supplier order. Catalog listings expire after 24 hours and reset on account/address changes. Supplier credentials, saved addresses and receipts are coordinator-only.
-- **Office meals & drinks** (`/snacks`) — verified employees in office pick up to four items; selections and notes autosave into an internal daily request. Change or cancel before preparation starts and the optional `ORDER_CUTOFF_HOUR` deadline. Coordinators mark preparation, readiness and collection/delivery; supplier purchases remain separate
 - **Daily Grievances** — anonymous or named, with an optional photo; submitters track status via ids held on their own device; the database stores no device link at all, so anonymous submissions can't be traced even with direct DB access
 - **Speed test** — Check Speed downloads from fast.com's nearest Netflix CDN node (looked up by an edge function, since api.fast.com allows no browser CORS and picks nodes by caller location) and times it **from the first byte**, so connection latency isn't counted as transfer time. Stops at 12 MB or 8 seconds. Falls back to a self-hosted 2 MB payload if fast.com is unavailable; `SPEEDTEST_PROVIDER=self` disables it.
 - **Wi-Fi Quality** — speed test + Good/Poor reports with notes and a recent feed
-- **Time Away** (`/away`) — leave and work-from-home requests: pick dates, submit, track approval status under your verified employee account; admins approve/reject on the dashboard. Submissions require a verified Google identity.
-- **Personal plans** (`/planner`) — a private planning calendar, separate from recorded attendance and formal leave requests. The main Attendance & Leave navigation opens the actual request workflow.
-- **Attendance calendar** — a month grid inside Attendance with one dot per day (present / leave / WFH / holiday / weekly off); tap a day for its check-in/out times and location tag. Upcoming holidays sit below it.
+- **Leave requests** (Attendance → Leave tab) — pick a leave type and dates, submit, and track approval under your verified employee account; admins approve or reject on the dashboard. Only leave needs approval: there are no work-from-home requests — on a home day you choose **Remote** on Home instead. WFH requests made before that change stay in their owner's history and no longer reach the admin queue.
+- **Attendance calendar** — a month grid inside Attendance with one dot per day (present / leave / holiday / weekly off; WFH days approved before WFH requests were removed still show); tap a day for its check-in/out times and location tag. Upcoming holidays sit below it.
 - **Leave** (Attendance → Leave tab) — balances per leave type (Casual, Sick, Earned, Flexible) under Employee Leave Policy 3.0, plus the declared-holiday calendar. Leave is charged in **working days**: Sundays, the 2nd and 4th Saturday, and declared holidays are free. Half-day Casual Leave is supported; Earned Leave accrues 1.25 days per completed month and can't be availed in the first year. Balances are per verified identity, so signing in is required — the Attendance page requires Google sign-in. **Zoho People is the system of record**: an admin copies each person's "Available" figures into the dashboard's People tab, and the admin explicitly selects which app approvals the copied figures include; unreconciled local approvals are estimated deductions. Every snapshot shows its date. Where no snapshot exists the policy entitlement is shown, clearly marked. `/leave` and `/away` redirect here.
 - **Events** (`/events`) — upcoming internal events published by employees or admins. Organizers and admins can edit or cancel future events while preserving RSVPs. One RSVP per signed-in employee shows only a going count, never a guest list.
-- **People** (`/people`) — the office directory: everyone who's signed in (Google name/photo/email), plus "In today" — who's checked in right now with an In office / Remote tag.
-- **Notifications** — a bell in the nav with an unread count, listing announcements, upcoming/changed/cancelled events, pantry fulfillment, decisions on your own leave, and your grievance status. Derived from existing rows (there is no notifications table); "last seen" is a cookie, so it works unsigned. Optional **Web Push** per device on top (`VAPID_*` keys) — announcements, events, pantry fulfillment and leave decisions only. Grievance status updates are never pushed: push is server-initiated, so it would need the grievance→device link that anonymity forbids.
+- **Notifications** — a bell in the nav with an unread count, listing announcements, upcoming/changed/cancelled events, decisions on your own leave, and your grievance status. Derived from existing rows (there is no notifications table); "last seen" is a cookie, so it works unsigned. Optional **Web Push** per device on top (`VAPID_*` keys) — announcements, events and leave decisions only. Grievance status updates are never pushed: push is server-initiated, so it would need the grievance→device link that anonymity forbids.
 - **Announcements** — posted by admins, shown on everyone's home dashboard
-- **Admin** (`/admin`) — dashboard: attendance (with real names + location tags), orders, grievance inbox with statuses, Wi-Fi feed, time-away approvals, announcements
-- **Roles** — `owner` > `admin` > `member`. Owners are set via `OWNER_EMAILS` and grant/revoke admin from the dashboard's Access card; admins reach the dashboard by signing in with Google, so approvals are recorded against their name. `ADMIN_PASSCODE` remains as break-glass access (bootstrap, or if Google sign-in is unavailable) and is deliberately unattributed.
-- **Sign in with Google** — required for attendance and the employee directory on `innovinlabs.com`; a remembered email cannot impersonate an employee. Anonymous grievances remain available without signing in.
+- **Admin** (`/admin`) — dashboard: attendance (with real names + location tags), grievance inbox with statuses, Wi-Fi feed, leave approvals, announcements
+- **Roles** — `admin` and `member`. Admins run everything behind `/admin` (Speak Up inbox, leave approvals, announcements, people). `ADMIN_EMAILS` bootstraps admins on Google sign-in — they can't be demoted in-app, which is also the recovery path; any admin grants or revokes admin for other members from the dashboard's Access card (never their own role). Admin access is Google sign-in only, so every approval is recorded against a name. Members who open an admin page are sent home.
+- **Sign in with Google** — required for every page except anonymous Speak Up (`/grievances`). Signed-out visitors are sent to `/sign-in` and returned to the page they asked for; a remembered email cannot impersonate an employee.
 
 ## Stack
 
@@ -30,7 +26,7 @@ Next.js 16 (App Router) · React 19 · Tailwind 4 · shadcn/ui · beUI + transit
 
 ```bash
 npm install
-cp .env.example .env.local   # ADMIN_PASSCODE=1704 for local use
+cp .env.example .env.local   # set GOOGLE_CLIENT_ID/SECRET and put your email in ADMIN_EMAILS
 npm run dev                  # http://localhost:3000
 ```
 
@@ -40,16 +36,14 @@ Without `DATABASE_URL`, data is stored in `data/store.json` (git-ignored).
 
 | Var | Purpose |
 |---|---|
-| `ADMIN_PASSCODE` | Break-glass access to `/admin`. 4–8 digits → PIN pad, otherwise password field. Unset → passcode entry locked (role-based sign-in still works). **Use a long, unique value in production.** |
-| `OWNER_EMAILS` | Comma-separated emails granted the `owner` role on Google sign-in. Owners grant/revoke admin in-app; an owner's own role can only be changed here. |
+| `ADMIN_EMAILS` | Comma-separated emails made `admin` on every Google sign-in. They can't be demoted in-app (change them here). Other admins are granted in-app by any admin. `OWNER_EMAILS` is still read as a fallback name. |
 | `DATABASE_URL` | Postgres (Supabase/Neon/any). Required when deployed — the app refuses the file store on Vercel. |
 | `DATABASE_CA_CERT` | Trusted provider CA (PEM) for remote Postgres when system CAs do not suffice. Remote certificate verification is always required. |
 | `DATABASE_POOL_MAX` | Connections per serverless instance (default 5). |
 | `ALLOWED_EMAIL_DOMAINS` | Comma-separated domains allowed to mark attendance (default `innovinlabs.com`). |
-| `ORDER_CUTOFF_HOUR` | IST hour (0–24) when orders close (default 24 = open all day). |
 | `OFFICE_LAT` / `OFFICE_LNG` / `OFFICE_RADIUS_M` | Office geofence for attendance tagging (radius in metres, default 300). Unset → check-ins show "Location not shared". |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth "Web application" credentials (redirect URI `<app-url>/api/auth/callback`). Unset → attendance and directory show a sign-in configuration notice. |
-| `SESSION_SECRET` | Signing key for 30-day employee sessions (falls back to `ADMIN_PASSCODE`). |
+| `SESSION_SECRET` | **Required.** Signing key for 30-day employee sessions and OAuth state. Unset → sign-in reports "not configured". |
 
 Tables and indexes are created automatically on first use.
 
@@ -67,21 +61,21 @@ E2E_DATABASE_URL=postgres://… npm run test:e2e   # E2E against Postgres
 
 Playwright uses its bundled Chromium (`npx playwright install chromium`); set `CHROME_PATH` to use a local Chromium-based browser instead. CI (`.github/workflows/ci.yml`) runs typecheck, unit + Postgres contract, `npm audit`, and E2E against both storage backends.
 
-What's covered: every employee and admin flow in the browser (with console-error guard), the after-cutoff flow, horizontal overflow on all pages, and at the HTTP level validation, auth, privacy (no submitter identity leaks), idempotency, rate limits, and security headers.
+What's covered: every employee and admin flow in the browser (with console-error guard), horizontal overflow on all pages, and at the HTTP level validation, auth, privacy (no submitter identity leaks), idempotency, rate limits, and security headers.
 
 ## Security notes
 
-- Admin sessions are HMAC-signed, expire server-side after 12h, and are invalidated when `ADMIN_PASSCODE` changes. Cookies are `HttpOnly`, `SameSite=Lax`, `Secure` in production.
-- Failed admin logins are rate limited (5 per IP / 15 min, 50 globally); grievances, Wi-Fi reports and speed tests are limited per device and per IP. Limits are in-memory per instance — use a shared store (e.g. Redis) if strict global limits are ever needed.
+- There is no shared admin passcode: admin pages and APIs check the signed-in employee's role, read from the directory on every request, so revoking admin applies immediately.
+- Sign-in is rate limited per IP; grievances, Wi-Fi reports and speed tests are limited per device and per IP. Limits are in-memory per instance — use a shared store (e.g. Redis) if strict global limits are ever needed.
 - Rate limiting trusts `X-Forwarded-For`, which Vercel sets. Behind other proxies, make sure the proxy overwrites it.
-- Attendance and directory APIs require a verified Google session; attendance always uses that session's identity and rejects guest requests, including remembered-email cookies. Employee sessions are HMAC-signed, HttpOnly, SameSite=Lax, 30 days, and invalidate when `SESSION_SECRET`/`ADMIN_PASSCODE` changes.
+- Attendance and directory APIs require a verified Google session; attendance always uses that session's identity and rejects guest requests, including remembered-email cookies. Employee sessions are HMAC-signed, HttpOnly, SameSite=Lax, 30 days, and invalidate when `SESSION_SECRET` changes.
 - Check-in location is captured once per session (no tracking); the API returns only the office/remote/unknown tag, never raw coordinates. Employees can deny the browser permission — attendance still works, tagged "Location not shared".
 - CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` and HSTS are set in `next.config.ts`.
 
 ## Deploy (Vercel)
 
 1. Create a Postgres database (Supabase: use the pooled connection string).
-2. In the Vercel project set `DATABASE_URL`, a strong `ADMIN_PASSCODE`, `OFFICE_LAT`/`OFFICE_LNG`/`OFFICE_RADIUS_M` for attendance tagging, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` for sign-in, and optionally `ALLOWED_EMAIL_DOMAINS` / `ORDER_CUTOFF_HOUR` / `SESSION_SECRET`.
+2. In the Vercel project set `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_EMAILS`, `OFFICE_LAT`/`OFFICE_LNG`/`OFFICE_RADIUS_M` for attendance tagging, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` for sign-in, and optionally `ALLOWED_EMAIL_DOMAINS`.
 3. `vercel link --token "$VERCEL_TOKEN"` then `vercel deploy --token "$VERCEL_TOKEN"`.
 
 ## Optional Zoho People read-only connection
@@ -97,26 +91,20 @@ and the ZOHO_* variables in .env.example. This path is implemented locally; live
 provider payloads, permissions and browser behavior have not yet been verified.
 Request submission and approval through Zoho are not implemented.
 
-Paper notes can target one teammate (private, expires after 24 hours) or the whole
-team (a named post on the shared board, retained until an admin removes it).
-
 ## Release repair notes (October 26)
 
-Presence uses the attendance row for Overview, directory, calendar and pantry eligibility; declared office/remote is stored separately from location evidence. Leave decisions use an atomic expected-status transition. Manual Zoho snapshots include explicit reconciliation checkboxes: timestamps no longer imply that local requests reached Zoho. Partial snapshots retain policy history for omitted types. Values adjusted for unreconciled local requests are estimates; Zoho remains authoritative.
+Presence uses the attendance row for Overview and the calendar; declared office/remote is stored separately from location evidence. Leave decisions use an atomic expected-status transition. Manual Zoho snapshots include explicit reconciliation checkboxes: timestamps no longer imply that local requests reached Zoho. Partial snapshots retain policy history for omitted types. Values adjusted for unreconciled local requests are estimates; Zoho remains authoritative.
 
 Private push registrations are tied to an expiring sign-in session and revoked before logout/account switching. Targeted push payloads contain only a generic prompt to open the app; private content is fetched after authentication. Old registrations must be refreshed by opening the app. Auto check-in is not part of v0. Signed-in RSVPs follow employee identity; guest RSVPs remain browser-scoped.
 
 Remote Postgres now always verifies TLS certificates. Install the trusted CA in Vercel before deploying this revision if the provider certificate is not trusted by system CAs. Browser, physical-device, provider and full release verification remain pending.
 
-## Instamart office purchasing
+## Removed in Phase 2
 
-Admin > Today links to `/admin/pantry`. A named Google admin or owner can connect the
-Swiggy office purchasing account, choose a saved address and exact product variants,
-review the live bill, and explicitly confirm a returned Cash/COD payment method.
-Employee requests remain separate from supplier purchases. Unknown checkout outcomes
-block new purchases until matched to provider receipts; checkout is never auto-retried.
-
-See [setup, production access and recovery](docs/pantry-provider-setup.md) and the
-PANTRY_* variables in `.env.example`. Ordering defaults to disabled. Live Swiggy OAuth,
-production callback approval and a real purchase/delivery remain unverified. Blinkit
-ordering is unavailable until approved partner access and documentation are supplied.
+Meals & snacks ordering, Instamart office purchasing (Swiggy), pings and paper notes,
+personal plans, the People page and work-from-home requests were removed. Their old
+page URLs — `/pantry`, `/snacks`, `/planner`, `/people`, `/admin/pantry` — redirect Home
+with a temporary (307) redirect, so bookmarks and old links never hit a 404 (`/snacks`
+returns later as "Tea & snacks"); their API routes are gone. The Postgres tables they used
+(`orders`, `pings`, `planner_days`, `provider_records`) are left in place with their rows:
+the app no longer creates or reads them, and nothing drops them.

@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   // Urgent goes straight to admins' devices — that's the whole point of the flag. The push
   // carries no id or link to the submitter, so this doesn't touch anonymity.
   if (urgent) {
-    const admins = (await store.listEmployees()).filter((e) => e.role === "admin" || e.role === "owner");
+    const admins = (await store.listEmployees()).filter((e) => e.role === "admin");
     await Promise.all(
       admins.map((a) =>
         sendPush({ title: "Urgent report just came in", body: "Someone marked a report urgent — worth a look.", href: "/admin?tab=approvals", tag: "urgent-report" }, a.email).catch(() => {}),

@@ -1,7 +1,7 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
 // Every browser test fails if the page logs an unexpected console error or throws.
-// Expected 4xx responses (validation, closed orders) are part of the flows being tested.
+// Expected 4xx responses (validation) are part of the flows being tested.
 const EXPECTED = /Failed to load resource: the server responded with a status of 4\d\d/;
 
 export const test = base.extend<{ consoleErrors: string[] }>({
@@ -42,7 +42,7 @@ export async function signInEmployee(page: Page, email?: string, next = "/attend
   } finally { if (email) await page.request.get("http://localhost:3999/as?reset=1"); }
 }
 
-// Pantry rules now require a verified company employee and a daily office declaration.
+// Signs in as a verified company employee and declares the day as in-office.
 export async function signInOffice(page: Page, email?: string) {
   if (email) await page.request.get(`http://localhost:3999/as?email=${encodeURIComponent(email)}&name=${encodeURIComponent(email)}`);
   try { await page.goto("/api/auth/google?next=/"); await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible(); }
@@ -51,20 +51,16 @@ export async function signInOffice(page: Page, email?: string) {
   await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");
 }
 
-// The PIN input is disabled until hydrated (so early keystrokes can't be lost); wait for it.
-export async function typePin(page: Page, pin: string) {
-  const input = page.getByLabel("Admin passcode");
-  await expect(input).toBeEnabled();
-  await input.pressSequentially(pin);
-}
-
 export type AdminTab = "today" | "approvals" | "people" | "publish";
 
 // The dashboard groups its sections into URL-driven tabs and only queries the open one, so
 // tests have to say which tab they need. Defaults to Today, same as the dashboard.
+// Admin access is a Google identity with the admin role: admin@innovinlabs.com is listed in
+// ADMIN_EMAILS (playwright.config), so signing in as it lands on the dashboard.
+export const ADMIN_EMAIL = "admin@innovinlabs.com";
+
 export async function adminLogin(page: Page, tab: AdminTab = "today") {
-  await page.goto("/admin");
-  await typePin(page, "1704");
+  await signInEmployee(page, ADMIN_EMAIL, "/admin");
   await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
   if (tab !== "today") await adminTab(page, tab);
 }

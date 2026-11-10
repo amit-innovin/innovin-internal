@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, OrderRow, PingRow, StepsRow, Store, WifiRow } from "@/lib/types";
-import { PING_TTL_MS } from "@/lib/pings";
+import type { AttendanceRow, AwayRow, EmployeeRow, EventRow, GrievanceRow, StepsRow, Store, WifiRow } from "@/lib/types";
 
 // Behavioural contract every Store adapter must satisfy (JSON file + Postgres).
 export function storeContract(name: string, getStore: () => Promise<Store>, resetData: () => Promise<void>) {
@@ -13,49 +12,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
     beforeEach(async () => {
       store = await getStore();
       await resetData();
-    });
-
-    it("persists exact product requests and rejects stale basket replacements atomically",async()=>{
-      const date="2026-10-28",ref="shop-cart",product={spinId:"spin",skuId:"sku",name:"Biscuits",variant:"200 g",price:40,available:true,maxQuantity:10,category:"Snacks" as const,publishedAt:iso(),sourceKey:"office-context",quantity:2};
-      const row={id:uid(),date,itemId:"instamart:spin:sku",preference:"anything",instructions:"For the team",submitterRef:ref,orderedBy:"member@innovinlabs.com",createdAt:iso(),product};
-      await store.setDayOrders(date,ref,[row],[]);
-      expect((await store.listOrders(date))[0]).toMatchObject({product});
-      await expect(store.deleteOrder(ref,date)).rejects.toThrow(/changed/i);
-      await expect(store.setDayOrders(date,ref,[],[])).rejects.toThrow(/changed/i);
-      expect((await store.listOrders(date))).toHaveLength(1);
-      await store.setDayOrders(date,ref,[{...row,id:uid(),product:{...product,quantity:3}}],[row.id]);
-      expect((await store.listOrdersByRef(ref,10))[0].product?.quantity).toBe(3);
-    });
-
-    it("tracks pantry preparation against the exact reviewed tray and locks employee changes", async () => {
-      const date="2026-10-27", ref="verified-tray", rows=[{id:uid(),date,itemId:"tea",preference:"anything",instructions:"",submitterRef:ref,orderedBy:"a@innovinlabs.com",createdAt:iso()}];
-      await store.setDayOrders(date,ref,rows);
-      expect(await store.setOrderFulfillment(date,ref,["stale"],"requested","preparing","admin",iso(1))).toBe(false);
-      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"requested","preparing","admin",iso(1))).toBe(true);
-      expect((await store.listOrders(date))[0]).toMatchObject({fulfillment:"preparing",fulfillmentBy:"admin"});
-      await expect(store.setDayOrders(date,ref,[{...rows[0],id:uid(),itemId:"snacks"}])).rejects.toThrow(/preparation/i);
-      await expect(store.deleteOrder(ref,date)).rejects.toThrow(/preparation/i);
-      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"requested","ready","admin",iso(2))).toBe(false);
-      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"preparing","ready","admin",iso(3))).toBe(true);
-      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"ready","fulfilled","admin",iso(4))).toBe(true);
-      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"fulfilled","requested","admin",iso(5))).toBe(false);
-    });
-
-    it("serializes a changing employee tray against coordinator preparation",async()=>{
-      const date="2026-10-27",ref="racing-tray",row={id:uid(),date,itemId:"tea",preference:"anything",instructions:"",submitterRef:ref,createdAt:iso()};
-      await store.setDayOrders(date,ref,[row]);
-      const results=await Promise.allSettled([store.setOrderFulfillment(date,ref,[row.id],"requested","preparing","admin",iso(1)),store.setDayOrders(date,ref,[{...row,id:uid(),itemId:"snacks"}])]);
-      const rows=await store.listOrders(date);
-      if(results[0].status==="fulfilled"&&results[0].value===true){expect(rows[0]).toMatchObject({itemId:"tea",fulfillment:"preparing"});expect(results[1].status).toBe("rejected");}
-      else {expect(rows[0]).toMatchObject({itemId:"snacks"});expect(results[1].status).toBe("fulfilled");}
-    });
-
-    it("lets a coordinator reopen preparation before an employee changes the request",async()=>{
-      const date="2026-10-27",ref="reopen-tray",rows=[{id:uid(),date,itemId:"tea",preference:"anything",instructions:"",submitterRef:ref,createdAt:iso()}];
-      await store.setDayOrders(date,ref,rows);
-      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"requested","preparing","admin",iso(1))).toBe(true);
-      expect(await store.setOrderFulfillment(date,ref,rows.map(r=>r.id),"preparing","requested","admin",iso(2))).toBe(true);
-      await expect(store.setDayOrders(date,ref,[{...rows[0],id:uid(),itemId:"snacks"}])).resolves.toMatchObject([{itemId:"snacks"}]);
     });
 
     it("does not add RSVP to a cancelled or deleted event even through a stale caller",async()=>{
@@ -76,22 +32,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.rsvpCounts([event.id])).toEqual({[event.id]:1});
       expect(await store.deleteEvent(event.id,event.createdAt)).toBe(false);
       expect(await store.deleteEvent(event.id,iso(1000))).toBe(true);
-    });
-
-    it("persists provider state with compare-and-set so two coordinators cannot both claim checkout", async () => {
-      expect(await store.getProviderRecord("instamart")).toBeNull();
-      expect(await store.putProviderRecord("instamart", null, "encrypted-initial", iso())).toBe(true);
-      expect(await store.putProviderRecord("instamart", null, "overwrite", iso())).toBe(false);
-      const initial = (await store.getProviderRecord("instamart"))!;
-      expect(initial).toMatchObject({ key: "instamart", version: 1, value: "encrypted-initial" });
-      const writes = await Promise.all([
-        store.putProviderRecord("instamart", initial.version, "encrypted-checkout-a", iso(1000)),
-        store.putProviderRecord("instamart", initial.version, "encrypted-checkout-b", iso(1000)),
-      ]);
-      expect(writes.filter(Boolean)).toHaveLength(1);
-      expect((await store.getProviderRecord("instamart"))?.version).toBe(2);
-      expect((await store.getProviderRecord("instamart"))?.value).toBe(writes[0] ? "encrypted-checkout-a" : "encrypted-checkout-b");
-      expect(await store.getProviderRecord("blinkit")).toBeNull();
     });
 
     it("persists public notes while discarding anonymous authors and toggling one reaction per employee", async () => {
@@ -122,16 +62,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       lat: null,
       lng: null,
       accuracyM: null,
-      ...p,
-    });
-    const order = (p: Partial<OrderRow> = {}): OrderRow => ({
-      id: uid(),
-      date: "2026-09-23",
-      itemId: "tea",
-      preference: "anything",
-      instructions: "",
-      submitterRef: "ref-1",
-      createdAt: iso(),
       ...p,
     });
     const grievance = (p: Partial<GrievanceRow> = {}): GrievanceRow => ({
@@ -201,17 +131,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(await store.getWorkspaceProfile("a@innovinlabs.com")).toMatchObject({ designation: "Product Designer", desk: "B12", mode: "office" });
         expect(await store.getWorkspaceProfile("b@innovinlabs.com")).toBeNull();
         expect(await store.listWorkspaceProfiles()).toHaveLength(1);
-      });
-
-      it("replaces a person's planner day, ranges by date and clears only their own day", async () => {
-        await store.setPlannerDay({ email: "a@innovinlabs.com", date: "2026-10-15", kind: "office" });
-        await store.setPlannerDay({ email: "a@innovinlabs.com", date: "2026-10-15", kind: "vacation" });
-        await store.setPlannerDay({ email: "b@innovinlabs.com", date: "2026-10-15", kind: "remote" });
-        await store.setPlannerDay({ email: "a@innovinlabs.com", date: "2026-11-01", kind: "sick" });
-        expect(await store.listPlannerDays("a@innovinlabs.com", "2026-10-01", "2026-10-31")).toEqual([{ email: "a@innovinlabs.com", date: "2026-10-15", kind: "vacation" }]);
-        await store.deletePlannerDay("a@innovinlabs.com", "2026-10-15");
-        expect(await store.listPlannerDays("a@innovinlabs.com", "2026-10-01", "2026-10-31")).toEqual([]);
-        expect(await store.listPlannerDays("b@innovinlabs.com", "2026-10-01", "2026-10-31")).toHaveLength(1);
       });
     });
 
@@ -316,6 +235,12 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(mine.map((s) => s.date)).toEqual(["2026-09-23"]);
       });
 
+      it("legacy owner rows read back as admin", async () => {
+        await store.upsertEmployee(employee({ email: "o@innovinlabs.com", role: "owner" as never }));
+        expect((await store.getEmployee("o@innovinlabs.com"))!.role).toBe("admin");
+        expect((await store.listEmployees()).find((e) => e.email === "o@innovinlabs.com")!.role).toBe("admin");
+      });
+
       it("keeps a steps offset on the employee", async () => {
         expect(await store.setStepsOffset("ghost@innovinlabs.com", 10)).toBe(false);
         await store.upsertEmployee(employee());
@@ -324,102 +249,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         // A re-sign-in (upsert) must not wipe the admin-entered offset.
         await store.upsertEmployee(employee({ name: "Asha Renamed" }));
         expect((await store.getEmployee("a@innovinlabs.com"))?.stepsOffset).toBe(45);
-      });
-    });
-
-    describe("pings", () => {
-      // Real timestamps — pings expire on wall-clock age, so fixed future dates would
-      // behave differently once the calendar passes them.
-      const nowIso = (offsetMs = 0) => new Date(Date.now() + offsetMs).toISOString();
-      const ping = (p: Partial<PingRow> = {}): PingRow => ({
-        id: uid(),
-        fromEmail: "a@innovinlabs.com",
-        toEmail: "b@innovinlabs.com",
-        body: "chai?",
-        readAt: null,
-        createdAt: nowIso(),
-        ...p,
-      });
-
-      it("lists both sides of a conversation, newest first, with a limit", async () => {
-        await store.addPing(ping({ createdAt: nowIso(-3000) }));
-        await store.addPing(ping({ fromEmail: "b@innovinlabs.com", toEmail: "a@innovinlabs.com", body: "yes!", createdAt: nowIso(-2000) }));
-        await store.addPing(ping({ toEmail: "c@innovinlabs.com", createdAt: nowIso(-1000) }));
-        const mine = await store.listPingsFor("a@innovinlabs.com", 10);
-        // The a→c ping is newest, then b→a, then a→b.
-        expect(mine.map((p) => `${p.fromEmail}>${p.toEmail}`)).toEqual([
-          "a@innovinlabs.com>c@innovinlabs.com",
-          "b@innovinlabs.com>a@innovinlabs.com",
-          "a@innovinlabs.com>b@innovinlabs.com",
-        ]);
-        expect(await store.listPingsFor("a@innovinlabs.com", 1)).toHaveLength(1);
-        // A bystander sees none of it.
-        expect(await store.listPingsFor("stranger@innovinlabs.com", 10)).toEqual([]);
-      });
-
-      it("marks only incoming pings from one person as read", async () => {
-        await store.addPing(ping({ fromEmail: "b@innovinlabs.com", toEmail: "a@innovinlabs.com" }));
-        await store.addPing(ping({ fromEmail: "c@innovinlabs.com", toEmail: "a@innovinlabs.com" }));
-        await store.addPing(ping({ fromEmail: "a@innovinlabs.com", toEmail: "b@innovinlabs.com" }));
-        await store.markPingsRead("a@innovinlabs.com", "b@innovinlabs.com");
-        const mine = await store.listPingsFor("a@innovinlabs.com", 10);
-        const byFrom = Object.fromEntries(mine.map((p) => [`${p.fromEmail}->${p.toEmail}`, p.readAt]));
-        expect(byFrom["b@innovinlabs.com->a@innovinlabs.com"]).toBeTruthy();
-        expect(byFrom["c@innovinlabs.com->a@innovinlabs.com"]).toBeNull();
-        expect(byFrom["a@innovinlabs.com->b@innovinlabs.com"]).toBeNull();
-      });
-
-      it("purges pings older than a day — no history survives", async () => {
-        const stale = new Date(Date.now() - PING_TTL_MS - 60_000).toISOString();
-        await store.addPing(ping({ body: "yesterday", createdAt: stale }));
-        await store.addPing(ping({ body: "fresh" }));
-        const mine = await store.listPingsFor("a@innovinlabs.com", 10);
-        expect(mine.map((p) => p.body)).toEqual(["fresh"]);
-      });
-    });
-
-    describe("orders", () => {
-      it("persists verified employee attribution for the buyer", async () => {
-        await store.setDayOrders("2026-09-23", "person", [order({ submitterRef: "person", orderedBy: "a@innovinlabs.com" })]);
-        expect((await store.listOrders("2026-09-23"))[0].orderedBy).toBe("a@innovinlabs.com");
-      });
-      it("replaces the day's selection atomically — several items, then fewer", async () => {
-        await store.setDayOrders("2026-09-23", "ref-1", [order()]);
-        const replaced = await store.setDayOrders("2026-09-23", "ref-1", [
-          order({ itemId: "healthy", preference: "healthy", instructions: "no sugar" }),
-          order({ itemId: "lunch" }),
-        ]);
-        expect(replaced).toHaveLength(2);
-        const listed = await store.listOrders("2026-09-23");
-        expect(listed.map((o) => o.itemId).sort()).toEqual(["healthy", "lunch"]);
-        expect(listed.find((o) => o.itemId === "healthy")?.instructions).toBe("no sugar");
-        // Replacing again shrinks the selection, not just adds.
-        await store.setDayOrders("2026-09-23", "ref-1", [order({ itemId: "tea" })]);
-        expect((await store.listOrders("2026-09-23")).map((o) => o.itemId)).toEqual(["tea"]);
-      });
-
-      it("keeps different devices and days separate", async () => {
-        await store.setDayOrders("2026-09-23", "ref-1", [order({ submitterRef: "ref-1" })]);
-        await store.setDayOrders("2026-09-23", "ref-2", [order({ submitterRef: "ref-2", createdAt: iso(1000) })]);
-        await store.setDayOrders("2026-09-22", "ref-1", [order({ submitterRef: "ref-1", date: "2026-09-22" })]);
-        expect((await store.listOrders("2026-09-23")).map((o) => o.submitterRef).sort()).toEqual(["ref-1", "ref-2"]);
-      });
-
-      it("lists a device's history newest day first with a limit", async () => {
-        for (const date of ["2026-09-20", "2026-09-22", "2026-09-21"]) await store.setDayOrders(date, "ref-1", [order({ date })]);
-        await store.setDayOrders("2026-09-23", "someone-else", [order({ submitterRef: "someone-else" })]);
-        const history = await store.listOrdersByRef("ref-1", 2);
-        expect(history.map((o) => o.date)).toEqual(["2026-09-22", "2026-09-21"]);
-      });
-
-      it("deletes all of that device's rows for that day", async () => {
-        await store.setDayOrders("2026-09-23", "ref-1", [order(), order({ itemId: "lunch" })]);
-        await store.setDayOrders("2026-09-22", "ref-1", [order({ date: "2026-09-22" })]);
-        await store.setDayOrders("2026-09-23", "ref-2", [order({ submitterRef: "ref-2" })]);
-        expect(await store.deleteOrder("ref-1", "2026-09-23")).toBe(true);
-        expect(await store.deleteOrder("ref-1", "2026-09-23")).toBe(false);
-        expect((await store.listOrders("2026-09-23")).map((o) => o.submitterRef)).toEqual(["ref-2"]);
-        expect(await store.listOrdersByRef("ref-1", 10)).toHaveLength(1);
       });
     });
 
@@ -784,17 +613,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       it("never loses writes under parallel requests", async () => {
         await Promise.all(Array.from({ length: 25 }, (_, i) => store.addGrievance(grievance({ body: `g${i}` }))));
         expect(await store.listGrievances()).toHaveLength(25);
-      });
-
-      it("keeps one consistent selection when a device saves in parallel", async () => {
-        await Promise.all([
-          store.setDayOrders("2026-09-23", "ref-1", [order({ itemId: "tea" })]),
-          store.setDayOrders("2026-09-23", "ref-1", [order({ itemId: "tea" }), order({ itemId: "lunch" })]),
-        ]);
-        const rows = await store.listOrders("2026-09-23");
-        expect(rows.every((o) => o.submitterRef === "ref-1")).toBe(true);
-        // Whichever save won, the result is a complete selection — never a merge of both.
-        expect([1, 2]).toContain(rows.length);
       });
 
       it("checks in once even when the same email checks in in parallel", async () => {

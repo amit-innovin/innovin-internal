@@ -1,8 +1,6 @@
-import { fulfillmentOf,FULFILLMENT_LABELS } from "./order-state";
-import { todayIST } from "./time";
 import { boardHref,attendanceHref,eventHref } from "./journey";
 import { fmtShortDate } from "./format";
-import { LEAVE_LABELS } from "./leave";
+import { LEAVE_LABELS, needsApproval } from "./leave";
 import { store } from "./store";
 import type { GrievanceRow } from "./types";
 
@@ -16,7 +14,7 @@ import type { GrievanceRow } from "./types";
 
 export type Notification = {
   id: string;
-  kind: "announcement" | "event" | "away" | "grievance" | "ping" | "pantry";
+  kind: "announcement" | "event" | "away" | "grievance";
   title: string;
   body: string;
   at: string;
@@ -29,11 +27,10 @@ const LOOKBACK_DAYS = 30;
 export async function feedFor(opts: { email: string | null; grievances: Omit<GrievanceRow, "submitterRef">[]; now: number }) {
   const since = new Date(opts.now - LOOKBACK_DAYS * 86_400_000).toISOString();
 
-  const [announcements, events, away, pings, employees] = await Promise.all([
+  const [announcements, events, away, employees] = await Promise.all([
     store.listAnnouncements(10),
     store.listEvents(new Date(opts.now).toISOString(), 10),
     opts.email ? store.listAwayByEmail(opts.email, 20) : Promise.resolve([]),
-    opts.email ? store.listPingsFor(opts.email, 50) : Promise.resolve([]),
     opts.email ? store.listEmployees() : Promise.resolve([]),
   ]);
 
@@ -58,10 +55,8 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
   }
 
   if(opts.email) {
-    const trays=(await store.listOrders(todayIST())).filter(r=>r.orderedBy===opts.email&&r.fulfillmentAt);
-    const first=trays[0];if(first?.fulfillmentAt)items.push({id:`pantry-${first.date}-${fulfillmentOf(first)}`,kind:"pantry",title:FULFILLMENT_LABELS[fulfillmentOf(first)],body:"Your pantry request",at:first.fulfillmentAt,href:trays.some(r=>r.product)?"/pantry":"/snacks?tab=today"});
     const me=employees.find(e=>e.email===opts.email);
-    if(me?.role==="admin"||me?.role==="owner")for(const r of await store.listPendingAway())items.push({id:`pending-away-${r.id}`,kind:"away",title:"Time-away request awaiting review",body:"Open Approvals to review it.",at:r.createdAt,href:"/admin?tab=approvals#away"});
+    if(me?.role==="admin")for(const r of (await store.listPendingAway()).filter(needsApproval))items.push({id:`pending-away-${r.id}`,kind:"away",title:"Time-away request awaiting review",body:"Open Approvals to review it.",at:r.createdAt,href:"/admin?tab=approvals#away"});
   }
 
   // A decision on your own request — only ever for a verified identity.
@@ -75,20 +70,6 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
       body: `${fmtShortDate(`${r.startDate}T00:00:00`)}${r.decidedBy ? ` · by ${r.decidedBy}` : ""}`,
       at: r.decidedAt,
       href: attendanceHref("leave",undefined,r.id),
-    });
-  }
-
-  // Unread pings land here too — tapping one opens that thread on People.
-  const names = new Map(employees.map((e) => [e.email, e.name]));
-  for (const p of pings) {
-    if (p.toEmail !== opts.email || p.readAt) continue;
-    items.push({
-      id: `ping-${p.id}`,
-      kind: "ping",
-      title: `${names.get(p.fromEmail) ?? p.fromEmail} pinged you`,
-      body: p.body,
-      at: p.createdAt,
-      href: `/people?ping=${encodeURIComponent(p.fromEmail)}`,
     });
   }
 

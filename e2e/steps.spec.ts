@@ -1,4 +1,4 @@
-import { expect, test, uniqueText, typePin } from "./fixtures";
+import { adminLogin, expect, test, uniqueText } from "./fixtures";
 import type { Browser } from "@playwright/test";
 
 // The mock Google provider pins who signs in, then the round-trip completes in the browser.
@@ -56,8 +56,7 @@ test.describe("10K Steps", () => {
     await walker.goto("/steps");
     await expect(walker.locator(".ranking-list .is-me")).toHaveCount(0);
 
-    await page.goto("/admin?tab=people");
-    await typePin(page, "1704");
+    await adminLogin(page, "people");
     await page.getByRole("searchbox", { name: "Search people" }).fill(name);
     await page.getByRole("button", { name: new RegExp(`Edit balances for ${name}`) }).click();
     await page.getByLabel(`Fitness history: prior 10k+ days for ${name}`).fill("45");

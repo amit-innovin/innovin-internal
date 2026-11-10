@@ -1,8 +1,5 @@
-import { assertBasketRevision } from "./pantry/shop";
-import { assertRequestEditable, fulfillmentOf, nextFulfillment, canMoveFulfillment, sameTray, type OrderFulfillment } from "./order-state";
 import { Pool } from "pg";
 import { pgConfig } from "./pgconfig";
-import { PING_TTL_MS } from "./pings";
 import type {
   NoticeRow,
   NoticeReaction,
@@ -15,26 +12,16 @@ import type {
   GrievanceRow,
   GrievanceStatus,
   LeaveBalanceRow,
-  PingRow,
   PushSubscriptionRow,
   StepsRow,
-  OrderRow,
   Role,
   Store,
   WifiRow,
   WorkspaceProfile,
-  PlannerDay,
-  ProviderRecord,
 } from "./types";
 
 // Postgres persistence — used when DATABASE_URL is set (Neon, Supabase, Vercel Postgres).
 const SCHEMA = `
-CREATE TABLE IF NOT EXISTS provider_records (
-  key text PRIMARY KEY,
-  version integer NOT NULL,
-  value text NOT NULL,
-  updated_at timestamptz NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS notices (
   id text PRIMARY KEY,
@@ -51,12 +38,6 @@ CREATE TABLE IF NOT EXISTS workspace_profiles (
   email text PRIMARY KEY,
   data jsonb NOT NULL DEFAULT '{}'::jsonb
 );
-CREATE TABLE IF NOT EXISTS planner_days (
-  email text NOT NULL,
-  date text NOT NULL,
-  kind text NOT NULL CHECK (kind IN ('office','remote','vacation','sick','festival','holiday')),
-  PRIMARY KEY (email, date)
-);
 CREATE TABLE IF NOT EXISTS attendance (
   id text PRIMARY KEY,
   email text NOT NULL,
@@ -67,17 +48,6 @@ CREATE TABLE IF NOT EXISTS attendance (
   lng double precision,
   accuracy_m real
 );
-CREATE TABLE IF NOT EXISTS orders (
-  id text PRIMARY KEY,
-  date text NOT NULL,
-  item_id text NOT NULL,
-  preference text NOT NULL,
-  instructions text NOT NULL DEFAULT '',
-  submitter_ref text NOT NULL,
-  created_at timestamptz NOT NULL,
-  UNIQUE (date, submitter_ref, item_id)
-);
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS product jsonb;
 CREATE TABLE IF NOT EXISTS grievances (
   id text PRIMARY KEY,
   body text NOT NULL,
@@ -138,14 +108,12 @@ CREATE TABLE IF NOT EXISTS event_rsvps (
   created_at timestamptz NOT NULL,
   PRIMARY KEY (event_id, submitter_ref)
 );
--- Migrations for databases created before sessions/multi-item orders/images existed:
+-- Migrations for databases created before sessions/images existed:
 ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_email_date_key;
-ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_date_submitter_ref_key;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS ordered_by text;
 ALTER TABLE grievances ADD COLUMN IF NOT EXISTS image text;
 ALTER TABLE grievances ADD COLUMN IF NOT EXISTS urgent boolean NOT NULL DEFAULT false;
 -- Scrub device-linked refs written before hard anonymity: the DB must not be joinable
--- against away/orders to de-anonymize a submission.
+-- against away to de-anonymize a submission.
 UPDATE grievances SET submitter_ref = 'anon' WHERE submitter_ref <> 'anon';
 -- Leave balances copied from Zoho People (the system of record) by an admin. One row per
 -- person per leave year; as_of is what makes app-side requests countable on top.
@@ -171,18 +139,6 @@ CREATE TABLE IF NOT EXISTS steps (
 );
 -- Days banked in the old spreadsheet before the app took over.
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS steps_offset int NOT NULL DEFAULT 0;
--- One-line pings between people. Ephemeral by design — rows past the TTL are deleted
--- lazily on every access (see listPingsFor), so there is no history to keep.
-CREATE TABLE IF NOT EXISTS pings (
-  id text PRIMARY KEY,
-  from_email text NOT NULL,
-  to_email text NOT NULL,
-  body text NOT NULL,
-  read_at timestamptz,
-  created_at timestamptz NOT NULL
-);
-CREATE INDEX IF NOT EXISTS pings_to_idx ON pings (to_email, created_at DESC);
-CREATE INDEX IF NOT EXISTS pings_from_idx ON pings (from_email, created_at DESC);
 CREATE TABLE IF NOT EXISTS leave_balances (
   email text NOT NULL,
   year int NOT NULL,
@@ -195,6 +151,7 @@ CREATE TABLE IF NOT EXISTS leave_balances (
   PRIMARY KEY (email, year)
 );
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'member';
+UPDATE employees SET role = 'admin' WHERE role = 'owner';
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS joined_on text;
 ALTER TABLE away ADD COLUMN IF NOT EXISTS decided_by text;
 ALTER TABLE away ADD COLUMN IF NOT EXISTS decided_at timestamptz;
@@ -231,13 +188,7 @@ DELETE FROM attendance a USING attendance b
   WHERE a.email = b.email AND a.date = b.date
     AND (a.check_in_at > b.check_in_at OR (a.check_in_at = b.check_in_at AND a.ctid > b.ctid));
 ALTER TABLE attendance ADD CONSTRAINT attendance_email_date_key UNIQUE (email, date);
-CREATE UNIQUE INDEX IF NOT EXISTS orders_day_ref_item ON orders (date, submitter_ref, item_id);
 CREATE INDEX IF NOT EXISTS attendance_date_idx ON attendance (date);
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment text;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_at timestamptz;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_by text;
-CREATE INDEX IF NOT EXISTS orders_date_idx ON orders (date);
-CREATE INDEX IF NOT EXISTS orders_submitter_idx ON orders (submitter_ref, date DESC);
 CREATE INDEX IF NOT EXISTS grievances_created_idx ON grievances (created_at DESC);
 CREATE INDEX IF NOT EXISTS grievances_submitter_idx ON grievances (submitter_ref, created_at DESC);
 CREATE INDEX IF NOT EXISTS wifi_created_idx ON wifi (created_at DESC);
@@ -265,18 +216,6 @@ const attendance = (r: any): AttendanceRow => ({
   declaredMode: r.declared_mode ?? null,
   accuracyM: r.accuracy_m ?? null,
 });
-const order = (r: any): OrderRow => ({
-  ...(r.product?{product:r.product}:{}),
-  ...(r.fulfillment ? {fulfillment:r.fulfillment,fulfillmentAt:r.fulfillment_at?.toISOString?.()??r.fulfillment_at,fulfillmentBy:r.fulfillment_by??null} : {}),
-  id: r.id,
-  date: r.date,
-  itemId: r.item_id,
-  preference: r.preference,
-  instructions: r.instructions,
-  submitterRef: r.submitter_ref,
-  ...(r.ordered_by ? { orderedBy: r.ordered_by } : {}),
-  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
-});
 const grievance = (r: any): GrievanceRow => ({
   id: r.id,
   body: r.body,
@@ -303,11 +242,13 @@ const announcement = (r: any): AnnouncementRow => ({
   tag: r.tag,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
+// "owner" is the retired top role; such rows are admins now.
+const roleOf = (role: unknown): Role => (role === "admin" || role === "owner" ? "admin" : "member");
 const employee = (r: any): EmployeeRow => ({
   email: r.email,
   name: r.name,
   picture: r.picture,
-  role: r.role ?? "member",
+  role: roleOf(r.role),
   joinedOn: r.joined_on ?? null,
   stepsOffset: r.steps_offset ?? 0,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
@@ -320,14 +261,6 @@ const pushSubscription = (r: any): PushSubscriptionRow => ({
   p256dh: r.p256dh,
   auth: r.auth,
   email: r.email ?? null,
-  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
-});
-const ping = (r: any): PingRow => ({
-  id: r.id,
-  fromEmail: r.from_email,
-  toEmail: r.to_email,
-  body: r.body,
-  readAt: r.read_at ? r.read_at.toISOString?.() ?? r.read_at : null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const steps = (r: any): StepsRow => ({
@@ -379,18 +312,6 @@ const event = (r: any): EventRow => ({
 });
 
 class PgStore implements Store {
-  async getProviderRecord(key: string): Promise<ProviderRecord | null> {
-    const result = await this.q(`SELECT key, version, value, updated_at AS "updatedAt" FROM provider_records WHERE key=$1`, [key]);
-    const row = result.rows[0];
-    return row ? { ...row, updatedAt: row.updatedAt?.toISOString?.() ?? row.updatedAt } : null;
-  }
-  async putProviderRecord(key: string, expectedVersion: number | null, value: string, updatedAt: string) {
-    const result = expectedVersion === null
-      ? await this.q(`INSERT INTO provider_records(key,version,value,updated_at) VALUES($1,1,$2,$3) ON CONFLICT(key) DO NOTHING`, [key,value,updatedAt])
-      : await this.q(`UPDATE provider_records SET version=version+1, value=$3, updated_at=$4 WHERE key=$1 AND version=$2`, [key,expectedVersion,value,updatedAt]);
-    return !!result.rowCount;
-  }
-
   async addNotice(row: NoticeRow): Promise<NoticeRow> {
     const safe = row.anonymous ? { ...row, authorEmail: null, authorName: null } : row;
     await this.q(`INSERT INTO notices (id, data, created_at) VALUES ($1,$2::jsonb,$3)`, [safe.id, JSON.stringify(safe), safe.createdAt]);
@@ -437,17 +358,6 @@ class PgStore implements Store {
       ON CONFLICT (email) DO UPDATE SET data = workspace_profiles.data || $3::jsonb RETURNING data`,
       [email, JSON.stringify({ ...defaults, ...patch }), JSON.stringify(patch)]);
     return { ...res.rows[0].data, email };
-  }
-  async setPlannerDay(row: PlannerDay) {
-    await this.q(`INSERT INTO planner_days (email, date, kind) VALUES ($1,$2,$3)
-      ON CONFLICT (email, date) DO UPDATE SET kind = EXCLUDED.kind`, [row.email, row.date, row.kind]);
-  }
-  async deletePlannerDay(email: string, date: string) {
-    await this.q(`DELETE FROM planner_days WHERE email = $1 AND date = $2`, [email, date]);
-  }
-  async listPlannerDays(email: string, from: string, to: string): Promise<PlannerDay[]> {
-    const res = await this.q(`SELECT email, date, kind FROM planner_days WHERE email = $1 AND date >= $2 AND date <= $3 ORDER BY date`, [email, from, to]);
-    return res.rows;
   }
   private pool: Pool | null = null;
   private ready: Promise<void> | null = null;
@@ -530,56 +440,6 @@ class PgStore implements Store {
   async listAttendance(date: string) {
     const res = await this.q(`SELECT * FROM attendance WHERE date = $1 ORDER BY check_in_at`, [date]);
     return res.rows.map(attendance);
-  }
-  async setDayOrders(date: string, ref: string, rows: OrderRow[], expectedIds?:string[]) {
-    await this.init();
-    const client = await this.db().connect();
-    try {
-      await client.query("BEGIN");
-      await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`pantry:${date}:${ref}`]);
-      const existing=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);
-      assertBasketRevision(existing.rows.map(order),expectedIds);
-      assertRequestEditable(existing.rows.map(order));
-      await client.query(`DELETE FROM orders WHERE date = $1 AND submitter_ref = $2`, [date, ref]);
-      for (const row of rows) {
-        await client.query(
-          `INSERT INTO orders (id, date, item_id, preference, instructions, submitter_ref, created_at, ordered_by,product)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
-           ON CONFLICT (date, submitter_ref, item_id) DO UPDATE SET preference = $4, instructions = $5`,
-          [row.id, row.date, row.itemId, row.preference, row.instructions, row.submitterRef, row.createdAt, row.orderedBy ?? null,row.product?JSON.stringify(row.product):null],
-        );
-      }
-      await client.query("COMMIT");
-    } catch (err) {
-      await client.query("ROLLBACK").catch(() => undefined);
-      throw err;
-    } finally {
-      client.release();
-    }
-    return rows;
-  }
-  async listOrders(date: string) {
-    const res = await this.q(`SELECT * FROM orders WHERE date = $1 ORDER BY created_at`, [date]);
-    return res.rows.map(order);
-  }
-  async setOrderFulfillment(date:string,ref:string,expectedIds:string[],expected:OrderFulfillment,next:OrderFulfillment,actor:string|null,at:string) {
-    await this.init();const client=await this.db().connect();
-    try {await client.query("BEGIN");await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,[`pantry:${date}:${ref}`]);
-      const result=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);const rows=result.rows.map(order);
-      if(!canMoveFulfillment(expected,next) || !sameTray(rows,expectedIds) || rows.some(r=>fulfillmentOf(r)!==expected)){await client.query("COMMIT");return false;}
-      await client.query(`UPDATE orders SET fulfillment=$3,fulfillment_at=$4,fulfillment_by=$5 WHERE date=$1 AND submitter_ref=$2`,[date,ref,next,at,actor]);await client.query("COMMIT");return true;
-    } catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}finally{client.release();}
-  }
-  async deleteOrder(ref: string, date: string) {
-    await this.init();const client=await this.db().connect();
-    try {await client.query("BEGIN");await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,[`pantry:${date}:${ref}`]);
-      const rows=await client.query(`SELECT * FROM orders WHERE date=$1 AND submitter_ref=$2`,[date,ref]);assertBasketRevision(rows.rows.map(order));assertRequestEditable(rows.rows.map(order));
-      const result=await client.query(`DELETE FROM orders WHERE submitter_ref=$1 AND date=$2`,[ref,date]);await client.query("COMMIT");return !!result.rowCount;
-    }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}finally{client.release();}
-  }
-  async listOrdersByRef(ref: string, limit: number) {
-    const res = await this.q(`SELECT * FROM orders WHERE submitter_ref = $1 ORDER BY date DESC LIMIT $2`, [ref, limit]);
-    return res.rows.map(order);
   }
   async addGrievance(row: GrievanceRow) {
     const res = await this.q(
@@ -670,32 +530,6 @@ class PgStore implements Store {
   async listStepsByEmail(email: string, limit: number) {
     const res = await this.q(`SELECT * FROM steps WHERE email = $1 ORDER BY date DESC LIMIT $2`, [email, limit]);
     return res.rows.map(steps);
-  }
-  // Pings expire after PING_TTL_MS — swept before every access so nothing stale survives.
-  private async sweepPings() {
-    await this.q(`DELETE FROM pings WHERE created_at < $1`, [new Date(Date.now() - PING_TTL_MS).toISOString()]);
-  }
-  async addPing(row: PingRow) {
-    await this.sweepPings();
-    const res = await this.q(
-      `INSERT INTO pings (id, from_email, to_email, body, read_at, created_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [row.id, row.fromEmail, row.toEmail, row.body, row.readAt, row.createdAt],
-    );
-    return ping(res.rows[0]);
-  }
-  async listPingsFor(email: string, limit: number) {
-    await this.sweepPings();
-    const res = await this.q(
-      `SELECT * FROM pings WHERE from_email = $1 OR to_email = $1 ORDER BY created_at DESC LIMIT $2`,
-      [email, limit],
-    );
-    return res.rows.map(ping);
-  }
-  async markPingsRead(email: string, fromEmail: string) {
-    await this.q(
-      `UPDATE pings SET read_at = now() WHERE to_email = $1 AND from_email = $2 AND read_at IS NULL`,
-      [email, fromEmail],
-    );
   }
   async setLeaveBalance(row: LeaveBalanceRow) {
     const a = row.available;

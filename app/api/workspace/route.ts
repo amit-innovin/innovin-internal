@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
-import { DEVICE_COOKIE } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
 import { workspaceData } from "@/lib/workspace";
+import { currentActor } from "@/lib/admin";
 import type { WorkspaceProfile } from "@/lib/types";
 
-export async function GET(req: NextRequest) {
-  const user = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
+export async function GET() {
+  const user = await currentActor();
   if (!user) return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
-  return NextResponse.json(await workspaceData(user, req.cookies.get(DEVICE_COOKIE)?.value));
+  return NextResponse.json(await workspaceData(user));
 }
 
 export async function PATCH(req: NextRequest) {

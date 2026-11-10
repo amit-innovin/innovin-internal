@@ -10,7 +10,7 @@ let generation = 0;
 
 const pathOf = (url: string) => url.split("?")[0];
 
-// Drop cached GETs whose path matches (query variants included — /api/snacks clears
+// Drop cached GETs whose path matches (query variants included — /api/attendance clears
 // scope=mine and scope=history). send() calls this after every successful mutation.
 export function invalidate(urlPrefix: string) {
   generation++;
@@ -67,7 +67,7 @@ export async function readError(res: Response) {
 
 // fetch that never throws: network failures come back as a synthetic 503 response.
 // Successful mutations invalidate their own GET cache — and the notification feed, since
-// pings, leave, grievances and announcements all surface there.
+// leave, grievances and announcements all surface there.
 export async function send(url: string, init: RequestInit & { json?: unknown } = {}) {
   const { json, ...rest } = init;
   try {
@@ -83,10 +83,8 @@ export async function send(url: string, init: RequestInit & { json?: unknown } =
       invalidate("/api/notifications");
       invalidate("/api/workspace");
       // Leave balances are derived from away requests; their URL differs from the write.
-      if (["/api/snacks","/api/pantry-shop"].includes(pathOf(url))) { invalidate("/api/snacks"); invalidate("/api/pantry-shop"); }
-      if(pathOf(url)==="/api/pantry-provider")invalidate("/api/pantry-shop");
       if (pathOf(url) === "/api/away") { invalidate("/api/leave"); invalidate("/api/attendance"); }
-      if (["/api/workspace", "/api/attendance"].includes(pathOf(url))) { invalidate("/api/attendance"); invalidate("/api/people"); invalidate("/api/snacks"); }
+      if (["/api/workspace", "/api/attendance"].includes(pathOf(url))) { invalidate("/api/attendance"); invalidate("/api/people"); }
       if (pathOf(url).startsWith("/api/auth/") || (pathOf(url) === "/api/attendance" && rest.method === "DELETE")) invalidate("");
     }
     return res;

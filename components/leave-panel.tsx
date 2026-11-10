@@ -4,7 +4,7 @@ import { LoadRecovery } from "@/components/load-recovery";
 import { useEffect, useState } from "react";
 import { CalendarOff, Info, Mail, Palmtree, Send } from "lucide-react";
 import { toast } from "sonner";
-import { AWAY_META, AWAY_TYPE_LABEL, Empty, IconTile, SectionHeader, Segmented, stagger } from "@/components/kit";
+import { AWAY_META, AWAY_TYPE_LABEL, Empty, IconTile, SectionHeader, stagger } from "@/components/kit";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { StatefulButton } from "@/components/motion/button/stateful";
 import { Input } from "@/components/motion/input";
@@ -88,7 +88,6 @@ export default function LeavePanel({ rememberedEmail, focusRequest }: { remember
   const [requests, setRequests] = useState<AwayRequest[] | null>(null);
   const [summary, setSummary] = useState<LeaveSummary | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
-  const [type, setType] = useState<AwayType>("leave");
   const [leaveType, setLeaveType] = useState<LeaveType>("cl");
   const [halfDay, setHalfDay] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -123,18 +122,19 @@ export default function LeavePanel({ rememberedEmail, focusRequest }: { remember
         method: "POST",
         json: {
           email: auth?.email ?? rememberedEmail ?? email,
-          type,
+          type: "leave",
           startDate,
           endDate,
           reason,
-          ...(type === "leave" ? { leaveType, halfDay: halfDay && leaveType === "cl" } : {}),
+          leaveType,
+          halfDay: halfDay && leaveType === "cl",
         },
       });
       if (!res.ok) {
         setError(await readError(res));
         return false;
       }
-      toast.success(`${AWAY_TYPE_LABEL[type]} request sent for approval`);
+      toast.success("Leave request sent for approval");
       setStartDate("");
       setEndDate("");
       setReason("");
@@ -225,47 +225,34 @@ export default function LeavePanel({ rememberedEmail, focusRequest }: { remember
               </div>
             </div>
 
-            <div className="mt-5">
-              <Segmented
-                value={type}
-                onChange={setType}
-                options={[
-                  { value: "leave", label: "Leave" },
-                  { value: "wfh", label: "Work from home" },
-                ]}
-              />
-            </div>
-
-            {type === "leave" && (
-              <div className="mt-4">
-                <label htmlFor="away-leave-type" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  Leave type
+            <div className="mt-4">
+              <label htmlFor="away-leave-type" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                Leave type
+              </label>
+              <select
+                id="away-leave-type"
+                value={leaveType}
+                onChange={(e) => setLeaveType(e.target.value as LeaveType)}
+                className="h-11 w-full min-w-0 rounded-lg border border-input bg-card px-3.5 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
+              >
+                <option value="cl">Casual Leave</option>
+                <option value="sl">Sick Leave</option>
+                <option value="el">Earned Leave</option>
+                <option value="fl">Flexible Leave</option>
+                <option value="ml">Maternity Leave</option>
+              </select>
+              {leaveType === "cl" && (
+                <label className="mt-2.5 flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={halfDay}
+                    onChange={(e) => setHalfDay(e.target.checked)}
+                    className="size-4 rounded border-input accent-foreground"
+                  />
+                  Half day (single day only)
                 </label>
-                <select
-                  id="away-leave-type"
-                  value={leaveType}
-                  onChange={(e) => setLeaveType(e.target.value as LeaveType)}
-                  className="h-11 w-full min-w-0 rounded-lg border border-input bg-card px-3.5 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
-                >
-                  <option value="cl">Casual Leave</option>
-                  <option value="sl">Sick Leave</option>
-                  <option value="el">Earned Leave</option>
-                  <option value="fl">Flexible Leave</option>
-                  <option value="ml">Maternity Leave</option>
-                </select>
-                {leaveType === "cl" && (
-                  <label className="mt-2.5 flex items-center gap-2 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={halfDay}
-                      onChange={(e) => setHalfDay(e.target.checked)}
-                      className="size-4 rounded border-input accent-foreground"
-                    />
-                    Half day (single day only)
-                  </label>
-                )}
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
@@ -345,7 +332,7 @@ export default function LeavePanel({ rememberedEmail, focusRequest }: { remember
               icon={<Send className="size-4" />}
               className="mt-5 h-11 w-full rounded-lg font-medium"
             >
-              Request {type === "leave" ? "Leave" : "WFH"}
+              Request Leave
             </StatefulButton>
           </form>
         </Card>

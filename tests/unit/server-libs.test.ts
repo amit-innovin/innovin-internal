@@ -1,18 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAdminSession, validAdminPasscode, verifyAdminSession } from "@/lib/admin";
 import { createOauthState, createUserSession, sanitizeNext, verifyOauthState, verifyUserSession } from "@/lib/auth";
-import { ADMIN_SESSION_MS, allowedEmailDomains, orderCutoffHour } from "@/lib/config";
+import { adminEmails, allowedEmailDomains } from "@/lib/config";
 import { clientIp, readJSON } from "@/lib/http";
 import { distanceM, locationTag, officeLocation } from "@/lib/geo";
 import { pgConfig } from "@/lib/pgconfig";
 import { hit, peek, reset, resetAll } from "@/lib/rate-limit";
-import { istHour, todayIST } from "@/lib/time";
+import { istHour, todayIST, validDate } from "@/lib/time";
 
 const post = (body: string) => new Request("http://x/api", { method: "POST", body, headers: { "Content-Type": "application/json" } });
 
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.useRealTimers();
+});
+
+describe("validDate", () => {
+  it("accepts real ISO calendar dates and rejects impossible or non-ISO ones", () => {
+    expect(validDate("2026-11-10")).toBe(true);
+    expect(validDate("2028-02-29")).toBe(true);
+    expect(validDate("2026-02-30")).toBe(false);
+    expect(validDate("2026-02-29")).toBe(false);
+    expect(validDate("10-11-2026")).toBe(false);
+    expect(validDate("2026-10-15-extra")).toBe(false);
+  });
 });
 
 describe("IST time", () => {
@@ -28,16 +38,6 @@ describe("IST time", () => {
 });
 
 describe("config", () => {
-  it("parses ORDER_CUTOFF_HOUR, defaulting to open all day", () => {
-    expect(orderCutoffHour()).toBe(24);
-    vi.stubEnv("ORDER_CUTOFF_HOUR", "15");
-    expect(orderCutoffHour()).toBe(15);
-    for (const bad of ["abc", "-1", "25", "10.5"]) {
-      vi.stubEnv("ORDER_CUTOFF_HOUR", bad);
-      expect(orderCutoffHour()).toBe(24);
-    }
-  });
-
   it("normalises allowed email domains", () => {
     expect(allowedEmailDomains()).toEqual(["innovinlabs.com"]);
     vi.stubEnv("ALLOWED_EMAIL_DOMAINS", " InnovinLabs.com , partner.io ,");
@@ -125,47 +125,9 @@ describe("rate limiter", () => {
   });
 });
 
-describe("admin auth", () => {
-  beforeEach(() => vi.stubEnv("ADMIN_PASSCODE", "1704"));
-
-  it("validates the passcode strictly", () => {
-    expect(validAdminPasscode("1704")).toBe(true);
-    for (const bad of ["1705", "17040", "", " 1704", 1704, null, undefined, ["1704"]]) expect(validAdminPasscode(bad)).toBe(false);
-    vi.stubEnv("ADMIN_PASSCODE", "");
-    expect(validAdminPasscode("")).toBe(false);
-  });
-
-  it("issues sessions that verify, expire, and resist tampering", () => {
-    const now = Date.now();
-    const token = createAdminSession(now);
-    expect(verifyAdminSession(token, now)).toBe(true);
-    expect(verifyAdminSession(token, now + ADMIN_SESSION_MS - 1000)).toBe(true);
-    expect(verifyAdminSession(token, now + ADMIN_SESSION_MS + 1000)).toBe(false);
-
-    const [issued, mac] = token.split(".");
-    expect(verifyAdminSession(`${Number(issued) + 1}.${mac}`, now)).toBe(false);
-    expect(verifyAdminSession(`${issued}.${mac.replace(/.$/, mac.endsWith("a") ? "b" : "a")}`, now)).toBe(false);
-    expect(verifyAdminSession(`${now + 3_600_000}.${mac}`, now)).toBe(false);
-    for (const bad of [undefined, "", "garbage", "123", ".abc", "NaN.abc"]) expect(verifyAdminSession(bad, now)).toBe(false);
-  });
-
-  it("invalidates every session when the passcode changes", () => {
-    const token = createAdminSession();
-    vi.stubEnv("ADMIN_PASSCODE", "a-new-long-passcode");
-    expect(verifyAdminSession(token)).toBe(false);
-  });
-
-  it("rejects sessions when admin is disabled", () => {
-    const token = createAdminSession();
-    vi.stubEnv("ADMIN_PASSCODE", "");
-    expect(verifyAdminSession(token)).toBe(false);
-  });
-});
-
 describe("employee sessions & oauth state", () => {
   beforeEach(() => {
     vi.stubEnv("SESSION_SECRET", "test-secret");
-    vi.stubEnv("ADMIN_PASSCODE", "");
   });
 
   const me = { email: "asha@innovinlabs.com", name: "Asha" };
@@ -186,7 +148,6 @@ describe("employee sessions & oauth state", () => {
 
   it("returns null when no signing secret exists", () => {
     vi.stubEnv("SESSION_SECRET", "");
-    vi.stubEnv("ADMIN_PASSCODE", "");
     expect(createUserSession(me)).toBeNull();
     expect(verifyUserSession("x.y")).toBeNull();
   });
@@ -214,7 +175,7 @@ describe("employee sessions & oauth state", () => {
       const { cookie, state } = createOauthState(path);
       expect(verifyOauthState(cookie, state)).toBe("/");
     }
-    expect(sanitizeNext("/planner?month=2026-10#today")).toBe("/planner?month=2026-10#today");
+    expect(sanitizeNext("/attendance?month=2026-10#today")).toBe("/attendance?month=2026-10#today");
   });
 });
 
@@ -242,5 +203,37 @@ describe("pgConfig", () => {
     const c = pgConfig("postgres://u:p@db.internal:5432/db?sslmode=disable", { DATABASE_POOL_MAX: "2" });
     expect(c.ssl).toEqual({ rejectUnauthorized: true });
     expect(c.max).toBe(2);
+  });
+});
+
+describe("adminEmails", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it("reads ADMIN_EMAILS, trimmed and lowercased", () => {
+    vi.stubEnv("ADMIN_EMAILS", " A@innovinlabs.com, b@innovinlabs.com ,");
+    expect(adminEmails()).toEqual(["a@innovinlabs.com", "b@innovinlabs.com"]);
+  });
+  it("falls back to OWNER_EMAILS when ADMIN_EMAILS is empty", () => {
+    vi.stubEnv("ADMIN_EMAILS", "");
+    vi.stubEnv("OWNER_EMAILS", "o@innovinlabs.com");
+    expect(adminEmails()).toEqual(["o@innovinlabs.com"]);
+  });
+  it("is empty when neither is set", () => {
+    vi.stubEnv("ADMIN_EMAILS", "");
+    vi.stubEnv("OWNER_EMAILS", "");
+    expect(adminEmails()).toEqual([]);
+  });
+});
+
+describe("the cut", () => {
+  it("no pantry, snack-order or Swiggy code is reachable", async () => {
+    expect(Object.keys(await import("@/lib/submitter"))).not.toContain("pantryRef");
+    expect(Object.keys(await import("@/lib/config"))).not.toContain("orderCutoffHour");
+    const { existsSync } = await import("fs");
+    for (const p of ["lib/pantry", "lib/menu.ts", "lib/order-state.ts", "app/api/snacks", "app/api/pantry-shop", "app/api/pantry-provider"]) expect(existsSync(p), p).toBe(false);
+  });
+
+  it("the cut: notifications never contain ping or pantry items", async () => {
+    const src = (await import("fs")).readFileSync("lib/notifications.ts", "utf8");
+    expect(src).not.toMatch(/"ping"|"pantry"|listPingsFor|listOrders/);
   });
 });

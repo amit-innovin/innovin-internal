@@ -1,7 +1,10 @@
 import { adminLogin, adminTab, expect, test, uniqueEmail, uniqueText, signInEmployee } from "./fixtures";
 import type { Page } from "@playwright/test";
+import { futureWorkday } from "./dates";
 
-// Leave, WFH requests and the month calendar all live inside Attendance now — one "my time"
+const FUTURE = futureWorkday();
+
+// Leave requests and the month calendar all live inside Attendance now — one "my time"
 // surface behind Today / Calendar / Leave tabs. Segmented renders role="tab".
 const openTab = async (page: Page, name: "Today" | "Calendar" | "Leave") => {
   await page.getByRole("tab", { name }).click();
@@ -36,19 +39,17 @@ test.describe("Leave & calendar", () => {
     await expect(page.getByRole("tab", { name: "Today" })).toBeVisible();
   });
 
-  test("a WFH request is submitted and tracked on this device only", async ({ page, browser }) => {
-    const email = uniqueEmail("away");
+  test("a leave request is submitted and tracked on this device only", async ({ page, browser }) => {
     const reason = uniqueText("plumber visit");
     await leaveTab(page);
-    await page.getByRole("tab", { name: "Work from home" }).click();
-    await page.locator("#away-start").fill("2026-10-07");
-    await page.locator("#away-end").fill("2026-10-07");
+    await page.locator("#away-start").fill(FUTURE);
+    await page.locator("#away-end").fill(FUTURE);
     await page.getByLabel("Reason").fill(reason);
-    await page.getByRole("button", { name: "Request WFH" }).click();
-    await expect(page.getByText("Work from home request sent")).toBeVisible();
+    await page.getByRole("button", { name: "Request Leave" }).click();
+    await expect(page.getByText("Leave request sent")).toBeVisible();
 
     const item = page.locator("li", { hasText: reason });
-    await expect(item).toContainText("Work from home");
+    await expect(item).toContainText("Leave");
     await expect(item).toContainText("Pending");
 
     const other = await browser.newContext();
@@ -58,10 +59,17 @@ test.describe("Leave & calendar", () => {
     await other.close();
   });
 
+  test("the form offers no Leave-vs-WFH chooser", async ({ page }) => {
+    await leaveTab(page);
+    await expect(page.getByRole("button", { name: "Request Leave" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Work from home" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Request WFH" })).toHaveCount(0);
+  });
+
   test("a signed-in request cannot use a forged email", async ({ page }) => {
     await leaveTab(page);
     const me = await (await page.request.get("/api/auth/me")).json();
-    const res = await page.request.post("/api/away", { data: { email: "someone@gmail.com", type: "wfh", startDate: "2026-11-09", endDate: "2026-11-09" } });
+    const res = await page.request.post("/api/away", { data: { email: "someone@gmail.com", type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE } });
     expect(res.status()).toBe(200);
     expect((await res.json()).email).toBe(me.email);
   });
@@ -97,8 +105,8 @@ test.describe("Leave & calendar", () => {
     const employee = await browser.newContext();
     const e = await employee.newPage();
     await leaveTab(e);
-    await e.locator("#away-start").fill("2026-11-09"); // Mon
-    await e.locator("#away-end").fill("2026-11-10");
+    await e.locator("#away-start").fill(FUTURE);
+    await e.locator("#away-end").fill(FUTURE);
     await e.getByLabel("Reason").fill(reason);
     await e.getByRole("button", { name: "Request Leave" }).click();
     await expect(e.getByText("Leave request sent")).toBeVisible();
@@ -126,8 +134,8 @@ test.describe("Leave & calendar", () => {
     const employee = await browser.newContext();
     const e = await employee.newPage();
     await leaveTab(e);
-    await e.locator("#away-start").fill("2026-11-16"); // Mon
-    await e.locator("#away-end").fill("2026-11-17");
+    await e.locator("#away-start").fill(FUTURE);
+    await e.locator("#away-end").fill(FUTURE);
     await e.getByLabel("Reason").fill(reason);
     await e.getByRole("button", { name: "Request Leave" }).click();
     await expect(e.getByText("Leave request sent")).toBeVisible();
@@ -160,7 +168,8 @@ test.describe("Leave & calendar", () => {
     const res = await page.request.post("/api/away", {
       data: {
         email: uniqueEmail("past"),
-        type: "wfh",
+        type: "leave",
+        leaveType: "cl",
         startDate: "2026-09-21",
         endDate: "2026-09-21",
         reason: "past request",

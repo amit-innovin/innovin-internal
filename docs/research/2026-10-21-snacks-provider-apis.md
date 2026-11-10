@@ -35,4 +35,4 @@ New backend work would require both JSON/Postgres store adapters and shared cont
 
 ## Implementation update - 26 October 2026
 
-The coordinator integration now lives at `/admin/pantry`. See [setup and recovery](../pantry-provider-setup.md). The current official contract supports Cash/COD, UPI and Swiggy Money; the first app slice deliberately enables only live returned Cash/COD methods. OAuth production access and callback approval remain prerequisites. Blinkit partner access is not available, so Blinkit ordering remains disabled. Local fixtures are not proof of provider connectivity.
+Update (2026-11-10): the Instamart/Swiggy coordinator integration was removed in the Phase 2 cut, along with its setup guide; `/admin/pantry` now redirects Home. This section records it as built. The official contract supports Cash/COD, UPI and Swiggy Money; the first app slice deliberately enables only live returned Cash/COD methods. OAuth production access and callback approval remain prerequisites. Blinkit partner access is not available, so Blinkit ordering remains disabled. Local fixtures are not proof of provider connectivity.

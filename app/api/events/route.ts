@@ -7,7 +7,7 @@ import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { sendPush } from "@/lib/push";
 import { id, store } from "@/lib/store";
-import { pantryRef, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
+import { accountRef, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 import type { EventCategory, EventRow } from "@/lib/types";
 
 const CATEGORIES: EventCategory[] = ["sports", "arts", "culture", "learning", "social", "company"];
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   const target=focused?await store.getEvent(focused):null;
   const rows = focused ? (target?[target]:[]) : await store.listEvents(from, 30);
   const user = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
-  const ref = user ? pantryRef(`rsvp:${user.email}`) : submitterIdentity(req).ref;
+  const ref = user ? accountRef(`rsvp:${user.email}`) : submitterIdentity(req).ref;
   const [counts, mine] = await Promise.all([store.rsvpCounts(rows.map((r) => r.id)), store.myRsvpEventIds(ref, user?.email)]);
   const myIds = new Set(mine);
   const admin=await isAdmin();
@@ -113,7 +113,7 @@ export async function PATCH(req: NextRequest) {
   if(event.cancelledAt)return NextResponse.json({error:"This event has been cancelled"},{status:409});
 
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
-  const savedRsvp=await store.setRsvp(eventId, session ? pantryRef(`rsvp:${session.email}`) : identity.ref, session?.email ?? null, going);
+  const savedRsvp=await store.setRsvp(eventId, session ? accountRef(`rsvp:${session.email}`) : identity.ref, session?.email ?? null, going);
   if(!savedRsvp)return NextResponse.json({error:"The event was cancelled or removed. Refresh the event list."},{status:409});
   const counts = await store.rsvpCounts([eventId]);
   const res = NextResponse.json({ going, count: counts[eventId] ?? 0 });

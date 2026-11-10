@@ -29,41 +29,6 @@ test("mobile board URL and notification open the announcement itself",async({pag
   await expect(page.getByRole("heading",{name:"Notice Board",exact:true})).toBeVisible();
 });
 
-test("a coordinator fulfills an exact pantry request and the employee sees the result",async({page,browser},testInfo)=>{
-  const email=uniqueEmail("fulfillment");const {signInOffice}=await import("./fixtures");
-  await signInOffice(page,email);await page.goto("/snacks");await page.getByRole("button",{name:/^Tea/}).click();
-  await expect(page.getByText(/Request received.*Tea/)).toBeVisible();
-  const context=await browser.newContext({viewport:page.viewportSize()??{width:1280,height:900}}),admin=await context.newPage();await adminLogin(admin);
-  const control=admin.getByRole("combobox",{name:`Pantry status for ${email}`});
-  admin.on("dialog",d=>d.accept());
-  await control.selectOption("preparing");await expect(control).toHaveValue("preparing");
-  await page.reload();await expect(page.getByText(/Being prepared.*Tea/)).toBeVisible();await expect(page.getByRole("button",{name:/^Tea/})).toBeDisabled();
-  expect((await page.request.post("/api/snacks",{data:{items:["lunch"]}})).status()).toBe(409);
-  expect((await page.request.delete("/api/snacks")).status()).toBe(409);
-  await control.selectOption("requested");await expect(control).toHaveValue("requested");
-  await page.reload();await expect(page.getByRole("button",{name:/^Tea/})).toBeEnabled();
-  await control.selectOption("preparing");await expect(control).toHaveValue("preparing");
-  await control.selectOption("ready");await expect(control).toHaveValue("ready");
-  await page.reload();await expect(page.getByText(/Ready for collection.*Tea/)).toBeVisible();
-  await control.scrollIntoViewIfNeeded();await admin.screenshot({path:testInfo.outputPath("coordinator-fulfillment.png"),animations:"disabled"});await page.screenshot({path:testInfo.outputPath("employee-fulfillment.png"),animations:"disabled"});
-  await control.selectOption("fulfilled");await expect(control).toHaveValue("fulfilled");
-  await page.reload();await expect(page.getByText(/Collected \/ delivered.*Tea/)).toBeVisible();
-  await context.close();
-});
-
-test("cancelling waits for a pending note autosave and cannot recreate the request",async({page})=>{
-  const {signInOffice}=await import("./fixtures");await signInOffice(page);await page.goto("/snacks");await page.getByRole("button",{name:/^Tea/}).click();
-  await expect(page.getByText(/Request received.*Tea/)).toBeVisible();
-  let release!:()=>void,arrived!:()=>void;const held=new Promise<void>(r=>release=r),started=new Promise<void>(r=>arrived=r);
-  await page.route("**/api/snacks",async route=>{if(route.request().method()==="POST"&&route.request().postDataJSON()?.instructions==="Pending note"){arrived();await held;}await route.continue();});
-  await page.getByLabel("Special instructions").fill("Pending note");await page.getByLabel("Special instructions").press("Tab");await started;
-  const cancel=page.getByRole("button",{name:"Cancel today's request",exact:true});await expect(cancel).toBeDisabled();
-  release();await expect(cancel).toBeEnabled();await cancel.click();
-  await page.getByRole("alertdialog").getByRole("button",{name:"Cancel request",exact:true}).click();
-  await expect(page.getByText("Pantry request cancelled",{exact:true})).toBeVisible();await page.reload();
-  expect((await(await page.request.get("/api/snacks?scope=mine")).json()).items).toEqual([]);
-});
-
 test("event organizers can correct and cancel their event without losing existing RSVPs",async({page,browser,isMobile})=>{
   const {uniqueText}=await import("./fixtures");const title=uniqueText("Organized event"),changed=`${title} corrected`;
   await signInEmployee(page,uniqueEmail("organizer"),"/");if(isMobile)await page.getByRole("button",{name:"Expand Events",exact:true}).click();
@@ -97,9 +62,9 @@ test("same-route event notifications load the target omitted from the initial li
   await page.goForward();await expect(page.getByRole("heading",{name:"Notification target event",exact:true})).toBeVisible();
 });
 
-test("the pass shows recorded attendance rather than a conflicting private plan",async({page,isMobile})=>{
+test("the pass shows recorded attendance counts and links each day to its record",async({page,isMobile})=>{
   const {signInOffice}=await import("./fixtures");await signInOffice(page,uniqueEmail("pass-record"));
-  const {today}=await(await page.request.get("/api/workspace")).json();await page.request.post("/api/planner",{data:{date:today,kind:"sick"}});
+  const {today}=await(await page.request.get("/api/workspace")).json();
   await page.reload();
   if(isMobile){
     await page.getByRole("button",{name:"Flip workspace pass",exact:true}).click();
@@ -111,50 +76,12 @@ test("the pass shows recorded attendance rather than a conflicting private plan"
   }
 });
 
-test("opening a teammate profile sends nothing until the user explicitly writes a private note",async({page,browser,isMobile})=>{
-  const {signInOffice}=await import("./fixtures");const peerEmail=uniqueEmail("profile-peer");const peerContext=await browser.newContext(),peer=await peerContext.newPage();await signInOffice(peer,peerEmail);
-  await signInOffice(page,uniqueEmail("profile-viewer"));const data=await(await page.request.get("/api/workspace")).json();const person=data.people.find((p:{email:string})=>p.email===peerEmail);
-  if(isMobile)await page.getByRole("button",{name:"Expand People in Office",exact:true}).click();
-  const personButton=page.getByRole("button",{name:`View ${person.name}'s profile`,exact:true});
-  expect(await personButton.locator(".cursor-pill").evaluate(el=>getComputedStyle(el).backgroundColor!==getComputedStyle(el.querySelector(".cursor-person-name")!).color)).toBe(true);
-  await personButton.click();
-  await expect(page.getByRole("dialog").getByLabel("Job title")).toHaveAttribute("readonly","");
-  expect((await(await page.request.get(`/api/pings?with=${encodeURIComponent(peerEmail)}`)).json()).messages).toEqual([]);
-  await page.getByRole("button",{name:"Send a private note",exact:true}).click();await page.getByLabel("Ping message").fill("Intentional private note");await page.getByRole("button",{name:"Send ping",exact:true}).click();
-  await expect(page.getByRole("dialog")).toContainText("Intentional private note");await peer.goto("/people");await expect(peer.getByText(/Intentional private note/)).toBeVisible();await peerContext.close();
-});
-
 test("removing a public board post requires a deliberate confirmation",async({page,isMobile})=>{
-  const {uniqueText}=await import("./fixtures");await signInEmployee(page,"owner@innovinlabs.com","/");if(isMobile)await page.getByRole("button",{name:"Office Notice Board",exact:true}).click();
+  const {uniqueText}=await import("./fixtures");await signInEmployee(page,"admin@innovinlabs.com","/");if(isMobile)await page.getByRole("button",{name:"Office Notice Board",exact:true}).click();
   await page.getByRole("button",{name:"Post Note",exact:true}).click();const text=uniqueText("Removal confirmation");await page.getByLabel("Your board note").fill(text);await page.getByRole("button",{name:"Pin to board",exact:true}).click();
   const card=page.getByRole("article").filter({hasText:text});await expect(card).toBeVisible();page.once("dialog",d=>d.dismiss());await card.getByRole("button",{name:"Remove board note",exact:true}).click();await expect(card).toBeVisible();
   page.once("dialog",d=>d.accept());await card.getByRole("button",{name:"Remove board note",exact:true}).click();await expect(card).toHaveCount(0);
 });
-
-test("a personal plan keeps its selected future month and date after reload",async({page})=>{
-  await signInEmployee(page,uniqueEmail("future-plan"),"/planner?date=2026-11-05");
-  await expect(page.getByRole("button",{name:"Select 2026-11-05",exact:true})).toBeVisible();
-  await page.getByRole("button",{name:"🌴 Vacation",exact:true}).click();await expect(page.getByText("Calendar updated",{exact:true})).toBeVisible();
-  await page.reload();await expect(page.getByRole("button",{name:"Select 2026-11-05",exact:true})).toContainText("Vacation");
-  await expect(page).toHaveURL(/date=2026-11-05/);await page.getByRole("button",{name:"Next month",exact:true}).click();await expect(page).toHaveURL(/date=2026-12-01/);
-  await page.goBack();await expect(page.getByRole("button",{name:"Select 2026-11-05",exact:true})).toContainText("Vacation");
-});
-
-
-test("browser Back during a personal-plan save cannot replace the visible month with stale plans",async({page})=>{
-  await signInEmployee(page,uniqueEmail("plan-race"),"/planner?date=2026-11-05");
-  await page.request.post("/api/planner",{data:{date:"2026-11-05",kind:"office"}});await page.waitForLoadState("networkidle");await page.reload();
-  await page.getByRole("button",{name:"Next month",exact:true}).click();await expect(page).toHaveURL(/date=2026-12-01/);
-  // Settle unrelated link prefetches before holding the actual save across Back.
-  await page.waitForLoadState("networkidle");
-  let release!:()=>void,arrived!:()=>void;const held=new Promise<void>(r=>release=r),started=new Promise<void>(r=>arrived=r);
-  await page.route("**/api/planner",async route=>{if(route.request().method()==="POST"){arrived();await held;}await route.continue();});
-  await page.getByRole("button",{name:"🌴 Vacation",exact:true}).click();await started;await page.goBack();
-  await expect(page.getByRole("heading",{name:"November 2026",exact:true})).toBeVisible();release();await expect(page.getByText("Calendar updated",{exact:true})).toBeVisible();
-  await expect(page.getByRole("button",{name:"Select 2026-11-05",exact:true})).toContainText("In office");
-  await expect(page.locator(".planner-stats").getByText("Vacation days planned").locator("..")).toContainText("0");
-});
-
 
 test("saving fitness history cannot swallow the separate Save balances action",async({page})=>{
   const email=uniqueEmail(`independent-admin-saves-${Date.now()}`);await signInEmployee(page,email,"/");

@@ -1,7 +1,10 @@
 import { expect, request, test, type APIRequestContext } from "@playwright/test";
-import { CLOSED_URL, MAIN_URL } from "../playwright.config";
+import { MAIN_URL } from "../playwright.config";
+import { futureWorkday } from "./dates";
+import { LEGACY_WFH, LEGACY_WFH_CANCEL } from "./legacy-wfh";
 
 // HTTP-level verification of validation, auth, privacy, idempotency and abuse limits.
+const FUTURE = futureWorkday();
 let seq = 0;
 const ip = () => `203.0.113.${(++seq % 250) + 1}-${Date.now()}`;
 const email = () => `api.${Date.now().toString(36)}${++seq}@innovinlabs.com`;
@@ -10,11 +13,9 @@ async function device(baseURL = MAIN_URL, headers: Record<string, string> = {}) 
   return request.newContext({ baseURL, extraHTTPHeaders: { "x-forwarded-for": ip(), ...headers } });
 }
 
+// Admin is a Google identity with the admin role (ADMIN_EMAILS in playwright.config).
 async function admin(): Promise<APIRequestContext> {
-  const ctx = await device();
-  const res = await ctx.post("/api/admin/login", { data: { passcode: "1704" } });
-  expect(res.status()).toBe(200);
-  return ctx;
+  return signedIn("admin@innovinlabs.com", "Admin E2E");
 }
 
 const noRef = (body: unknown) => expect(JSON.stringify(body)).not.toContain("submitterRef");
@@ -36,17 +37,33 @@ async function officeDevice() {
   return ctx;
 }
 
+test.describe("API: removed features", () => {
+  for (const path of ["/api/snacks", "/api/pantry-shop", "/api/pantry-provider", "/api/pings", "/api/planner"]) {
+    test(`removed API ${path} is gone`, async ({ request }) => {
+      expect((await request.get(path)).status()).toBe(404);
+    });
+  }
+});
+
+test.describe("API: notifications", () => {
+  test("signed-in notifications only carry the four remaining kinds", async () => {
+    const ctx = await signedIn(email());
+    const res = await ctx.get("/api/notifications");
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    for (const item of body.items) expect(["announcement", "event", "away", "grievance"]).toContain(item.kind);
+  });
+});
+
 test.describe("API: input validation", () => {
   test("malformed or non-object JSON bodies return 400, never 500", async () => {
     const ctx = await officeDevice();
-    for (const path of ["/api/attendance", "/api/snacks", "/api/grievances", "/api/wifi", "/api/away"]) {
+    for (const path of ["/api/attendance", "/api/grievances", "/api/wifi", "/api/away"]) {
       for (const body of ["{bad", "[1,2]", "null", '"text"']) {
         const res = await ctx.post(path, { data: body, headers: { "Content-Type": "application/json" } });
         expect(res.status(), `${path} ${body}`).toBe(400);
       }
     }
-    const login = await ctx.post("/api/admin/login", { data: "{bad", headers: { "Content-Type": "application/json" } });
-    expect(login.status()).toBe(401);
   });
 
   test("attendance requires identity and validates the action", async () => {
@@ -62,12 +79,8 @@ test.describe("API: input validation", () => {
     expect((await ctx.post("/api/attendance", { data: { action: "out" } })).status()).toBe(404);
   });
 
-  test("snacks, wifi, and grievances reject invalid payloads", async () => {
+  test("wifi and grievances reject invalid payloads", async () => {
     const ctx = await officeDevice();
-    expect((await ctx.post("/api/snacks", { data: { items: ["caviar"] } })).status()).toBe(400);
-    expect((await ctx.post("/api/snacks", { data: { items: [] } })).status()).toBe(400);
-    expect((await ctx.post("/api/snacks", { data: { items: ["tea"], preference: "spicy" } })).status()).toBe(400);
-    expect((await ctx.post("/api/snacks", { data: { itemId: "tea" } })).status()).toBe(400);
     expect((await ctx.post("/api/wifi", { data: { quality: "meh" } })).status()).toBe(400);
     expect((await ctx.post("/api/wifi", { data: { quality: "good", downMbps: -1 } })).status()).toBe(400);
     expect((await ctx.post("/api/wifi", { data: { quality: "good", downMbps: "fast" } })).status()).toBe(400);
@@ -75,7 +88,6 @@ test.describe("API: input validation", () => {
     expect((await ctx.post("/api/grievances", { data: { body: 123 } })).status()).toBe(400);
     expect((await ctx.post("/api/grievances", { data: { body: "x", image: "data:text/html;base64,PGI+" } })).status()).toBe(400);
     expect((await ctx.post("/api/grievances", { data: { body: "x", image: "not-a-data-url" } })).status()).toBe(400);
-    expect((await ctx.delete("/api/snacks")).status()).toBe(404);
   });
 
   test("time away requires identity and validates type and the date range", async () => {
@@ -89,7 +101,7 @@ test.describe("API: input validation", () => {
       [{ email: who, type: "leave", leaveType: "cl", startDate: "2026-10-08", endDate: "2026-10-07" }, 400],
       [{ email: who, type: "leave", leaveType: "cl", startDate: "2026-01-01", endDate: "2026-12-31" }, 400],
       [{ email: who, type: "leave", leaveType: "holiday", startDate: "2026-10-07", endDate: "2026-10-07" }, 400], // unknown bucket
-      [{ email: who, type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 200],
+      [{ email: who, type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" }, 400],
     ];
     for (const [data, status] of cases) expect((await ctx.post("/api/away", { data })).status(), JSON.stringify(data)).toBe(status);
   });
@@ -99,8 +111,6 @@ test.describe("API: input validation", () => {
     const g = await (await ctx.post("/api/grievances", { data: { body: "x".repeat(5000), displayName: "n".repeat(500) } })).json();
     expect(g.body).toHaveLength(2000);
     expect(g.displayName).toHaveLength(100);
-    const o = await (await ctx.post("/api/snacks", { data: { items: ["tea"], instructions: "i".repeat(900) } })).json();
-    expect(o.items[0].instructions).toHaveLength(500);
   });
 });
 
@@ -169,10 +179,10 @@ test.describe("API: behaviour", () => {
     const ctx = await device();
     expect(await (await ctx.get("/api/auth/me")).json()).toEqual({ signedIn: false, googleEnabled: true });
 
-    // A callback hit without the state cookie bounces to settings?auth=failed.
+    // A callback hit without the state cookie bounces to sign-in?auth=failed.
     const bad = await ctx.get("/api/auth/callback?code=x&state=bogus.abc", { maxRedirects: 0 });
     expect(bad.status()).toBe(307);
-    expect(bad.headers()["location"]).toContain("/settings?auth=failed");
+    expect(bad.headers()["location"]).toContain("/sign-in?auth=failed");
 
     // Full round-trip through the mock: google → mock auth → callback → session.
     const start = await ctx.get("/api/auth/google?next=/attendance", { maxRedirects: 0 });
@@ -193,27 +203,9 @@ test.describe("API: behaviour", () => {
     const att = await (await ctx.get("/api/attendance")).json();
     expect(att.email).toBe(me.email);
     const away = await (
-      await ctx.post("/api/away", { data: { email: "forged@innovinlabs.com", type: "wfh", startDate: "2026-10-07", endDate: "2026-10-07" } })
+      await ctx.post("/api/away", { data: { email: "forged@innovinlabs.com", type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE } })
     ).json();
     expect(away.email).toBe(me.email);
-  });
-
-  test("a day's order can hold several items, is replaceable and cancellable", async () => {
-    const ctx = await officeDevice();
-    const placed = await (await ctx.post("/api/snacks", { data: { items: ["tea", "lunch"], instructions: "i" } })).json();
-    expect(placed.items).toHaveLength(2);
-    noRef(placed);
-    await ctx.post("/api/snacks", { data: { items: ["healthy"], preference: "healthy" } });
-    const mine = await (await ctx.get("/api/snacks?scope=mine")).json();
-    expect(mine).toMatchObject({ open: true, cutoffHour: 24 });
-    expect(mine.items.map((o: { itemId: string }) => o.itemId)).toEqual(["healthy"]);
-    noRef(mine);
-    expect(await (await ctx.get("/api/snacks?scope=history")).json()).toHaveLength(1);
-    expect((await ctx.delete("/api/snacks")).status()).toBe(200);
-    expect((await (await ctx.get("/api/snacks?scope=mine")).json()).items).toEqual([]);
-
-    const other = await device();
-    expect((await (await other.get("/api/snacks?scope=mine")).json()).items).toEqual([]);
   });
 
   test("time away: a request is visible to its device and admin, and approval flows through", async () => {
@@ -245,7 +237,7 @@ test.describe("API: behaviour", () => {
   test("leave history and cancellation follow the employee across account switching", async () => {
     const who = email();
     const ctx = await signedIn(who);
-    const created = await (await ctx.post("/api/away", { data: { type: "wfh", startDate: "2026-11-09", endDate: "2026-11-09", reason: "private reason" } })).json();
+    const created = await (await ctx.post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE, reason: "private reason" } })).json();
     const secondDevice = await signedIn(who);
     expect((await (await secondDevice.get("/api/away?scope=mine")).json()).some((r: { id: string }) => r.id === created.id)).toBe(true);
     await ctx.post("/api/auth/logout");
@@ -257,6 +249,51 @@ test.describe("API: behaviour", () => {
     expect((await (await ctx.get("/api/away?scope=mine")).json()).some((r: { id: string }) => r.id === created.id)).toBe(false);
     expect((await ctx.patch("/api/away", { data: { id: created.id, status: "cancelled" } })).status()).toBe(403);
     expect((await secondDevice.patch("/api/away", { data: { id: created.id, status: "cancelled" } })).status()).toBe(200);
+  });
+
+  test("WFH requests are rejected; leave still works", async () => {
+    const ctx = await signedIn(email());
+    const wfh = await ctx.post("/api/away", { data: { type: "wfh", startDate: FUTURE, endDate: FUTURE, reason: "x" } });
+    expect(wfh.status()).toBe(400);
+    expect((await wfh.json()).error).toBe("WFH requests are gone — just tap Remote on Home");
+    const leave = await ctx.post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE, reason: "x" } });
+    expect(leave.status()).toBe(200);
+  });
+
+  // The row is written straight into the JSON data file by e2e/global-setup.ts: the API refuses
+  // to create one now, but rows from before the cut still exist in real stores.
+  test("a pre-cut pending WFH row is history for its owner, not work for the admin", async () => {
+    test.skip(!!process.env.E2E_DATABASE_URL, "the legacy row is seeded into the JSON data file only");
+    const owner = await signedIn(LEGACY_WFH.email);
+    const adm = await admin();
+
+    const mine = await (await owner.get("/api/away?scope=mine")).json();
+    expect(mine.find((r: { id: string }) => r.id === LEGACY_WFH.id)).toMatchObject({ type: "wfh", status: "pending" });
+
+    const queue = await (await adm.get("/api/away?scope=pending")).json();
+    expect(queue.map((r: { id: string }) => r.id)).not.toContain(LEGACY_WFH.id);
+
+    // Positive control: a pending leave request does reach the admin feed, so the WFH row's
+    // absence below means it was filtered, not that the feed was empty.
+    const who = email();
+    const control = await (await (await signedIn(who)).post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE } })).json();
+    const feed = await (await adm.get("/api/notifications")).json();
+    const ids = feed.items.map((i: { id: string }) => i.id);
+    expect(ids).toContain(`pending-away-${control.id}`);
+    expect(ids).not.toContain(`pending-away-${LEGACY_WFH.id}`);
+    expect((await adm.patch("/api/away", { data: { id: control.id, status: "cancelled" } })).status()).toBe(200);
+
+    for (const status of ["approved", "rejected"]) {
+      const res = await adm.patch("/api/away", { data: { id: LEGACY_WFH.id, status } });
+      expect(res.status()).toBe(409);
+      expect((await res.json()).error).toBe("WFH requests no longer need approval");
+    }
+  });
+
+  test("the owner can still cancel their own pending WFH row", async () => {
+    test.skip(!!process.env.E2E_DATABASE_URL, "the legacy row is seeded into the JSON data file only");
+    const owner = await signedIn(LEGACY_WFH_CANCEL.email);
+    expect((await owner.patch("/api/away", { data: { id: LEGACY_WFH_CANCEL.id, status: "cancelled" } })).status()).toBe(200);
   });
 
   test("leave is charged in working days, skipping Sundays, 2nd/4th Saturdays and holidays", async () => {
@@ -285,10 +322,8 @@ test.describe("API: behaviour", () => {
     expect((await mk({ type: "leave", leaveType: "el", startDate: "2026-09-07", endDate: "2026-09-07", halfDay: true })).status()).toBe(400);
     expect((await mk({ type: "leave", leaveType: "cl", startDate: "2026-09-07", endDate: "2026-09-08", halfDay: true })).status()).toBe(400);
 
-    // A leave type is required, and WFH draws from no balance.
+    // A leave type is required.
     expect((await mk({ type: "leave", startDate: "2026-09-07", endDate: "2026-09-07" })).status()).toBe(400);
-    const wfh = await (await mk({ type: "wfh", startDate: "2026-09-07", endDate: "2026-09-08" })).json();
-    expect(wfh).toMatchObject({ leaveType: null, days: 0 });
   });
 
   test("leave balances are per identity and per type, and need a signed-in user", async () => {
@@ -439,13 +474,6 @@ test.describe("API: behaviour", () => {
     expect(all.find((x: { id: string }) => x.id === g.id).image).toBe(img);
   });
 
-  test("after the cutoff, ordering and cancelling are refused", async () => {
-    const ctx = await device(CLOSED_URL);
-    expect((await (await ctx.get("/api/snacks?scope=mine")).json()).open).toBe(false);
-    expect((await ctx.post("/api/snacks", { data: { items: ["tea"] } })).status()).toBe(403);
-    expect((await ctx.delete("/api/snacks")).status()).toBe(403);
-  });
-
   test("speed test serves 2 MB of uncached bytes", async () => {
     const ctx = await device();
     const res = await ctx.get("/api/wifi/speedtest");
@@ -459,7 +487,6 @@ test.describe("API: privacy & auth", () => {
   test("admin-only endpoints reject anonymous callers", async () => {
     const ctx = await device();
     expect((await ctx.get("/api/grievances")).status()).toBe(401);
-    expect((await ctx.get("/api/snacks")).status()).toBe(401);
     expect((await ctx.get("/api/away")).status()).toBe(401);
     expect((await ctx.patch("/api/grievances", { data: { id: "x", status: "resolved" } })).status()).toBe(401);
     expect((await ctx.patch("/api/away", { data: { id: "x", status: "approved" } })).status()).toBe(401);
@@ -485,7 +512,6 @@ test.describe("API: privacy & auth", () => {
     const all = await (await adm.get("/api/grievances")).json();
     expect(all.find((x: { id: string }) => x.id === g.id)).toMatchObject({ displayName: null, status: "open" });
     noRef(all);
-    noRef(await (await adm.get("/api/snacks")).json());
   });
 
   test("admin status updates validate input and report unknown ids", async () => {
@@ -511,26 +537,10 @@ test.describe("API: privacy & auth", () => {
     expect(del.headers().location).toBe("/admin?tab=publish&done=deleted#announcements");
   });
 
-  test("session cookie is HttpOnly, SameSite=Lax, 12h, and logout clears it", async () => {
+  test("the retired shared-passcode login no longer exists", async () => {
     const ctx = await device();
-    const res = await ctx.post("/api/admin/login", { data: { passcode: "1704" } });
-    const setCookie = res.headers()["set-cookie"];
-    expect(setCookie).toMatch(/innovin_admin=\d+\.[0-9a-f]{64}/);
-    expect(setCookie).toMatch(/HttpOnly/i);
-    expect(setCookie).toMatch(/SameSite=lax/i);
-    expect(setCookie).toMatch(/Max-Age=43200/);
-    expect((await ctx.get("/api/grievances")).status()).toBe(200);
-    const out = await ctx.post("/api/admin/logout", { maxRedirects: 0 });
-    expect(out.status()).toBe(303);
+    expect((await ctx.post("/api/admin/login", { data: { passcode: "1704" } })).status()).toBe(404);
     expect((await ctx.get("/api/grievances")).status()).toBe(401);
-  });
-
-  test("HTML form login works without JavaScript", async () => {
-    const ctx = await device();
-    const bad = await ctx.post("/api/admin/login", { form: { passcode: "0000" }, maxRedirects: 0 });
-    expect(bad.headers().location).toBe("/admin?error=1");
-    const good = await ctx.post("/api/admin/login", { form: { passcode: "1704" }, maxRedirects: 0 });
-    expect(good.headers().location).toBe("/admin");
   });
 
   test("security headers are set on pages and APIs", async () => {
@@ -547,23 +557,6 @@ test.describe("API: privacy & auth", () => {
 });
 
 test.describe("API: abuse limits", () => {
-  test("admin PIN brute force locks the IP after 5 failures — even the right PIN", async () => {
-    const attacker = await device();
-    for (let i = 0; i < 5; i++) expect((await attacker.post("/api/admin/login", { data: { passcode: `99${i}0` } })).status()).toBe(401);
-    const locked = await attacker.post("/api/admin/login", { data: { passcode: "1704" } });
-    expect(locked.status()).toBe(429);
-    expect(Number(locked.headers()["retry-after"])).toBeGreaterThan(0);
-    // Other IPs are unaffected.
-    expect((await (await device()).post("/api/admin/login", { data: { passcode: "1704" } })).status()).toBe(200);
-  });
-
-  test("a successful login clears earlier failures for that IP", async () => {
-    const ctx = await device();
-    for (let i = 0; i < 4; i++) await ctx.post("/api/admin/login", { data: { passcode: "0000" } });
-    expect((await ctx.post("/api/admin/login", { data: { passcode: "1704" } })).status()).toBe(200);
-    for (let i = 0; i < 4; i++) expect((await ctx.post("/api/admin/login", { data: { passcode: "0000" } })).status()).toBe(401);
-  });
-
   test("grievance spam from one device is capped at 10 per hour, others unaffected", async () => {
     const spammer = await device();
     for (let i = 0; i < 10; i++) expect((await spammer.post("/api/grievances", { data: { body: `spam ${i}` } })).status()).toBe(200);

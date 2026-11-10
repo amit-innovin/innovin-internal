@@ -1,12 +1,12 @@
 import { attendanceHref } from "@/lib/journey";
-import { validPlannerDate } from "@/lib/workspace-model";
+import { validDate } from "@/lib/time";
 import { NextRequest, NextResponse } from "next/server";
 import { currentActor, isAdmin } from "@/lib/admin";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { allowedEmailDomains } from "@/lib/config";
 import { enforce } from "@/lib/guard";
 import { fmtShortDate } from "@/lib/format";
-import { isLeaveType, leaveCost, nonWorkingReason } from "@/lib/leave";
+import { isLeaveType, leaveCost, needsApproval, nonWorkingReason } from "@/lib/leave";
 import { todayIST } from "@/lib/time";
 import { sendPush } from "@/lib/push";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   }
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const [history, pending] = await Promise.all([store.listAway(100), store.listPendingAway()]);
-  const rows = [...pending, ...history.filter(r => r.status !== "pending")];
+  const rows = [...pending.filter(needsApproval), ...history.filter(r => r.status !== "pending")];
   return NextResponse.json(rows.map(strip));
 }
 
@@ -54,16 +54,17 @@ export async function POST(req: NextRequest) {
   const endDate = str(body.endDate).trim();
   const reason = str(body.reason).trim().slice(0, 500);
   const halfDay = body.halfDay === true;
-  // Leave draws from a specific bucket; WFH doesn't touch a balance at all.
+  // Leave draws from a specific bucket.
   const leaveType = isLeaveType(body.leaveType) ? body.leaveType : null;
 
   if (!EMAIL.test(email)) return badRequest("Enter a valid email");
   if (!allowedEmailDomains().includes(email.split("@")[1])) {
     return NextResponse.json({ error: "Use your Innovin email" }, { status: 403 });
   }
-  if (type !== "leave" && type !== "wfh") return badRequest("Choose Leave or WFH");
-  if (type === "leave" && !leaveType) return badRequest("Choose a leave type");
-  if (!validPlannerDate(startDate) || !validPlannerDate(endDate)) return badRequest("Pick valid dates");
+  if (type === "wfh") return badRequest("WFH requests are gone — just tap Remote on Home");
+  if (type !== "leave") return badRequest("Choose Leave");
+  if (!leaveType) return badRequest("Choose a leave type");
+  if (!validDate(startDate) || !validDate(endDate)) return badRequest("Pick valid dates");
   if (startDate > endDate) return badRequest("Start date can't be after the end date");
   if (dayDiff(startDate, endDate) > MAX_SPAN_DAYS) return badRequest("Requests can span at most 3 months");
   if (halfDay && (startDate !== endDate || leaveType !== "cl")) {
@@ -71,8 +72,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Working days only: Sundays, 2nd/4th Saturdays and declared holidays cost nothing.
-  const days = type === "leave" ? leaveCost(startDate, endDate, halfDay) : 0;
-  if (type === "leave" && days === 0) {
+  const days = leaveCost(startDate, endDate, halfDay);
+  if (days === 0) {
     const reasonWhy = nonWorkingReason(startDate);
     return badRequest(reasonWhy ? `${fmtShortDate(`${startDate}T00:00:00`)} is a non-working day (${reasonWhy})` : "That range has no working days");
   }
@@ -144,7 +145,7 @@ export async function PATCH(req: NextRequest) {
       // An admin approved this and now it's undone — tell the admins so nobody plans around it.
       if (row.status === "approved") {
         const who = session?.name ?? row.email;
-        const admins = (await store.listEmployees()).filter((e) => e.role === "admin" || e.role === "owner");
+        const admins = (await store.listEmployees()).filter((e) => e.role === "admin");
         await Promise.all(admins.map((a) => notify(row, `${who} cancelled their approved ${what.toLowerCase()}`, a.email)));
       }
     } else {
@@ -156,14 +157,14 @@ export async function PATCH(req: NextRequest) {
   // Decisions only come out of pending — a rejected or cancelled request is history, and an
   // approved one that needs undoing goes through cancel, not a re-decision.
   if (row.status !== "pending") return badRequest("This request was already decided");
+  if (!needsApproval(row)) return NextResponse.json({ error: "WFH requests no longer need approval" }, { status: 409 });
   // Attribute the decision when the admin is a verified identity; break-glass PIN sessions
   // have nobody to attribute it to.
-  const decidedBy = actor?.role === "admin" || actor?.role === "owner" ? actor.name || actor.email : null;
+  const decidedBy = actor?.role === "admin" ? actor.name || actor.email : null;
   const updated = await store.setAwayStatus(rid, status, decidedBy, new Date().toISOString(), "pending");
   if (!updated) return NextResponse.json({ error: "This request changed. Refresh and try again." }, { status: 409 });
 
   // Tell just that person's devices. Best-effort — the decision is already saved.
-  const what = row.type === "wfh" ? "Work from home" : "Leave";
-  await notify(row, `${what} ${status}${decidedBy ? ` by ${decidedBy}` : ""}`);
+  await notify(row, `Leave ${status}${decidedBy ? ` by ${decidedBy}` : ""}`);
   return NextResponse.json({ ok: true });
 }

@@ -38,19 +38,12 @@ test.describe("Supplied workspace design", () => {
     await signInOffice(page);
     if (isMobile) {
       await expect(page.locator(".phone-id-name")).toBeVisible();
-      await expect(page.getByRole("link", { name: "Open pantry shop", exact: true })).toBeVisible();
       await page.screenshot({ path: "output/playwright/zip-wallet-mobile.png", fullPage: true });
 
     } else {
       await expect(page.locator(".dashboard-grid > .dash-col")).toHaveCount(3);
       await expect(page.getByRole("heading", { name: "Office Notice Board", exact: true })).toBeVisible();
     }
-    await page.getByRole("link",{name:isMobile?"Open pantry shop":/Browse the office shop/}).click();
-    await expect(page.getByRole("heading",{name:"Office pantry",exact:true})).toBeVisible();
-    await page.getByRole("link",{name:/Office meals.*drinks/}).click();
-    await page.getByRole("button",{name:/^Tea/}).click();
-    await expect(page.getByText(/Request received.*Tea/)).toBeVisible();
-    expect((await (await page.request.get("/api/snacks?scope=mine")).json()).items.some((r: { itemId: string }) => r.itemId === "tea")).toBe(true);
     await page.goto("/");
     await page.screenshot({ path: `output/playwright/zip-overview-${test.info().project.name}.png`, fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

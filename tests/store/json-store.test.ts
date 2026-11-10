@@ -27,6 +27,14 @@ describe("JSON store safety", () => {
     expect(await jsonStore.getAttendance(row.email, row.date)).toMatchObject({ declaredMode: null });
   });
 
+  it("still loads an old data file that holds removed planner data", async () => {
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(file, JSON.stringify({ plannerDays: [{ email: "a@innovinlabs.com", date: "2026-10-15", kind: "office" }], announcements: [{ id: "k", title: "Kept", body: "", tag: "Office", createdAt: "2026-10-01T00:00:00Z" }] }));
+    expect(await jsonStore.listAnnouncements(10)).toHaveLength(1);
+    await jsonStore.addWifi({ id: "w", quality: "good", note: "", downMbps: null, upMbps: null, createdAt: new Date().toISOString() });
+    expect(await jsonStore.listWifi(10)).toHaveLength(1);
+  });
+
   it("refuses to read (and never overwrites) a corrupt data file", async () => {
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(file, "{ this is not json");

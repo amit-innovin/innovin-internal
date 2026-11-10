@@ -8,7 +8,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://images.swiggy.com https://media-assets.swiggy.com",
+  "img-src 'self' data: blob:",
   "font-src 'self' data:",
   // The Wi-Fi speed test downloads from fast.com's nearest Netflix CDN node, which has to
   // happen in the browser to measure the office's own connection (api.fast.com itself is
@@ -45,10 +45,16 @@ const nextConfig: NextConfig = {
   // Leave and Time Away folded into Attendance. Redirect here rather than keeping stub pages,
   // so there's no extra route to render. Not permanent — browsers cache 308s aggressively and
   // these paths may be reused.
+  //
+  // Removed features (Phase 2 cut): old links land Home rather than on a 404. Also temporary —
+  // /snacks comes back as "Tea & snacks". Redirects run before proxy.ts, so a signed-out
+  // visitor goes to "/" and from there to sign-in. Next passes the query string through
+  // (/snacks?tab=today → /?tab=today); Home reads no such parameters, so it is harmless.
   async redirects() {
     return [
       { source: "/leave", destination: "/attendance?tab=leave", permanent: false },
       { source: "/away", destination: "/attendance?tab=leave", permanent: false },
+      ...["/pantry", "/snacks", "/planner", "/people", "/admin/pantry"].map((source) => ({ source, destination: "/", permanent: false })),
     ];
   },
 };

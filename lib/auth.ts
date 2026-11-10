@@ -1,14 +1,14 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 
-// Signed-in employee identity. The cookie is HMAC-signed with SESSION_SECRET (falling back to
-// ADMIN_PASSCODE so local dev needs no extra env) and expires after 30 days.
+// Signed-in employee identity. The cookie is HMAC-signed with SESSION_SECRET (required — there
+// is no fallback key) and expires after 30 days.
 export const USER_COOKIE = "innovin_user";
 export const USER_SESSION_MS = 30 * 24 * 60 * 60_000;
 export const OAUTH_COOKIE = "innovin_oauth";
 const OAUTH_STATE_MS = 10 * 60_000;
 
-const secret = () => process.env.SESSION_SECRET || process.env.ADMIN_PASSCODE;
+const secret = () => process.env.SESSION_SECRET;
 
 const b64u = (s: string) => Buffer.from(s, "utf8").toString("base64url");
 const hmac = (key: string, value: string) => crypto.createHmac("sha256", key).update(value).digest("hex");

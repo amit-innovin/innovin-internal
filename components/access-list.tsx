@@ -11,9 +11,9 @@ import type { Role } from "@/lib/types";
 
 type Person = { email: string; name: string; role: Role };
 
-// Owner-only: grant or revoke admin. Owners aren't listed as changeable — the owner role is
-// set through OWNER_EMAILS so it can't be granted or removed from here.
-export default function AccessList({ people }: { people: Person[] }) {
+// Any admin grants or revokes admin. Admins listed in ADMIN_EMAILS (`locked`) are changed only
+// there, and nobody changes their own role (`me`) — the API enforces both; this just says so.
+export default function AccessList({ people, locked, me }: { people: Person[]; locked: string[]; me: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [roles, setRoles] = useState<Record<string, Role>>({});
@@ -26,7 +26,7 @@ export default function AccessList({ people }: { people: Person[] }) {
       toast.success(role === "admin" ? "Admin access granted" : "Admin access revoked");
       router.refresh();
     } else {
-      toast.error(res.status === 401 ? "Only the owner can change access." : await readError(res));
+      toast.error(res.status === 401 ? "Only admins can change access." : await readError(res));
     }
     setBusy(null);
   }
@@ -43,10 +43,10 @@ export default function AccessList({ people }: { people: Person[] }) {
               <p className="truncate text-sm font-medium">{p.name || p.email}</p>
               <p className="truncate text-xs text-muted-foreground">{p.email}</p>
             </div>
-            {role === "owner" ? (
-              <Badge variant="secondary" className="shrink-0">
-                Owner
-              </Badge>
+            {locked.includes(p.email.toLowerCase()) ? (
+              <Badge variant="secondary" className="shrink-0">Set in ADMIN_EMAILS</Badge>
+            ) : p.email === me ? (
+              <Badge variant="secondary" className="shrink-0">You</Badge>
             ) : (
               <Button
                 size="sm"

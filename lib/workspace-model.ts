@@ -1,16 +1,7 @@
-import type { PlannerKind, WorkspaceProfile } from "./types";
-
-export const PANTRY_LIMIT = 4;
-export const PLANNER_LABELS: Record<PlannerKind, string> = {
-  office: "In office", remote: "Work from home", vacation: "Vacation", sick: "Sick leave", festival: "Festival leave", holiday: "Public holiday",
-};
-export const PLANNER_ICONS: Record<PlannerKind, string> = { office: "🏢", remote: "🏠", vacation: "🌴", sick: "🤒", festival: "🪔", holiday: "🎉" };
+import type { WorkspaceProfile } from "./types";
 
 export function activeMode(profile: Pick<WorkspaceProfile, "mode" | "presenceDate"> | null, checkedIn: boolean, today: string) {
   return checkedIn && profile?.presenceDate === today ? profile.mode : null;
-}
-export function validPlannerDate(date: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(`${date}T00:00:00Z`)) && new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === date;
 }
 
 export type Ranking = { id: string; name: string; score: number; unit: string };

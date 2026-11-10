@@ -35,7 +35,7 @@ describe("employee access", () => {
     vi.stubEnv("SESSION_SECRET", "test-secret");
     const res = await requestAway(new NextRequest("https://internal.example/api/away", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "owner@innovinlabs.com", type: "wfh", startDate: "2026-11-09", endDate: "2026-11-09" }),
+      body: JSON.stringify({ email: "owner@innovinlabs.com", type: "leave", leaveType: "cl", startDate: "2026-11-09", endDate: "2026-11-09" }),
     }));
     expect(res.status).toBe(401);
   });

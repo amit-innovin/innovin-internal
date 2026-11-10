@@ -101,7 +101,7 @@ test.describe("Wi-Fi Quality", () => {
   test("falls back to our own payload when fast.com is unavailable", async ({ page }) => {
     // SPEEDTEST_PROVIDER=self makes the lookup return no targets, as it would if fast.com
     // changed or were unreachable. The test must still produce a number.
-    await page.goto("/wifi");
+    await signInEmployee(page, undefined, "/wifi");
     const targets = await (await page.request.get("/api/wifi/speedtest/targets")).json();
     expect(targets).toMatchObject({ targets: [], city: null });
 
@@ -116,7 +116,7 @@ test.describe("Wi-Fi Quality", () => {
     await page.route("**/api/wifi/speedtest/targets", (route) =>
       route.fulfill({ json: { targets: [`${new URL(page.url() || "http://localhost:3210").origin}/api/wifi/speedtest`], city: "Chennai" } }),
     );
-    await page.goto("/wifi");
+    await signInEmployee(page, undefined, "/wifi");
     await page.getByRole("button", { name: "Check Speed" }).click();
     const reading = page.getByText(/^Download/);
     await expect(reading).toContainText("Mbps", { timeout: 20_000 });
@@ -125,7 +125,7 @@ test.describe("Wi-Fi Quality", () => {
 
   test("reports with a note appear in the feed, update the status, and reset the speed", async ({ page }) => {
     const note = uniqueText("Slow near meeting room");
-    await page.goto("/wifi");
+    await signInEmployee(page, undefined, "/wifi");
     await page.getByRole("button", { name: "Check Speed" }).click();
     await expect(page.getByText(/^Download/)).toContainText("Mbps", { timeout: 20_000 });
 

@@ -10,7 +10,6 @@ import type {
   EventRow,
   GrievanceRow,
   LeaveBalanceRow,
-  PingRow,
   PushSubscriptionRow,
   RsvpRow,
   StepsRow,
@@ -19,7 +18,6 @@ import type {
   WorkspaceProfile,
   PlannerDay,
 } from "./types";
-import { pingExpired } from "./pings";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -39,14 +37,13 @@ type DB = {
   leaveBalances: LeaveBalanceRow[];
   pushSubscriptions: PushSubscriptionRow[];
   steps: StepsRow[];
-  pings: PingRow[];
   workspaceProfiles: WorkspaceProfile[];
   plannerDays: PlannerDay[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
 const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0 });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], pings: [], workspaceProfiles: [], plannerDays: [] });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], plannerDays: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -76,12 +73,6 @@ async function read(): Promise<DB> {
       g.submitterRef = "anon";
       dirty = true;
     }
-  }
-  // Pings keep no history — drop anything past the TTL on every read.
-  const live = db.pings.filter((p) => !pingExpired(p.createdAt));
-  if (live.length !== db.pings.length) {
-    db.pings = live;
-    dirty = true;
   }
   if (dirty) await write(db);
   return db;
@@ -304,30 +295,6 @@ export const jsonStore: Store = {
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, limit),
     ),
-  addPing: (row) =>
-    mutate((db) => {
-      db.pings.unshift(row);
-      return { result: row, changed: true };
-    }),
-  listPingsFor: (email, limit) =>
-    query((db) =>
-      db.pings
-        .filter((p) => p.fromEmail === email || p.toEmail === email)
-        .sort(newestFirst)
-        .slice(0, limit),
-    ),
-  markPingsRead: (email, fromEmail) =>
-    mutate((db) => {
-      let changed = false;
-      const at = new Date().toISOString();
-      for (const p of db.pings) {
-        if (p.toEmail === email && p.fromEmail === fromEmail && !p.readAt) {
-          p.readAt = at;
-          changed = true;
-        }
-      }
-      return { result: undefined, changed };
-    }),
   setLeaveBalance: (row) =>
     mutate((db) => {
       const existing = db.leaveBalances.find((b) => b.email === row.email && b.year === row.year);

@@ -76,19 +76,6 @@ test("the pass shows recorded attendance rather than a conflicting private plan"
   }
 });
 
-test("opening a teammate profile sends nothing until the user explicitly writes a private note",async({page,browser,isMobile})=>{
-  const {signInOffice}=await import("./fixtures");const peerEmail=uniqueEmail("profile-peer");const peerContext=await browser.newContext(),peer=await peerContext.newPage();await signInOffice(peer,peerEmail);
-  await signInOffice(page,uniqueEmail("profile-viewer"));const data=await(await page.request.get("/api/workspace")).json();const person=data.people.find((p:{email:string})=>p.email===peerEmail);
-  if(isMobile)await page.getByRole("button",{name:"Expand People in Office",exact:true}).click();
-  const personButton=page.getByRole("button",{name:`View ${person.name}'s profile`,exact:true});
-  expect(await personButton.locator(".cursor-pill").evaluate(el=>getComputedStyle(el).backgroundColor!==getComputedStyle(el.querySelector(".cursor-person-name")!).color)).toBe(true);
-  await personButton.click();
-  await expect(page.getByRole("dialog").getByLabel("Job title")).toHaveAttribute("readonly","");
-  expect((await(await page.request.get(`/api/pings?with=${encodeURIComponent(peerEmail)}`)).json()).messages).toEqual([]);
-  await page.getByRole("button",{name:"Send a private note",exact:true}).click();await page.getByLabel("Ping message").fill("Intentional private note");await page.getByRole("button",{name:"Send ping",exact:true}).click();
-  await expect(page.getByRole("dialog")).toContainText("Intentional private note");await peer.goto("/people");await expect(peer.getByText(/Intentional private note/)).toBeVisible();await peerContext.close();
-});
-
 test("removing a public board post requires a deliberate confirmation",async({page,isMobile})=>{
   const {uniqueText}=await import("./fixtures");await signInEmployee(page,"admin@innovinlabs.com","/");if(isMobile)await page.getByRole("button",{name:"Office Notice Board",exact:true}).click();
   await page.getByRole("button",{name:"Post Note",exact:true}).click();const text=uniqueText("Removal confirmation");await page.getByLabel("Your board note").fill(text);await page.getByRole("button",{name:"Pin to board",exact:true}).click();

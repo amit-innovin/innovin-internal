@@ -15,7 +15,7 @@ import type { GrievanceRow } from "./types";
 
 export type Notification = {
   id: string;
-  kind: "announcement" | "event" | "away" | "grievance" | "ping";
+  kind: "announcement" | "event" | "away" | "grievance";
   title: string;
   body: string;
   at: string;
@@ -28,11 +28,10 @@ const LOOKBACK_DAYS = 30;
 export async function feedFor(opts: { email: string | null; grievances: Omit<GrievanceRow, "submitterRef">[]; now: number }) {
   const since = new Date(opts.now - LOOKBACK_DAYS * 86_400_000).toISOString();
 
-  const [announcements, events, away, pings, employees] = await Promise.all([
+  const [announcements, events, away, employees] = await Promise.all([
     store.listAnnouncements(10),
     store.listEvents(new Date(opts.now).toISOString(), 10),
     opts.email ? store.listAwayByEmail(opts.email, 20) : Promise.resolve([]),
-    opts.email ? store.listPingsFor(opts.email, 50) : Promise.resolve([]),
     opts.email ? store.listEmployees() : Promise.resolve([]),
   ]);
 
@@ -72,20 +71,6 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
       body: `${fmtShortDate(`${r.startDate}T00:00:00`)}${r.decidedBy ? ` · by ${r.decidedBy}` : ""}`,
       at: r.decidedAt,
       href: attendanceHref("leave",undefined,r.id),
-    });
-  }
-
-  // Unread pings land here too — tapping one opens that thread on People.
-  const names = new Map(employees.map((e) => [e.email, e.name]));
-  for (const p of pings) {
-    if (p.toEmail !== opts.email || p.readAt) continue;
-    items.push({
-      id: `ping-${p.id}`,
-      kind: "ping",
-      title: `${names.get(p.fromEmail) ?? p.fromEmail} pinged you`,
-      body: p.body,
-      at: p.createdAt,
-      href: `/people?ping=${encodeURIComponent(p.fromEmail)}`,
     });
   }
 

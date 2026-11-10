@@ -82,7 +82,7 @@ test.describe("Studio workspace", () => {
     expect((await page.request.post("/api/workspace", { data: { mode: "admin" } })).status()).toBe(400);
   });
 
-  test("steps and paper notes save through their owning APIs", async ({ page, browser }) => {
+  test("steps save through their owning API", async ({ page, browser }) => {
     const peer = await browser.newContext();
     const peerPage = await peer.newPage();
     await peerPage.goto("http://localhost:3210/api/auth/google?next=/settings");
@@ -96,20 +96,6 @@ test.describe("Studio workspace", () => {
     await expect(page.getByLabel("Today's total steps")).toHaveValue("12450");
     await page.getByRole("button", { name: "10k+ days", exact: true }).click();
     await expect(page.locator(".ranking-list .is-me")).toContainText("1");
-    await page.getByRole("button", { name: "Write a paper note" }).click();
-    const recipient = await page.getByRole("combobox", { name: "To", exact: true }).locator('option[value$="@innovinlabs.com"]').first().getAttribute("value");
-    await page.getByRole("combobox", { name: "To", exact: true }).selectOption(recipient!);
-    const text = uniqueText("Thanks for the help");
-    await page.getByLabel("Your note", { exact: true }).fill(text);
-    await page.getByRole("button", { name: "Send airplane" }).click();
-    await expect(page.getByText("Your note is on its way")).toBeVisible();
-    const thread = await (await page.request.get(`/api/pings?with=${encodeURIComponent(recipient!)}`)).json();
-    expect(thread.messages.some((m: { body: string; mine: boolean }) => m.body.includes(text) && m.mine)).toBe(true);
-    await page.getByRole("button", { name: "Write a paper note" }).click();
-    await page.getByLabel("Your note", { exact: true }).fill("Discard me");
-    await page.getByRole("button", { name: "Crumple and discard note" }).click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.locator(".paper-animation")).toHaveCount(0);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `output/playwright/steps-${test.info().project.name}.png`, fullPage: true });
   });

@@ -1,6 +1,5 @@
 "use client";
 import { ProfileEditor } from "./profile";
-import { PingSheet,type PingTarget } from "@/components/ping-sheet";
 import { useRef, useState } from "react";
 import { List, Minus, MousePointer2, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -11,7 +10,6 @@ export function OfficeArena({ data, onSaved }: { data: WorkspaceData; onSaved: (
   const [mode, setMode] = useState("office");
   const [projectFilter,setProjectFilter]=useState("");
   const [selectedPerson,setSelectedPerson]=useState<WorkspaceData["people"][number]|null>(null);
-  const [pingTarget,setPingTarget]=useState<PingTarget|null>(null);
   const [zoom, setZoom] = useState(.85);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [focus, setFocus] = useState("");
@@ -40,5 +38,5 @@ export function OfficeArena({ data, onSaved }: { data: WorkspaceData; onSaved: (
       {!people.length && <p className="arena-empty">No teammates in this view yet.</p>}
       <form className="figma-canvas-toolbar" onSubmit={e => { e.preventDefault(); status(focus); }}><div className="figma-chat-input-wrap"><span className="figma-chat-key">💬</span><input aria-label="Your office status" value={focus} maxLength={36} onChange={e => setFocus(e.target.value)} placeholder="Broadcast status…" /><button className="btn-figma-send-chat" disabled={busy || !focus.trim()}>Broadcast</button></div><div className="figma-quick-reactions">{["👋", "☕", "🚀", "🎧"].map(emoji => <button key={emoji} type="button" className="quick-rx-btn" aria-label={`Share status ${emoji}`} disabled={busy} onClick={() => status(emoji)}>{emoji}</button>)}</div></form>
     </div>}
-  </section>{selectedPerson&&<ProfileEditor key={selectedPerson.email} profile={{...selectedPerson,presenceDate:data.today}} readOnly personName={selectedPerson.name} onClose={()=>setSelectedPerson(null)} onSaved={onSaved} onContact={selectedPerson.email!==data.user.email?()=>{setPingTarget(selectedPerson);setSelectedPerson(null);}:undefined} />}{pingTarget&&<PingSheet target={pingTarget} onClose={()=>setPingTarget(null)} />}</>;
+  </section>{selectedPerson&&<ProfileEditor key={selectedPerson.email} profile={{...selectedPerson,presenceDate:data.today}} readOnly personName={selectedPerson.name} onClose={()=>setSelectedPerson(null)} onSaved={onSaved} />}</>;
 }

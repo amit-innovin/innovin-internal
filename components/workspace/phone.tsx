@@ -4,14 +4,14 @@ import { useRouter, useSearchParams,usePathname } from "next/navigation";
 import AttendanceCalendar from "@/components/attendance-calendar";
 import { boardHref } from "@/lib/journey";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { CalendarDays, Expand, Footprints, House, Pin, RotateCw, Settings, Send, UserRound, X } from "lucide-react";
+import { CalendarDays, Expand, Footprints, House, Pin, RotateCw, Settings, UserRound, X } from "lucide-react";
 import type { WorkspaceData } from "@/lib/workspace";
 import type { WorkspaceView } from "./portal";
 import { WorkspacePlanner } from "./planner";
 import Notifications from "@/components/notifications";
 
-type Props = { data: WorkspaceData; view: WorkspaceView; presence: ReactNode; arena: ReactNode; events: ReactNode; board: ReactNode; steps: ReactNode; planner: ReactNode; onProfile: () => void; onComposeNote: () => void; keyboardOpen: boolean };
-export function PhoneWorkspace({ data, view, presence, arena, events, board, steps, planner, onProfile, onComposeNote, keyboardOpen }: Props) {
+type Props = { data: WorkspaceData; view: WorkspaceView; presence: ReactNode; arena: ReactNode; events: ReactNode; board: ReactNode; steps: ReactNode; planner: ReactNode; onProfile: () => void; keyboardOpen: boolean };
+export function PhoneWorkspace({ data, view, presence, arena, events, board, steps, planner, onProfile, keyboardOpen }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [flipped, setFlipped] = useState(false);
   const router=useRouter();
@@ -43,7 +43,6 @@ export function PhoneWorkspace({ data, view, presence, arena, events, board, ste
       <Link className={`phone-dock-item ${view === "overview" && !notice ? "active" : ""}`} href="/" aria-label="Overview" aria-current={view === "overview" && !notice ? "page" : undefined} ><House size={22} /><span>Home</span></Link>
       <Link className={`phone-dock-item ${view === "steps" && !notice ? "active" : ""}`} href="/steps" aria-label="Daily Steps" aria-current={view === "steps" && !notice ? "page" : undefined}><Footprints size={22} /><span>Steps</span></Link>
       <button className={`phone-dock-item ${notice ? "active" : ""}`} aria-label="Office Notice Board" aria-pressed={notice} onClick={() => router.push(boardHref())}><Pin size={22} /><span>Board</span></button>
-      <button className="phone-dock-item" aria-label="Write a paper note" onClick={onComposeNote}><Send size={21} /><span>Note</span></button>
     </nav>
   </div></div>;
 }

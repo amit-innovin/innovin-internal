@@ -133,17 +133,6 @@ export type GrievanceRow = {
   createdAt: string;
 };
 
-// A one-line ping between two people — "chai?", "walk?". Deliberately ephemeral: stores purge
-// rows older than PING_TTL on every access, so there is no chat history to keep or leak.
-export type PingRow = {
-  id: string;
-  fromEmail: string;
-  toEmail: string;
-  body: string;
-  readAt: string | null;
-  createdAt: string;
-};
-
 export type WifiRow = {
   id: string;
   quality: "good" | "poor";
@@ -221,11 +210,6 @@ export interface Store {
   listGrievances(): Promise<GrievanceRow[]>;
   // "My submissions" lookup — ids come from the device's own cookie, never a stored ref.
   listGrievancesByIds(ids: string[], limit: number): Promise<GrievanceRow[]>;
-  // Pings — both sides of every conversation `email` is part of, newest first.
-  addPing(row: PingRow): Promise<PingRow>;
-  listPingsFor(email: string, limit: number): Promise<PingRow[]>;
-  // Marks unread pings sent to `email` by `fromEmail` as read.
-  markPingsRead(email: string, fromEmail: string): Promise<void>;
   addWifi(row: WifiRow): Promise<WifiRow>;
   listWifi(limit: number): Promise<WifiRow[]>;
   addAnnouncement(row: AnnouncementRow): Promise<AnnouncementRow>;

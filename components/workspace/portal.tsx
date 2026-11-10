@@ -11,7 +11,6 @@ import { OfficeArena } from "./arena";
 import { WorkspaceEvents } from "./events";
 import { WorkspacePlanner } from "./planner";
 import { WorkspaceSteps } from "./steps";
-import { PaperNotes } from "./notes";
 import { NoticeBoard } from "./notice-board";
 import { LeaveChips } from "./leave-chips";
 import { PhoneWorkspace } from "./phone";
@@ -24,7 +23,6 @@ export function WorkspacePortal({ initial, view = "overview" }: { initial: Works
   const [profileOpen, setProfileOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [phone, setPhone] = useState<boolean | null>(null);
-  const [noteOpen, setNoteOpen] = useState(false);
   const keyboardOpen = useMobileViewport(phone === true);
   const reload = useCallback(async () => { const d = await getJSON<WorkspaceData>("/api/workspace", "your workspace", { fresh: true }); if (d) setData(d); }, []);
   useEffect(() => {
@@ -66,7 +64,7 @@ export function WorkspacePortal({ initial, view = "overview" }: { initial: Works
   const steps = <WorkspaceSteps data={data} onSaved={reload} compact={!!phone} />;
   const planner = <WorkspacePlanner today={data.today} />;
   const p = data.profile;
-  const phoneContent = <PhoneWorkspace data={data} view={view} presence={presenceControl} arena={arena} events={events} board={board} steps={steps} planner={planner} onProfile={() => setProfileOpen(true)} onComposeNote={() => setNoteOpen(true)} keyboardOpen={keyboardOpen} />;
+  const phoneContent = <PhoneWorkspace data={data} view={view} presence={presenceControl} arena={arena} events={events} board={board} steps={steps} planner={planner} onProfile={() => setProfileOpen(true)} keyboardOpen={keyboardOpen} />;
   return <div className={`studio-workspace zip-workspace ${phone ? "is-phone" : ""}`}>
     <h1 className="sr-only">{view === "overview" ? "Your workspace" : view === "steps" ? "A little healthy competition" : "Your days, your rhythm"}</h1>
     {phone === null ? <div role="status" className="workspace-loading">Loading your workspace…</div> : phone ? phoneContent : view === "overview" ? <div className="dashboard-grid">
@@ -85,7 +83,6 @@ export function WorkspacePortal({ initial, view = "overview" }: { initial: Works
         {events}
       </div>
     </div> : view === "steps" ? steps : planner}
-    <PaperNotes people={data.people} email={data.user.email} open={noteOpen} onOpenChange={setNoteOpen} floatingTrigger={phone === false} onSaved={reload} />
     {profileOpen && <ProfileEditor profile={p} onClose={() => setProfileOpen(false)} onSaved={reload} />}
   </div>;
 }

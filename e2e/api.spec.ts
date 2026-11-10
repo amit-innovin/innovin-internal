@@ -35,11 +35,21 @@ async function officeDevice() {
 }
 
 test.describe("API: removed features", () => {
-  for (const path of ["/api/snacks", "/api/pantry-shop", "/api/pantry-provider"]) {
+  for (const path of ["/api/snacks", "/api/pantry-shop", "/api/pantry-provider", "/api/pings"]) {
     test(`removed API ${path} is gone`, async ({ request }) => {
       expect((await request.get(path)).status()).toBe(404);
     });
   }
+});
+
+test.describe("API: notifications", () => {
+  test("signed-in notifications only carry the four remaining kinds", async () => {
+    const ctx = await signedIn(email());
+    const res = await ctx.get("/api/notifications");
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    for (const item of body.items) expect(["announcement", "event", "away", "grievance"]).toContain(item.kind);
+  });
 });
 
 test.describe("API: input validation", () => {

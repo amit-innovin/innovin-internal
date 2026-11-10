@@ -67,7 +67,7 @@ export async function readError(res: Response) {
 
 // fetch that never throws: network failures come back as a synthetic 503 response.
 // Successful mutations invalidate their own GET cache — and the notification feed, since
-// pings, leave, grievances and announcements all surface there.
+// leave, grievances and announcements all surface there.
 export async function send(url: string, init: RequestInit & { json?: unknown } = {}) {
   const { json, ...rest } = init;
   try {

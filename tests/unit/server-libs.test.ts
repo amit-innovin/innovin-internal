@@ -220,4 +220,9 @@ describe("the cut", () => {
     const { existsSync } = await import("fs");
     for (const p of ["lib/pantry", "lib/menu.ts", "lib/order-state.ts", "app/api/snacks", "app/api/pantry-shop", "app/api/pantry-provider"]) expect(existsSync(p), p).toBe(false);
   });
+
+  it("the cut: notifications never contain ping or pantry items", async () => {
+    const src = (await import("fs")).readFileSync("lib/notifications.ts", "utf8");
+    expect(src).not.toMatch(/"ping"|"pantry"|listPingsFor|listOrders/);
+  });
 });

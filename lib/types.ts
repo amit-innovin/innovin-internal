@@ -20,6 +20,9 @@ export type EmployeeRow = {
   officeDays?: number[];
   // Exempt from the 8-office-days target (e.g. fully remote). Admin-set.
   officeExempt?: boolean;
+  // Day and month only ("MM-DD"), and shown to colleagues only when the person opts in.
+  birthday?: string | null;
+  showBirthday?: boolean;
   createdAt: string;
   lastSeenAt: string;
 };
@@ -187,7 +190,8 @@ export type WorkspaceProfile = {
 
 export type NoticeRow = {
   id: string;
-  kind: "quote" | "feedback";
+  // Feed posts anyone can make. Kudos and polls are notices too, so they share reactions.
+  kind: "quote" | "feedback" | "kudos" | "poll";
   title: string;
   body: string;
   attribution: string;
@@ -196,8 +200,24 @@ export type NoticeRow = {
   authorEmail: string | null;
   authorName: string | null;
   createdAt: string;
+  // A photo on a note (compressed data URL).
+  image?: string | null;
+  // Kudos: who it is for.
+  toEmail?: string | null;
+  toName?: string | null;
+  // Poll: the choices and when voting stops.
+  options?: string[];
+  closesAt?: string | null;
 };
 export type NoticeReaction = { noticeId: string; email: string; emoji: string };
+export type PollVote = { noticeId: string; email: string; option: number };
+export type TeaRow = { date: string; email: string; createdAt: string };
+// "suggested" by anyone (anonymously) → "shelf" when an admin adds it → "dismissed".
+export type SnackItem = { id: string; name: string; note: string; status: "suggested" | "shelf" | "dismissed"; orderedAt: string | null; createdAt: string };
+// voterRef is a keyed hash of the voter, so one vote per person without storing who.
+export type SnackVote = { itemId: string; voterRef: string };
+export type BookRow = { id: string; title: string; author: string; createdAt: string };
+export type ReadingRow = { email: string; bookId: string; status: "want" | "reading" | "done"; page: number; pages: number; updatedAt: string };
 
 
 export interface Store {
@@ -213,6 +233,24 @@ export interface Store {
   checkIn(row: AttendanceRow): Promise<AttendanceRow>;
   // Closes the open session; null when there isn't one.
   checkOut(email: string, date: string, at: string): Promise<AttendanceRow | null>;
+  votePoll(noticeId: string, email: string, option: number | null): Promise<boolean>;
+  listPollVotes(noticeIds: string[]): Promise<PollVote[]>;
+  setTea(date: string, email: string, going: boolean): Promise<void>;
+  listTea(date: string): Promise<TeaRow[]>;
+  addSnack(row: SnackItem): Promise<SnackItem>;
+  getSnack(id: string): Promise<SnackItem | null>;
+  listSnacks(): Promise<SnackItem[]>;
+  setSnackStatus(id: string, status: SnackItem["status"], orderedAt: string | null): Promise<boolean>;
+  // The voter's new state (true = voted), or null when the item doesn't exist.
+  toggleSnackVote(itemId: string, voterRef: string): Promise<boolean | null>;
+  listSnackVotes(): Promise<SnackVote[]>;
+  clearSnackVotes(itemId: string): Promise<void>;
+  addBook(row: BookRow): Promise<BookRow>;
+  listBooks(): Promise<BookRow[]>;
+  setReading(row: ReadingRow): Promise<ReadingRow>;
+  clearReading(email: string, bookId: string): Promise<void>;
+  listReadings(): Promise<ReadingRow[]>;
+  setBirthday(email: string, birthday: string | null, show: boolean): Promise<boolean>;
   // One tap = the day's mark. Creates or replaces that person's row for the date (mode, source,
   // position, time) and clears any old check-out.
   markDay(row: AttendanceRow): Promise<AttendanceRow>;

@@ -19,6 +19,9 @@ import type {
   WifiRow,
   WorkspaceProfile,
   AttendanceChangeRow,
+  SnackItem,
+  BookRow,
+  ReadingRow,
 } from "./types";
 
 // Postgres persistence — used when DATABASE_URL is set (Neon, Supabase, Vercel Postgres).
@@ -213,6 +216,50 @@ CREATE TABLE IF NOT EXISTS attendance_changes (
   at timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS attendance_changes_email_idx ON attendance_changes (email, at DESC);
+-- The rebuilt member app: poll votes, the daily tea round, the snack shelf, the reading list
+-- and birthdays (day and month only).
+CREATE TABLE IF NOT EXISTS poll_votes (
+  notice_id text NOT NULL REFERENCES notices(id) ON DELETE CASCADE,
+  email text NOT NULL,
+  option int NOT NULL,
+  PRIMARY KEY (notice_id, email)
+);
+CREATE TABLE IF NOT EXISTS tea_rounds (
+  date text NOT NULL,
+  email text NOT NULL,
+  created_at timestamptz NOT NULL,
+  PRIMARY KEY (date, email)
+);
+CREATE TABLE IF NOT EXISTS snack_items (
+  id text PRIMARY KEY,
+  name text NOT NULL,
+  note text NOT NULL DEFAULT '',
+  status text NOT NULL,
+  ordered_at timestamptz,
+  created_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS snack_votes (
+  item_id text NOT NULL REFERENCES snack_items(id) ON DELETE CASCADE,
+  voter_ref text NOT NULL,
+  PRIMARY KEY (item_id, voter_ref)
+);
+CREATE TABLE IF NOT EXISTS books (
+  id text PRIMARY KEY,
+  title text NOT NULL,
+  author text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS readings (
+  email text NOT NULL,
+  book_id text NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  status text NOT NULL,
+  page int NOT NULL DEFAULT 0,
+  pages int NOT NULL DEFAULT 0,
+  updated_at timestamptz NOT NULL,
+  PRIMARY KEY (email, book_id)
+);
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS birthday text;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS show_birthday boolean NOT NULL DEFAULT false;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS updated_at timestamptz;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelled_at timestamptz;
 CREATE INDEX IF NOT EXISTS events_starts_idx ON events (starts_at);
@@ -233,6 +280,14 @@ const attendance = (r: any): AttendanceRow => ({
   declaredMode: r.declared_mode ?? null,
   accuracyM: r.accuracy_m ?? null,
   source: r.source ?? null,
+});
+const snack = (r: any): SnackItem => ({
+  id: r.id,
+  name: r.name,
+  note: r.note ?? "",
+  status: r.status,
+  orderedAt: r.ordered_at ? r.ordered_at.toISOString?.() ?? r.ordered_at : null,
+  createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
 const attendanceChange = (r: any): AttendanceChangeRow => ({
   id: r.id,
@@ -281,6 +336,8 @@ const employee = (r: any): EmployeeRow => ({
   stepsOffset: r.steps_offset ?? 0,
   officeDays: Array.isArray(r.office_days) ? r.office_days : [],
   officeExempt: r.office_exempt ?? false,
+  birthday: r.birthday ?? null,
+  showBirthday: r.show_birthday ?? false,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
 });
@@ -448,6 +505,84 @@ class PgStore implements Store {
     );
     // Repeated check-in preserves arrival/evidence while allowing an explicit declaration change.
     return res.rows[0] ? attendance(res.rows[0]) : (await this.getAttendance(row.email, row.date))!;
+  }
+  async votePoll(noticeId: string, email: string, option: number | null) {
+    const exists = await this.q(`SELECT 1 FROM notices WHERE id = $1`, [noticeId]);
+    if (!exists.rowCount) return false;
+    if (option === null) await this.q(`DELETE FROM poll_votes WHERE notice_id = $1 AND email = $2`, [noticeId, email]);
+    else await this.q(`INSERT INTO poll_votes (notice_id, email, option) VALUES ($1,$2,$3) ON CONFLICT (notice_id, email) DO UPDATE SET option = EXCLUDED.option`, [noticeId, email, option]);
+    return true;
+  }
+  async listPollVotes(ids: string[]) {
+    if (!ids.length) return [];
+    const res = await this.q(`SELECT notice_id, email, option FROM poll_votes WHERE notice_id = ANY($1)`, [ids]);
+    return res.rows.map((r) => ({ noticeId: r.notice_id, email: r.email, option: r.option }));
+  }
+  async setTea(date: string, email: string, going: boolean) {
+    if (going) await this.q(`INSERT INTO tea_rounds (date, email, created_at) VALUES ($1,$2,now()) ON CONFLICT DO NOTHING`, [date, email]);
+    else await this.q(`DELETE FROM tea_rounds WHERE date = $1 AND email = $2`, [date, email]);
+  }
+  async listTea(date: string) {
+    const res = await this.q(`SELECT * FROM tea_rounds WHERE date = $1 ORDER BY created_at`, [date]);
+    return res.rows.map((r) => ({ date: r.date, email: r.email, createdAt: r.created_at?.toISOString?.() ?? r.created_at }));
+  }
+  async addSnack(row: SnackItem) {
+    await this.q(`INSERT INTO snack_items (id, name, note, status, ordered_at, created_at) VALUES ($1,$2,$3,$4,$5,$6)`, [row.id, row.name, row.note, row.status, row.orderedAt, row.createdAt]);
+    return row;
+  }
+  async getSnack(id: string) {
+    const res = await this.q(`SELECT * FROM snack_items WHERE id = $1`, [id]);
+    return res.rows[0] ? snack(res.rows[0]) : null;
+  }
+  async listSnacks() {
+    const res = await this.q(`SELECT * FROM snack_items ORDER BY created_at`);
+    return res.rows.map(snack);
+  }
+  async setSnackStatus(id: string, status: SnackItem["status"], orderedAt: string | null) {
+    const res = await this.q(`UPDATE snack_items SET status = $2, ordered_at = $3 WHERE id = $1`, [id, status, orderedAt]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async toggleSnackVote(itemId: string, voterRef: string) {
+    const exists = await this.q(`SELECT 1 FROM snack_items WHERE id = $1`, [itemId]);
+    if (!exists.rowCount) return null;
+    const removed = await this.q(`DELETE FROM snack_votes WHERE item_id = $1 AND voter_ref = $2`, [itemId, voterRef]);
+    if (removed.rowCount) return false;
+    await this.q(`INSERT INTO snack_votes (item_id, voter_ref) VALUES ($1,$2) ON CONFLICT DO NOTHING`, [itemId, voterRef]);
+    return true;
+  }
+  async listSnackVotes() {
+    const res = await this.q(`SELECT item_id, voter_ref FROM snack_votes`);
+    return res.rows.map((r) => ({ itemId: r.item_id, voterRef: r.voter_ref }));
+  }
+  async clearSnackVotes(itemId: string) {
+    await this.q(`DELETE FROM snack_votes WHERE item_id = $1`, [itemId]);
+  }
+  async addBook(row: BookRow) {
+    await this.q(`INSERT INTO books (id, title, author, created_at) VALUES ($1,$2,$3,$4)`, [row.id, row.title, row.author, row.createdAt]);
+    return row;
+  }
+  async listBooks() {
+    const res = await this.q(`SELECT * FROM books ORDER BY created_at`);
+    return res.rows.map((r) => ({ id: r.id, title: r.title, author: r.author, createdAt: r.created_at?.toISOString?.() ?? r.created_at }));
+  }
+  async setReading(row: ReadingRow) {
+    await this.q(
+      `INSERT INTO readings (email, book_id, status, page, pages, updated_at) VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (email, book_id) DO UPDATE SET status = EXCLUDED.status, page = EXCLUDED.page, pages = EXCLUDED.pages, updated_at = EXCLUDED.updated_at`,
+      [row.email, row.bookId, row.status, row.page, row.pages, row.updatedAt],
+    );
+    return row;
+  }
+  async clearReading(email: string, bookId: string) {
+    await this.q(`DELETE FROM readings WHERE email = $1 AND book_id = $2`, [email, bookId]);
+  }
+  async listReadings() {
+    const res = await this.q(`SELECT * FROM readings`);
+    return res.rows.map((r) => ({ email: r.email, bookId: r.book_id, status: r.status, page: r.page, pages: r.pages, updatedAt: r.updated_at?.toISOString?.() ?? r.updated_at }));
+  }
+  async setBirthday(email: string, birthday: string | null, show: boolean) {
+    const res = await this.q(`UPDATE employees SET birthday = $2, show_birthday = $3 WHERE email = $1`, [email, birthday, show]);
+    return (res.rowCount ?? 0) > 0;
   }
   async markDay(row: AttendanceRow) {
     const res = await this.q(

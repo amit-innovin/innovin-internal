@@ -16,7 +16,7 @@ import type {
   Store,
   WifiRow,
   WorkspaceProfile,
- AttendanceChangeRow } from "./types";
+ AttendanceChangeRow, PollVote, TeaRow, SnackItem, SnackVote, BookRow, ReadingRow } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -38,11 +38,17 @@ type DB = {
   steps: StepsRow[];
   workspaceProfiles: WorkspaceProfile[];
   attendanceChanges: AttendanceChangeRow[];
+  pollVotes: PollVote[];
+  tea: TeaRow[];
+  snacks: SnackItem[];
+  snackVotes: SnackVote[];
+  books: BookRow[];
+  readings: ReadingRow[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
-const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [] });
+const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -117,6 +123,7 @@ export const jsonStore: Store = {
     const exists = db.notices.some(n => n.id === id);
     db.notices = db.notices.filter(n => n.id !== id);
     db.noticeReactions = db.noticeReactions.filter(n => n.noticeId !== id);
+    db.pollVotes = db.pollVotes.filter(v => v.noticeId !== id);
     return { result: exists, changed: exists };
   }),
   toggleNoticeReaction: (id, email, emoji) => mutate((db) => {
@@ -161,6 +168,57 @@ export const jsonStore: Store = {
       const normalized = { ...row, declaredMode: row.declaredMode ?? null };
       db.attendance.unshift(normalized);
       return { result: normalized, changed: true };
+    }),
+  votePoll: (noticeId, email, option) =>
+    mutate((db) => {
+      if (!db.notices.some((n) => n.id === noticeId)) return { result: false, changed: false };
+      db.pollVotes = db.pollVotes.filter((v) => !(v.noticeId === noticeId && v.email === email));
+      if (option !== null) db.pollVotes.push({ noticeId, email, option });
+      return { result: true, changed: true };
+    }),
+  listPollVotes: (ids) => query((db) => db.pollVotes.filter((v) => ids.includes(v.noticeId))),
+  setTea: (date, email, going) =>
+    mutate((db) => {
+      const has = db.tea.some((t) => t.date === date && t.email === email);
+      if (going && !has) db.tea.push({ date, email, createdAt: new Date().toISOString() });
+      if (!going) db.tea = db.tea.filter((t) => !(t.date === date && t.email === email));
+      return { result: undefined, changed: going !== has };
+    }),
+  listTea: (date) => query((db) => db.tea.filter((t) => t.date === date).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  addSnack: (row) => mutate((db) => { db.snacks.push(row); return { result: row, changed: true }; }),
+  getSnack: (id) => query((db) => db.snacks.find((s) => s.id === id) ?? null),
+  listSnacks: () => query((db) => [...db.snacks].sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  setSnackStatus: (id, status, orderedAt) =>
+    mutate((db) => {
+      const row = db.snacks.find((s) => s.id === id);
+      if (row) Object.assign(row, { status, orderedAt });
+      return { result: !!row, changed: !!row };
+    }),
+  toggleSnackVote: (itemId, voterRef) =>
+    mutate((db) => {
+      if (!db.snacks.some((s) => s.id === itemId)) return { result: null, changed: false };
+      const i = db.snackVotes.findIndex((v) => v.itemId === itemId && v.voterRef === voterRef);
+      if (i >= 0) db.snackVotes.splice(i, 1);
+      else db.snackVotes.push({ itemId, voterRef });
+      return { result: i < 0, changed: true };
+    }),
+  listSnackVotes: () => query((db) => db.snackVotes),
+  clearSnackVotes: (itemId) => mutate((db) => { db.snackVotes = db.snackVotes.filter((v) => v.itemId !== itemId); return { result: undefined, changed: true }; }),
+  addBook: (row) => mutate((db) => { db.books.push(row); return { result: row, changed: true }; }),
+  listBooks: () => query((db) => [...db.books].sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  setReading: (row) =>
+    mutate((db) => {
+      db.readings = db.readings.filter((r) => !(r.email === row.email && r.bookId === row.bookId));
+      db.readings.push(row);
+      return { result: row, changed: true };
+    }),
+  clearReading: (email, bookId) => mutate((db) => { db.readings = db.readings.filter((r) => !(r.email === email && r.bookId === bookId)); return { result: undefined, changed: true }; }),
+  listReadings: () => query((db) => db.readings),
+  setBirthday: (email, birthday, show) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) Object.assign(row, { birthday, showBirthday: show });
+      return { result: !!row, changed: !!row };
     }),
   markDay: (row) =>
     mutate((db) => {

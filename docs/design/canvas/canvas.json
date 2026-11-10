@@ -1,0 +1,319 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "D-Buddy.dc.html": {
+      "h": 860,
+      "title": "Lappy mascot reference — animated poses",
+      "w": 1072,
+      "x": 480,
+      "y": 0
+    },
+    "D-Prototype.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Full app prototype — Lappy (press Play)",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "D-Desktop.dc.html": {
+      "h": 860,
+      "w": 1280,
+      "x": 0,
+      "y": 1260,
+      "title": "Home on desktop — Feed is its own page (account menu shown open)"
+    },
+    "D-Tablet.dc.html": {
+      "h": 1180,
+      "w": 834,
+      "x": 1400,
+      "y": 1260,
+      "title": "Home on tablet — icon sidebar"
+    },
+    "D-AdminPhone.dc.html": {
+      "h": 950,
+      "w": 2166,
+      "x": 0,
+      "y": 2880,
+      "title": "Admin on the phone — five screens"
+    },
+    "D-AdminDesktop.dc.html": {
+      "h": 900,
+      "w": 1280,
+      "x": 0,
+      "y": 3980,
+      "title": "Admin on desktop — overview dashboard"
+    },
+    "D-Desk-Feed.dc.html": {
+      "x": 0,
+      "y": 5200,
+      "w": 1280,
+      "h": 1420,
+      "title": "Feed on desktop"
+    },
+    "D-Desk-Days.dc.html": {
+      "x": 1360,
+      "y": 5200,
+      "w": 1280,
+      "h": 980,
+      "title": "Days on desktop"
+    },
+    "D-Desk-Snacks.dc.html": {
+      "x": 2720,
+      "y": 5200,
+      "w": 1280,
+      "h": 900,
+      "title": "Tea & snacks on desktop"
+    },
+    "D-Desk-Steps.dc.html": {
+      "x": 4080,
+      "y": 5200,
+      "w": 1280,
+      "h": 900,
+      "title": "10K steps on desktop"
+    },
+    "D-Desk-Reading.dc.html": {
+      "x": 5440,
+      "y": 5200,
+      "w": 1280,
+      "h": 900,
+      "title": "Reading list on desktop"
+    },
+    "D-Desk-Account.dc.html": {
+      "x": 0,
+      "y": 6740,
+      "w": 1280,
+      "h": 800,
+      "title": "Account on desktop"
+    },
+    "D-Desk-SpeakUp.dc.html": {
+      "x": 1360,
+      "y": 6740,
+      "w": 1280,
+      "h": 800,
+      "title": "Speak up on desktop"
+    },
+    "D-Desk-Wifi.dc.html": {
+      "x": 2720,
+      "y": 6740,
+      "w": 1280,
+      "h": 800,
+      "title": "Wi-Fi check on desktop"
+    },
+    "D-Desk-Event.dc.html": {
+      "x": 4080,
+      "y": 6740,
+      "w": 1280,
+      "h": 760,
+      "title": "Biryani Friday on desktop"
+    },
+    "D-NewPost.dc.html": {
+      "x": 5440,
+      "y": 6740,
+      "w": 1090,
+      "h": 860,
+      "title": "New post — Kudos and Poll (dialog on desktop and tablet, sheet on phone)"
+    },
+    "D-Tab-Feed.dc.html": {
+      "x": 0,
+      "y": 7960,
+      "w": 834,
+      "h": 1460,
+      "title": "Feed on tablet"
+    },
+    "D-Tab-Days.dc.html": {
+      "x": 914,
+      "y": 7960,
+      "w": 834,
+      "h": 1500,
+      "title": "Days on tablet"
+    },
+    "D-Tab-Snacks.dc.html": {
+      "x": 1828,
+      "y": 7960,
+      "w": 834,
+      "h": 1340,
+      "title": "Tea & snacks on tablet"
+    },
+    "D-Tab-Steps.dc.html": {
+      "x": 2742,
+      "y": 7960,
+      "w": 834,
+      "h": 1500,
+      "title": "10K steps on tablet"
+    },
+    "D-Tab-Reading.dc.html": {
+      "x": 3656,
+      "y": 7960,
+      "w": 834,
+      "h": 1400,
+      "title": "Reading list on tablet"
+    },
+    "D-Tab-Account.dc.html": {
+      "x": 0,
+      "y": 9580,
+      "w": 834,
+      "h": 800,
+      "title": "Account on tablet"
+    },
+    "D-Tab-SpeakUp.dc.html": {
+      "x": 914,
+      "y": 9580,
+      "w": 834,
+      "h": 1100,
+      "title": "Speak up on tablet"
+    },
+    "D-Tab-Wifi.dc.html": {
+      "x": 1828,
+      "y": 9580,
+      "w": 834,
+      "h": 1150,
+      "title": "Wi-Fi check on tablet"
+    },
+    "D-Tab-Event.dc.html": {
+      "x": 2742,
+      "y": 9580,
+      "w": 834,
+      "h": 900,
+      "title": "Biryani Friday on tablet"
+    },
+    "D-AdminDesk-People.dc.html": {
+      "x": 0,
+      "y": 11090,
+      "w": 1280,
+      "h": 900,
+      "title": "Admin on desktop — People & office days"
+    },
+    "D-AdminDesk-SpeakUp.dc.html": {
+      "x": 1360,
+      "y": 11090,
+      "w": 1280,
+      "h": 900,
+      "title": "Admin on desktop — Speak up inbox"
+    },
+    "D-AdminDesk-Shelf.dc.html": {
+      "x": 2720,
+      "y": 11090,
+      "w": 1280,
+      "h": 900,
+      "title": "Admin on desktop — Snack shelf"
+    },
+    "D-AdminDesk-Wifi.dc.html": {
+      "x": 4080,
+      "y": 11090,
+      "w": 1280,
+      "h": 900,
+      "title": "Admin on desktop — Wi-Fi reports"
+    },
+    "D-Desk-Notifications.dc.html": {
+      "x": 6610,
+      "y": 6740,
+      "w": 1280,
+      "h": 760,
+      "title": "Notifications on desktop"
+    },
+    "D-Tab-Notifications.dc.html": {
+      "x": 3656,
+      "y": 9580,
+      "w": 834,
+      "h": 900,
+      "title": "Notifications on tablet"
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-09T16:30:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "protoNote",
+    "respNote",
+    "adminNote",
+    "deskNote",
+    "tabNote",
+    "adminDeskNote"
+  ],
+  "notes": {
+    "protoNote": {
+      "fill": "blue",
+      "text": "Press Play. Bottom bar: Home, Feed, Days, Snacks, Account. Feed has events, polls, kudos, announcements, birthdays, photos and notes. Account holds settings, Speak up, Wi-Fi check, Help and Sign out. Rule: chunky bottom edge = tappable, flat = information.",
+      "w": 390,
+      "x": 0,
+      "y": -240
+    },
+    "respNote": {
+      "fill": "blue",
+      "w": 900,
+      "x": 0,
+      "y": 960,
+      "text": "Desktop and tablet, v3: Feed is a separate page, not merged into Home. Sidebar: Home, Feed, Days, Tea & snacks, 10K steps, Reading list. Account menu at the bottom: Settings, Speak up, Wi-Fi check, Help, Sign out. Home centre: check-in, office days, who's around, a short 'From the feed' peek. Right rail: chai, coming up, step league, reading now. Tablet: icon sidebar, rail folds into the column."
+    },
+    "adminNote": {
+      "fill": "blue",
+      "w": 900,
+      "x": 0,
+      "y": 2640,
+      "text": "Admin. An admin is an employee first: same app, same Home, Feed, Days and Snacks. Extra powers show up in two ways. (1) In place: on the Feed an admin can post an announcement, create or edit an event, and remove a post. (2) One Admin area, reached from Account on the phone and from the sidebar on desktop: Overview, People & office days, Speak up inbox, Snack shelf, Wi-Fi reports. Leave is NOT here: requests go to Zoho People and are approved there by each person's approver. Members never see the Admin area."
+    },
+    "deskNote": {
+      "fill": "blue",
+      "w": 900,
+      "x": 0,
+      "y": 4960,
+      "text": "Laptop pages (≥1100px), added 11 Nov. Same sidebar as Home. Every page has a bell that opens the Notifications page. It is its own page on every size and never opens the Feed. Feed, Days, Tea & snacks, 10K steps and Reading list keep a right rail. Account is one page for profile and settings; Speak up, Wi-Fi check, Help and Sign out stay in the account menu. New post now has four kinds: Quote, Feedback, Kudos, Poll. Anyone can post a poll or kudos."
+    },
+    "tabNote": {
+      "fill": "blue",
+      "w": 900,
+      "x": 0,
+      "y": 7720,
+      "text": "Tablet pages. Icon sidebar, one column. Whatever sits in the right rail on a laptop drops below the main column in the same order."
+    },
+    "adminDeskNote": {
+      "fill": "blue",
+      "w": 900,
+      "x": 0,
+      "y": 10850,
+      "text": "Admin sub-pages on a laptop: People & office days, Speak up inbox, Snack shelf, Wi-Fi reports. Overview is the board above. Still no leave approvals: leave is decided in Zoho People."
+    }
+  },
+  "order": [
+    "D-Prototype.dc.html",
+    "D-Buddy.dc.html",
+    "D-Desktop.dc.html",
+    "D-Tablet.dc.html",
+    "D-AdminPhone.dc.html",
+    "D-AdminDesktop.dc.html",
+    "D-Desk-Feed.dc.html",
+    "D-Desk-Days.dc.html",
+    "D-Desk-Snacks.dc.html",
+    "D-Desk-Steps.dc.html",
+    "D-Desk-Reading.dc.html",
+    "D-Desk-Account.dc.html",
+    "D-Desk-SpeakUp.dc.html",
+    "D-Desk-Wifi.dc.html",
+    "D-Desk-Event.dc.html",
+    "D-NewPost.dc.html",
+    "D-Tab-Feed.dc.html",
+    "D-Tab-Days.dc.html",
+    "D-Tab-Snacks.dc.html",
+    "D-Tab-Steps.dc.html",
+    "D-Tab-Reading.dc.html",
+    "D-Tab-Account.dc.html",
+    "D-Tab-SpeakUp.dc.html",
+    "D-Tab-Wifi.dc.html",
+    "D-Tab-Event.dc.html",
+    "D-AdminDesk-People.dc.html",
+    "D-AdminDesk-SpeakUp.dc.html",
+    "D-AdminDesk-Shelf.dc.html",
+    "D-AdminDesk-Wifi.dc.html",
+    "D-Desk-Notifications.dc.html",
+    "D-Tab-Notifications.dc.html"
+  ],
+  "pages": [],
+  "title": "Innovin Internal — app design"
+}

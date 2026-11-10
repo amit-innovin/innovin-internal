@@ -95,3 +95,49 @@ export function useLeaveBalances() {
 export function useMyLeaveRequests() {
   return useQuery({ queryKey: ["away", "mine"], queryFn: () => fetchJSON<MyLeaveRequest[]>("/api/away?scope=mine") });
 }
+
+// ---- generic write: POST/PATCH/DELETE a JSON body, then refresh (or replace) the query ----
+export function useSend<TInput = unknown, TOut = unknown>(key: readonly unknown[], url: string, method: "POST" | "PATCH" | "DELETE", opts: { replace?: boolean; also?: (readonly unknown[])[] } = {}) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: TInput) => {
+      const res = await send(url, { method, json: input });
+      if (!res.ok) throw new Error(await readError(res));
+      return (await res.json().catch(() => null)) as TOut;
+    },
+    onSuccess: (data) => {
+      if (opts.replace && data) client.setQueryData(key, data);
+      else client.invalidateQueries({ queryKey: key });
+      for (const k of opts.also ?? []) client.invalidateQueries({ queryKey: k });
+    },
+  });
+}
+
+export type { Feed, FeedPost } from "@/lib/feed";
+export const useFeed = () => useQuery({ queryKey: ["feed"], queryFn: () => fetchJSON<import("@/lib/feed").Feed>("/api/feed") });
+
+export type Tea = { date: string; count: number; mine: boolean; roundAt: string; countsAt: string; names: string[] | null };
+export const useTea = () => useQuery({ queryKey: ["tea"], queryFn: () => fetchJSON<Tea>("/api/tea") });
+
+export type SnackRow = { id: string; name: string; note: string; orderedAt: string | null; votes: number; mine: boolean };
+export type Snacks = { shelf: SnackRow[]; suggestions: SnackRow[]; canManage: boolean };
+export const useSnacks = () => useQuery({ queryKey: ["snacks"], queryFn: () => fetchJSON<Snacks>("/api/snacks") });
+
+export type Reading = {
+  current: { bookId: string; title: string; author: string; page: number; pages: number; pct: number } | null;
+  shelf: { id: string; title: string; author: string; read: number; want: number; mine: "want" | "reading" | "done" | null }[];
+  finishedThisYear: number;
+};
+export const useReading = () => useQuery({ queryKey: ["reading"], queryFn: () => fetchJSON<Reading>("/api/reading") });
+
+export type Account = { email: string; name: string; role: "admin" | "member"; birthday: string | null; showBirthday: boolean; officeDays: number[] };
+export const useAccount = () => useQuery({ queryKey: ["account"], queryFn: () => fetchJSON<Account>("/api/account") });
+
+export type Steps = Awaited<ReturnType<typeof import("@/lib/today").stepsBoard>>;
+export const useSteps = () => useQuery({ queryKey: ["steps"], queryFn: () => fetchJSON<Steps>("/api/steps") });
+
+export type WifiReport = { id: string; quality: "good" | "poor"; note: string; downMbps: number | null; createdAt: string };
+export const useWifiReports = () => useQuery({ queryKey: ["wifi"], queryFn: () => fetchJSON<WifiReport[]>("/api/wifi") });
+
+export type FeedEvent = { id: string; title: string; body: string; category: string; startsAt: string; location: string; cancelledAt?: string; going: number; mine: boolean; canManage: boolean };
+export const useEvent = (id: string) => useQuery({ queryKey: ["event", id], queryFn: () => fetchJSON<FeedEvent[]>(`/api/events?event=${encodeURIComponent(id)}`) });

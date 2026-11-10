@@ -3,6 +3,7 @@ import { attendanceLocation } from "@/lib/presence";
 // server-rendered home page, so first paint already carries the data instead of the client
 // fetching it again after hydration.
 import { officeLocation, onOfficeNetwork } from "./geo";
+import { stepLeague } from "./member-features";
 import { STEP_GOAL, stepBoard, stepStreak } from "./steps";
 import { store } from "./store";
 import { todayIST } from "./time";
@@ -54,5 +55,5 @@ export async function stepsBoard(session: SessionLite | null) {
     };
   }
 
-  return { goal: STEP_GOAL, today, signedIn: !!session, board, me };
+  return { goal: STEP_GOAL, today, signedIn: !!session, board, me, league: session ? stepLeague(employees, rows, today, session.email) : null };
 }

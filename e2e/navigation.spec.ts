@@ -85,7 +85,7 @@ test.describe("Navigation & studio shell", () => {
   // Removed features: their old links (bookmarks, notifications, chat messages) go Home with a
   // temporary redirect — never a 404. The old query string rides along (Next passes it
   // through) and Home ignores it, so the assertion is on the path.
-  for (const old of ["/pantry", "/snacks?tab=today", "/planner", "/people?ping=a%40innovinlabs.com", "/admin/pantry"]) {
+  for (const old of ["/pantry", "/planner", "/people?ping=a%40innovinlabs.com", "/admin/pantry"]) {
     test(`old link ${old} lands on Home when signed in`, async ({ page }) => {
       await signInEmployee(page, undefined, "/");
       const res = await page.goto(old);

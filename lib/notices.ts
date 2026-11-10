@@ -1,6 +1,7 @@
 import { store } from "./store";
 
-export const NOTICE_REACTIONS = ["❤️", "👍", "💡"] as const;
+// ❤️ Love, 💡 Brilliant, 😂 Haha on the Feed. 👍 stays valid so older reactions still count.
+export const NOTICE_REACTIONS = ["❤️", "💡", "😂", "👍"] as const;
 export async function noticeBoard(email: string) {
   const rows = await store.listNotices(100);
   const reactions = await store.listNoticeReactions(rows.map(n => n.id));

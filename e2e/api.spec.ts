@@ -46,6 +46,98 @@ test.describe("API: removed features", () => {
   }
 });
 
+test.describe("API: office days", () => {
+  const isoDay = (offset: number) => {
+    // The server works in IST; build the date the same way so the test holds around midnight.
+    const d = new Date(Date.now() + 5.5 * 3600_000 + offset * 86_400_000);
+    return d.toISOString().slice(0, 10);
+  };
+
+  test("needs a sign-in", async ({ request }) => {
+    expect((await request.get("/api/days")).status()).toBe(401);
+    expect((await request.post("/api/days", { data: { mode: "remote" } })).status()).toBe(401);
+    expect((await request.patch("/api/days", { data: { officeDays: [0] } })).status()).toBe(401);
+  });
+
+  test("office needs proof: Wi-Fi alone, or a location inside the office", async () => {
+    const ctx = await signedIn(email());
+    // Off Wi-Fi with no position: asked for a location.
+    const ask = await ctx.post("/api/days", { data: { mode: "office" } });
+    expect(ask.status()).toBe(428);
+    expect((await ask.json()).code).toBe("location-needed");
+    // A position far from the office is refused, and nothing is recorded.
+    const far = await ctx.post("/api/days", { data: { mode: "office", lat: 12.99, lng: 77.7, accuracyM: 20 } });
+    expect(far.status()).toBe(422);
+    expect(await far.json()).toMatchObject({ code: "outside", error: "You don't look like you're at the office" });
+    expect((await (await ctx.get("/api/days")).json()).me).toBeNull();
+    // Inside the fake office (12.935,77.624 ±1km).
+    const ok = await ctx.post("/api/days", { data: { mode: "office", lat: 12.9352, lng: 77.6241, accuracyM: 15 } });
+    expect(ok.status()).toBe(200);
+    const view = await ok.json();
+    expect(view.me).toMatchObject({ mode: "office", source: "location" });
+    expect(view.summary.done).toBe(1);
+    // Coordinates never come back out.
+    expect(JSON.stringify(view)).not.toContain("12.9352");
+
+    // On office Wi-Fi no position is needed at all.
+    const wifi = await signedIn(email());
+    const viaWifi = await wifi.post("/api/days", { data: { mode: "office" }, headers: { "x-forwarded-for": "203.0.113.7" } });
+    expect(viaWifi.status()).toBe(200);
+    expect((await viaWifi.json()).me).toMatchObject({ mode: "office", source: "wifi" });
+  });
+
+  test("remote never needs a location, a second tap replaces the first, and Change clears today", async () => {
+    const ctx = await signedIn(email());
+    const remote = await (await ctx.post("/api/days", { data: { mode: "remote" } })).json();
+    expect(remote.me).toMatchObject({ mode: "remote", source: "self" });
+    expect(remote.summary.done).toBe(0);
+    const office = await (await ctx.post("/api/days", { data: { mode: "office", lat: 12.9352, lng: 77.6241 } })).json();
+    expect(office.me.mode).toBe("office");
+    expect(office.days.filter((d: { mode: string | null }) => d.mode).length).toBe(1);
+    const cleared = await (await ctx.post("/api/days", { data: { mode: "none" } })).json();
+    expect(cleared.me).toBeNull();
+    expect(cleared.summary.done).toBe(0);
+  });
+
+  test("you can fix your own last 7 days without a location; older and future days are refused", async () => {
+    const ctx = await signedIn(email());
+    const twoAgo = isoDay(-2);
+    const fixed = await ctx.post("/api/days", { data: { mode: "office", date: twoAgo } });
+    expect(fixed.status()).toBe(200);
+    const view = await (await ctx.get(`/api/days?month=${twoAgo.slice(0, 7)}`)).json();
+    const day = view.days.find((d: { date: string }) => d.date === twoAgo);
+    // Counted, and flagged as added afterwards.
+    expect(day).toMatchObject({ mode: "office", late: true });
+    expect(view.fixableFrom).toBe(isoDay(-7));
+
+    const old = await ctx.post("/api/days", { data: { mode: "office", date: isoDay(-8) } });
+    expect(old.status()).toBe(403);
+    expect((await old.json()).code).toBe("locked");
+    const future = await ctx.post("/api/days", { data: { mode: "office", date: isoDay(1) } });
+    expect(future.status()).toBe(409);
+    expect((await ctx.post("/api/days", { data: { mode: "office", date: "2026-02-30" } })).status()).toBe(400);
+    expect((await ctx.post("/api/days", { data: { mode: "desk" } })).status()).toBe(400);
+  });
+
+  test("office days are yours to set, and decide who is expected", async () => {
+    const ctx = await signedIn(email());
+    const start = await (await ctx.get("/api/days")).json();
+    expect(start.officeDays).toEqual([]);
+    expect(start.summary).toMatchObject({ target: 8, done: 0, toGo: 8 });
+    // Every weekday: then they are certainly expected on the next working day.
+    const set = await ctx.patch("/api/days", { data: { officeDays: [4, 0, 1, 2, 3, 5] } });
+    expect(set.status()).toBe(200);
+    const view = await set.json();
+    expect(view.officeDays).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(view.around.next.mine).toBe(true);
+    expect(view.around.next.count).toBeGreaterThan(0);
+    for (const bad of [[7], [0, 0], "mon", [1.5]]) {
+      expect((await ctx.patch("/api/days", { data: { officeDays: bad } })).status()).toBe(400);
+    }
+    expect((await ctx.get("/api/days?month=2026-13")).status()).toBe(400);
+  });
+});
+
 test.describe("API: notifications", () => {
   test("signed-in notifications only carry the four remaining kinds", async () => {
     const ctx = await signedIn(email());

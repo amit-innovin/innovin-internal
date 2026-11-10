@@ -1,0 +1,120 @@
+// What Home and Days show about office days, and the one write behind "I'm in the office".
+// Server-only: reads the store. The rules themselves are pure and live in lib/office-days.ts.
+import { officeCheck, onOfficeNetwork } from "./geo";
+import { holidaysFor, isWorkingDay, nonWorkingReason } from "./leave";
+import { addDays, countOfficeDays, expectedOn, fixableFrom, monthBounds, officeDaysSummary, officeDayTarget } from "./office-days";
+import { attendanceLocation } from "./presence";
+import { id, store } from "./store";
+import { todayIST } from "./time";
+import type { AttendanceRow, DayMode } from "./types";
+
+// Rows from the old check-in flow have no declared mode; their position still classifies them.
+export function dayMode(row: AttendanceRow | null | undefined): DayMode | null {
+  if (!row) return null;
+  const mode = attendanceLocation(row);
+  return mode === "office" || mode === "remote" ? mode : null;
+}
+
+const firstName = (name: string, email: string) => (name.trim() || email.split("@")[0]).split(/\s+/)[0];
+
+function nextWorkingDay(after: string) {
+  let date = addDays(after, 1);
+  for (let i = 0; i < 14 && !isWorkingDay(date); i += 1) date = addDays(date, 1);
+  return date;
+}
+
+export async function daysView(email: string, month: string) {
+  const today = todayIST();
+  const { first, last } = monthBounds(month);
+  const next = nextWorkingDay(today);
+  const [me, rows, leave, todayRows, employees] = await Promise.all([
+    store.getEmployee(email),
+    store.listAttendanceRange(email, first, last),
+    store.listAwayByEmail(email, 200),
+    store.listAttendance(today),
+    store.listEmployees(),
+  ]);
+  const officeDays = me?.officeDays ?? [];
+  const holidays = holidaysFor(Number(month.slice(0, 4)));
+  const from = fixableFrom(today);
+
+  const days = Array.from({ length: Number(last.slice(8)) }, (_, i) => {
+    const date = `${month}-${String(i + 1).padStart(2, "0")}`;
+    const row = rows.find((r) => r.date === date);
+    const away = leave.find((r) => r.type === "leave" && (r.status === "pending" || r.status === "approved") && date >= r.startDate && date <= r.endDate);
+    return {
+      date,
+      mode: dayMode(row),
+      // Added after the day itself, by the person or an admin.
+      late: row?.source === "late" || row?.source === "admin",
+      working: isWorkingDay(date),
+      off: holidays[date] ?? nonWorkingReason(date),
+      planned: date > today && expectedOn(officeDays, date),
+      leave: away ? away.status : null,
+      fixable: date < today && date >= from,
+    };
+  });
+
+  const target = officeDayTarget({ joinedOn: me?.joinedOn ?? null, officeExempt: me?.officeExempt ?? false }, month);
+  const done = countOfficeDays(days.map((d) => ({ date: d.date, declaredMode: d.mode })));
+  const mine = todayRows.find((r) => r.email === email);
+  const byEmail = new Map(employees.map((e) => [e.email, e]));
+  const inToday = todayRows.filter((r) => dayMode(r) === "office").map((r) => firstName(byEmail.get(r.email)?.name ?? "", r.email));
+  const expectedNext = employees.filter((e) => !e.officeExempt && expectedOn(e.officeDays ?? [], next));
+
+  return {
+    today,
+    month,
+    fixableFrom: from,
+    officeDays,
+    summary: officeDaysSummary({ done, target, month, today }),
+    me: mine ? { mode: dayMode(mine), source: mine.source ?? null, at: mine.checkInAt } : null,
+    isOfficeDayToday: expectedOn(officeDays, today),
+    days,
+    around: {
+      inToday: { count: inToday.length, names: inToday.slice(0, 6) },
+      next: { date: next, count: expectedNext.length, names: expectedNext.slice(0, 6).map((e) => firstName(e.name, e.email)), mine: expectedOn(officeDays, next) },
+    },
+  };
+}
+export type DaysView = Awaited<ReturnType<typeof daysView>>;
+
+export type MarkResult =
+  | { ok: true }
+  | { ok: false; status: 403 | 409 | 422 | 428; code: "locked" | "future" | "outside" | "location-needed"; error: string; distanceM?: number };
+
+// One tap. Today: office is verified (Wi-Fi first, then location); remote is taken at its word.
+// A past day inside the self-fix window is recorded as late, with no location check, and logged.
+export async function markDay(input: { email: string; date: string; mode: DayMode | null; ip: string; lat: number | null; lng: number | null; accuracyM: number | null }): Promise<MarkResult> {
+  const today = todayIST();
+  if (input.date > today) return { ok: false, status: 409, code: "future", error: "You can't mark a day that hasn't happened yet" };
+  const now = new Date().toISOString();
+  const before = dayMode(await store.getAttendance(input.email, input.date));
+
+  if (input.date === today) {
+    if (input.mode === null) {
+      await store.clearDay(input.email, today);
+      return { ok: true };
+    }
+    let source: AttendanceRow["source"] = "self";
+    let position = { lat: null as number | null, lng: null as number | null, accuracyM: null as number | null };
+    if (input.mode === "office") {
+      const check = officeCheck({ onNetwork: onOfficeNetwork(input.ip), lat: input.lat, lng: input.lng });
+      if (!check.ok) {
+        return check.code === "outside"
+          ? { ok: false, status: 422, code: "outside", distanceM: check.distanceM, error: "You don't look like you're at the office" }
+          : { ok: false, status: 428, code: "location-needed", error: "Share your location once so we can check you're at the office" };
+      }
+      source = check.source;
+      if (check.source === "location") position = { lat: input.lat, lng: input.lng, accuracyM: input.accuracyM };
+    }
+    await store.markDay({ id: id(), email: input.email, date: today, checkInAt: now, checkOutAt: null, ...position, declaredMode: input.mode, source });
+    return { ok: true };
+  }
+
+  if (input.date < fixableFrom(today)) return { ok: false, status: 403, code: "locked", error: "You can fix your own last 7 days. Ask an admin to change an older day." };
+  if (input.mode === null) await store.clearDay(input.email, input.date);
+  else await store.markDay({ id: id(), email: input.email, date: input.date, checkInAt: now, checkOutAt: null, lat: null, lng: null, accuracyM: null, declaredMode: input.mode, source: "late" });
+  if (before !== input.mode) await store.addAttendanceChange({ id: id(), email: input.email, date: input.date, from: before, to: input.mode, by: input.email, kind: "late", at: now });
+  return { ok: true };
+}

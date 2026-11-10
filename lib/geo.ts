@@ -45,3 +45,20 @@ export function officeIps() {
 export function onOfficeNetwork(ip: string) {
   return officeIps().includes(ip);
 }
+
+// Can "I'm in the office" be believed? Office Wi-Fi is proof by itself. Off Wi-Fi the device
+// must share a position inside the geofence. If no office is configured (local development)
+// there is nothing to check against, and the mark is recorded as self-declared.
+export type OfficeCheck =
+  | { ok: true; source: "wifi" | "location" | "self" }
+  | { ok: false; code: "location-needed" }
+  | { ok: false; code: "outside"; distanceM: number };
+
+export function officeCheck(input: { onNetwork: boolean; lat: number | null; lng: number | null }): OfficeCheck {
+  if (input.onNetwork) return { ok: true, source: "wifi" };
+  const office = officeLocation();
+  if (!office) return { ok: true, source: "self" };
+  if (input.lat == null || input.lng == null) return { ok: false, code: "location-needed" };
+  const distance = Math.round(distanceM(input.lat, input.lng, office.lat, office.lng));
+  return distance <= office.radiusM ? { ok: true, source: "location" } : { ok: false, code: "outside", distanceM: distance };
+}

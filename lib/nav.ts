@@ -34,8 +34,21 @@ const ITEMS: Item[] = [
 const matches = (pathname: string, owned: string) => (owned === "/" ? pathname === "/" : pathname === owned || pathname.startsWith(`${owned}/`));
 
 // Routes that already render in the new shell. Everything else still gets the legacy nav.
-const DUO_ROUTES = ["/", "/days", "/notifications", "/feed", "/snacks", "/steps", "/reading", "/account", "/grievances", "/wifi"];
-export const isDuoRoute = (pathname: string) => DUO_ROUTES.some((r) => matches(pathname, r));
+const DUO_ROUTES = ["/", "/days", "/notifications", "/feed", "/snacks", "/steps", "/reading", "/account", "/grievances", "/wifi", "/admin"];
+// The old admin screen keeps the tools the canvas hasn't drawn a new home for yet.
+const LEGACY_ROUTES = ["/admin/tools"];
+export const isDuoRoute = (pathname: string) => DUO_ROUTES.some((r) => matches(pathname, r)) && !LEGACY_ROUTES.some((r) => matches(pathname, r));
+
+// Laptop sidebar for admins: "Admin" with its sub-pages (D-AdminDesktop and D-AdminDesk-*).
+export const ADMIN_NAV = [
+  { id: "overview", label: "Overview", href: "/admin" },
+  { id: "people", label: "People & office days", href: "/admin/people" },
+  { id: "speak", label: "Speak up inbox", href: "/admin/speak-up" },
+  { id: "shelf", label: "Snack shelf", href: "/admin/snacks" },
+  { id: "wifi", label: "Wi-Fi reports", href: "/admin/wifi" },
+] as const;
+export const activeAdmin = (pathname: string) =>
+  pathname === "/admin" || pathname === "/admin/today" ? "overview" : ADMIN_NAV.find((n) => n.href !== "/admin" && matches(pathname, n.href))?.id ?? null;
 
 export function navFor(surface: Surface) {
   return ITEMS.filter((i) => i.on.includes(surface) && i.href !== null).map((i) => ({ id: i.id, label: i.label[surface], icon: i.icon, href: i.href as string }));
@@ -47,10 +60,10 @@ export function activeNav(pathname: string, surface: Surface): NavId | null {
 
 // Laptop and tablet: these live in the menu on the account button, so the pages themselves
 // don't repeat them. Sign out is rendered separately because it is an action, not a link.
-export const ACCOUNT_MENU = (isAdmin: boolean) => [
+// Admin is not here: admins get an "Admin" item in the sidebar itself.
+export const ACCOUNT_MENU = () => [
   { label: "Settings", href: "/account", icon: "settings" as const },
   { label: "Speak up", href: "/grievances", icon: "speak" as const },
   { label: "Wi-Fi check", href: "/wifi", icon: "wifi" as const },
   { label: "Help", href: "/help", icon: "help" as const },
-  ...(isAdmin ? [{ label: "Admin", href: "/admin", icon: "admin" as const }] : []),
 ];

@@ -29,3 +29,14 @@ export async function needsYou(): Promise<NeedsYou[]> {
   if (poor.length) items.push({ id: "wifi", kind: "wifi", urgent: false, href: "/admin/wifi", title: `${poor.length} poor Wi-Fi report${poor.length === 1 ? "" : "s"} today`, sub: poor[0].note || "No location given" });
   return items;
 }
+
+// The badge on "Speak up inbox" in the admin sidebar.
+export async function openReports() {
+  return (await store.listGrievances()).filter((g) => g.status === "open").length;
+}
+
+// Shell props for a signed-in person: admins also get the open-report badge.
+export async function shellProps(actor: { name: string; email: string; role: "admin" | "member" }) {
+  const isAdmin = actor.role === "admin";
+  return { name: actor.name || actor.email, isAdmin, openReports: isAdmin ? await openReports() : 0 };
+}

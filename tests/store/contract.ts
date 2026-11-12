@@ -472,6 +472,16 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect((await store.getEmployee("a@innovinlabs.com"))?.officeDays).toEqual([0, 2]);
         expect((await store.listEmployees())[0].officeDays).toEqual([0, 2]);
       });
+
+      it("an admin can exempt someone from the office-day target, and it survives a re-sign-in", async () => {
+        await store.upsertEmployee(employee());
+        expect(await store.setOfficeExempt("a@innovinlabs.com", true)).toBe(true);
+        expect(await store.setOfficeExempt("nobody@innovinlabs.com", true)).toBe(false);
+        await store.upsertEmployee(employee({ lastSeenAt: iso(60_000) }));
+        expect((await store.getEmployee("a@innovinlabs.com"))?.officeExempt).toBe(true);
+        expect(await store.setOfficeExempt("a@innovinlabs.com", false)).toBe(true);
+        expect((await store.listEmployees())[0].officeExempt).toBe(false);
+      });
     });
 
     describe("employees", () => {

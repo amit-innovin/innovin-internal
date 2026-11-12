@@ -210,3 +210,31 @@
 }
 .duo-wide-only { display: none; }
 @media (min-width: 768px) { .duo-wide-only { display: block; } }
+
+/* ---- admin sub-nav in the sidebar (laptop only; the tablet shows just the Admin icon) ---- */
+.duo-subnav { display: none; }
+.duo-navitem[data-open="true"] { border-color: var(--duo-sky-edge); background: var(--duo-sky); color: var(--duo-brand); }
+@media (min-width: 1100px) {
+  .duo-navitem[data-open="true"] { border-color: transparent; background: transparent; color: var(--duo-ink); }
+  .duo-subnav { display: flex; flex-direction: column; gap: 2px; margin-left: 24px; padding-left: 10px; border-left: 2.5px solid var(--duo-line); }
+}
+.duo-subitem { height: 38px; border-radius: 10px; display: flex; align-items: center; gap: 6px; padding: 0 10px; font-family: var(--duo-display); font-size: 14px; font-weight: 600; color: var(--duo-muted); }
+.duo-subitem[aria-current="page"] { background: var(--duo-sky); color: var(--duo-brand); }
+.duo-subbadge { margin-left: auto; font-family: var(--duo-body); font-size: 12px; font-weight: 800; background: var(--duo-alert); color: #fff; border-radius: 999px; padding: 1px 7px; }
+
+/* ---- breakpoint helpers at the laptop width ---- */
+.duo-lg-only { display: none !important; }
+@media (min-width: 1100px) { .duo-lg-only { display: flex !important; } .duo-sm-only { display: none !important; } }
+
+/* ---- tables (admin) ---- */
+.duo-table { width: 100%; border-collapse: collapse; }
+.duo-table th { text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--duo-muted); border-bottom: 2.5px solid var(--duo-line); }
+.duo-table th, .duo-table td { white-space: nowrap; }
+.duo-table-wrap { overflow-x: auto; }
+.duo-table td { padding: 9px 12px; border-bottom: 2px solid var(--duo-line); font-size: 14px; font-weight: 700; vertical-align: middle; }
+.duo-table tr[aria-selected="true"] td { background: var(--duo-sky); }
+.duo-table tbody tr { cursor: pointer; }
+.duo-table tbody tr:hover td { background: var(--duo-soft); }
+.duo-table tbody tr[aria-selected="true"]:hover td { background: var(--duo-sky); }
+
+.duo-table[data-dense="true"] th, .duo-table[data-dense="true"] td { padding-left: 8px; padding-right: 8px; }

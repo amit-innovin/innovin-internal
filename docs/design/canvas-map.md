@@ -221,3 +221,10 @@ Matches the spec's delivery plan; each row lists what it depends on from this ma
 | Account | `/account` | Rebuilt | Birthday date is picked in a sheet (day + month); "Switch Google account" is laptop/tablet only, as drawn; `/settings` redirects here |
 | Speak up | `/grievances` | Rebuilt | Still public: signed-out visitors get the page without the shell. Photo attachment dropped (not on the canvas) |
 | Wi-Fi check | `/wifi` | Rebuilt | Upload speed is not measured, so the gauge shows download only |
+| Admin · Overview / hub | `/admin` | Rebuilt | Phone and tablet get the hub (D-AdminPhone 2); laptop gets the dashboard (D-AdminDesktop). "On leave" counts the app's own leave records, so its tile says "today", not "from Zoho". A "More admin tools" link leads to the old screen |
+| Admin · Today | `/admin/today` | Rebuilt | Adds an "On leave" filter chip; the pencil on a not-marked row opens "Fix a day" for today |
+| Admin · People & office days | `/admin/people` | Rebuilt | Laptop: table + person panel; phone/tablet: list + the same panel in a sheet. Filter and person are in the URL. The panel note reads "Every day you fix is logged with your name" because only day fixes are logged, not exempt or role changes |
+| Admin · Speak up inbox | `/admin/speak-up` | Rebuilt | Phone (not drawn): the selected report opens in a sheet. Reports have no title, so the panel shows the body |
+| Admin · Snack shelf | `/admin/snacks` | Rebuilt | "Add an item yourself" opens a one-field sheet |
+| Admin · Wi-Fi reports | `/admin/wifi` | Rebuilt | Phone (not drawn): the table becomes a list. The chart reads from the latest 50 reports |
+| Old admin screen | `/admin/tools` | Legacy, kept | Announcements, events, roles, joining dates, leave balances and leave approvals stay here until the canvas draws them a new home (not-drawn item 2) |

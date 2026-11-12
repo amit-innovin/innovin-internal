@@ -63,6 +63,13 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // No 8-office-day target for this person (e.g. fully remote).
+  if (body?.officeExempt !== undefined) {
+    if (typeof body.officeExempt !== "boolean") return badRequest("Say whether they're exempt");
+    await store.setOfficeExempt(email, body.officeExempt);
+    return NextResponse.json({ ok: true });
+  }
+
   // Joining date drives Earned Leave accrual and Flexible Leave pro-rating; "" clears it.
   if (body?.joinedOn !== undefined) {
     const joinedOn = str(body.joinedOn).trim();

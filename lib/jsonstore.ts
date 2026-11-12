@@ -245,6 +245,12 @@ export const jsonStore: Store = {
     }),
   listAttendanceChanges: (email, limit) =>
     query((db) => db.attendanceChanges.filter((c) => c.email === email).sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit)),
+  setOfficeExempt: (email, exempt) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.officeExempt = exempt;
+      return { result: !!row, changed: !!row };
+    }),
   setOfficeDays: (email, days) =>
     mutate((db) => {
       const row = db.employees.find((e) => e.email === email);

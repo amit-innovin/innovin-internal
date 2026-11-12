@@ -66,7 +66,7 @@ function AdminTabs({ active, pending }: { active: Tab; pending: number }) {
       {TABS.map((t) => (
         <Link
           key={t.id}
-          href={`/admin?tab=${t.id}`}
+          href={`/admin/tools?tab=${t.id}`}
           aria-current={t.id === active ? "page" : undefined}
           className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             t.id === active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
@@ -138,13 +138,13 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
       <div className="t-stagger grid grid-cols-2 gap-3 lg:grid-cols-3">
         <div style={stagger(0)}>
-          <Stat icon={CalendarCheck} tone="blue" label="Checked in today" value={people.length} href="/admin?tab=today#attendance" />
+          <Stat icon={CalendarCheck} tone="blue" label="Checked in today" value={people.length} href="/admin/tools?tab=today#attendance" />
         </div>
         <div style={stagger(1)}>
-          <Stat icon={MessageSquare} tone="ink" label="Open reports" value={openGrievances} href="/admin?tab=approvals#grievances" />
+          <Stat icon={MessageSquare} tone="ink" label="Open reports" value={openGrievances} href="/admin/tools?tab=approvals#grievances" />
         </div>
         <div style={stagger(2)}>
-          <Stat icon={Wifi} tone="blue" label="Poor Wi-Fi reports today" value={poorToday} href="/admin?tab=today#wifi" />
+          <Stat icon={Wifi} tone="blue" label="Poor Wi-Fi reports today" value={poorToday} href="/admin/tools?tab=today#wifi" />
         </div>
       </div>
 

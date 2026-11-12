@@ -259,6 +259,8 @@ export interface Store {
   addAttendanceChange(row: AttendanceChangeRow): Promise<AttendanceChangeRow>;
   listAttendanceChanges(email: string, limit: number): Promise<AttendanceChangeRow[]>;
   setOfficeDays(email: string, days: number[]): Promise<boolean>;
+  // Admin-set: no 8-office-day target for this person (e.g. fully remote).
+  setOfficeExempt(email: string, exempt: boolean): Promise<boolean>;
   // The currently open session, or null.
   getAttendance(email: string, date: string): Promise<AttendanceRow | null>;
   // One person's day rows across a date range (inclusive), for the attendance calendar.

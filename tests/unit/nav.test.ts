@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACCOUNT_MENU, activeNav, isDuoRoute, navFor } from "@/lib/nav";
+import { ACCOUNT_MENU, activeAdmin, activeNav, isDuoRoute, navFor } from "@/lib/nav";
 
 describe("new shell navigation", () => {
   it("knows which routes are already in the new design", () => {
@@ -37,7 +37,18 @@ describe("new shell navigation", () => {
   });
 
   it("never offers Admin in the account menu to a member", () => {
-    expect(ACCOUNT_MENU(false).map((m) => m.label)).toEqual(["Settings", "Speak up", "Wi-Fi check", "Help"]);
-    expect(ACCOUNT_MENU(true).map((m) => m.label)).toContain("Admin");
+    // Admins reach Admin from its own sidebar item, so the menu is the same for everyone.
+    expect(ACCOUNT_MENU().map((m) => m.label)).toEqual(["Settings", "Speak up", "Wi-Fi check", "Help"]);
+  });
+
+  it("admin pages: the old tools screen stays legacy, sub-pages light the right item", () => {
+    expect(isDuoRoute("/admin")).toBe(true);
+    expect(isDuoRoute("/admin/people")).toBe(true);
+    expect(isDuoRoute("/admin/tools")).toBe(false);
+    expect(activeAdmin("/admin")).toBe("overview");
+    expect(activeAdmin("/admin/today")).toBe("overview");
+    expect(activeAdmin("/admin/speak-up")).toBe("speak");
+    expect(activeAdmin("/admin/tools")).toBeNull();
+    expect(activeNav("/admin/people", "bar")).toBe("account");
   });
 });

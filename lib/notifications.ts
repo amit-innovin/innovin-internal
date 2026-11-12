@@ -56,7 +56,7 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
 
   if(opts.email) {
     const me=employees.find(e=>e.email===opts.email);
-    if(me?.role==="admin")for(const r of (await store.listPendingAway()).filter(needsApproval))items.push({id:`pending-away-${r.id}`,kind:"away",title:"Time-away request awaiting review",body:"Open Approvals to review it.",at:r.createdAt,href:"/admin?tab=approvals#away"});
+    if(me?.role==="admin")for(const r of (await store.listPendingAway()).filter(needsApproval))items.push({id:`pending-away-${r.id}`,kind:"away",title:"Time-away request awaiting review",body:"Open Approvals to review it.",at:r.createdAt,href:"/admin/tools?tab=approvals#away"});
   }
 
   // A decision on your own request — only ever for a verified identity.

@@ -608,6 +608,10 @@ class PgStore implements Store {
     const res = await this.q(`SELECT * FROM attendance_changes WHERE email = $1 ORDER BY at DESC LIMIT $2`, [email, limit]);
     return res.rows.map(attendanceChange);
   }
+  async setOfficeExempt(email: string, exempt: boolean) {
+    const res = await this.q(`UPDATE employees SET office_exempt = $2 WHERE email = $1`, [email, exempt]);
+    return (res.rowCount ?? 0) > 0;
+  }
   async setOfficeDays(email: string, days: number[]) {
     const res = await this.q(`UPDATE employees SET office_days = $2::jsonb WHERE email = $1`, [email, JSON.stringify([...days].sort((a, b) => a - b))]);
     return (res.rowCount ?? 0) > 0;

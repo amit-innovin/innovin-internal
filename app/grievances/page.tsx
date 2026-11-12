@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/app-shell";
 import { SpeakUpPage } from "@/components/speak-up/speak-up-page";
 import { currentActor } from "@/lib/admin";
+import { shellProps } from "@/lib/admin-queue";
 
 export const metadata: Metadata = { title: "Speak up · Innovin" };
 
@@ -10,5 +11,5 @@ export const metadata: Metadata = { title: "Speak up · Innovin" };
 export default async function Page() {
   const actor = await currentActor();
   if (!actor) return <div className="duo"><main className="duo-main" style={{ paddingBottom: 32 }}><SpeakUpPage name={null} /></main></div>;
-  return <AppShell name={actor.name || actor.email} isAdmin={actor.role === "admin"}><SpeakUpPage name={actor.name || actor.email} /></AppShell>;
+  return <AppShell {...await shellProps(actor)}><SpeakUpPage name={actor.name || actor.email} /></AppShell>;
 }

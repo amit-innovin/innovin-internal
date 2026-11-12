@@ -136,8 +136,17 @@ export const useAccount = () => useQuery({ queryKey: ["account"], queryFn: () =>
 export type Steps = Awaited<ReturnType<typeof import("@/lib/today").stepsBoard>>;
 export const useSteps = () => useQuery({ queryKey: ["steps"], queryFn: () => fetchJSON<Steps>("/api/steps") });
 
-export type WifiReport = { id: string; quality: "good" | "poor"; note: string; downMbps: number | null; createdAt: string };
+export type WifiReport = { id: string; quality: "good" | "poor"; note: string; downMbps: number | null; upMbps?: number | null; createdAt: string };
 export const useWifiReports = () => useQuery({ queryKey: ["wifi"], queryFn: () => fetchJSON<WifiReport[]>("/api/wifi") });
 
 export type FeedEvent = { id: string; title: string; body: string; category: string; startsAt: string; location: string; cancelledAt?: string; going: number; mine: boolean; canManage: boolean };
 export const useEvent = (id: string) => useQuery({ queryKey: ["event", id], queryFn: () => fetchJSON<FeedEvent[]>(`/api/events?event=${encodeURIComponent(id)}`) });
+
+// ---- admin ----
+export type { AdminOverview, PersonMonth, PersonRow } from "@/lib/admin-view";
+export type AdminData = import("@/lib/admin-view").AdminOverview & { needsYou: import("@/lib/admin-queue").NeedsYou[] };
+export const useAdminOverview = () => useQuery({ queryKey: ["admin", "overview"], queryFn: () => fetchJSON<AdminData>("/api/admin/overview") });
+export const useAdminPerson = (email: string | null, month: string) =>
+  useQuery({ queryKey: ["admin", "person", email, month], enabled: !!email, queryFn: () => fetchJSON<import("@/lib/admin-view").PersonMonth>(`/api/admin/person?email=${encodeURIComponent(email ?? "")}&month=${month}`) });
+export type Grievance = { id: string; body: string; displayName: string | null; image: string | null; urgent: boolean; status: "open" | "in_progress" | "resolved"; createdAt: string };
+export const useAllGrievances = () => useQuery({ queryKey: ["admin", "grievances"], queryFn: () => fetchJSON<Grievance[]>("/api/grievances") });

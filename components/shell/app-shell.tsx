@@ -6,7 +6,7 @@ import { BookOpen, CalendarDays, CircleHelp, Cookie, Ellipsis, Footprints, House
 import { toast } from "sonner";
 import { Avatar } from "@/components/duo";
 import { readError, send } from "@/lib/fetcher";
-import { ACCOUNT_MENU, activeNav, navFor, type NavIcon } from "@/lib/nav";
+import { ACCOUNT_MENU, ADMIN_NAV, activeAdmin, activeNav, navFor, type NavIcon } from "@/lib/nav";
 
 const NAV_ICON: Record<NavIcon, LucideIcon> = { home: House, feed: Newspaper, days: CalendarDays, snacks: Cookie, steps: Footprints, reading: BookOpen, account: UserRound };
 const MENU_ICON = { settings: Settings, speak: MessageSquare, wifi: Wifi, help: CircleHelp, admin: ShieldCheck };
@@ -19,7 +19,8 @@ async function signOut() {
 
 // The app frame from the design canvas: bottom bar on phones, icon sidebar on tablets, full
 // sidebar from 1100px. Which one shows is pure CSS (app/duo.css), so there is no layout flash.
-export function AppShell({ name, isAdmin, children }: { name: string; isAdmin: boolean; children: ReactNode }) {
+// `openReports` is the open Speak up count for the admin badge (admins only).
+export function AppShell({ name, isAdmin, openReports = 0, children }: { name: string; isAdmin: boolean; openReports?: number; children: ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const account = useRef<HTMLDivElement>(null);
@@ -36,6 +37,9 @@ export function AppShell({ name, isAdmin, children }: { name: string; isAdmin: b
 
   const sideActive = activeNav(pathname, "side");
   const barActive = activeNav(pathname, "bar");
+  const adminActive = activeAdmin(pathname);
+  // On laptop the sub-pages carry the highlight; the tablet's icon sidebar has no sub-pages,
+  // so there the Admin icon itself lights up (CSS: .duo-navitem[data-open]).
 
   return (
     <div className="duo">
@@ -50,10 +54,26 @@ export function AppShell({ name, isAdmin, children }: { name: string; isAdmin: b
             </Link>
           );
         })}
+        {isAdmin && (
+          <>
+            <Link href="/admin" className="duo-navitem" aria-label="Admin" data-open={adminActive ? "true" : undefined}>
+              <ShieldCheck size={22} strokeWidth={2.2} aria-hidden="true" />
+              <span className="duo-navlabel">Admin</span>
+            </Link>
+            <div className="duo-subnav" aria-label="Admin pages" role="group">
+              {ADMIN_NAV.map((item) => (
+                <Link key={item.id} href={item.href} className="duo-subitem" aria-current={adminActive === item.id ? "page" : undefined}>
+                  {item.label}
+                  {item.id === "speak" && openReports > 0 && <span className="duo-subbadge" aria-label={`${openReports} open`}>{openReports}</span>}
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
         <div className="duo-acct" ref={account}>
           {menuOpen && (
             <div className="duo-menu" role="menu" aria-label="Account">
-              {ACCOUNT_MENU(isAdmin).map((item) => {
+              {ACCOUNT_MENU().map((item) => {
                 const Icon = MENU_ICON[item.icon];
                 return <Link key={item.href} href={item.href} role="menuitem" className="duo-menuitem"><Icon size={18} strokeWidth={2.2} aria-hidden="true" />{item.label}</Link>;
               })}

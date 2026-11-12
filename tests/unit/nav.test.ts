@@ -7,16 +7,18 @@ describe("new shell navigation", () => {
     expect(isDuoRoute("/notifications/anything")).toBe(true);
     expect(isDuoRoute("/notificationsx")).toBe(false);
     expect(isDuoRoute("/")).toBe(true);
-    expect(isDuoRoute("/board")).toBe(false);
     expect(isDuoRoute("/attendance")).toBe(false);
-    expect(isDuoRoute("/days")).toBe(true);
+    expect(isDuoRoute("/help")).toBe(false);
+    for (const r of ["/days", "/feed", "/feed/events/x", "/snacks", "/steps", "/reading", "/account", "/grievances", "/wifi"]) expect(isDuoRoute(r)).toBe(true);
   });
 
   it("phone bar: Home stays lit for the screens it owns", () => {
     expect(activeNav("/", "bar")).toBe("home");
     expect(activeNav("/notifications", "bar")).toBe("home");
     expect(activeNav("/steps", "bar")).toBe("home");
-    expect(activeNav("/attendance", "bar")).toBe("days");
+    expect(activeNav("/reading", "bar")).toBe("home");
+    expect(activeNav("/feed/events/x", "bar")).toBe("feed");
+    expect(activeNav("/account", "bar")).toBe("account");
     expect(activeNav("/grievances", "bar")).toBe("account");
     expect(activeNav("/wifi", "bar")).toBe("account");
   });
@@ -24,15 +26,14 @@ describe("new shell navigation", () => {
   it("sidebar: steps has its own item, and account pages light nothing", () => {
     expect(activeNav("/steps", "side")).toBe("steps");
     expect(activeNav("/notifications", "side")).toBe("home");
-    expect(activeNav("/settings", "side")).toBeNull();
+    expect(activeNav("/reading", "side")).toBe("reading");
+    expect(activeNav("/account", "side")).toBeNull();
   });
 
-  it("only links to screens that exist today", () => {
-    const hrefs = [...navFor("bar"), ...navFor("side")].map((n) => n.href);
-    expect(hrefs).not.toContain("/snacks");
-    expect(hrefs).not.toContain("/reading");
-    expect(navFor("bar").map((n) => n.label)).toEqual(["Home", "Feed", "Days", "Account"]);
-    expect(navFor("side").map((n) => n.label)).toEqual(["Home", "Feed", "Days", "10K steps"]);
+  it("matches the canvas: five tabs on the phone, six sidebar items", () => {
+    expect(navFor("bar").map((n) => n.label)).toEqual(["Home", "Feed", "Days", "Snacks", "Account"]);
+    expect(navFor("side").map((n) => n.label)).toEqual(["Home", "Feed", "Days", "Tea & snacks", "10K steps", "Reading list"]);
+    expect(navFor("bar").find((n) => n.label === "Account")?.href).toBe("/account");
   });
 
   it("never offers Admin in the account menu to a member", () => {

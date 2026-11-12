@@ -23,18 +23,18 @@ type Item = {
 
 const ITEMS: Item[] = [
   { id: "home", label: { bar: "Home", side: "Home" }, icon: "home", href: "/", on: ["bar", "side"], owns: { bar: ["/", "/notifications", "/steps", "/reading"], side: ["/", "/notifications"] } },
-  { id: "feed", label: { bar: "Feed", side: "Feed" }, icon: "feed", href: "/board?view=board", on: ["bar", "side"], owns: { bar: ["/feed", "/board", "/events"], side: ["/feed", "/board", "/events"] } },
-  { id: "days", label: { bar: "Days", side: "Days" }, icon: "days", href: "/days", on: ["bar", "side"], owns: { bar: ["/days", "/attendance"], side: ["/days", "/attendance"] } },
-  { id: "snacks", label: { bar: "Snacks", side: "Tea & snacks" }, icon: "snacks", href: null, on: ["bar", "side"], owns: { bar: ["/snacks"], side: ["/snacks"] } },
+  { id: "feed", label: { bar: "Feed", side: "Feed" }, icon: "feed", href: "/feed", on: ["bar", "side"], owns: { bar: ["/feed"], side: ["/feed"] } },
+  { id: "days", label: { bar: "Days", side: "Days" }, icon: "days", href: "/days", on: ["bar", "side"], owns: { bar: ["/days"], side: ["/days"] } },
+  { id: "snacks", label: { bar: "Snacks", side: "Tea & snacks" }, icon: "snacks", href: "/snacks", on: ["bar", "side"], owns: { bar: ["/snacks"], side: ["/snacks"] } },
   { id: "steps", label: { bar: "10K steps", side: "10K steps" }, icon: "steps", href: "/steps", on: ["side"], owns: { side: ["/steps"] } },
-  { id: "reading", label: { bar: "Reading list", side: "Reading list" }, icon: "reading", href: null, on: ["side"], owns: { side: ["/reading"] } },
-  { id: "account", label: { bar: "Account", side: "Account" }, icon: "account", href: "/settings", on: ["bar"], owns: { bar: ["/account", "/settings", "/grievances", "/wifi", "/help"] } },
+  { id: "reading", label: { bar: "Reading list", side: "Reading list" }, icon: "reading", href: "/reading", on: ["side"], owns: { side: ["/reading"] } },
+  { id: "account", label: { bar: "Account", side: "Account" }, icon: "account", href: "/account", on: ["bar"], owns: { bar: ["/account", "/grievances", "/wifi", "/help", "/admin"] } },
 ];
 
 const matches = (pathname: string, owned: string) => (owned === "/" ? pathname === "/" : pathname === owned || pathname.startsWith(`${owned}/`));
 
 // Routes that already render in the new shell. Everything else still gets the legacy nav.
-const DUO_ROUTES = ["/", "/days", "/notifications"];
+const DUO_ROUTES = ["/", "/days", "/notifications", "/feed", "/snacks", "/steps", "/reading", "/account", "/grievances", "/wifi"];
 export const isDuoRoute = (pathname: string) => DUO_ROUTES.some((r) => matches(pathname, r));
 
 export function navFor(surface: Surface) {
@@ -48,7 +48,7 @@ export function activeNav(pathname: string, surface: Surface): NavId | null {
 // Laptop and tablet: these live in the menu on the account button, so the pages themselves
 // don't repeat them. Sign out is rendered separately because it is an action, not a link.
 export const ACCOUNT_MENU = (isAdmin: boolean) => [
-  { label: "Settings", href: "/settings", icon: "settings" as const },
+  { label: "Settings", href: "/account", icon: "settings" as const },
   { label: "Speak up", href: "/grievances", icon: "speak" as const },
   { label: "Wi-Fi check", href: "/wifi", icon: "wifi" as const },
   { label: "Help", href: "/help", icon: "help" as const },

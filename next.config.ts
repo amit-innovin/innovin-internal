@@ -53,7 +53,12 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       // Old links to the notice board, from before Home was rebuilt.
-      { source: "/", has: [{ type: "query", key: "view", value: "board" }], destination: "/board", permanent: false },
+      { source: "/", has: [{ type: "query", key: "view", value: "board" }], destination: "/feed", permanent: false },
+      // The Feed replaced the notice board and the events list; Account replaced Settings.
+      { source: "/board", destination: "/feed", permanent: false },
+      { source: "/events", has: [{ type: "query", key: "event", value: "(?<event>[^&]+)" }], destination: "/feed/events/:event", permanent: false },
+      { source: "/events", destination: "/feed?filter=event", permanent: false },
+      { source: "/settings", destination: "/account", permanent: false },
       { source: "/leave", destination: "/attendance?tab=leave", permanent: false },
       { source: "/away", destination: "/attendance?tab=leave", permanent: false },
       ...["/pantry", "/planner", "/people", "/admin/pantry"].map((source) => ({ source, destination: "/", permanent: false })),

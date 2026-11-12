@@ -55,3 +55,28 @@ export function PageHeader({ title, subtitle, actions, back }: { title: string; 
     </header>
   );
 }
+
+// An inner page from the laptop and tablet boards: header and main column, with an optional
+// right rail that folds under the main column below 1100px. `railFirst="phone"` puts the rail
+// above the main column on phones only, where the phone prototype leads with it.
+export function Split({ head, rail, railFirst, children }: { head: ReactNode; rail?: ReactNode; railFirst?: "phone"; children: ReactNode }) {
+  return (
+    <div className="duo-page duo-screen-in" data-rail={rail ? undefined : "none"} data-rail-first={railFirst}>
+      <div className="duo-page-head">{head}</div>
+      <div className="duo-page-main">{children}</div>
+      {rail && <aside className="duo-page-rail">{rail}</aside>}
+    </div>
+  );
+}
+
+// A loading or error state that every query-backed page uses the same way.
+export function QueryState({ error, onRetry, what }: { error?: Error | null; onRetry: () => void; what: string }) {
+  if (!error) return <div aria-busy="true" aria-label={`Loading ${what}`} style={{ display: "flex", flexDirection: "column", gap: 14 }}><div className="duo-flat" style={{ height: 120 }} /><div className="duo-flat" style={{ height: 180 }} /></div>;
+  return (
+    <Card role="alert" style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "flex-start" }}>
+      <span className="duo-h2">Couldn't load {what}</span>
+      <span className="duo-sub">{error.message}</span>
+      <Button onClick={onRetry}>Try again</Button>
+    </Card>
+  );
+}

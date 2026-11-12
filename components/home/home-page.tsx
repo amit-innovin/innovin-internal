@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { CalendarDays, ChevronRight, Footprints, Megaphone, Wifi } from "lucide-react";
+import { BookOpen, CalendarDays, ChevronRight, Footprints, Megaphone, Wifi } from "lucide-react";
 import { Avatar, Button, Card, Flat } from "@/components/duo";
 import { BellLink } from "@/components/duo/bell";
 import { Lappy } from "@/components/duo/lappy";
@@ -8,7 +8,7 @@ import { CheckIn } from "@/components/home/check-in";
 import { Battery } from "@/components/days/battery";
 import type { DaysView } from "@/lib/days";
 import { boardHref, eventHref } from "@/lib/journey";
-import { useDays, useWorkspace } from "@/lib/queries";
+import { useDays, useReading, useWorkspace } from "@/lib/queries";
 
 const IST = "Asia/Kolkata";
 const fmt = (iso: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-IN", { timeZone: IST, ...options }).format(new Date(iso));
@@ -59,6 +59,7 @@ export function HomePage({ firstName }: { firstName: string }) {
   const events = (workspace.data?.events ?? []).filter((e) => !e.cancelledAt).slice(0, 3);
   const pinned = workspace.data?.announcements[0];
   const steps = workspace.data?.steps.me;
+  const book = useReading().data?.current;
 
   const comingUp = events.length > 0 && (
     <Card style={{ display: "flex", flexDirection: "column", gap: 12, padding: 14 }}>
@@ -113,6 +114,11 @@ export function HomePage({ firstName }: { firstName: string }) {
                 <span className="duo-tag" style={{ display: "flex", alignItems: "center", gap: 6 }}><Footprints size={14} aria-hidden="true" />10K steps</span>
                 <span style={{ fontSize: 18, fontWeight: 700 }}>{steps?.rank ? `#${steps.rank} on the board` : "Join the board"}</span>
                 <span className="duo-sub" style={{ fontSize: 12 }}>{steps?.today?.steps ? `${steps.today.steps.toLocaleString("en-IN")} today` : steps?.today?.hit ? "10K done today" : "Nothing logged today"}</span>
+              </Link>
+              <Link href="/reading" className="duo-btn duo-btn-g duo-tilebtn">
+                <span className="duo-tag" style={{ display: "flex", alignItems: "center", gap: 6 }}><BookOpen size={14} aria-hidden="true" />Reading list</span>
+                <span style={{ fontSize: 18, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{book ? book.title : "Between books"}</span>
+                <span className="duo-sub" style={{ fontSize: 12 }}>{book ? `${book.pct}% read` : "Pick one from the shelf"}</span>
               </Link>
             </div>
 

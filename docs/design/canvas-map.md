@@ -214,3 +214,10 @@ Matches the spec's delivery plan; each row lists what it depends on from this ma
 | Home | `/` | Rebuilt (PR 3) | Reading tile, chai card and birthdays wait for those features; "Who's around" shows the next *working* day; the old Home moved to `/board` while it still hosts the notice board |
 | Days | `/days` | Rebuilt (PR 3) | Month arrows (needed to reach last month's fixable days early in a month); remote days get a sky tint and a legend entry; "Your office days" opens the weekday chips from the Account board in a sheet; "Swap a day" is not built (no board); "Request leave" opens the legacy leave form until the Zoho flow exists, and request statuses are the app's own, not Zoho's |
 
+| Feed, event detail | `/feed`, `/feed/events/[id]` | Rebuilt (PR 5) | `/board`, `/events` and `/?view=board` redirect here; announcement links use `#announcement-<id>` |
+| Tea & snacks | `/snacks` | Rebuilt | Empty shelf shows Lappy and a nudge to suggest; snack subtitle falls back to "Restocked …" from the order date |
+| 10K steps | `/steps` | Rebuilt | The "Today" ring card leads on the phone (as in the prototype) and sits in the rail on laptop; hitting 10K opens the celebration |
+| Reading list | `/reading` | Rebuilt | Each shelf card has "Start" next to "Want to read" (the prototype's start state); starting asks for the page count in a sheet; "Between books" when nothing is being read |
+| Account | `/account` | Rebuilt | Birthday date is picked in a sheet (day + month); "Switch Google account" is laptop/tablet only, as drawn; `/settings` redirects here |
+| Speak up | `/grievances` | Rebuilt | Still public: signed-out visitors get the page without the shell. Photo attachment dropped (not on the canvas) |
+| Wi-Fi check | `/wifi` | Rebuilt | Upload speed is not measured, so the gauge shows download only |

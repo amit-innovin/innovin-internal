@@ -3,17 +3,28 @@ import { expect, test, uniqueEmail, signInEmployee } from "./fixtures";
 // The Material 3 Home (prototype: docs/design/m3/Prototype.dc.html, "Home").
 // Check-in is verified by location only; the office network is not proof.
 test.describe("Home", () => {
+  // Today counts as one of your days, so the full check-in card shows (skipped on a non-working day).
+  async function plannedToday(page: import("@playwright/test").Page) {
+    const res = await page.request.patch("/api/days", { data: { officeDays: [0, 1, 2, 3, 4, 5, 6] } });
+    expect(res.ok()).toBe(true);
+    test.skip(!(await res.json()).isOfficeDayToday, "today isn't a working day");
+    await page.reload();
+  }
+
   test("near the office: checks in by location and collapses to a chip", async ({ page, context }) => {
     await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({ latitude: 12.9352, longitude: 77.6241 });
     await signInEmployee(page, uniqueEmail("home-in"), "/");
+    await plannedToday(page);
     await expect(page.getByText("We check your location once, when you tap Check in. It isn't tracked.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Working remote" })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Check in", exact: true }).click();
     await expect(page.getByText("You're in", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Change today's status" })).toBeVisible();
     await expect(page.getByText(/^In office · \d{1,2}:\d{2}/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Check in", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "In office today" })).toBeVisible();
     await page.screenshot({ path: `output/playwright/m3-home-${test.info().project.name}.png`, fullPage: true });
 
     // There is no check-out; "Change" takes the mark back.
@@ -22,31 +33,35 @@ test.describe("Home", () => {
     await expect(page.getByRole("button", { name: "Check in", exact: true })).toBeVisible();
   });
 
-  test("away from the office: says how far and offers remote", async ({ page, context }) => {
+  test("away from the office: says how far", async ({ page, context }) => {
     await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({ latitude: 12.99, longitude: 77.7 });
     await signInEmployee(page, uniqueEmail("home-far"), "/");
+    await plannedToday(page);
     await page.getByRole("button", { name: "Check in", exact: true }).click();
     await expect(page.getByText(/about \d+(\.\d)? km from the office/)).toBeVisible();
-    await page.getByRole("button", { name: "Working remote", exact: true }).click();
-    await expect(page.getByText("Remote today", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
   });
 
-  test("location blocked: says so and remote still works", async ({ page }) => {
+  test("location blocked: says so", async ({ page }) => {
     await signInEmployee(page, uniqueEmail("home-blocked"), "/");
+    await plannedToday(page);
     await page.getByRole("button", { name: "Check in", exact: true }).click();
     await expect(page.getByText("Location is off for innovin")).toBeVisible();
-    await page.getByRole("button", { name: "Working remote", exact: true }).click();
-    await expect(page.getByText("Remote today", { exact: true })).toBeVisible();
   });
 
-  test("remote day hides office-only items", async ({ page }) => {
-    await signInEmployee(page, uniqueEmail("home-remote"), "/");
-    await page.getByRole("button", { name: "Working remote", exact: true }).click();
-    await expect(page.getByText("Remote today", { exact: true })).toBeVisible();
+  test("on a day you're not planned in, check-in is a quiet row", async ({ page, context }) => {
+    await context.grantPermissions(["geolocation"]);
+    await context.setGeolocation({ latitude: 12.9352, longitude: 77.6241 });
+    await signInEmployee(page, uniqueEmail("home-quiet"), "/");
+    const card = page.getByRole("region", { name: "Check in" });
+    await expect(card).toContainText("Not planned in today");
+    await expect(card).toContainText("In the office after all?");
+    await expect(page.getByText("We check your location once")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Working remote" })).toHaveCount(0);
     await expect(page.getByText("Tea round", { exact: true })).toHaveCount(0);
-    await expect(page.getByRole("region", { name: "Your crowd today" })).toHaveCount(0);
-    await expect(page.getByText(/Your crowd is in on|Nobody from your crowd is planned/)).toBeVisible();
+    await card.getByRole("button", { name: "Check in" }).click();
+    await expect(page.getByText(/^In office · \d{1,2}:\d{2}/)).toBeVisible();
   });
 
   test("header greets by time of day and shows Lappy", async ({ page }) => {

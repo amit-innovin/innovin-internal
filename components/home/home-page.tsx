@@ -39,7 +39,7 @@ function Header({ firstName, days }: { firstName: string; days: DaysView | undef
       </>}>
       {me && (
         <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 8, flexWrap: "nowrap" }}>
-          <span className={`m3-chip ${me.mode === "office" ? "m3-chip-success" : "m3-chip-neutral"} m3-chip-enter`}>{me.mode === "office" ? `In office · ${timeIST(me.at)}` : "Remote today"}</span>
+          <span className="m3-chip m3-chip-success m3-chip-enter">In office · {timeIST(me.at)}</span>
           <Button variant="text" style={{ height: 32, padding: "0 8px", fontSize: 13, color: time === "evening" ? "#FFFFFF" : undefined }} aria-label="Change today's status" disabled={mark.isPending}
             onClick={() => mark.mutate({ mode: "none" }, { onError: (e) => toast.error(e.message) })}>Change</Button>
         </div>
@@ -143,8 +143,8 @@ function Crowd({ days }: { days: DaysView }) {
   const { inToday } = days.around;
   if (!inToday.names.length) return null;
   return (
-    <section aria-label="Your crowd today" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <h2 className="m3-title" style={{ padding: "0 4px" }}>Your crowd today</h2>
+    <section aria-label="In office today" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <h2 className="m3-title" style={{ padding: "0 4px" }}>In office today</h2>
       <div style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -18px", padding: "0 18px" }}>
         {inToday.names.map((n, i) => (
           <div key={`${n}-${i}`} className="m3-card" style={{ flex: "none", width: 112, padding: "14px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" }}>
@@ -174,8 +174,8 @@ function StepsTile() {
   );
 }
 
-// Home from the Material 3 prototype: what needs you today, in time order. Tea, today's crowd
-// and similar office-only items disappear on a remote day.
+// Home from the Material 3 prototype: what needs you today, in time order. Tea and other
+// office-only items show once you've checked in; there is no remote mark.
 export function HomePage({ firstName }: { firstName: string }) {
   const days = useDays();
   return (

@@ -5,6 +5,7 @@ import { Bell, ChevronRight, Footprints, Wifi } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, Button, Card, IconCircle, QueryState, StatusChip } from "@/components/m3";
 import { TeaLappy } from "@/components/m3/art";
+import { TeaActions, teaCopy } from "@/components/snacks/tea";
 import { PageHero } from "@/components/m3/hero";
 import { CheckIn, timeIST } from "@/components/home/check-in";
 import type { DaysView } from "@/lib/days";
@@ -48,30 +49,22 @@ function Header({ firstName, days }: { firstName: string; days: DaysView | undef
   );
 }
 
+// Home's tea row: the same round and answer as the Snacks tab's tea card.
 function TeaRow({ tea }: { tea: Tea }) {
-  const toggle = useSend<{ going: boolean }, Tea>(["tea"], "/api/tea", "POST", { replace: true });
-  const [skipped, setSkipped] = useState(false);
-  const answered = tea.mine || skipped;
-  const go = (going: boolean) => toggle.mutate({ going }, { onError: (e) => toast.error(e.message) });
+  const copy = teaCopy(tea);
+  if (!copy) return null;
   return (
     <div className="m3-row" style={{ alignItems: "flex-start" }}>
-      <TimeCell top={hhmm(tea.roundAt).replace(/ (am|pm)$/, "")} bottom="Today" />
+      <TimeCell top={copy.at} bottom="Today" />
       <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
         <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <span>
-            <span style={{ display: "block", fontWeight: 600 }}>{tea.mine ? "You're on the tea list" : skipped ? "Skipping tea today" : "Tea round"}</span>
-            <span className="m3-small">{answered ? `You can change your answer until ${hhmm(tea.countsAt)}.` : `Answer by ${hhmm(tea.countsAt)}.`}</span>
+            <span style={{ display: "block", fontWeight: 600 }}>{copy.round.open && tea.mine === null ? "Tea round" : copy.title}</span>
+            <span className="m3-small">{copy.line}</span>
           </span>
-          {tea.mine && <TeaLappy />}
+          {copy.lappy && <TeaLappy />}
         </span>
-        {answered ? (
-          <Button variant="text" style={{ alignSelf: "flex-start", height: 32, padding: 0 }} disabled={toggle.isPending} onClick={() => { setSkipped(false); if (tea.mine) go(false); }}>Change answer</Button>
-        ) : (
-          <span style={{ display: "flex", gap: 8 }}>
-            <Button style={{ height: 36, padding: "0 16px" }} disabled={toggle.isPending} onClick={() => go(true)}>Yes, I'll have tea</Button>
-            <Button variant="text" style={{ height: 36 }} onClick={() => setSkipped(true)}>Skip</Button>
-          </span>
-        )}
+        <TeaActions tea={tea} compact />
       </span>
     </div>
   );

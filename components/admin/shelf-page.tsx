@@ -6,6 +6,7 @@ import { Button, Card, QueryState } from "@/components/duo";
 import { Sheet } from "@/components/duo/sheet";
 import { useSend, useSnacks, type Snacks } from "@/lib/queries";
 import { AdminHeader, useAdminRefresh } from "./admin-ui";
+import { SnackTimesCard, TodayCard } from "./snack-times";
 
 type Action = { id: string; action: "add" | "dismiss" | "ordered" | "remove" };
 
@@ -30,7 +31,7 @@ export function ShelfPage() {
   const act = useSend<Action, Snacks>(["snacks"], "/api/snacks", "PATCH", { replace: true });
   const [adding, setAdding] = useState(false);
   const run = (a: Action, ok: string) => act.mutate(a, { onSuccess: () => { toast.success(ok); refresh(); }, onError: (e) => toast.error(e.message) });
-  const head = <AdminHeader title="Snack shelf" subtitle="What to buy next · all votes anonymous" />;
+  const head = <AdminHeader title="Snacks & tea" subtitle="Times, today’s numbers, and what to buy next · picks are anonymous" />;
   if (!snacks.data) return <div className="duo-col">{head}<QueryState error={snacks.error} onRetry={() => snacks.refetch()} what="the snack shelf" /></div>;
   const shelf = snacks.data.shelf;
   const max = Math.max(1, ...shelf.map((s) => s.votes));
@@ -78,7 +79,7 @@ export function ShelfPage() {
           </Card>
           <Button variant="ghost" style={{ alignSelf: "flex-start" }} onClick={() => setAdding(true)}><Plus size={18} aria-hidden="true" />Add an item yourself</Button>
         </div>
-        <aside className="duo-page-rail">{suggestions}</aside>
+        <aside className="duo-page-rail" style={{ display: "flex", flexDirection: "column", gap: 14 }}><TodayCard /><SnackTimesCard />{suggestions}</aside>
       </div>
       {adding && <AddSheet onClose={() => setAdding(false)} />}
     </>

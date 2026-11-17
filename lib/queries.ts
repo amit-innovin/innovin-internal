@@ -199,11 +199,61 @@ export function useAckAnnouncement() {
   });
 }
 
-export type Tea = { date: string; count: number; mine: boolean; roundAt: string; countsAt: string; names: string[] | null };
+// The tea round that matters now (null once the day's rounds are done) and your answer for it:
+// true = yes, false = skipping, null = not answered. counts/names come only to admins.
+export type Tea = {
+  date: string;
+  round: { id: "am" | "pm"; at: string; closesAt: string; open: boolean; next: "am" | "pm" | null } | null;
+  mine: boolean | null;
+  times: { am: string; pm: string };
+  counts?: { am: number; pm: number };
+  names?: { am: string[]; pm: string[] };
+};
 export const useTea = () => useQuery({ queryKey: ["tea"], queryFn: () => fetchJSON<Tea>("/api/tea") });
+export function useAnswerTea() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { round: "am" | "pm"; going: boolean | null }) => {
+      const res = await send("/api/tea", { method: "POST", json: input });
+      if (!res.ok) throw new Error(await readError(res));
+      return (await res.json()) as Tea;
+    },
+    onSuccess: (tea) => client.setQueryData(["tea"], tea),
+    onError: () => client.invalidateQueries({ queryKey: ["tea"] }),
+  });
+}
 
 export type SnackRow = { id: string; name: string; note: string; orderedAt: string | null; votes: number; mine: boolean };
-export type Snacks = { shelf: SnackRow[]; suggestions: SnackRow[]; canManage: boolean };
+export type Snacks = {
+  shelf: SnackRow[];
+  suggestions: SnackRow[];
+  canManage: boolean;
+  today: { open: boolean; orderAt: string; ordered: boolean; picks: { itemId: string; count: number }[]; mine: string | null };
+};
+export function useSnackWrite<T>(method: "POST" | "PATCH") {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: T) => {
+      const res = await send("/api/snacks", { method, json: input });
+      if (!res.ok) throw new Error(await readError(res));
+      return (await res.json()) as Snacks;
+    },
+    onSuccess: (snacks) => client.setQueryData(["snacks"], snacks),
+    onError: () => client.invalidateQueries({ queryKey: ["snacks"] }),
+  });
+}
+export type SnackTimes = { amAt: string; amClose: string; pmAt: string; pmClose: string; orderAt: string };
+export const useSnackTimes = () => useQuery({ queryKey: ["snack-times"], queryFn: () => fetchJSON<SnackTimes>("/api/admin/snack-times") });
+export function useSetSnackTimes() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (times: SnackTimes) => {
+      const res = await send("/api/admin/snack-times", { method: "PATCH", json: times });
+      if (!res.ok) throw new Error(await readError(res));
+    },
+    onSuccess: () => Promise.all(["snack-times", "tea", "snacks"].map((k) => client.invalidateQueries({ queryKey: [k] }))),
+  });
+}
 export const useSnacks = () => useQuery({ queryKey: ["snacks"], queryFn: () => fetchJSON<Snacks>("/api/snacks") });
 
 export type Reading = {

@@ -53,6 +53,11 @@ const HOLIDAYS: Record<number, Record<string, string>> = {
 
 export const holidaysFor = (year: number): Record<string, string> => HOLIDAYS[year] ?? {};
 
+// Dates an admin has marked the office closed, with the reason. Loaded from the store by callers
+// and passed in, so these rules stay pure. A closed date is not a working day anywhere.
+export type Closed = ReadonlyMap<string, string>;
+export const NO_CLOSED: Closed = new Map();
+
 // Dates are plain YYYY-MM-DD; parse as UTC so the result never shifts with the server's zone.
 const parseDay = (iso: string) => new Date(`${iso}T00:00:00Z`);
 const toIso = (d: Date) => d.toISOString().slice(0, 10);
@@ -63,7 +68,8 @@ const saturdayOrdinal = (d: Date) => Math.ceil(d.getUTCDate() / 7);
 // A working day is any scheduled day: the week is 6 days (Sunday off), with the 2nd and 4th
 // Saturday also off, minus company-declared holidays. Verified against the "total working
 // days" figures on each month sheet of the 2026 tracker.
-export function isWorkingDay(iso: string) {
+export function isWorkingDay(iso: string, closed: Closed = NO_CLOSED) {
+  if (closed.has(iso)) return false;
   const d = parseDay(iso);
   const weekday = d.getUTCDay();
   if (weekday === 0) return false;
@@ -71,7 +77,8 @@ export function isWorkingDay(iso: string) {
   return !holidaysFor(d.getUTCFullYear())[iso];
 }
 
-export function nonWorkingReason(iso: string): string | null {
+export function nonWorkingReason(iso: string, closed: Closed = NO_CLOSED): string | null {
+  if (closed.has(iso)) return `Office closed: ${closed.get(iso)}`;
   const d = parseDay(iso);
   const holiday = holidaysFor(d.getUTCFullYear())[iso];
   if (holiday) return holiday;
@@ -84,26 +91,26 @@ export function nonWorkingReason(iso: string): string | null {
 
 // Working days a leave range consumes. Sundays, 2nd/4th Saturdays and holidays inside the
 // range are free — so 20 Mar 2026 (Ramzan) costs nothing.
-export function leaveWorkingDays(startDate: string, endDate: string) {
+export function leaveWorkingDays(startDate: string, endDate: string, closed: Closed = NO_CLOSED) {
   if (endDate < startDate) return 0;
   let days = 0;
   for (const d = parseDay(startDate), end = parseDay(endDate); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-    if (isWorkingDay(toIso(d))) days += 1;
+    if (isWorkingDay(toIso(d), closed)) days += 1;
   }
   return days;
 }
 
 // Working days inclusive, or 0.5 for a half-day (single-day Casual Leave only).
-export function leaveCost(startDate: string, endDate: string, halfDay = false) {
-  if (halfDay) return startDate === endDate && isWorkingDay(startDate) ? 0.5 : 0;
-  return leaveWorkingDays(startDate, endDate);
+export function leaveCost(startDate: string, endDate: string, halfDay = false, closed: Closed = NO_CLOSED) {
+  if (halfDay) return startDate === endDate && isWorkingDay(startDate, closed) ? 0.5 : 0;
+  return leaveWorkingDays(startDate, endDate, closed);
 }
 
-export function workingDaysInMonth(year: number, month: number) {
+export function workingDaysInMonth(year: number, month: number, closed: Closed = NO_CLOSED) {
   const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
   let days = 0;
   for (let day = 1; day <= last; day += 1) {
-    if (isWorkingDay(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`)) days += 1;
+    if (isWorkingDay(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`, closed)) days += 1;
   }
   return days;
 }

@@ -58,3 +58,13 @@ describe("office days", () => {
     expect(monthBounds("2026-02")).toEqual({ first: "2026-02-01", last: "2026-02-28" });
   });
 });
+
+describe("closed office days", () => {
+  const closed = new Map([["2026-11-03", "Maintenance"]]);
+  it("aren't expected and don't count toward the month's pace", () => {
+    expect(expectedOn([1], "2026-11-03")).toBe(true);
+    expect(expectedOn([1], "2026-11-03", closed)).toBe(false);
+    expect(officeDaysSummary({ done: 0, target: 8, month: "2026-11", today: "2026-11-05" }).status).toBe("behind");
+    expect(officeDaysSummary({ done: 0, target: 8, month: "2026-11", today: "2026-11-05", closed }).status).toBe("on-track");
+  });
+});

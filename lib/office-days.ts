@@ -1,6 +1,6 @@
 // The office-day rules: everyone owes 8 office days a month, on their own regular weekdays.
 // Pure functions, so Home, Days and the admin table all agree.
-import { isWorkingDay, leaveWorkingDays, workingDaysInMonth } from "./leave";
+import { type Closed, isWorkingDay, leaveWorkingDays, NO_CLOSED, workingDaysInMonth } from "./leave";
 import type { AttendanceRow, EmployeeRow } from "./types";
 
 export const OFFICE_DAY_TARGET = 8;
@@ -45,20 +45,21 @@ export type OfficeDayStatus = "on-track" | "behind" | "done" | "exempt";
 
 // "Behind" means fewer office days than the month's pace so far (working days already over,
 // not counting today, since today can still be marked).
-export function officeDaysSummary(input: { done: number; target: number | null; month: string; today: string }) {
+export function officeDaysSummary(input: { done: number; target: number | null; month: string; today: string; closed?: Closed }) {
+  const closed = input.closed ?? NO_CLOSED;
   const { first, last } = monthBounds(input.month);
   if (input.target === null) return { done: input.done, target: null, toGo: 0, status: "exempt" as OfficeDayStatus, lastDay: last };
   const toGo = Math.max(0, input.target - input.done);
   const [year, mon] = input.month.split("-").map(Number);
   const overUntil = input.today > last ? last : addDays(input.today, -1);
-  const elapsed = overUntil < first ? 0 : leaveWorkingDays(first, overUntil);
-  const pace = Math.floor((input.target * elapsed) / workingDaysInMonth(year, mon));
+  const elapsed = overUntil < first ? 0 : leaveWorkingDays(first, overUntil, closed);
+  const pace = Math.floor((input.target * elapsed) / workingDaysInMonth(year, mon, closed));
   const status: OfficeDayStatus = toGo === 0 ? "done" : input.done < pace ? "behind" : "on-track";
   return { done: input.done, target: input.target, toGo, status, lastDay: last };
 }
 
 // Expected in the office: one of their regular weekdays, and the office is open that day.
-export const expectedOn = (officeDays: number[], date: string) => officeDays.includes(weekdayIndex(date)) && isWorkingDay(date);
+export const expectedOn = (officeDays: number[], date: string, closed: Closed = NO_CLOSED) => officeDays.includes(weekdayIndex(date)) && isWorkingDay(date, closed);
 
 export const scheduleLabel = (officeDays: number[]) => (officeDays.length ? [...officeDays].sort((a, b) => a - b).map((d) => WEEKDAYS[d]).join(" + ") : "Not set");
 

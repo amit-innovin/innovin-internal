@@ -279,3 +279,17 @@ describe("needsApproval", () => {
     expect(needsApproval({ type: "wfh" })).toBe(false);
   });
 });
+
+describe("closed office days", () => {
+  const closed = new Map([["2026-11-25", "Maintenance"]]);
+  it("are not working days, and say why", () => {
+    expect(isWorkingDay("2026-11-25")).toBe(true);
+    expect(isWorkingDay("2026-11-25", closed)).toBe(false);
+    expect(nonWorkingReason("2026-11-25", closed)).toBe("Office closed: Maintenance");
+  });
+  it("cost no leave and leave the month one working day shorter", () => {
+    expect(leaveCost("2026-11-24", "2026-11-26", false, closed)).toBe(2);
+    expect(leaveCost("2026-11-25", "2026-11-25", true, closed)).toBe(0);
+    expect(workingDaysInMonth(2026, 11, closed)).toBe(workingDaysInMonth(2026, 11) - 1);
+  });
+});

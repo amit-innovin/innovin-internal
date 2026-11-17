@@ -1,4 +1,6 @@
 "use client";
+import { ImportantSheet } from "@/components/m3/important-sheet";
+import { useFeed } from "@/lib/queries";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -37,6 +39,9 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   }, [menuOpen]);
 
+  const feed = useFeed();
+  const fresh = feed.data?.newIds.length ?? 0;
+  const badge = (id: string) => (id === "feed" && fresh > 0 ? fresh : 0);
   const sideActive = activeNav(pathname, "side");
   const barActive = activeNav(pathname, "bar");
   const adminActive = activeAdmin(pathname);
@@ -49,8 +54,9 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
         {navFor("side").map((item) => {
           const Icon = NAV_ICON[item.icon];
           return (
-            <Link key={item.id} href={item.href} className="m3-navitem" aria-label={item.label} aria-current={sideActive === item.id ? "page" : undefined}>
+            <Link key={item.id} href={item.href} className="m3-navitem" aria-label={badge(item.id) ? `${item.label}, ${badge(item.id)} new` : item.label} aria-current={sideActive === item.id ? "page" : undefined} style={{ position: "relative" }}>
               <Icon size={22} strokeWidth={1.9} aria-hidden="true" />
+              {badge(item.id) > 0 && <span className="m3-dot-badge" aria-hidden="true">{badge(item.id)}</span>}
               <span className="m3-navlabel">{item.label}</span>
             </Link>
           );
@@ -97,6 +103,7 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
       </nav>
 
       <main className="duo-main m3-main">{children}</main>
+      <ImportantSheet />
 
       {showsSpeakFab(pathname) && <Fab href="/grievances" label="Speak up anonymously" icon={<SpeakUpIcon size={26} />} />}
 
@@ -105,8 +112,8 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
           const Icon = NAV_ICON[item.icon];
           return (
             <Link key={item.id} href={item.href} className="m3-tab" aria-current={barActive === item.id ? "page" : undefined}>
-              <span className="m3-ind"><Icon size={24} strokeWidth={1.9} aria-hidden="true" /></span>
-              {item.label}
+              <span className="m3-ind" style={{ position: "relative" }}><Icon size={24} strokeWidth={1.9} aria-hidden="true" />{badge(item.id) > 0 && <span className="m3-dot-badge" aria-hidden="true" style={{ top: -2, right: 8 }}>{badge(item.id)}</span>}</span>
+              {item.label}{badge(item.id) > 0 && <span className="sr-only">, {badge(item.id)} new</span>}
             </Link>
           );
         })}

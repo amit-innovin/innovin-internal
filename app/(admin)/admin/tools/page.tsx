@@ -109,6 +109,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
     tab === "publish" ? store.listAnnouncements(10) : Promise.resolve([]),
   ]);
   const names = new Map(employees.map((e) => [e.email, e.name]));
+  // Important announcements: how many people have tapped "Got it". A count, never who.
+  const seenCounts = await store.countAnnouncementAcks(announcements.filter((a) => a.important).map((a) => a.id));
 
   const openGrievances = grievances.filter((g) => g.status !== "resolved").length;
   const poorToday = wifi.filter((w) => w.quality === "poor" && relativeDay(w.createdAt) === "Today").length;
@@ -280,7 +282,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                     {a.title} <Badge variant="secondary" className="ml-1 align-middle">{a.tag}</Badge>
                   </p>
                   {a.body && <p className="mt-0.5 text-xs text-muted-foreground">{a.body}</p>}
-                  <p className="mt-0.5 text-[11px] text-muted-foreground/80">{fmtShortDate(a.createdAt)}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground/80">{fmtShortDate(a.createdAt)}{a.important ? ` · Important · seen by ${seenCounts[a.id] ?? 0} of ${employees.length}` : ""}</p>
                 </div>
                 <form id={`delete-${a.id}`} action="/api/announcements" method="post">
                   <input type="hidden" name="_action" value="delete" />

@@ -32,8 +32,15 @@ export default function PostComposer() {
           <Input name="title" required maxLength={120} placeholder="Title — e.g. Team Lunch on Friday" aria-label="Title" />
           <Input name="tag" maxLength={30} placeholder="Tag (Office)" aria-label="Tag" />
           <Textarea name="body" maxLength={500} placeholder="Details (optional)" aria-label="Details" className="resize-none sm:col-span-2" />
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input type="checkbox" name="important" aria-label="Important" /> Important: show it once to everyone and ask them to confirm they&apos;ve seen it
+          </label>
+          <label className="grid gap-1 text-sm sm:col-span-2">
+            Pinned until (needed for Important)
+            <Input type="date" name="pinnedUntil" aria-label="Pinned until" />
+          </label>
           <p className="text-xs text-muted-foreground sm:col-span-2">
-            Appears on everyone&apos;s home dashboard and notifies anyone with notifications on.
+            Appears on everyone&apos;s home dashboard and notifies anyone with notifications on. For an important one, you&apos;ll see how many people have seen it, never who.
           </p>
           <Button type="submit" size="xl" className="sm:col-span-2">
             <Megaphone /> Post announcement

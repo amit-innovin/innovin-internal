@@ -106,3 +106,41 @@ test.describe("Feed", () => {
     await expect(page.getByRole("region", { name: "Earlier" })).toContainText(`You gave kudos to ${name}`);
   });
 });
+
+test.describe("Important announcements and the Feed badge", () => {
+  test("an important announcement shows once on any page and never again after Got it", async ({ page, browser }) => {
+    const admin = await person(browser, ADMIN_EMAIL);
+    const title = uniqueText("Office closed");
+    expect((await admin.page.request.post("/api/announcements", { form: { title, body: "Building maintenance.", important: "on", pinnedUntil: inDays(3) }, maxRedirects: 0 })).status()).toBe(303);
+    const id = (await (await admin.page.request.get("/api/announcements")).json()).find((a: { title: string }) => a.title === title).id;
+    try {
+      await signInEmployee(page, uniqueEmail("feedimportant"), "/days");
+      // Acknowledge any older important announcement other tests left pinned, so ours is next.
+      for (let i = 0; i < 5; i++) {
+        const next = (await (await page.request.get("/api/announcements/important")).json()).announcement;
+        if (!next || next.id === id) break;
+        await page.request.post("/api/announcements/ack", { data: { id: next.id } });
+      }
+      await page.reload();
+      const sheet = page.getByRole("dialog", { name: "Important announcement" });
+      await expect(sheet).toContainText(title);
+      await expect(sheet).toContainText("Building maintenance.");
+      await sheet.getByRole("button", { name: "Got it" }).click();
+      await expect(sheet).toHaveCount(0);
+      await page.reload();
+      await expect(page.getByRole("heading", { level: 1, name: "Days" })).toBeVisible();
+      await expect(page.getByRole("dialog", { name: "Important announcement" })).toHaveCount(0);
+    } finally {
+      await admin.page.request.post("/api/announcements", { form: { _action: "delete", id }, maxRedirects: 0 });
+      await admin.close();
+    }
+  });
+
+  test("the Feed nav item shows how many posts are new", async ({ page, browser }) => {
+    await signInEmployee(page, uniqueEmail("feedbadge"), "/");
+    await seenNow(page);
+    await seed(browser);
+    await page.goto("/days");
+    await expect(page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).getByRole("link", { name: /Feed.*3 new/ })).toBeVisible();
+  });
+});

@@ -27,6 +27,8 @@ export type EmployeeRow = {
   lastSeenAt: string;
   // Feed: everything created up to this moment has been seen. Only ever moves forward.
   feedSeenAt?: string | null;
+  // Opted into the step league: listed for others who joined, and can nudge and be nudged.
+  stepsLeague?: boolean;
 };
 
 // How a day got its mark. wifi / location: verified at the office. self: declared remote.
@@ -171,6 +173,8 @@ export type WifiRow = {
   downMbps: number | null;
   upMbps: number | null;
   createdAt: string;
+  // Where in the office: Desk area, Meeting room, Pantry, Balcony. Never who.
+  area?: string | null;
 };
 
 export type AnnouncementRow = {
@@ -312,6 +316,9 @@ export interface Store {
   listAckedAnnouncementIds(email: string): Promise<string[]>;
   countAnnouncementAcks(ids: string[]): Promise<Record<string, number>>;
   setFeedSeenAt(email: string, at: string): Promise<void>;
+  setStepsLeague(email: string, on: boolean): Promise<boolean>;
+  // One nudge per sender, recipient and day; false when it was already sent.
+  addNudge(date: string, from: string, to: string): Promise<boolean>;
   addAway(row: AwayRow): Promise<AwayRow>;
   setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string, expected: AwayStatus): Promise<boolean>;
   getAway(id: string): Promise<AwayRow | null>;

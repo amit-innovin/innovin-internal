@@ -93,6 +93,23 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.getSetting("snackTea")).toEqual({ orderAt: "13:00" });
     });
 
+    it("keeps the step league opt-in and a nudge once a day per direction", async () => {
+      await store.upsertEmployee(employee({ email: "a@innovinlabs.com" }));
+      expect((await store.getEmployee("a@innovinlabs.com"))?.stepsLeague).toBe(false);
+      expect(await store.setStepsLeague("a@innovinlabs.com", true)).toBe(true);
+      expect((await store.getEmployee("a@innovinlabs.com"))?.stepsLeague).toBe(true);
+      expect(await store.setStepsLeague("nobody@innovinlabs.com", true)).toBe(false);
+      expect(await store.addNudge("2026-11-18", "a@innovinlabs.com", "b@innovinlabs.com")).toBe(true);
+      expect(await store.addNudge("2026-11-18", "a@innovinlabs.com", "b@innovinlabs.com")).toBe(false);
+      expect(await store.addNudge("2026-11-18", "b@innovinlabs.com", "a@innovinlabs.com")).toBe(true);
+      expect(await store.addNudge("2026-11-19", "a@innovinlabs.com", "b@innovinlabs.com")).toBe(true);
+    });
+
+    it("keeps where a Wi-Fi report came from", async () => {
+      await store.addWifi({ id: uid(), quality: "poor", note: "", downMbps: 3, upMbps: 1, createdAt: iso(), area: "Pantry" });
+      expect((await store.listWifi(5))[0]).toMatchObject({ quality: "poor", area: "Pantry" });
+    });
+
     it("keeps one plan override per person and date, and lists a date's overrides for everyone", async () => {
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", true);
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", false);

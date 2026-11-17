@@ -49,12 +49,13 @@ type DB = {
   announcementAcks: { announcementId: string; email: string; at: string }[];
   snackPicks: { date: string; voterRef: string; itemId: string }[];
   settings: Record<string, unknown>;
+  nudges: { date: string; from: string; to: string }[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
-const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, feedSeenAt: e.feedSeenAt ?? null });
+const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, feedSeenAt: e.feedSeenAt ?? null, stepsLeague: e.stepsLeague ?? false });
 const readAnnouncement = (a: AnnouncementRow): AnnouncementRow => ({ ...a, important: a.important ?? false, authorName: a.authorName ?? null, pinnedUntil: a.pinnedUntil ?? null });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [], snackPicks: [], settings: {} });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [], snackPicks: [], settings: {}, nudges: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -370,6 +371,18 @@ export const jsonStore: Store = {
     }),
   listAckedAnnouncementIds: (email) => query((db) => db.announcementAcks.filter((a) => a.email === email).map((a) => a.announcementId)),
   countAnnouncementAcks: (ids) => query((db) => Object.fromEntries(ids.map((id) => [id, db.announcementAcks.filter((a) => a.announcementId === id).length]))),
+  setStepsLeague: (email, on) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.stepsLeague = on;
+      return { result: !!row, changed: !!row };
+    }),
+  addNudge: (date, from, to) =>
+    mutate((db) => {
+      if (db.nudges.some((n) => n.date === date && n.from === from && n.to === to)) return { result: false, changed: false };
+      db.nudges.push({ date, from, to });
+      return { result: true, changed: true };
+    }),
   setFeedSeenAt: (email, at) =>
     mutate((db) => {
       const row = db.employees.find((e) => e.email === email);

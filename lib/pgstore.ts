@@ -228,6 +228,14 @@ CREATE TABLE IF NOT EXISTS plan_overrides (
 );
 CREATE INDEX IF NOT EXISTS plan_overrides_date_idx ON plan_overrides (date);
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS feed_seen_at timestamptz;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS steps_league boolean NOT NULL DEFAULT false;
+ALTER TABLE wifi ADD COLUMN IF NOT EXISTS area text;
+CREATE TABLE IF NOT EXISTS nudges (
+  date text NOT NULL,
+  from_email text NOT NULL,
+  to_email text NOT NULL,
+  PRIMARY KEY (date, from_email, to_email)
+);
 ALTER TABLE announcements ADD COLUMN IF NOT EXISTS important boolean NOT NULL DEFAULT false;
 ALTER TABLE announcements ADD COLUMN IF NOT EXISTS author_name text;
 ALTER TABLE announcements ADD COLUMN IF NOT EXISTS pinned_until text;
@@ -368,6 +376,7 @@ const wifi = (r: any): WifiRow => ({
   downMbps: r.down_mbps,
   upMbps: r.up_mbps,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+  area: r.area ?? null,
 });
 const announcement = (r: any): AnnouncementRow => ({
   id: r.id,
@@ -395,6 +404,7 @@ const employee = (r: any): EmployeeRow => ({
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
   feedSeenAt: r.feed_seen_at ? r.feed_seen_at.toISOString?.() ?? r.feed_seen_at : null,
+  stepsLeague: r.steps_league ?? false,
 });
 const pushSubscription = (r: any): PushSubscriptionRow => ({
   sessionRef: r.session_ref ?? null,
@@ -767,9 +777,9 @@ class PgStore implements Store {
   }
   async addWifi(row: WifiRow) {
     const res = await this.q(
-      `INSERT INTO wifi (id, quality, note, down_mbps, up_mbps, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [row.id, row.quality, row.note, row.downMbps, row.upMbps, row.createdAt],
+      `INSERT INTO wifi (id, quality, note, down_mbps, up_mbps, created_at, area)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [row.id, row.quality, row.note, row.downMbps, row.upMbps, row.createdAt, row.area ?? null],
     );
     return wifi(res.rows[0]);
   }
@@ -802,6 +812,14 @@ class PgStore implements Store {
   async countAnnouncementAcks(ids: string[]) {
     const res = await this.q(`SELECT announcement_id, count(*)::int AS n FROM announcement_acks WHERE announcement_id = ANY($1) GROUP BY announcement_id`, [ids]);
     return Object.fromEntries(ids.map((id) => [id, res.rows.find((r: any) => r.announcement_id === id)?.n ?? 0]));
+  }
+  async setStepsLeague(email: string, on: boolean) {
+    const res = await this.q(`UPDATE employees SET steps_league = $2 WHERE email = $1`, [email, on]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async addNudge(date: string, from: string, to: string) {
+    const res = await this.q(`INSERT INTO nudges (date, from_email, to_email) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`, [date, from, to]);
+    return (res.rowCount ?? 0) > 0;
   }
   async setFeedSeenAt(email: string, at: string) {
     await this.q(`UPDATE employees SET feed_seen_at = $2 WHERE email = $1 AND (feed_seen_at IS NULL OR feed_seen_at < $2)`, [email, at]);

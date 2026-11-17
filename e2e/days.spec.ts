@@ -63,7 +63,8 @@ test.describe("Days", () => {
     await expect(sheet.getByRole("switch", { name: "Half day" })).toBeVisible();
     await sheet.getByRole("button", { name: "Send request" }).click();
     await expect(sheet).toHaveCount(0);
-    await expect(cell(page, FUTURE)).toHaveAccessibleName(new RegExp(`^${longDay(FUTURE)}, leave requested`));
+    // Leave days aren't buttons; their state is read out from the cell's text.
+    await expect(calendar(page).getByText(`${longDay(FUTURE)}, leave requested`)).toHaveCount(1);
     const requests = page.getByRole("region", { name: "Your leave requests" });
     await expect(requests).toContainText("Pending");
     await requests.getByRole("button", { name: /^Cancel / }).click();
@@ -85,7 +86,7 @@ test.describe("Days", () => {
     const sheet = page.getByRole("dialog", { name: "Fix a day" });
     await expect(sheet).toContainText("Marked later, so there's no location check.");
     await expect(sheet.getByRole("radio")).toHaveCount(2);
-    await sheet.getByRole("radio", { name: "In office" }).click();
+    await sheet.getByRole("radio", { name: "In office", exact: true }).click();
     await sheet.getByRole("button", { name: "Save" }).click();
     await expect(sheet).toHaveCount(0);
     await expect(cell(page, target!.day.date)).toHaveAccessibleName(new RegExp(`^${longDay(target!.day.date)}, done\\. Tap to fix`));

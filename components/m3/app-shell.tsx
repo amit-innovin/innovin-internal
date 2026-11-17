@@ -111,9 +111,9 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
         {navFor("bar").map((item) => {
           const Icon = NAV_ICON[item.icon];
           return (
-            <Link key={item.id} href={item.href} className="m3-tab" aria-current={barActive === item.id ? "page" : undefined}>
+            <Link key={item.id} href={item.href} className="m3-tab" aria-label={badge(item.id) ? `${item.label}, ${badge(item.id)} new` : undefined} aria-current={barActive === item.id ? "page" : undefined}>
               <span className="m3-ind" style={{ position: "relative" }}><Icon size={24} strokeWidth={1.9} aria-hidden="true" />{badge(item.id) > 0 && <span className="m3-dot-badge" aria-hidden="true" style={{ top: -2, right: 8 }}>{badge(item.id)}</span>}</span>
-              {item.label}{badge(item.id) > 0 && <span className="sr-only">, {badge(item.id)} new</span>}
+              {item.label}
             </Link>
           );
         })}

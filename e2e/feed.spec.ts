@@ -153,10 +153,11 @@ test.describe("Feed freshness", () => {
     await seenNow(page);
     await page.goto("/days");
     await expect(page.getByRole("heading", { level: 1, name: "Days" })).toBeVisible();
-    const { question } = await seed(browser);
+    const { kudos } = await seed(browser);
     await feedLink(page).click();
     await expect(page).toHaveURL(/\/feed$/);
-    await expect(page.getByRole("region", { name: "New posts" })).toContainText(question);
+    // Oldest first: the kudos is the first card on a phone, and on screen with the rest on a laptop.
+    await expect(page.getByRole("region", { name: "New posts" })).toContainText(kudos);
   });
 
   test("posts you've read aren't new again when you come back", async ({ page, browser }) => {

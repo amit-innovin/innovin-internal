@@ -44,6 +44,8 @@ export async function POST(req: Request) {
     const { cookies } = await import("next/headers");
     const session = verifyUserSession((await cookies()).get(USER_COOKIE)?.value);
     if (!session) return NextResponse.json({ error: "Sign in to publish an event" }, { status: 401 });
+    // Events are published by admins (prototype composer: "Events and announcements are posted by admins").
+    if (!(await isAdmin())) return NextResponse.json({ error: "Only admins publish events" }, { status: 401 });
     const limited = enforce([["writeIp", clientIp(req)]]);
     if (limited) return limited;
     const body = await readJSON(req);

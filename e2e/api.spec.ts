@@ -739,3 +739,59 @@ test.describe("API: abuse limits", () => {
     expect((await ctx.get("/api/wifi/speedtest")).status()).toBe(429);
   });
 });
+
+test.describe("Feed catch-up", () => {
+  const plusDays = (n: number) => new Date(Date.now() + 5.5 * 3600_000 + n * 86_400_000).toISOString().slice(0, 10);
+
+  test("the seen watermark only moves forward", async () => {
+    const ctx = await signedIn(email());
+    const first = await (await ctx.get("/api/feed")).json();
+    expect(typeof first.seenAt).toBe("string");
+    expect(Array.isArray(first.newIds)).toBe(true);
+    const later = new Date(Date.now() - 60_000).toISOString();
+    expect((await ctx.post("/api/feed/seen", { data: { at: later } })).status()).toBe(200);
+    expect((await ctx.post("/api/feed/seen", { data: { at: first.seenAt } })).status()).toBe(200);
+    expect((await (await ctx.get("/api/feed")).json()).seenAt).toBe(later);
+    expect((await ctx.post("/api/feed/seen", { data: { at: "yesterday" } })).status()).toBe(400);
+  });
+
+  test("poll results stay hidden until you vote", async () => {
+    const author = await signedIn(email());
+    const question = `Lunch? ${Date.now()}`;
+    expect((await author.post("/api/notices", { data: { kind: "poll", title: question, options: ["Biryani", "Pizza"], closesOn: plusDays(3) } })).status()).toBe(201);
+    const voter = await signedIn(email());
+    const poll = async () => (await (await voter.get("/api/feed")).json()).posts.find((p: { question?: string }) => p.question === question);
+    const before = await poll();
+    expect(before.total).toBeNull();
+    expect(before.options.every((o: { pct: number | null; votes: number | null }) => o.pct === null && o.votes === null)).toBe(true);
+    await voter.patch("/api/notices", { data: { id: before.id, vote: 0 } });
+    const after = await poll();
+    expect(after.total).toBe(1);
+    expect(after.options[0]).toMatchObject({ pct: 100, votes: 1, mine: true });
+  });
+
+  test("only admins publish events", async () => {
+    const member = await signedIn(email());
+    const startsAt = new Date(Date.now() + 86_400_000).toISOString().slice(0, 16);
+    expect((await member.post("/api/events", { data: { title: "Member event", category: "social", startsAt, body: "", location: "" } })).status()).toBe(401);
+    const adm = await admin();
+    expect((await adm.post("/api/events", { data: { title: `Admin event ${Date.now()}`, category: "social", startsAt, body: "", location: "" } })).status()).toBe(201);
+  });
+
+  test("an important announcement is shown once per person and admins see a count", async () => {
+    const adm = await admin();
+    const title = `Office closed ${Date.now()}`;
+    expect((await adm.post("/api/announcements", { form: { title, body: "Maintenance", important: "on", pinnedUntil: plusDays(3) }, maxRedirects: 0 })).status()).toBe(303);
+    const member = await signedIn(email());
+    const shown = await (await member.get("/api/announcements/important")).json();
+    expect(shown.announcement).toMatchObject({ title, body: "Maintenance", authorName: "Admin E2E" });
+    const feed = await (await member.get("/api/feed")).json();
+    expect(feed.newIds).not.toContain(shown.announcement.id);
+    expect((await member.post("/api/announcements/ack", { data: { id: "missing" } })).status()).toBe(404);
+    expect((await member.post("/api/announcements/ack", { data: { id: shown.announcement.id } })).status()).toBe(200);
+    expect((await (await member.get("/api/announcements/important")).json()).announcement?.id).not.toBe(shown.announcement.id);
+    const list = await (await adm.get("/api/announcements")).json();
+    expect(list.find((a: { id: string }) => a.id === shown.announcement.id)).toMatchObject({ important: true, seen: 1 });
+    await adm.post("/api/announcements", { form: { _action: "delete", id: shown.announcement.id }, maxRedirects: 0 });
+  });
+});

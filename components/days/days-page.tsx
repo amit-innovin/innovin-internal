@@ -7,13 +7,13 @@ import { useDays } from "@/lib/queries";
 import { Calendar, type Day, type DayAction } from "./calendar";
 import { ComingUp } from "./coming-up";
 import { DaySheet } from "./day-sheet";
-import { FixSheet, LockedSheet } from "./fix-sheet";
 import { LeaveRequests } from "./leave-requests";
 import { UsualDays } from "./usual-days";
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-// Days from the Material 3 prototype: plan your own month, apply for leave, fix a missed day.
+// Days from the Material 3 prototype: plan your own month and apply for leave. A missed day is
+// fixed by an admin.
 // Planning is from your own target only; nothing here says who else will be in.
 export function DaysPage() {
   const raw = useSearchParams().get("month");
@@ -30,9 +30,7 @@ export function DaysPage() {
           <ComingUp view={days.data} />
           <UsualDays key={days.data.officeDays.join(",")} officeDays={days.data.officeDays} />
           <LeaveRequests today={days.data.today} />
-          {picked && (picked.action === "plan" || picked.action === "today") && <DaySheet key={picked.day.date} view={days.data} day={picked.day} leaveOnly={picked.action === "today"} onClose={close} />}
-          {picked?.action === "fix" && <FixSheet key={picked.day.date} day={picked.day} onClose={close} />}
-          {picked?.action === "locked" && <LockedSheet day={picked.day} onClose={close} />}
+          {picked && <DaySheet key={picked.day.date} view={days.data} day={picked.day} leaveOnly={picked.action === "today"} onClose={close} />}
         </>
       )}
     </div>

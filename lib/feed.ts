@@ -66,7 +66,8 @@ export async function feedFor(viewer: string) {
     // The catch-up stack, oldest first. Important announcements come through their own sheet.
     newIds: newPostIds(posts.map((p) => ({ id: p.id, at: p.at, type: p.type, important: p.type === "announcement" && p.important, mine: "reactions" in p && p.mine })), seenAt, now),
     open: openItems(posts, now),
-    celebrations: celebrationsFor(employees, today),
+    // Never your own birthday: the card asks you to send a wish.
+    celebrations: celebrationsFor(employees, today).filter((c) => c.email !== viewer),
     people,
   };
 }

@@ -7,6 +7,7 @@ const MESSAGES: Record<string, { type: "success" | "error"; text: string }> = {
   posted: { type: "success", text: "Announcement posted to everyone's home dashboard" },
   deleted: { type: "success", text: "Announcement deleted" },
   "missing-title": { type: "error", text: "Add a title to post an announcement" },
+  "bad-pin": { type: "error", text: "Pick a pin date from today on for an important announcement" },
   "event-posted": { type: "success", text: "Event published" },
   "event-deleted": { type: "success", text: "Event deleted" },
   "invalid-event": { type: "error", text: "Check the event's category and start time" },

@@ -47,3 +47,12 @@ export function myPostLine(post: { type: string; toName?: string | null; questio
   if (post.type === "feedback") return "You shared feedback";
   return null;
 }
+
+// Earlier holds everything not in today's stack. An important announcement waits there only
+// while its sheet is still due (pinned and not yet acknowledged); once acknowledged, or once its
+// pin date has passed unseen, it's listed so nobody loses it.
+export function inEarlier(post: { id: string; type: string; important?: boolean; acked?: boolean; pinnedUntil?: string | null }, stackIds: Set<string>, today: string): boolean {
+  if (stackIds.has(post.id)) return false;
+  const sheetDue = post.type === "announcement" && post.important && !post.acked && !!post.pinnedUntil && post.pinnedUntil >= today;
+  return !sheetDue;
+}

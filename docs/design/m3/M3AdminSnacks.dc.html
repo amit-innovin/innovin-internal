@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin snacks and tea</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F9FF}
+a{color:#006493}a:hover{color:#004B6F}
+button{font-family:inherit;cursor:pointer}
+button:disabled{cursor:default}
+input{font-family:inherit}
+.tm{font-size:16px;font-weight:600;line-height:24px;margin:0}
+.bm{font-size:14px;line-height:20px;color:#41474D}
+.sm{font-size:13px;line-height:18px;color:#41474D}
+.card{background:#FFFFFF;border-radius:20px;padding:20px;box-sizing:border-box}
+.bf{height:44px;padding:0 20px;border-radius:22px;border:0;background:#006493;color:#FFFFFF;font-size:14px;font-weight:600}
+.bo{height:36px;padding:0 16px;border-radius:18px;border:1px solid #71787E;background:transparent;color:#006493;font-size:14px;font-weight:600}
+.bt{height:36px;padding:0 8px;border-radius:18px;border:0;background:transparent;color:#006493;font-size:14px;font-weight:600}
+.field{height:44px;border-radius:12px;border:1px solid #71787E;padding:0 14px;font-size:15px;background:#FFFFFF;color:#181C20;box-sizing:border-box;width:100%;min-width:0}
+.lbl{font-size:13px;font-weight:600;line-height:18px;color:#181C20}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F7F9FF; color: #181C20; font-family: Figtree, system-ui, sans-serif; font-size: 15px; line-height: 22px">
+<header style="background: #FFFFFF; border-bottom: 1px solid #DFE3E8">
+<div style="max-width: 1040px; margin: 0 auto; padding: 14px 16px; box-sizing: border-box; display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+<span style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: #006493">innovin</span>
+<nav aria-label="Breadcrumb"><ol style="list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; font-size: 14px; color: #41474D"><li>Admin</li><li aria-hidden="true">›</li><li aria-current="page" style="color: #181C20; font-weight: 600">Snacks &amp; tea</li></ol></nav>
+<span style="flex: 1"></span>
+<span class="sm">Signed in as Anita · Admin</span>
+</div>
+</header>
+<main style="max-width: 1040px; margin: 0 auto; padding: 28px 16px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 6px; max-width: 720px">
+<h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.01em">Snacks &amp; tea</h1>
+<p class="bm" style="margin: 0; font-size: 15px; line-height: 22px">Times for tea rounds and the daily snack order. People see these times in the app.</p>
+</div>
+
+<section aria-labelledby="times-h" class="card" style="display: flex; flex-direction: column; gap: 16px">
+<h2 id="times-h" class="tm">Times</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end">
+<div style="flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px"><label for="t-am" class="lbl">Morning tea round</label><input id="t-am" class="field" type="time" value="{{ f.am }}" onChange="{{ on.am }}"></div>
+<div style="flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px"><label for="t-amby" class="lbl">Answers close</label><input id="t-amby" class="field" type="time" value="{{ f.amBy }}" onChange="{{ on.amBy }}" aria-invalid="{{ amBad }}"></div>
+</div>
+<sc-if value="{{ amBadOn }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: -6px 0 0; font-size: 14px; line-height: 20px; color: #4A2800">Answers must close before the round.</p></sc-if>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end">
+<div style="flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px"><label for="t-pm" class="lbl">Afternoon tea round</label><input id="t-pm" class="field" type="time" value="{{ f.pm }}" onChange="{{ on.pm }}"></div>
+<div style="flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px"><label for="t-pmby" class="lbl">Answers close</label><input id="t-pmby" class="field" type="time" value="{{ f.pmBy }}" onChange="{{ on.pmBy }}" aria-invalid="{{ pmBad }}"></div>
+</div>
+<sc-if value="{{ pmBadOn }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: -6px 0 0; font-size: 14px; line-height: 20px; color: #4A2800">Answers must close before the round.</p></sc-if>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end">
+<div style="flex: 0 1 372px; display: flex; flex-direction: column; gap: 6px"><label for="t-order" class="lbl">Snack order goes in</label><input id="t-order" class="field" type="time" value="{{ f.order }}" onChange="{{ on.order }}"></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+<button class="bf" style="opacity: {{ saveOp }}" disabled="{{ cantSave }}" onClick="{{ save }}">Save times</button>
+<sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><p role="status" class="bm" style="margin: 0; color: #0B3D1F">{{ msg }}</p></sc-if>
+</div>
+</section>
+
+<section aria-labelledby="today-h" class="card" style="padding: 0; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 16px 20px 8px; flex-wrap: wrap"><h2 id="today-h" class="tm">Today</h2><span class="sm">Read only</span></div>
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{ rounds }}" as="r" hint-placeholder-count="2"><li style="display: flex; flex-direction: column; gap: 6px; padding: 12px 20px; box-sizing: border-box; border-top: 1px solid #DFE3E8">
+<div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-height: 40px"><div style="flex: 1; min-width: 180px; font-weight: 600">{{ r.line }}</div><button class="bt" aria-expanded="{{ r.expanded }}" aria-controls="{{ r.listId }}" onClick="{{ r.toggle }}">{{ r.btn }}</button></div>
+<sc-if value="{{ r.open }}" hint-placeholder-val="{{ false }}"><p id="{{ r.listId }}" class="bm" style="margin: 0">{{ r.names }}</p></sc-if>
+</li></sc-for>
+<li style="padding: 14px 20px; box-sizing: border-box; border-top: 1px solid #DFE3E8; display: flex; flex-direction: column; gap: 2px"><div style="font-weight: 600">{{ picksLine }}</div><div class="sm">Snack picks are anonymous. Only the totals are shown.</div></li>
+</ul>
+</section>
+
+<p class="sm" style="margin: 0 4px">Tea is the one thing that isn't anonymous, so whoever makes it knows whose cup to pour.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const saved = { am: '11:00', amBy: '10:45', pm: '16:00', pmBy: '15:30', order: '12:00' };
+    this.state = { saved, draft: Object.assign({}, saved), msg: '', showAm: false, showPm: false };
+  }
+  renderVals() {
+    const s = this.state;
+    const d = s.draft;
+    const keys = ['am', 'amBy', 'pm', 'pmBy', 'order'];
+    const changed = keys.some((k) => d[k] !== s.saved[k]);
+    const amBad = !!d.am && !!d.amBy && d.amBy >= d.am;
+    const pmBad = !!d.pm && !!d.pmBy && d.pmBy >= d.pm;
+    const empty = keys.some((k) => !d[k]);
+    const cantSave = !changed || amBad || pmBad || empty;
+    const setF = (k) => (e) => this.setState({ draft: Object.assign({}, this.state.draft, { [k]: e.target.value }), msg: '' });
+    const on = {}; keys.forEach((k) => { on[k] = setF(k); });
+    const roundDefs = [
+      ['am', 'Morning round', 7, ['Arjun K', 'Kiran M', 'Meera S', 'Nisha T', 'Priya R', 'Rahul V', 'Sana A'], 'showAm'],
+      ['pm', 'Afternoon round', 4, ['Arjun K', 'Divya P', 'Meera S', 'Vikram N'], 'showPm']
+    ];
+    const rounds = roundDefs.map(([k, label, n, names, flag]) => {
+      const open = !!s[flag];
+      return { line: label + ': ' + n + ' having tea', open, expanded: open ? 'true' : 'false', btn: open ? 'Hide names' : 'Show names', listId: 'names-' + k, names: names.join(', '), toggle: () => this.setState({ [flag]: !open }) };
+    });
+    return {
+      f: d, on,
+      amBad: amBad ? 'true' : 'false', pmBad: pmBad ? 'true' : 'false', amBadOn: amBad, pmBadOn: pmBad,
+      cantSave, saveOp: cantSave ? 0.4 : 1,
+      save: () => { if (cantSave) return; this.setState({ saved: Object.assign({}, d), msg: 'Saved. The app shows the new times from now on.' }); },
+      hasMsg: !!s.msg, msg: s.msg,
+      rounds,
+      picksLine: 'Snack picks: Samosa 9 · Fruit bowl 6 · Biscuits 2'
+    };
+  }
+}
+</script>
+</body>
+</html>

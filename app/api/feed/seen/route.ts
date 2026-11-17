@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { enforce } from "@/lib/guard";
-import { badRequest, clientIp, readJSON } from "@/lib/http";
+import { badRequest, readJSON } from "@/lib/http";
 import { store } from "@/lib/store";
 
 // Moves the caller's Feed watermark forward to a post they've now seen: { at }. Never backwards,
@@ -9,7 +9,7 @@ import { store } from "@/lib/store";
 export async function POST(req: NextRequest) {
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
   if (!session) return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
-  const limited = enforce([["writeIp", clientIp(req)]]);
+  const limited = enforce([["feedSeenUser", session.email]]);
   if (limited) return limited;
   const body = await readJSON(req);
   const at = typeof body?.at === "string" ? Date.parse(body.at) : NaN;

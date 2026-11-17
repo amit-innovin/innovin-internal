@@ -6,7 +6,7 @@ import { Avatar, Button, Card, QueryState } from "@/components/m3";
 import { PageHero } from "@/components/m3/hero";
 import { Sheet } from "@/components/m3/sheet";
 import type { FeedPost } from "@/lib/feed";
-import { myPostLine } from "@/lib/feed-rules";
+import { inEarlier, myPostLine } from "@/lib/feed-rules";
 import { useFeed, useMarkFeedSeen, useRemoveNotice, useRsvp } from "@/lib/queries";
 import { CatchUp } from "./catch-up";
 import { Composer, type Kind } from "./composer";
@@ -92,7 +92,8 @@ function Earlier({ posts, canModerate, onWish }: { posts: FeedPost[]; canModerat
 // The catch-up Feed from the Material 3 prototype: what's new since you last looked, one card at a
 // time on phones (all at once on a laptop), then what's still waiting for your answer, then the rest.
 export function FeedPage() {
-  const feed = useFeed();
+  // Always refetch on arrival: the shell's badge keeps an older copy of the feed in the cache.
+  const feed = useFeed({ refetchOnMount: "always" });
   const wide = useWide();
   const [index, setIndex] = useState(0);
   const [compose, setCompose] = useState<{ kind?: Kind; to?: string } | null>(null);
@@ -103,10 +104,10 @@ export function FeedPage() {
   // Each card still shows the latest data for its post.
   const [frozen, setFrozen] = useState<{ ids: string[]; birthdays: BirthdayItem[] } | null>(null);
   useEffect(() => {
-    if (!data || frozen) return;
+    if (!data || frozen || !feed.isFetchedAfterMount) return;
     const birthdays: BirthdayItem[] = data.celebrations.filter((c) => c.today && c.type === "birthday").map((c): BirthdayItem => ({ type: "birthday", id: `bday-${c.id}`, name: c.name, email: c.email, at: new Date(`${c.date.slice(0, 10)}T00:00:00+05:30`).toISOString() })).filter((b) => b.at > data.seenAt);
     setFrozen({ ids: data.newIds, birthdays });
-  }, [data, frozen]);
+  }, [data, frozen, feed.isFetchedAfterMount]);
   const stack = useMemo<CardItem[]>(() => {
     if (!data || !frozen) return [];
     const byId = new Map(data.posts.map((p) => [p.id, p]));
@@ -118,7 +119,8 @@ export function FeedPage() {
 
   const stackIds = new Set(stack.map((s) => s.id));
   const open = data.open.map((id) => data.posts.find((p) => p.id === id)).filter((p): p is FeedPost => !!p);
-  const earlier = data.posts.filter((p) => !stackIds.has(p.id) && !(p.type === "announcement" && p.important && !p.acked));
+  const today = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
+  const earlier = data.posts.filter((p) => inEarlier(p, stackIds, today));
   const inStack = !wide && index < stack.length;
   const waiting = open.length;
   const wish = (email: string) => setCompose({ kind: "kudos", to: email });

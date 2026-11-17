@@ -10,17 +10,18 @@ import { useLeaveBalances } from "@/lib/queries";
 import { dayNumber, LEAVE_NAMES, longDay, monthName, monthTitle } from "./format";
 
 export type Day = DaysView["days"][number];
-// What tapping a date does: plan or take leave, take leave today, fix a recent day, or explain a lock.
-export type DayAction = "plan" | "today" | "fix" | "locked";
+// Tapping a date plans a day in or applies for leave (owner ruling): today offers leave only, and
+// past dates do nothing. A missed day is fixed by an admin.
+export type DayAction = "plan" | "today";
 
 export function actionFor(view: DaysView, day: Day): DayAction | null {
   if (!day.working || day.leave) return null;
   if (day.date > view.today) return "plan";
   if (day.date === view.today) return view.me ? null : "today";
-  return day.fixable ? "fix" : "locked";
+  return null;
 }
 
-const ACTION_TEXT: Record<DayAction, string> = { plan: "Tap to plan or apply for leave", today: "Tap to apply for leave", fix: "Tap to fix this day", locked: "Locked" };
+const ACTION_TEXT: Record<DayAction, string> = { plan: "Tap to plan or apply for leave", today: "Tap to apply for leave" };
 
 function stateText(day: Day) {
   if (day.mode === "office") return "done";

@@ -147,7 +147,7 @@ export function useSend<TInput = unknown, TOut = unknown>(key: readonly unknown[
 }
 
 export type { Feed, FeedPost } from "@/lib/feed";
-export const useFeed = () => useQuery({ queryKey: ["feed"], queryFn: () => fetchJSON<import("@/lib/feed").Feed>("/api/feed") });
+export const useFeed = (options: { refetchOnMount?: boolean | "always" } = {}) => useQuery({ queryKey: ["feed"], queryFn: () => fetchJSON<import("@/lib/feed").Feed>("/api/feed"), ...options });
 
 type FeedData = import("@/lib/feed").Feed;
 function useFeedWrite<T>(url: string, method: "POST" | "PATCH" | "DELETE") {
@@ -176,7 +176,12 @@ export function useMarkFeedSeen() {
       if (!res.ok) throw new Error(await readError(res));
       return ((await res.json()) as { seenAt: string }).seenAt;
     },
-    onSuccess: (seenAt) => client.setQueryData<FeedData>(["feed"], (feed) => (feed && seenAt > feed.seenAt ? { ...feed, seenAt } : feed)),
+    // Posts at or before the new watermark stop being new, so the badge and the next visit agree.
+    onSuccess: (seenAt) => client.setQueryData<FeedData>(["feed"], (feed) => {
+      if (!feed || seenAt <= feed.seenAt) return feed;
+      const at = new Map(feed.posts.map((p) => [p.id, p.at]));
+      return { ...feed, seenAt, newIds: feed.newIds.filter((id) => (at.get(id) ?? "") > seenAt) };
+    }),
   });
 }
 

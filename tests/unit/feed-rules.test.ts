@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultSeenAt, hideUnvoted, myPostLine, newPostIds, openItems } from "@/lib/feed-rules";
+import { defaultSeenAt, hideUnvoted, inEarlier, myPostLine, newPostIds, openItems } from "@/lib/feed-rules";
 
 const NOW = Date.parse("2026-11-18T06:00:00Z");
 const at = (h: number) => new Date(NOW - h * 3600_000).toISOString();
@@ -56,5 +56,16 @@ describe("myPostLine", () => {
     expect(myPostLine({ type: "quote" })).toBe("You shared a quote");
     expect(myPostLine({ type: "feedback" })).toBe("You shared feedback");
     expect(myPostLine({ type: "event" })).toBeNull();
+  });
+});
+
+describe("inEarlier", () => {
+  const imp = (extra: object) => ({ id: "i", type: "announcement", important: true, acked: false, pinnedUntil: "2026-11-20", ...extra });
+  it("keeps posts in the stack out of Earlier", () => expect(inEarlier({ id: "a", type: "quote" }, new Set(["a"]), "2026-11-18")).toBe(false));
+  it("holds back an important announcement only while its sheet is still due", () => {
+    expect(inEarlier(imp({}), new Set(), "2026-11-18")).toBe(false);
+    expect(inEarlier(imp({ acked: true }), new Set(), "2026-11-18")).toBe(true);
+    // Its pin date passed before this person saw it: it must still be findable.
+    expect(inEarlier(imp({ pinnedUntil: "2026-11-17" }), new Set(), "2026-11-18")).toBe(true);
   });
 });

@@ -93,8 +93,7 @@ export type MarkResult =
   | { ok: true }
   | { ok: false; status: 403 | 409 | 422 | 428; code: "locked" | "future" | "closed" | "outside" | "location-needed"; error: string; distanceM?: number };
 
-// One tap. Today: office is verified by location; remote is taken at its word.
-// A past day inside the self-fix window is recorded as late, with no location check, and logged.
+// One tap, today only: office is verified by location. Past days are fixed by an admin.
 export async function markDay(input: { email: string; date: string; mode: DayMode | null; lat: number | null; lng: number | null; accuracyM: number | null }): Promise<MarkResult> {
   const today = todayIST();
   if (input.date > today) return { ok: false, status: 409, code: "future", error: "You can't mark a day that hasn't happened yet" };
@@ -124,9 +123,6 @@ export async function markDay(input: { email: string; date: string; mode: DayMod
     return { ok: true };
   }
 
-  if (input.date < fixableFrom(today)) return { ok: false, status: 403, code: "locked", error: "You can fix your own last 7 days. Ask an admin to change an older day." };
-  if (input.mode === null) await store.clearDay(input.email, input.date);
-  else await store.markDay({ id: id(), email: input.email, date: input.date, checkInAt: now, checkOutAt: null, lat: null, lng: null, accuracyM: null, declaredMode: input.mode, source: "late" });
-  if (before !== input.mode) await store.addAttendanceChange({ id: id(), email: input.email, date: input.date, from: before, to: input.mode, by: input.email, kind: "late", at: now });
-  return { ok: true };
+  // Members mark today only. Past days are fixed by an admin (owner ruling), with the change logged.
+  return { ok: false, status: 403, code: "locked", error: "Ask an admin to fix a past day" };
 }

@@ -144,3 +144,33 @@ test.describe("Important announcements and the Feed badge", () => {
     await expect(page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).getByRole("link", { name: /Feed.*3 new/ })).toBeVisible();
   });
 });
+
+test.describe("Feed freshness", () => {
+  const feedLink = (page: Page) => page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).getByRole("link", { name: /^Feed/ });
+
+  test("a post made after you opened the app is in the stack when you go to Feed", async ({ page, browser }) => {
+    await signInEmployee(page, uniqueEmail("feedfresh"), "/");
+    await seenNow(page);
+    await page.goto("/days");
+    await expect(page.getByRole("heading", { level: 1, name: "Days" })).toBeVisible();
+    const { question } = await seed(browser);
+    await feedLink(page).click();
+    await expect(page).toHaveURL(/\/feed$/);
+    await expect(page.getByRole("region", { name: "New posts" })).toContainText(question);
+  });
+
+  test("posts you've read aren't new again when you come back", async ({ page, browser }) => {
+    await signInEmployee(page, uniqueEmail("feedback-again"), "/");
+    await seenNow(page);
+    await seed(browser);
+    await page.goto("/feed");
+    const wide = (page.viewportSize()?.width ?? 0) >= 1100;
+    if (!wide) for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Next post" }).click();
+    await expect(page.getByRole("heading", { name: "You're all caught up" })).toBeVisible();
+    await page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).getByRole("link", { name: /^Days/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Days" })).toBeVisible();
+    await expect(feedLink(page)).not.toHaveAccessibleName(/new/);
+    await feedLink(page).click();
+    await expect(page.getByText("Nothing new since yesterday")).toBeVisible();
+  });
+});

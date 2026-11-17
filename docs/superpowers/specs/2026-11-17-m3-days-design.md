@@ -88,6 +88,8 @@ Closed days: a new store collection that admins edit (chosen), rather than exten
 
 ## Owner rulings after the builder check
 
+- 18 Nov: tapping a date only plans a day in or applies for leave. Past dates do nothing, and members can't mark past days at all (the API returns 403 "Ask an admin to fix a past day"); admins fix missed days from the admin Today page. This replaces the fix/locked sheets below.
+
 - No "Working remote" anywhere: not coming in means remote. Home has only Check in, and it's quiet on days you're not planned in.
 
 - Legend shows only Done, Planned, Leave. Remote isn't a calendar state (not coming in means remote). No "Still to plan" section; the calendar itself is the planner.

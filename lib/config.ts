@@ -34,5 +34,8 @@ export const LIMITS = {
   awayDevice: { max: 15, windowMs: 60 * MIN },
   rsvpDevice: { max: 60, windowMs: 60 * MIN },
   writeIp: { max: 120, windowMs: MIN },
+  // Reading the Feed sends one write per card; keyed per person so a busy office morning behind
+  // one shared IP doesn't use up everyone's write allowance.
+  feedSeenUser: { max: 240, windowMs: MIN },
 } as const;
 

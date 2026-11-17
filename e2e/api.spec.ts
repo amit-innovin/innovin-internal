@@ -19,6 +19,15 @@ async function admin(): Promise<APIRequestContext> {
   return signedIn("admin@innovinlabs.com", "Admin E2E");
 }
 
+// Like signedIn, but from a fixed IP, so tests can put two people behind one office address.
+async function signedInFrom(who: string, fromIp: string): Promise<APIRequestContext> {
+  const ctx = await request.newContext({ baseURL: MAIN_URL, extraHTTPHeaders: { "x-forwarded-for": fromIp } });
+  await ctx.get(`${MOCK_URL}/as?email=${encodeURIComponent(who)}&name=${encodeURIComponent(who)}`);
+  expect((await ctx.get("/api/auth/google?next=/", { maxRedirects: 10 })).ok()).toBe(true);
+  await ctx.get(`${MOCK_URL}/as?reset=1`);
+  return ctx;
+}
+
 const noRef = (body: unknown) => expect(JSON.stringify(body)).not.toContain("submitterRef");
 
 // A context signed in through the Google OAuth mock as a specific person, so per-identity
@@ -175,22 +184,14 @@ test.describe("API: office days", () => {
     expect((await adm.delete("/api/admin/closed-days", { data: { date: closedDay } })).status()).toBe(404);
   });
 
-  test("you can fix your own last 7 days without a location; older and future days are refused", async () => {
+  test("past days are fixed by admins, not by members; future days can't be marked", async () => {
     const ctx = await signedIn(email());
-    const twoAgo = isoDay(-2);
-    const fixed = await ctx.post("/api/days", { data: { mode: "office", date: twoAgo } });
-    expect(fixed.status()).toBe(200);
-    const view = await (await ctx.get(`/api/days?month=${twoAgo.slice(0, 7)}`)).json();
-    const day = view.days.find((d: { date: string }) => d.date === twoAgo);
-    // Counted, and flagged as added afterwards.
-    expect(day).toMatchObject({ mode: "office", late: true });
-    expect(view.fixableFrom).toBe(isoDay(-7));
-
-    const old = await ctx.post("/api/days", { data: { mode: "office", date: isoDay(-8) } });
-    expect(old.status()).toBe(403);
-    expect((await old.json()).code).toBe("locked");
-    const future = await ctx.post("/api/days", { data: { mode: "office", date: isoDay(1) } });
-    expect(future.status()).toBe(409);
+    for (const date of [isoDay(-2), isoDay(-8)]) {
+      const res = await ctx.post("/api/days", { data: { mode: "office", date } });
+      expect(res.status(), date).toBe(403);
+      expect(await res.json()).toMatchObject({ code: "locked", error: "Ask an admin to fix a past day" });
+    }
+    expect((await ctx.post("/api/days", { data: { mode: "office", date: isoDay(1) } })).status()).toBe(409);
     expect((await ctx.post("/api/days", { data: { mode: "office", date: "2026-02-30" } })).status()).toBe(400);
     expect((await ctx.post("/api/days", { data: { mode: "desk" } })).status()).toBe(400);
   });
@@ -777,6 +778,37 @@ test.describe("Feed catch-up", () => {
     expect((await member.post("/api/events", { data: { title: "Member event", category: "social", startsAt, body: "", location: "" } })).status()).toBe(401);
     const adm = await admin();
     expect((await adm.post("/api/events", { data: { title: `Admin event ${Date.now()}`, category: "social", startsAt, body: "", location: "" } })).status()).toBe(201);
+  });
+
+  test("an important announcement needs a pin date that hasn't passed", async () => {
+    const adm = await admin();
+    for (const pinnedUntil of ["", plusDays(-1)]) {
+      const title = `Bad pin ${Date.now()} ${pinnedUntil}`;
+      const res = await adm.post("/api/announcements", { form: { title, body: "", important: "on", pinnedUntil }, maxRedirects: 0 });
+      expect(res.status()).toBe(303);
+      expect(res.headers().location).toContain("done=bad-pin");
+      expect((await (await adm.get("/api/announcements")).json()).some((a: { title: string }) => a.title === title)).toBe(false);
+    }
+  });
+
+  test("reading the feed doesn't use up the office's shared write limit", async () => {
+    // Two people behind one office IP: one reads a lot, the other can still vote.
+    const shared = ip();
+    const at = (who: string) => signedInFrom(who, shared);
+    const reader = await at(email());
+    for (let i = 0; i < 125; i++) await reader.post("/api/feed/seen", { data: { at: new Date(Date.now() - 3_600_000 + i * 1000).toISOString() } });
+    const other = await at(email());
+    const res = await other.post("/api/notices", { data: { kind: "quote", body: "Still works", title: "", attribution: "", color: "purple", anonymous: false } });
+    expect(res.status()).toBe(201);
+  });
+
+  test("your own birthday isn't in your feed's celebrations", async () => {
+    const who = email();
+    const ctx = await signedIn(who);
+    const today = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(5, 10);
+    expect((await ctx.patch("/api/account", { data: { birthday: today, showBirthday: true } })).status()).toBe(200);
+    const feed = await (await ctx.get("/api/feed")).json();
+    expect(feed.celebrations.some((c: { email: string }) => c.email === who)).toBe(false);
   });
 
   test("an important announcement is shown once per person and admins see a count", async () => {

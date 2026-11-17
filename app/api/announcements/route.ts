@@ -1,12 +1,12 @@
 import { boardHref } from "@/lib/journey";
 import { NextRequest,NextResponse } from "next/server";
 import { currentActor, isAdmin } from "@/lib/admin";
-import { validDate } from "@/lib/time";
+import { todayIST, validDate } from "@/lib/time";
 import { sendPush } from "@/lib/push";
 import { id, store } from "@/lib/store";
 
 // Redirect back to the admin section with a flash key the page turns into a toast.
-const back = (done: "posted" | "deleted" | "missing-title") =>
+const back = (done: "posted" | "deleted" | "missing-title" | "bad-pin") =>
   new NextResponse(null, { status: 303, headers: { Location: `/admin?tab=publish&done=${done}#announcements` } });
 
 export async function GET(req:NextRequest) {
@@ -37,6 +37,8 @@ export async function POST(req: Request) {
   const body = text("body", 500);
   const important = form.get("important") === "on" || form.get("important") === "true";
   const pinnedUntil = text("pinnedUntil", 10);
+  // An important announcement is shown until its pin date, so the date must be today or later.
+  if (important && (!validDate(pinnedUntil) || pinnedUntil < todayIST())) return back("bad-pin");
   const actor = await currentActor();
   const announcement = await store.addAnnouncement({
     id: id(),
@@ -44,9 +46,9 @@ export async function POST(req: Request) {
     body,
     tag: text("tag", 30) || "Office",
     createdAt: new Date().toISOString(),
-    important: important && validDate(pinnedUntil),
+    important,
     authorName: actor?.name || null,
-    pinnedUntil: important && validDate(pinnedUntil) ? pinnedUntil : null,
+    pinnedUntil: important ? pinnedUntil : null,
   });
   // Best-effort: a push that fails must not fail the post.
   await sendPush({ title, body: body.slice(0, 120), href: boardHref(announcement.id), tag: "announcement" }).catch(() => {});

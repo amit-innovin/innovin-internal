@@ -4,7 +4,7 @@ import { expect, test, uniqueEmail, signInEmployee } from "./fixtures";
 
 // The Material 3 Days screen (prototype: docs/design/m3/Prototype.dc.html, "Days").
 // Dates come from the server's own view, so these tests hold on any calendar day.
-type Day = { date: string; working: boolean; fixable: boolean; mode: string | null; planned: boolean };
+type Day = { date: string; working: boolean; mode: string | null; planned: boolean };
 type View = { today: string; month: string; fixableFrom: string; officeDays: number[]; days: Day[] };
 const view = async (page: Page, month?: string): Promise<View> => (await page.request.get(month ? `/api/days?month=${month}` : "/api/days")).json();
 const shiftMonth = (month: string, by: number) => {
@@ -72,40 +72,17 @@ test.describe("Days", () => {
     await expect(cell(page, FUTURE)).toHaveAccessibleName(new RegExp(`^${longDay(FUTURE)}\\. Tap to plan`));
   });
 
-  test("fix one of your last 7 days: in office or not in office", async ({ page }) => {
-    await signInEmployee(page, uniqueEmail("days-fix"), "/days");
+  test("past dates aren't tappable: a date is for planning a day in or applying for leave", async ({ page }) => {
+    await signInEmployee(page, uniqueEmail("days-past"), "/days");
     const now = await view(page);
-    let target: { month: string; day: Day } | null = null;
-    for (const month of [now.month, shiftMonth(now.month, -1)]) {
-      const day = (await view(page, month)).days.filter((d) => d.fixable && d.working).at(-1);
-      if (day) { target = { month, day }; break; }
-    }
-    expect(target, "a fixable working day in the last 7 days").not.toBeNull();
-    await page.goto(`/days?month=${target!.month}`);
-    await cell(page, target!.day.date).click();
-    const sheet = page.getByRole("dialog", { name: "Fix a day" });
-    await expect(sheet).toContainText("Marked later, so there's no location check.");
-    await expect(sheet.getByRole("radio")).toHaveCount(2);
-    await sheet.getByRole("radio", { name: "In office", exact: true }).click();
-    await sheet.getByRole("button", { name: "Save" }).click();
-    await expect(sheet).toHaveCount(0);
-    await expect(cell(page, target!.day.date)).toHaveAccessibleName(new RegExp(`^${longDay(target!.day.date)}, done\\. Tap to fix`));
-    await cell(page, target!.day.date).click();
-    await sheet.getByRole("radio", { name: "Not in office" }).click();
-    await sheet.getByRole("button", { name: "Save" }).click();
-    await expect(cell(page, target!.day.date)).toHaveAccessibleName(new RegExp(`^${longDay(target!.day.date)}\\. Tap to fix`));
-  });
-
-  test("an older day is locked and says who can change it", async ({ page }) => {
-    await signInEmployee(page, uniqueEmail("days-locked"), "/days");
-    const month = shiftMonth((await view(page)).month, -1);
-    const old = (await view(page, month)).days.find((d) => d.working && !d.fixable && d.mode === null)!;
+    const month = shiftMonth(now.month, -1);
     await page.goto(`/days?month=${month}`);
-    await cell(page, old.date).click();
-    const locked = page.getByRole("dialog", { name: "Day locked" });
-    await expect(locked).toContainText("You can fix your own last 7 days. Anything older needs an admin.");
-    await locked.getByRole("button", { name: "OK" }).click();
-    await expect(locked).toHaveCount(0);
+    await expect(calendar(page)).toBeVisible();
+    const past = (await view(page, month)).days.filter((d) => d.working);
+    expect(past.length).toBeGreaterThan(0);
+    await expect(cell(page, past[0].date)).toHaveCount(0);
+    await expect(calendar(page).getByText(new RegExp(`^${longDay(past[0].date)}`))).toHaveCount(1);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
   test("a short legend, and months up to two ahead", async ({ page }) => {

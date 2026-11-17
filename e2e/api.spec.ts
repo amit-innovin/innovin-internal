@@ -828,3 +828,88 @@ test.describe("Feed catch-up", () => {
     await adm.post("/api/announcements", { form: { _action: "delete", id: shown.announcement.id }, maxRedirects: 0 });
   });
 });
+
+test.describe("Tea & snacks", () => {
+  const DEFAULTS = { amAt: "11:00", amClose: "10:45", pmAt: "16:00", pmClose: "15:30", orderAt: "12:00" };
+  // Checked in at the office today, by location (the only way in now).
+  const inOffice = async () => {
+    const ctx = await signedIn(email());
+    expect((await ctx.post("/api/days", { data: { mode: "office", lat: 12.9352, lng: 77.6241, accuracyM: 20 } })).status()).toBe(200);
+    return ctx;
+  };
+  const setTimes = async (adm: APIRequestContext, times: object) => adm.patch("/api/admin/snack-times", { data: { ...DEFAULTS, ...times } });
+
+  test("tea and snack picks are for people checked in at the office", async () => {
+    const ctx = await signedIn(email());
+    const tea = await ctx.post("/api/tea", { data: { round: "am", going: true } });
+    expect(tea.status()).toBe(403);
+    expect(await tea.json()).toMatchObject({ code: "not-in-office" });
+    const snacks = await (await ctx.get("/api/snacks")).json();
+    const item = snacks.shelf[0];
+    if (item) {
+      const pick = await ctx.patch("/api/snacks", { data: { id: item.id, action: "pick" } });
+      expect(pick.status()).toBe(403);
+    }
+  });
+
+  test("one snack pick a day: switching moves it, and nobody sees who", async () => {
+    const adm = await admin();
+    const a = `Samosa ${Date.now()}`, b = `Fruit ${Date.now()}`;
+    await adm.post("/api/snacks", { data: { name: a, shelf: true } });
+    await adm.post("/api/snacks", { data: { name: b, shelf: true } });
+    try {
+      expect((await setTimes(adm, { orderAt: "23:59" })).status()).toBe(200);
+      const ctx = await inOffice();
+      const shelf = (await (await ctx.get("/api/snacks")).json()).shelf as { id: string; name: string }[];
+      const idA = shelf.find((s) => s.name === a)!.id, idB = shelf.find((s) => s.name === b)!.id;
+      const count = (view: { today: { picks: { itemId: string; count: number }[] } }, id: string) => view.today.picks.find((p) => p.itemId === id)?.count ?? 0;
+      let view = await (await ctx.patch("/api/snacks", { data: { id: idA, action: "pick" } })).json();
+      expect(view.today).toMatchObject({ open: true, mine: idA });
+      expect(count(view, idA)).toBe(1);
+      view = await (await ctx.patch("/api/snacks", { data: { id: idB, action: "pick" } })).json();
+      expect(view.today.mine).toBe(idB);
+      expect([count(view, idA), count(view, idB)]).toEqual([0, 1]);
+      expect(JSON.stringify(view)).not.toContain("voterRef");
+      view = await (await ctx.patch("/api/snacks", { data: { id: idB, action: "unpick" } })).json();
+      expect(view.today.mine).toBeNull();
+    } finally {
+      await setTimes(adm, {});
+    }
+  });
+
+  test("tea is answered per round, and not after the round's answers close", async () => {
+    const adm = await admin();
+    try {
+      // Morning round all day, answers open until 23:57.
+      expect((await setTimes(adm, { amAt: "23:58", amClose: "23:57", pmAt: "23:59", pmClose: "23:58" })).status()).toBe(200);
+      const ctx = await inOffice();
+      let tea = await (await ctx.get("/api/tea")).json();
+      expect(tea.round).toMatchObject({ id: "am", at: "23:58", open: true });
+      tea = await (await ctx.post("/api/tea", { data: { round: "am", going: false } })).json();
+      expect(tea.mine).toBe(false);
+      tea = await (await ctx.post("/api/tea", { data: { round: "am", going: true } })).json();
+      expect(tea.mine).toBe(true);
+      expect(tea.names).toBeUndefined();
+      expect((await ctx.post("/api/tea", { data: { round: "pm", going: true } })).status()).toBe(409);
+      // Now the morning round's answers closed at 00:01.
+      await setTimes(adm, { amAt: "23:58", amClose: "00:01", pmAt: "23:59", pmClose: "23:58" });
+      const closed = await ctx.post("/api/tea", { data: { round: "am", going: false } });
+      expect(closed.status()).toBe(409);
+      expect(await closed.json()).toMatchObject({ code: "closed" });
+      const adminView = await (await adm.get("/api/tea")).json();
+      expect(adminView.counts.am).toBeGreaterThan(0);
+      expect(Array.isArray(adminView.names.am)).toBe(true);
+    } finally {
+      await setTimes(adm, {});
+    }
+  });
+
+  test("admins set the times; answers must close before their round", async () => {
+    const adm = await admin();
+    const member = await signedIn(email());
+    expect((await member.patch("/api/admin/snack-times", { data: DEFAULTS })).status()).toBe(401);
+    expect((await setTimes(adm, { amClose: "11:00" })).status()).toBe(400);
+    expect((await setTimes(adm, { orderAt: "noon" })).status()).toBe(400);
+    expect(await (await adm.get("/api/admin/snack-times")).json()).toEqual(DEFAULTS);
+  });
+});

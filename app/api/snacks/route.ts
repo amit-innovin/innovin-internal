@@ -4,7 +4,10 @@ import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
+import { inOfficeToday, snackTimes } from "@/lib/snack-times";
+import { pickCounts, pickOpen } from "@/lib/snacks-rules";
 import { accountRef } from "@/lib/submitter";
+import { todayIST } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 const signIn = () => NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
@@ -13,14 +16,30 @@ const signIn = () => NextResponse.json({ error: "Sign in with your Innovin Googl
 // admins included, can see who wants what. Suggestions store no author at all.
 const voterRef = (email: string) => accountRef(`snack:${email}`);
 
+// Ordered today: an admin marked a shelf item bought on today's date (office time).
+const orderedToday = (items: { orderedAt: string | null }[], today: string) =>
+  items.some((i) => i.orderedAt && new Date(new Date(i.orderedAt).getTime() + 5.5 * 3600_000).toISOString().slice(0, 10) === today);
+
 async function view(email: string) {
-  const [items, votes, admin] = await Promise.all([store.listSnacks(), store.listSnackVotes(), isAdmin()]);
+  const today = todayIST();
+  const [items, votes, admin, picks, times] = await Promise.all([store.listSnacks(), store.listSnackVotes(), isAdmin(), store.listSnackPicks(today), snackTimes()]);
   const me = voterRef(email);
+  const shelfIds = items.filter((i) => i.status === "shelf").map((i) => i.id);
+  const ordered = orderedToday(items.filter((i) => i.status === "shelf"), today);
+  const counts = pickCounts(picks, shelfIds);
   const row = (i: (typeof items)[number]) => ({ id: i.id, name: i.name, note: i.note, orderedAt: i.orderedAt, votes: votes.filter((v) => v.itemId === i.id).length, mine: votes.some((v) => v.itemId === i.id && v.voterRef === me) });
   const byVotes = (a: { votes: number; name: string }, b: { votes: number; name: string }) => b.votes - a.votes || a.name.localeCompare(b.name);
   return {
     shelf: items.filter((i) => i.status === "shelf").map(row).sort(byVotes),
     suggestions: items.filter((i) => i.status === "suggested").map(row).sort(byVotes),
+    // Today's single pick: counts per item and which one is yours. Voter refs stay on the server.
+    today: {
+      open: pickOpen(new Date(), times, ordered),
+      orderAt: times.orderAt,
+      ordered,
+      picks: shelfIds.map((itemId) => ({ itemId, count: counts[itemId] ?? 0 })),
+      mine: picks.find((p) => p.voterRef === me)?.itemId ?? null,
+    },
     canManage: admin,
   };
 }
@@ -66,6 +85,15 @@ export async function PATCH(req: NextRequest) {
   if (!itemId) return badRequest();
   const item = await store.getSnack(itemId);
   if (!item || item.status === "dismissed") return NextResponse.json({ error: "That snack is no longer listed" }, { status: 404 });
+  if (action === "pick" || action === "unpick") {
+    const today = todayIST();
+    if (!(await inOfficeToday(session.email, today))) return NextResponse.json({ error: "Snacks are for people in the office today. Check in on Home first.", code: "not-in-office" }, { status: 403 });
+    const items = await store.listSnacks();
+    if (!pickOpen(new Date(), await snackTimes(), orderedToday(items.filter((i) => i.status === "shelf"), today))) return NextResponse.json({ error: "Today's order is in. Picks open again tomorrow.", code: "closed" }, { status: 409 });
+    if (action === "pick" && item.status !== "shelf") return NextResponse.json({ error: "That snack isn't on today's list" }, { status: 409 });
+    await store.setSnackPick(today, voterRef(session.email), action === "pick" ? itemId : null);
+    return NextResponse.json(await view(session.email));
+  }
   if (action === "vote") {
     await store.toggleSnackVote(itemId, voterRef(session.email));
     return NextResponse.json(await view(session.email));

@@ -4,9 +4,10 @@ import { House, LoaderCircle, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card } from "@/components/m3";
 import type { DaysView } from "@/lib/days";
+import { locationFailure } from "@/lib/locate";
 import { MarkDayError, useMarkDay } from "@/lib/queries";
 
-type Step = "idle" | "checking" | "success" | "remote" | "outside" | "blocked";
+type Step = "idle" | "checking" | "success" | "remote" | "outside" | "blocked" | "no-fix";
 const km = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`);
 export const timeIST = (iso: string) => new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(iso)).replace(/\s?(am|pm)$/i, "");
 
@@ -35,7 +36,7 @@ export function CheckIn({ days }: { days: DaysView }) {
   const checkIn = async () => {
     setStep("checking");
     let coords: GeolocationCoordinates;
-    try { coords = (await position()).coords; } catch { return setStep("blocked"); }
+    try { coords = (await position()).coords; } catch (error) { return setStep(locationFailure(error)); }
     mark.mutate({ mode: "office", lat: coords.latitude, lng: coords.longitude, accuracyM: coords.accuracy }, { onSuccess: () => settle("success", 1100), onError: fail });
   };
   const remote = () => mark.mutate({ mode: "remote" }, { onSuccess: () => settle("remote", 900), onError: fail });
@@ -69,17 +70,17 @@ export function CheckIn({ days }: { days: DaysView }) {
           <h2 className="m3-title" style={{ fontSize: 20, lineHeight: "26px" }}>{days.isOfficeDayToday ? "One of your office days" : "Not checked in yet"}</h2>
           {step === "checking" ? (
             <div role="status" style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 48 }}><LoaderCircle size={22} className="m3-spin" aria-hidden="true" />Checking your location…</div>
-          ) : step === "outside" || step === "blocked" ? (
+          ) : ["outside", "blocked", "no-fix"].includes(step) ? (
             <div role="alert" style={{ background: "var(--m3-warn-container)", color: "var(--m3-on-warn-container)", borderRadius: 16, padding: 14, display: "flex", flexDirection: "column", gap: 4 }}>
-              <b>{step === "outside" ? `You're about ${distance !== null ? km(distance) : "a long way"} from the office` : "Location is off for innovin"}</b>
-              <span className="m3-body">{step === "outside" ? "Check-in works close to the office. If you're at the door, step outside for a better signal and try again." : "Allow location for this site in your browser settings, then try again. It's only read when you tap Check in."}</span>
+              <b>{step === "outside" ? `You're about ${distance !== null ? km(distance) : "a long way"} from the office` : step === "no-fix" ? "Couldn't get your location" : "Location is off for innovin"}</b>
+              <span className="m3-body">{step === "outside" ? "Check-in works close to the office. If you're at the door, step outside for a better signal and try again." : step === "no-fix" ? "The signal is weak indoors. Move near a window and try again." : "Allow location for this site in your browser settings, then try again. It's only read when you tap Check in."}</span>
             </div>
           ) : (
             <span className="m3-small" style={{ display: "flex", gap: 8, alignItems: "flex-start" }}><MapPin size={18} aria-hidden="true" style={{ flex: "none", marginTop: 1 }} />We check your location once, when you tap Check in. It isn't tracked.</span>
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-            <Button className="m3-btn-lg" disabled={busy} onClick={checkIn}>{step === "outside" || step === "blocked" ? "Try again" : "Check in"}</Button>
-            <Button className="m3-btn-lg" variant={step === "outside" || step === "blocked" ? "outlined" : "tonal"} disabled={busy} onClick={remote}>Working remote</Button>
+            <Button className="m3-btn-lg" disabled={busy} onClick={checkIn}>{["outside", "blocked", "no-fix"].includes(step) ? "Try again" : "Check in"}</Button>
+            <Button className="m3-btn-lg" variant={["outside", "blocked", "no-fix"].includes(step) ? "outlined" : "tonal"} disabled={busy} onClick={remote}>Working remote</Button>
           </div>
         </>
       )}

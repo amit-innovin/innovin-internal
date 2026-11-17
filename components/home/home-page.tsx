@@ -192,7 +192,7 @@ function StepsTile() {
 export function HomePage({ firstName }: { firstName: string }) {
   const days = useDays();
   return (
-    <div className="m3-home m3-stack">
+    <div className="m3 m3-page m3-home m3-stack">
       <Header firstName={firstName} days={days.data} />
       {days.isPending || days.isError ? (
         <QueryState error={days.error} onRetry={() => days.refetch()} what="your day" />

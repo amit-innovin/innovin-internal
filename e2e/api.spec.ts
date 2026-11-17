@@ -59,9 +59,9 @@ test.describe("API: office days", () => {
     expect((await request.patch("/api/days", { data: { officeDays: [0] } })).status()).toBe(401);
   });
 
-  test("office needs proof: Wi-Fi alone, or a location inside the office", async () => {
+  test("office needs proof: a location inside the office", async () => {
     const ctx = await signedIn(email());
-    // Off Wi-Fi with no position: asked for a location.
+    // No position: asked for a location.
     const ask = await ctx.post("/api/days", { data: { mode: "office" } });
     expect(ask.status()).toBe(428);
     expect((await ask.json()).code).toBe("location-needed");
@@ -79,11 +79,11 @@ test.describe("API: office days", () => {
     // Coordinates never come back out.
     expect(JSON.stringify(view)).not.toContain("12.9352");
 
-    // On office Wi-Fi no position is needed at all.
+    // Being on the office network is not proof: without a position the check-in is refused.
     const wifi = await signedIn(email());
     const viaWifi = await wifi.post("/api/days", { data: { mode: "office" }, headers: { "x-forwarded-for": "203.0.113.7" } });
-    expect(viaWifi.status()).toBe(200);
-    expect((await viaWifi.json()).me).toMatchObject({ mode: "office", source: "wifi" });
+    expect(viaWifi.status()).toBe(428);
+    expect(await viaWifi.json()).toMatchObject({ code: "location-needed" });
   });
 
   test("remote never needs a location, a second tap replaces the first, and Change clears today", async () => {

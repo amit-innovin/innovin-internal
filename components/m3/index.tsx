@@ -53,7 +53,7 @@ export function ListRow({ href, onClick, leading, title, subtitle, trailing, che
 
 // The icon-only Speak up button; the label is its accessible name and tooltip.
 export function Fab({ href, label, icon }: { href: string; label: string; icon: ReactNode }) {
-  return <Link href={href} className="m3-fab" aria-label={label} title={label}>{icon}</Link>;
+  return <Link href={href} className="m3 m3-fab" aria-label={label} title={label}>{icon}</Link>;
 }
 
 // Loading and error states that every query-backed screen uses the same way.

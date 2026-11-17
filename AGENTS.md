@@ -61,7 +61,8 @@ smoke-test production, and delete any test rows created by the smoke test.
   `phase2-shell` branch so the owner can switch back. The Material 3 work lives on its own branch and is not merged to `main`.
 - Rebuilt screens live in `app/(member)/(duo)/` and render inside the shell `components/m3/app-shell.tsx`; `lib/nav.ts` lists the routes.
   New UI uses the primitives in `components/m3` and the tokens and classes in `app/m3.css` (scoped under `.m3`). Screens not
-  rebuilt yet keep their Duo styling (`components/duo`, `app/duo.css`) inside the new shell until their stage.
+  rebuilt yet keep their Duo styling (`components/duo`, `app/duo.css`) inside the new shell until their stage. A rebuilt
+  page opts in by wrapping its content in `className="m3 m3-page"` (font, colours, grey ground, column width).
 - Tappable means a filled, tonal or outlined button, or a row with a chevron; flat means information. Lappy appears only where
   the prototype draws it (Home header, celebrations, empty states), never on attendance, leave or reminders.
 

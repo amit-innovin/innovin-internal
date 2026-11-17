@@ -1,6 +1,7 @@
-/* Material 3 design (prototype: docs/design/m3/). Everything is scoped under .m3 so the Duo
-   screens that haven't moved yet keep their own styles. Colours are the prototype's tokens. */
-.m3 {
+/* Material 3 design (prototype: docs/design/m3/). Tokens are available across the shell
+   (.m3-app), but the font, colours and microinteractions apply only inside .m3: the shell's own
+   bars and each rebuilt page. Duo screens that haven't moved yet keep their own styles. */
+.m3, .m3-app {
   --m3-primary: #006493;
   --m3-on-primary: #FFFFFF;
   --m3-primary-container: #CAE6FF;
@@ -26,14 +27,13 @@
   --m3-speak: #24222F;
   --m3-font: var(--font-figtree), system-ui, sans-serif;
   --m3-ease: cubic-bezier(.2, .8, .2, 1);
-  font-family: var(--m3-font);
-  color: var(--m3-on-surface);
 }
+.m3 { font-family: var(--m3-font); color: var(--m3-on-surface); }
 .m3 .m3-h1 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.01em; }
 .m3 .m3-title { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; }
 .m3 .m3-body { font-size: 15px; line-height: 22px; }
 .m3 .m3-small { font-size: 13px; line-height: 18px; color: var(--m3-on-surface-variant); }
-.m3 .m3-stack { display: flex; flex-direction: column; gap: 14px; }
+.m3 .m3-stack, .m3.m3-stack { display: flex; flex-direction: column; gap: 14px; }
 
 /* Buttons */
 .m3 .m3-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 20px; border-radius: 20px; border: 0;
@@ -66,7 +66,7 @@
 .m3 .m3-avatar { flex: none; border-radius: 50%; display: grid; place-items: center; font-weight: 600; background: var(--m3-primary-container); color: var(--m3-on-primary-container); }
 
 /* Speak up floating button */
-.m3 .m3-fab { position: fixed; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 45; width: 56px; height: 56px; border-radius: 16px;
+.m3-fab { position: fixed; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 45; width: 56px; height: 56px; border-radius: 16px;
   display: grid; place-items: center; background: var(--m3-speak); color: #FFFFFF; box-shadow: 0 4px 10px rgba(0,0,0,.18), 0 1px 3px rgba(0,0,0,.3);
   transition: transform .12s ease; }
 
@@ -96,8 +96,12 @@
 }
 
 /* App shell: bottom bar on phones, icon sidebar on tablets, full sidebar from 1100px */
-.m3-app { display: flex; min-height: 100dvh; background: var(--m3-ground); }
-.m3-main { background: var(--m3-ground); }
+.m3-app { display: flex; min-height: 100dvh; }
+/* The grey ground belongs to rebuilt pages; Duo pages keep their own background. */
+.m3-app:has(.m3-page), .m3-app:has(.m3-page) .m3-main { background: var(--m3-ground); }
+/* A rebuilt page's column: full width up to the reading measure (the old .duo-col widths). */
+.m3-page { width: 100%; max-width: 640px; }
+@media (min-width: 768px) { .m3-page { max-width: 760px; } }
 .m3-side { display: none; }
 .m3-bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; padding: 12px 0 calc(16px + env(safe-area-inset-bottom)); background: var(--m3-surface-container); }
 .m3-tab { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--m3-on-surface-variant); text-decoration: none; }
@@ -120,7 +124,7 @@
 .m3-menuitem { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--m3-on-surface); text-decoration: none; font: 500 15px var(--m3-font); cursor: pointer; }
 .m3-menuitem:hover { background: var(--m3-surface-container); }
 @media (min-width: 768px) {
-  .m3-bottom, .m3 .m3-fab { display: none; }
+  .m3-bottom, .m3-fab { display: none; }
   .m3-side { display: flex; flex-direction: column; gap: 4px; width: 84px; flex-shrink: 0; padding: 20px 12px; background: var(--m3-surface-container); position: sticky; top: 0; height: 100dvh; overflow-y: auto; }
 }
 @media (min-width: 1100px) {

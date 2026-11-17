@@ -30,8 +30,8 @@ describe("time of day in IST", () => {
 
 // Monday 16 Nov 2026: not marked yet, and Monday is one of this person's office days.
 // Wednesday 18 is planned; Friday 13 was done last week (outside this week).
+const day = (date: string, extra: Partial<DaysView["days"][number]> = {}) => ({ date, mode: null, late: false, working: true, off: null, planned: false, leave: null, fixable: false, ...extra }) as DaysView["days"][number];
 function view(over: Partial<DaysView> = {}): DaysView {
-  const day = (date: string, extra: Partial<DaysView["days"][number]> = {}) => ({ date, mode: null, late: false, working: true, off: null, planned: false, leave: null, fixable: false, ...extra });
   return {
     today: "2026-11-16",
     month: "2026-11",
@@ -58,6 +58,10 @@ describe("planned days", () => {
   it("counts future planned days, plus today when not marked and it's an office day", () => expect(plannedCount(view())).toBe(3));
   it("does not count today once it's marked", () => expect(plannedCount(view({ me: { mode: "remote", source: "self", at: "2026-11-16T04:00:00Z" } }))).toBe(2));
   it("does not count today when it isn't an office day", () => expect(plannedCount(view({ isOfficeDayToday: false }))).toBe(2));
+  it("does not count planned days you are on leave", () =>
+    expect(plannedCount(view({ days: [day("2026-11-18", { planned: true, leave: "approved" }), day("2026-11-23", { planned: true })] }))).toBe(2));
+  it("does not count today when you are on leave today", () =>
+    expect(plannedCount(view({ days: [day("2026-11-16", { leave: "approved" }), day("2026-11-23", { planned: true })] }))).toBe(1));
 });
 
 describe("this week strip", () => {

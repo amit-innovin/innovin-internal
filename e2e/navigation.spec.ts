@@ -45,7 +45,7 @@ test.describe("Navigation & studio shell", () => {
     await expect(more.getByRole("link", { name: "Events", exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Innovin Internal home" }).click();
     await expect(page).toHaveURL("http://localhost:3210/");
-    await expect(page.getByRole("button", { name: /I'm in the office/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Check in", exact: true })).toBeVisible();
   });
 
   test("support pages remain reachable through the studio shell", async ({ page }) => {

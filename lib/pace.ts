@@ -23,11 +23,12 @@ export function paceVerdict(input: { done: number; planned: number; target: numb
   return { state: "short", short: `Plan ${-spare} more`, long: `Plan ${-spare} more ${-spare === 1 ? "day" : "days"} to reach ${target}`, tone: "warn" };
 }
 
-const countsToday = (view: DaysView) => view.me === null && view.isOfficeDayToday;
+const countsToday = (view: DaysView) => view.me === null && view.isOfficeDayToday && !view.days.find((d) => d.date === view.today)?.leave;
 
-// Future days already planned, plus today while it's still open and one of your office days.
+// Future days already planned (and not on leave), plus today while it's still open, one of your
+// office days, and not a leave day.
 export function plannedCount(view: DaysView): number {
-  return view.days.filter((d) => d.date > view.today && d.planned).length + (countsToday(view) ? 1 : 0);
+  return view.days.filter((d) => d.date > view.today && d.planned && !d.leave).length + (countsToday(view) ? 1 : 0);
 }
 
 export type WeekDay = { date: string; label: string; day: number; state: "done" | "planned" | "empty" | "leave" | "off"; today: boolean };

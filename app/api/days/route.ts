@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(await daysView(session.email, month));
 }
 
-// Marks one of the caller's own days: { mode: "office" | "remote" | "none", date?, lat?, lng?, accuracyM? }.
+// Marks one of the caller's own days: { mode: "office" | "none", date?, lat?, lng?, accuracyM? }.
+// Remote isn't a mark: not coming in means remote.
 export async function POST(req: NextRequest) {
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
   if (!session) return signIn();
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   if (limited) return limited;
   const body = await readJSON(req);
   if (!body) return badRequest();
-  if (body.mode !== "office" && body.mode !== "remote" && body.mode !== "none") return badRequest("Choose office, remote or none");
+  if (body.mode !== "office" && body.mode !== "none") return badRequest("Choose office or none");
   const date = body.date === undefined ? todayIST() : body.date;
   if (typeof date !== "string" || !validDate(date)) return badRequest("Invalid date");
   const lat = num(body.lat), lng = num(body.lng), accuracyM = num(body.accuracyM);

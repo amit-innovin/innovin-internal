@@ -55,7 +55,8 @@ test.describe("API: office days", () => {
 
   test("needs a sign-in", async ({ request }) => {
     expect((await request.get("/api/days")).status()).toBe(401);
-    expect((await request.post("/api/days", { data: { mode: "remote" } })).status()).toBe(401);
+    expect((await request.post("/api/days", { data: { mode: "office" } })).status()).toBe(401);
+    expect((await request.patch("/api/days/plan", { data: { date: FUTURE, planned: true } })).status()).toBe(401);
     expect((await request.patch("/api/days", { data: { officeDays: [0] } })).status()).toBe(401);
   });
 
@@ -86,17 +87,74 @@ test.describe("API: office days", () => {
     expect(await viaWifi.json()).toMatchObject({ code: "location-needed" });
   });
 
-  test("remote never needs a location, a second tap replaces the first, and Change clears today", async () => {
+  test("remote isn't a mark any more; office marks today and Change clears it", async () => {
     const ctx = await signedIn(email());
-    const remote = await (await ctx.post("/api/days", { data: { mode: "remote" } })).json();
-    expect(remote.me).toMatchObject({ mode: "remote", source: "self" });
-    expect(remote.summary.done).toBe(0);
+    expect((await ctx.post("/api/days", { data: { mode: "remote" } })).status()).toBe(400);
     const office = await (await ctx.post("/api/days", { data: { mode: "office", lat: 12.9352, lng: 77.6241 } })).json();
     expect(office.me.mode).toBe("office");
     expect(office.days.filter((d: { mode: string | null }) => d.mode).length).toBe(1);
     const cleared = await (await ctx.post("/api/days", { data: { mode: "none" } })).json();
     expect(cleared.me).toBeNull();
     expect(cleared.summary.done).toBe(0);
+  });
+
+  test("single future days can be planned and unplanned, up to two months ahead", async () => {
+    const ctx = await signedIn(email());
+    const plan = (date: string, planned: unknown) => ctx.patch("/api/days/plan", { data: { date, planned } });
+    const day = (view: { days: { date: string; planned: boolean; added: boolean }[] }, date: string) => view.days.find((d) => d.date === date)!;
+    const on = await plan(FUTURE, true);
+    expect(on.status()).toBe(200);
+    expect(day(await on.json(), FUTURE)).toMatchObject({ planned: true, added: true });
+    expect(day(await (await plan(FUTURE, false)).json(), FUTURE).planned).toBe(false);
+
+    const sunday = (() => { let d = isoDay(7); while (new Date(`${d}T00:00:00Z`).getUTCDay() !== 0) d = new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10); return d; })();
+    const [y, m] = isoDay(0).split("-").map(Number);
+    const threeAhead = new Date(Date.UTC(y, m - 1 + 3, 10)).toISOString().slice(0, 10);
+    for (const date of [isoDay(0), isoDay(-1), sunday, threeAhead]) {
+      const res = await plan(date, true);
+      expect(res.status(), date).toBe(409);
+      expect(await res.json()).toMatchObject({ code: "not-plannable" });
+    }
+    expect((await plan(FUTURE, "yes")).status()).toBe(400);
+    expect((await plan("2026-13-01", true)).status()).toBe(400);
+  });
+
+  test("admins close a day: nobody can plan it or check in, and leave over it costs nothing", async () => {
+    const adm = await admin();
+    const member = await signedIn(email());
+    const today = isoDay(0);
+    const closedDay = futureWorkday(3);
+    const close = (date: string, reason = "Maintenance") => adm.post("/api/admin/closed-days", { data: { date, reason } });
+    expect((await member.get("/api/admin/closed-days")).status()).toBe(401);
+    expect((await member.post("/api/admin/closed-days", { data: { date: closedDay, reason: "x" } })).status()).toBe(401);
+    expect((await close(closedDay, "")).status()).toBe(400);
+    expect((await close(isoDay(-1))).status()).toBe(409);
+    try {
+      expect((await close(closedDay)).status()).toBe(200);
+      expect((await close(closedDay)).status()).toBe(409);
+      const listed = await (await adm.get(`/api/admin/closed-days?from=${closedDay}&to=${closedDay}`)).json();
+      expect(listed).toMatchObject([{ date: closedDay, reason: "Maintenance" }]);
+
+      const plan = await member.patch("/api/days/plan", { data: { date: closedDay, planned: true } });
+      expect(plan.status()).toBe(409);
+      const view = await (await member.get(`/api/days?month=${closedDay.slice(0, 7)}`)).json();
+      expect(view.days.find((d: { date: string }) => d.date === closedDay)).toMatchObject({ closed: "Maintenance", working: false, planned: false });
+
+      // A two-day request over the closed day and the next working day costs one day.
+      const next = new Date(Date.parse(`${closedDay}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+      const leave = await member.post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: closedDay, endDate: next, halfDay: false, reason: "" } });
+      expect(leave.status()).toBe(200);
+      expect((await leave.json()).days).toBe(1);
+
+      expect((await close(today)).status()).toBe(200);
+      const checkIn = await member.post("/api/days", { data: { mode: "office", lat: 12.9352, lng: 77.6241 } });
+      expect(checkIn.status()).toBe(409);
+      expect(await checkIn.json()).toMatchObject({ code: "closed", error: "The office is closed that day" });
+    } finally {
+      await adm.delete("/api/admin/closed-days", { data: { date: today } });
+      await adm.delete("/api/admin/closed-days", { data: { date: closedDay } });
+    }
+    expect((await adm.delete("/api/admin/closed-days", { data: { date: closedDay } })).status()).toBe(404);
   });
 
   test("you can fix your own last 7 days without a location; older and future days are refused", async () => {

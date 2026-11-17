@@ -103,7 +103,7 @@ export type DaysView = Awaited<ReturnType<typeof daysView>>;
 
 export type MarkResult =
   | { ok: true }
-  | { ok: false; status: 403 | 409 | 422 | 428; code: "locked" | "future" | "outside" | "location-needed"; error: string; distanceM?: number };
+  | { ok: false; status: 403 | 409 | 422 | 428; code: "locked" | "future" | "closed" | "outside" | "location-needed"; error: string; distanceM?: number };
 
 // One tap. Today: office is verified by location; remote is taken at its word.
 // A past day inside the self-fix window is recorded as late, with no location check, and logged.
@@ -121,6 +121,7 @@ export async function markDay(input: { email: string; date: string; mode: DayMod
     let source: AttendanceRow["source"] = "self";
     let position = { lat: null as number | null, lng: null as number | null, accuracyM: null as number | null };
     if (input.mode === "office") {
+      if ((await closedMap(today, today)).has(today)) return { ok: false, status: 409, code: "closed", error: "The office is closed that day" };
       const check = officeCheck({ lat: input.lat, lng: input.lng });
       if (!check.ok) {
         return check.code === "outside"

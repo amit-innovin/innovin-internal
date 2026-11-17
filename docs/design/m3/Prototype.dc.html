@@ -495,7 +495,7 @@ class Component extends DCLogic {
       { id: 'e', cardBg: '#F3F6FF', tint: '#D3E5F5', kind: 'Event', kindBg: '#D3E5F5', kindColor: '#0C1D29', author: 'Meera', av: 'MS', avBg: '#EBDCFF', time: 'Yesterday', title: 'Diwali potluck · Thu 19 Nov, 4:30', body: 'Big room after standup. Bring one dish from home.', action: 'rsvp' },
       { id: 'p', cardBg: '#FFF7EC', tint: '#FFDDB0', kind: 'Poll', kindBg: '#FFDDB0', kindColor: '#4A2800', author: 'Rahul', av: 'RV', avBg: '#D3E5F5', time: 'Yesterday', title: 'Friday lunch: biryani or pizza?', body: '', poll: true },
       { id: 'k', cardBg: '#FFF4F6', tint: '#FFD9E2', kind: 'Kudos', kindBg: '#FFD9E2', kindColor: '#5C1130', author: 'Arjun → Meera', av: 'AK', avBg: '#CAE6FF', time: '2 h ago', title: 'Kudos to Meera', body: '“Stayed back on Friday to get the client demo working. The client noticed. Thank you.”', action: 'like' },
-      { id: 'b', cardBg: '#FFFAEB', tint: '#FFE08A', kind: 'Birthday', kindBg: '#FFE08A', kindColor: '#3D2E00', author: 'Lappy', av: 'in', avBg: '#FFE08A', time: 'Today', title: 'It’s Nisha’s birthday', body: 'She’s in the office today, so you can say it in person too.', action: 'wish', system: true }
+      { id: 'b', cardBg: '#FFFAEB', tint: '#FFE08A', kind: 'Birthday', kindBg: '#FFE08A', kindColor: '#3D2E00', author: 'Lappy', av: 'in', avBg: '#FFE08A', time: 'Today', title: 'It’s Nisha’s birthday', body: 'Say happy birthday with a kudos.', action: 'wish', system: true }
     ];
     this.state = {
       tab: 'home', sub: null, status: 'none', tea: null, rsvp: false, vote: null, like: false, wish: false,
@@ -612,7 +612,7 @@ class Component extends DCLogic {
     const toggles = {
       rsvp: { on: s.rsvp, label: s.rsvp ? 'Going' : "I'm in" },
       like: { on: s.like, label: s.like ? 'Appreciated' : 'Appreciate' },
-      wish: { on: s.wish, label: s.wish ? 'Wished' : 'Wish her' }
+      wish: { on: s.wish, label: s.wish ? 'Wished' : 'Send a wish' }
     };
     const teaClosed = !!(this.props.teaClosed ?? false);
     tea.open = !teaClosed && s.tea === null; tea.done = !teaClosed && s.tea !== null;

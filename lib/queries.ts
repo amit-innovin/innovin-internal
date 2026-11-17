@@ -50,7 +50,7 @@ export function useDays(month?: string) {
 export class MarkDayError extends Error {
   constructor(message: string, public code?: string, public distanceM?: number) { super(message); }
 }
-export type MarkDayInput = { mode: "office" | "remote" | "none"; date?: string; lat?: number; lng?: number; accuracyM?: number };
+export type MarkDayInput = { mode: "office" | "none"; date?: string; lat?: number; lng?: number; accuracyM?: number };
 
 export function useMarkDay() {
   const client = useQueryClient();
@@ -67,6 +67,39 @@ export function useMarkDay() {
     onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.days() }),
   });
 }
+
+// Plans one future day in or out. The server answers with that month's view.
+export function usePlanDay() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { date: string; planned: boolean }) => {
+      const res = await send("/api/days/plan", { method: "PATCH", json: input });
+      if (!res.ok) throw new Error(await readError(res));
+      return (await res.json()) as DaysView;
+    },
+    onSuccess: (view) => {
+      client.setQueryData(queryKeys.days(view.month), view);
+      return client.invalidateQueries({ queryKey: queryKeys.days() });
+    },
+  });
+}
+
+export type ClosedDay = { date: string; reason: string; createdBy: string; createdAt: string };
+export function useClosedDays() {
+  return useQuery({ queryKey: ["closed-days"], queryFn: () => fetchJSON<ClosedDay[]>("/api/admin/closed-days") });
+}
+function useClosedDayWrite(method: "POST" | "DELETE") {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { date: string; reason?: string }) => {
+      const res = await send("/api/admin/closed-days", { method, json: input });
+      if (!res.ok) throw new Error(await readError(res));
+    },
+    onSuccess: () => Promise.all([client.invalidateQueries({ queryKey: ["closed-days"] }), client.invalidateQueries({ queryKey: queryKeys.days() })]),
+  });
+}
+export const useAddClosedDay = () => useClosedDayWrite("POST");
+export const useRemoveClosedDay = () => useClosedDayWrite("DELETE");
 
 export function useSetOfficeDays() {
   const client = useQueryClient();

@@ -23,7 +23,11 @@ export function paceVerdict(input: { done: number; planned: number; target: numb
   return { state: "short", short: `Plan ${-spare} more`, long: `Plan ${-spare} more ${-spare === 1 ? "day" : "days"} to reach ${target}`, tone: "warn" };
 }
 
-const countsToday = (view: DaysView) => view.me === null && view.isOfficeDayToday && !view.days.find((d) => d.date === view.today)?.leave;
+// Only in the view of today's own month; another month's view never includes today.
+const countsToday = (view: DaysView) => {
+  const today = view.days.find((d) => d.date === view.today);
+  return !!today && view.me === null && view.isOfficeDayToday && !today.leave;
+};
 
 // Future days already planned (and not on leave), plus today while it's still open, one of your
 // office days, and not a leave day.

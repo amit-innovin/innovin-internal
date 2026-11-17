@@ -20,6 +20,7 @@ import type {
   WorkspaceProfile,
   AttendanceChangeRow,
   ClosedDayRow,
+  TeaRound,
   PlanOverrideRow,
   SnackItem,
   BookRow,
@@ -235,6 +236,28 @@ CREATE TABLE IF NOT EXISTS announcement_acks (
   email text NOT NULL,
   at timestamptz NOT NULL,
   PRIMARY KEY (announcement_id, email)
+);
+CREATE TABLE IF NOT EXISTS tea_answers (
+  date text NOT NULL,
+  round text NOT NULL,
+  email text NOT NULL,
+  going boolean NOT NULL,
+  created_at timestamptz NOT NULL,
+  PRIMARY KEY (date, round, email)
+);
+-- One-time copy of the single-round tea list: those were all afternoon "yes" answers.
+INSERT INTO tea_answers (date, round, email, going, created_at)
+  SELECT date, 'pm', email, true, created_at FROM tea_rounds WHERE NOT EXISTS (SELECT 1 FROM tea_answers)
+  ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS snack_picks (
+  date text NOT NULL,
+  voter_ref text NOT NULL,
+  item_id text NOT NULL,
+  PRIMARY KEY (date, voter_ref)
+);
+CREATE TABLE IF NOT EXISTS settings (
+  key text PRIMARY KEY,
+  value jsonb NOT NULL
 );
 CREATE TABLE IF NOT EXISTS closed_days (
   date text PRIMARY KEY,
@@ -550,13 +573,36 @@ class PgStore implements Store {
     const res = await this.q(`SELECT notice_id, email, option FROM poll_votes WHERE notice_id = ANY($1)`, [ids]);
     return res.rows.map((r) => ({ noticeId: r.notice_id, email: r.email, option: r.option }));
   }
+  // The afternoon round, for callers from before rounds existed.
   async setTea(date: string, email: string, going: boolean) {
-    if (going) await this.q(`INSERT INTO tea_rounds (date, email, created_at) VALUES ($1,$2,now()) ON CONFLICT DO NOTHING`, [date, email]);
-    else await this.q(`DELETE FROM tea_rounds WHERE date = $1 AND email = $2`, [date, email]);
+    await this.setTeaAnswer(date, "pm", email, going ? true : null);
   }
   async listTea(date: string) {
-    const res = await this.q(`SELECT * FROM tea_rounds WHERE date = $1 ORDER BY created_at`, [date]);
+    const res = await this.q(`SELECT * FROM tea_answers WHERE date = $1 AND round = 'pm' AND going ORDER BY created_at`, [date]);
     return res.rows.map((r) => ({ date: r.date, email: r.email, createdAt: r.created_at?.toISOString?.() ?? r.created_at }));
+  }
+  async setTeaAnswer(date: string, round: TeaRound, email: string, going: boolean | null) {
+    if (going === null) await this.q(`DELETE FROM tea_answers WHERE date = $1 AND round = $2 AND email = $3`, [date, round, email]);
+    else await this.q(`INSERT INTO tea_answers (date, round, email, going, created_at) VALUES ($1,$2,$3,$4,now()) ON CONFLICT (date, round, email) DO UPDATE SET going = EXCLUDED.going`, [date, round, email, going]);
+  }
+  async listTeaAnswers(date: string) {
+    const res = await this.q(`SELECT * FROM tea_answers WHERE date = $1 ORDER BY created_at`, [date]);
+    return res.rows.map((r) => ({ date: r.date, round: r.round as TeaRound, email: r.email, going: r.going, createdAt: r.created_at?.toISOString?.() ?? r.created_at }));
+  }
+  async setSnackPick(date: string, voterRef: string, itemId: string | null) {
+    if (itemId === null) await this.q(`DELETE FROM snack_picks WHERE date = $1 AND voter_ref = $2`, [date, voterRef]);
+    else await this.q(`INSERT INTO snack_picks (date, voter_ref, item_id) VALUES ($1,$2,$3) ON CONFLICT (date, voter_ref) DO UPDATE SET item_id = EXCLUDED.item_id`, [date, voterRef, itemId]);
+  }
+  async listSnackPicks(date: string) {
+    const res = await this.q(`SELECT item_id, voter_ref FROM snack_picks WHERE date = $1`, [date]);
+    return res.rows.map((r) => ({ itemId: r.item_id as string, voterRef: r.voter_ref as string }));
+  }
+  async getSetting<T = unknown>(key: string) {
+    const res = await this.q(`SELECT value FROM settings WHERE key = $1`, [key]);
+    return (res.rows[0]?.value ?? null) as T | null;
+  }
+  async setSetting(key: string, value: unknown) {
+    await this.q(`INSERT INTO settings (key, value) VALUES ($1,$2::jsonb) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [key, JSON.stringify(value)]);
   }
   async addSnack(row: SnackItem) {
     await this.q(`INSERT INTO snack_items (id, name, note, status, ordered_at, created_at) VALUES ($1,$2,$3,$4,$5,$6)`, [row.id, row.name, row.note, row.status, row.orderedAt, row.createdAt]);

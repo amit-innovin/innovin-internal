@@ -220,7 +220,10 @@ export type NoticeRow = {
 };
 export type NoticeReaction = { noticeId: string; email: string; emoji: string };
 export type PollVote = { noticeId: string; email: string; option: number };
-export type TeaRow = { date: string; email: string; createdAt: string };
+export type TeaRow = { date: string; email: string; createdAt: string; round?: TeaRound; going?: boolean };
+export type TeaRound = "am" | "pm";
+// One person's answer for one tea round. Rows from before rounds existed read as an afternoon yes.
+export type TeaAnswer = { date: string; round: TeaRound; email: string; going: boolean; createdAt: string };
 // "suggested" by anyone (anonymously) → "shelf" when an admin adds it → "dismissed".
 export type SnackItem = { id: string; name: string; note: string; status: "suggested" | "shelf" | "dismissed"; orderedAt: string | null; createdAt: string };
 // voterRef is a keyed hash of the voter, so one vote per person without storing who.
@@ -246,6 +249,13 @@ export interface Store {
   listPollVotes(noticeIds: string[]): Promise<PollVote[]>;
   setTea(date: string, email: string, going: boolean): Promise<void>;
   listTea(date: string): Promise<TeaRow[]>;
+  setTeaAnswer(date: string, round: TeaRound, email: string, going: boolean | null): Promise<void>;
+  listTeaAnswers(date: string): Promise<TeaAnswer[]>;
+  // Today's snack: one pick per person per day, by anonymous voter ref. null clears it.
+  setSnackPick(date: string, voterRef: string, itemId: string | null): Promise<void>;
+  listSnackPicks(date: string): Promise<{ itemId: string; voterRef: string }[]>;
+  getSetting<T = unknown>(key: string): Promise<T | null>;
+  setSetting(key: string, value: unknown): Promise<void>;
   addSnack(row: SnackItem): Promise<SnackItem>;
   getSnack(id: string): Promise<SnackItem | null>;
   listSnacks(): Promise<SnackItem[]>;

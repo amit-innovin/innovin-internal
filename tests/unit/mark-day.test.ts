@@ -18,6 +18,7 @@ describe("markDay on a closed day", () => {
     await store.addClosedDay({ date: yesterday, reason: "Maintenance", createdBy: "admin", createdAt: new Date().toISOString() });
     const result = await markDay({ email: "a@innovinlabs.com", date: yesterday, mode: "office", lat: null, lng: null, accuracyM: null });
     expect(result).toMatchObject({ ok: false, status: 409, code: "closed" });
-    expect(await markDay({ email: "a@innovinlabs.com", date: yesterday, mode: null, lat: null, lng: null, accuracyM: null })).toEqual({ ok: true });
+    // Members don't fix past days at all any more (owner ruling): an admin does.
+    expect(await markDay({ email: "a@innovinlabs.com", date: yesterday, mode: null, lat: null, lng: null, accuracyM: null })).toMatchObject({ ok: false, status: 403, code: "locked" });
   });
 });

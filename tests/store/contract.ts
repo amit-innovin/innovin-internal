@@ -58,6 +58,41 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.countAnnouncementAcks(["imp", "plain"])).toEqual({ imp: 2, plain: 0 });
     });
 
+    it("keeps one tea answer per person, round and day, including a skip", async () => {
+      await store.setTeaAnswer("2026-11-18", "am", "a@innovinlabs.com", true);
+      await store.setTeaAnswer("2026-11-18", "pm", "a@innovinlabs.com", false);
+      await store.setTeaAnswer("2026-11-18", "am", "b@innovinlabs.com", true);
+      await store.setTeaAnswer("2026-11-18", "am", "b@innovinlabs.com", null);
+      const rows = (await store.listTeaAnswers("2026-11-18")).map(({ round, email, going }) => ({ round, email, going }));
+      expect(rows.sort((x, y) => x.round.localeCompare(y.round))).toEqual([
+        { round: "am", email: "a@innovinlabs.com", going: true },
+        { round: "pm", email: "a@innovinlabs.com", going: false },
+      ]);
+    });
+
+    it("reads tea from before rounds as an afternoon yes", async () => {
+      await store.setTea("2026-11-17", "c@innovinlabs.com", true);
+      expect((await store.listTeaAnswers("2026-11-17")).map(({ round, email, going }) => ({ round, email, going }))).toEqual([{ round: "pm", email: "c@innovinlabs.com", going: true }]);
+      expect((await store.listTea("2026-11-17")).map((t) => t.email)).toEqual(["c@innovinlabs.com"]);
+    });
+
+    it("keeps one snack pick per person per day, and switching replaces it", async () => {
+      await store.setSnackPick("2026-11-18", "ref-a", "samosa");
+      await store.setSnackPick("2026-11-18", "ref-a", "fruit");
+      await store.setSnackPick("2026-11-18", "ref-b", "fruit");
+      await store.setSnackPick("2026-11-19", "ref-a", "samosa");
+      expect((await store.listSnackPicks("2026-11-18")).sort((x, y) => x.voterRef.localeCompare(y.voterRef))).toEqual([{ itemId: "fruit", voterRef: "ref-a" }, { itemId: "fruit", voterRef: "ref-b" }]);
+      await store.setSnackPick("2026-11-18", "ref-a", null);
+      expect(await store.listSnackPicks("2026-11-18")).toEqual([{ itemId: "fruit", voterRef: "ref-b" }]);
+    });
+
+    it("stores settings by key", async () => {
+      expect(await store.getSetting("snackTea")).toBeNull();
+      await store.setSetting("snackTea", { orderAt: "12:30" });
+      await store.setSetting("snackTea", { orderAt: "13:00" });
+      expect(await store.getSetting("snackTea")).toEqual({ orderAt: "13:00" });
+    });
+
     it("keeps one plan override per person and date, and lists a date's overrides for everyone", async () => {
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", true);
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", false);

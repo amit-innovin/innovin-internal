@@ -47,12 +47,14 @@ type DB = {
   planOverrides: PlanOverrideRow[];
   closedDays: ClosedDayRow[];
   announcementAcks: { announcementId: string; email: string; at: string }[];
+  snackPicks: { date: string; voterRef: string; itemId: string }[];
+  settings: Record<string, unknown>;
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
 const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, feedSeenAt: e.feedSeenAt ?? null });
 const readAnnouncement = (a: AnnouncementRow): AnnouncementRow => ({ ...a, important: a.important ?? false, authorName: a.authorName ?? null, pinnedUntil: a.pinnedUntil ?? null });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [] });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [], snackPicks: [], settings: {} });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -181,14 +183,25 @@ export const jsonStore: Store = {
       return { result: true, changed: true };
     }),
   listPollVotes: (ids) => query((db) => db.pollVotes.filter((v) => ids.includes(v.noticeId))),
-  setTea: (date, email, going) =>
+  // The afternoon round, for callers from before rounds existed.
+  setTea: (date, email, going) => jsonStore.setTeaAnswer(date, "pm", email, going ? true : null),
+  listTea: (date) => query((db) => db.tea.filter((t) => t.date === date && (t.round ?? "pm") === "pm" && (t.going ?? true)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  setTeaAnswer: (date, round, email, going) =>
     mutate((db) => {
-      const has = db.tea.some((t) => t.date === date && t.email === email);
-      if (going && !has) db.tea.push({ date, email, createdAt: new Date().toISOString() });
-      if (!going) db.tea = db.tea.filter((t) => !(t.date === date && t.email === email));
-      return { result: undefined, changed: going !== has };
+      db.tea = db.tea.filter((t) => !(t.date === date && (t.round ?? "pm") === round && t.email === email));
+      if (going !== null) db.tea.push({ date, round, email, going, createdAt: new Date().toISOString() });
+      return { result: undefined, changed: true };
     }),
-  listTea: (date) => query((db) => db.tea.filter((t) => t.date === date).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  listTeaAnswers: (date) => query((db) => db.tea.filter((t) => t.date === date).map((t) => ({ date: t.date, round: t.round ?? "pm", email: t.email, going: t.going ?? true, createdAt: t.createdAt })).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  setSnackPick: (date, voterRef, itemId) =>
+    mutate((db) => {
+      db.snackPicks = db.snackPicks.filter((p) => !(p.date === date && p.voterRef === voterRef));
+      if (itemId !== null) db.snackPicks.push({ date, voterRef, itemId });
+      return { result: undefined, changed: true };
+    }),
+  listSnackPicks: (date) => query((db) => db.snackPicks.filter((p) => p.date === date).map(({ itemId, voterRef }) => ({ itemId, voterRef }))),
+  getSetting: <T,>(key: string) => query((db) => (key in db.settings ? (db.settings[key] as T) : null)),
+  setSetting: (key, value) => mutate((db) => { db.settings[key] = value; return { result: undefined, changed: true }; }),
   addSnack: (row) => mutate((db) => { db.snacks.push(row); return { result: row, changed: true }; }),
   getSnack: (id) => query((db) => db.snacks.find((s) => s.id === id) ?? null),
   listSnacks: () => query((db) => [...db.snacks].sort((a, b) => a.createdAt.localeCompare(b.createdAt))),

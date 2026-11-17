@@ -148,7 +148,9 @@ test.describe("Admin: closed days and today's counts", () => {
 
   test("today's counts have no remote: in office, not in office, on leave", async ({ page }) => {
     await signInEmployee(page, ADMIN_EMAIL, "/admin/today");
-    await expect(page.getByText("Not in office", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Remote", { exact: true })).toHaveCount(0);
+    // Scoped to the filters: other tests create people whose names can be anything, "Remote" included.
+    const show = page.getByRole("group", { name: "Show" });
+    await expect(show.getByRole("button", { name: "Not in office" })).toBeVisible();
+    await expect(show.getByRole("button", { name: /remote/i })).toHaveCount(0);
   });
 });

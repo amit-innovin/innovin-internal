@@ -149,6 +149,51 @@ export function useSend<TInput = unknown, TOut = unknown>(key: readonly unknown[
 export type { Feed, FeedPost } from "@/lib/feed";
 export const useFeed = () => useQuery({ queryKey: ["feed"], queryFn: () => fetchJSON<import("@/lib/feed").Feed>("/api/feed") });
 
+type FeedData = import("@/lib/feed").Feed;
+function useFeedWrite<T>(url: string, method: "POST" | "PATCH" | "DELETE") {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: T) => {
+      const res = await send(url, { method, json: input });
+      if (!res.ok) throw new Error(await readError(res));
+    },
+    onSuccess: () => client.invalidateQueries({ queryKey: ["feed"] }),
+  });
+}
+export const usePostNotice = () => useFeedWrite<Record<string, unknown>>("/api/notices", "POST");
+export const useReact = () => useFeedWrite<{ id: string; emoji: string }>("/api/notices", "PATCH");
+export const useVote = () => useFeedWrite<{ id: string; vote: number | null }>("/api/notices", "PATCH");
+export const useRsvp = () => useFeedWrite<{ eventId: string; going: boolean }>("/api/events", "PATCH");
+export const useRemoveNotice = () => useFeedWrite<{ id: string }>("/api/notices", "DELETE");
+
+// Seeing a card moves the watermark forward. The cache is patched in place (no refetch per card),
+// so the stack the person is reading doesn't reshuffle under them.
+export function useMarkFeedSeen() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (at: string) => {
+      const res = await send("/api/feed/seen", { method: "POST", json: { at } });
+      if (!res.ok) throw new Error(await readError(res));
+      return ((await res.json()) as { seenAt: string }).seenAt;
+    },
+    onSuccess: (seenAt) => client.setQueryData<FeedData>(["feed"], (feed) => (feed && seenAt > feed.seenAt ? { ...feed, seenAt } : feed)),
+  });
+}
+
+export type ImportantAnnouncement = { id: string; title: string; body: string; authorName: string | null };
+export const useImportantAnnouncement = () =>
+  useQuery({ queryKey: ["announcements", "important"], queryFn: () => fetchJSON<{ announcement: ImportantAnnouncement | null }>("/api/announcements/important") });
+export function useAckAnnouncement() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await send("/api/announcements/ack", { method: "POST", json: { id } });
+      if (!res.ok) throw new Error(await readError(res));
+    },
+    onSuccess: () => Promise.all([client.invalidateQueries({ queryKey: ["announcements", "important"] }), client.invalidateQueries({ queryKey: ["feed"] })]),
+  });
+}
+
 export type Tea = { date: string; count: number; mine: boolean; roundAt: string; countsAt: string; names: string[] | null };
 export const useTea = () => useQuery({ queryKey: ["tea"], queryFn: () => fetchJSON<Tea>("/api/tea") });
 

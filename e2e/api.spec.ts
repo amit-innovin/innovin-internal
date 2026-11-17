@@ -195,7 +195,7 @@ test.describe("API: office days", () => {
     expect((await ctx.post("/api/days", { data: { mode: "desk" } })).status()).toBe(400);
   });
 
-  test("office days are yours to set, and decide who is expected", async () => {
+  test("office days are yours to set, and plan your future working days", async () => {
     const ctx = await signedIn(email());
     const start = await (await ctx.get("/api/days")).json();
     expect(start.officeDays).toEqual([]);
@@ -205,8 +205,9 @@ test.describe("API: office days", () => {
     expect(set.status()).toBe(200);
     const view = await set.json();
     expect(view.officeDays).toEqual([0, 1, 2, 3, 4, 5]);
-    expect(view.around.next.mine).toBe(true);
-    expect(view.around.next.count).toBeGreaterThan(0);
+    // Every future working day this month is now planned; nothing says who else is in.
+    expect(view.days.filter((d: { date: string; working: boolean; planned: boolean }) => d.date > view.today && d.working).every((d: { planned: boolean }) => d.planned)).toBe(true);
+    expect(view.around.next).toBeUndefined();
     for (const bad of [[7], [0, 0], "mon", [1.5]]) {
       expect((await ctx.patch("/api/days", { data: { officeDays: bad } })).status()).toBe(400);
     }

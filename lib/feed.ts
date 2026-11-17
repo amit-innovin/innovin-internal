@@ -13,7 +13,7 @@ type Reactions = PublicNotice["reactions"];
 export type FeedPost =
   | { type: "announcement"; id: string; title: string; body: string; tag: string; at: string; pinned: boolean; important: boolean; authorName: string | null; pinnedUntil: string | null; acked: boolean }
   | { type: "event"; id: string; title: string; body: string; category: string; startsAt: string; location: string; going: number; mine: boolean; cancelled: boolean; at: string }
-  | { type: "quote" | "feedback"; id: string; title: string; body: string; color: string; authorName: string | null; anonymous: boolean; image: string | null; at: string; reactions: Reactions; mine: boolean }
+  | { type: "quote" | "feedback"; id: string; title: string; body: string; attribution: string; color: string; authorName: string | null; anonymous: boolean; image: string | null; at: string; reactions: Reactions; mine: boolean }
   | { type: "kudos"; id: string; body: string; fromName: string | null; toName: string | null; at: string; reactions: Reactions; mine: boolean }
   // total, votes and pct are null until the viewer has voted or the poll has closed.
   | { type: "poll"; id: string; question: string; authorName: string | null; closesAt: string | null; closed: boolean; total: number | null; options: { label: string; votes: number | null; pct: number | null; mine: boolean }[]; at: string; reactions: Reactions; mine: boolean };
@@ -51,7 +51,7 @@ export async function feedFor(viewer: string) {
         return { type: "poll", id: n.id, question: n.title, authorName: n.authorName, closesAt: n.closesAt ?? null, ...results, at: n.createdAt, reactions: n.reactions, mine: n.mine };
       }
       if (n.kind === "kudos") return { type: "kudos", id: n.id, body: n.body, fromName: n.authorName, toName: n.toName ?? null, at: n.createdAt, reactions: n.reactions, mine: n.mine };
-      return { type: n.kind, id: n.id, title: n.title, body: n.body, color: n.color, authorName: n.anonymous ? null : n.authorName, anonymous: n.anonymous, image: n.image ?? null, at: n.createdAt, reactions: n.reactions, mine: n.mine };
+      return { type: n.kind, id: n.id, title: n.title, body: n.body, attribution: n.attribution ?? "", color: n.color, authorName: n.anonymous ? null : n.authorName, anonymous: n.anonymous, image: n.image ?? null, at: n.createdAt, reactions: n.reactions, mine: n.mine };
     }),
   ];
   const pinned = (p: FeedPost) => p.type === "announcement" && p.pinned;

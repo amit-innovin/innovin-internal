@@ -33,29 +33,16 @@ export function locationTag(lat: number | null | undefined, lng: number | null |
   return distanceM(lat, lng, office.lat, office.lng) <= office.radiusM ? "office" : "remote";
 }
 
-// OFFICE_IPS: comma-separated public IPs of the office connection. Being on office Wi-Fi means
-// requests arrive from one of these — the network itself is the location proof, no GPS needed.
-export function officeIps() {
-  return (process.env.OFFICE_IPS || "")
-    .split(",")
-    .map((ip) => ip.trim())
-    .filter(Boolean);
-}
-
-export function onOfficeNetwork(ip: string) {
-  return officeIps().includes(ip);
-}
-
-// Can "I'm in the office" be believed? Office Wi-Fi is proof by itself. Off Wi-Fi the device
-// must share a position inside the geofence. If no office is configured (local development)
-// there is nothing to check against, and the mark is recorded as self-declared.
+// Can "I'm in the office" be believed? The device must share a position inside the geofence,
+// read once when the person taps Check in (never tracked). The office network is not proof:
+// the owner ruled it out as unreliable. If no office is configured (local development) there
+// is nothing to check against, and the mark is recorded as self-declared.
 export type OfficeCheck =
-  | { ok: true; source: "wifi" | "location" | "self" }
+  | { ok: true; source: "location" | "self" }
   | { ok: false; code: "location-needed" }
   | { ok: false; code: "outside"; distanceM: number };
 
-export function officeCheck(input: { onNetwork: boolean; lat: number | null; lng: number | null }): OfficeCheck {
-  if (input.onNetwork) return { ok: true, source: "wifi" };
+export function officeCheck(input: { lat: number | null; lng: number | null }): OfficeCheck {
   const office = officeLocation();
   if (!office) return { ok: true, source: "self" };
   if (input.lat == null || input.lng == null) return { ok: false, code: "location-needed" };

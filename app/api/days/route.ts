@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const lat = num(body.lat), lng = num(body.lng), accuracyM = num(body.accuracyM);
   if ((lat === null) !== (lng === null) || (lat !== null && (Math.abs(lat) > 90 || Math.abs(lng!) > 180)) || (accuracyM !== null && accuracyM < 0)) return badRequest("Invalid coordinates");
 
-  const result = await markDay({ email: session.email, date, mode: body.mode === "none" ? null : body.mode, ip: clientIp(req), lat, lng, accuracyM });
+  const result = await markDay({ email: session.email, date, mode: body.mode === "none" ? null : body.mode, lat, lng, accuracyM });
   if (!result.ok) return NextResponse.json({ error: result.error, code: result.code, distanceM: result.distanceM }, { status: result.status });
   return NextResponse.json(await daysView(session.email, date.slice(0, 7)));
 }

@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 type Status = {
   count: number;
   email: string | null;
-  onOfficeNetwork: boolean;
   office: { lat: number; lng: number; radiusM: number } | null;
   me: {
     checkedIn: boolean;
@@ -97,19 +96,11 @@ export default function CheckInCard({ nextAway, initial }: { nextAway: string | 
   useEffect(() => {
     const start = status ? Promise.resolve(status) : load();
     start.then(async (data) => {
-      // Auto check-in: once per page load, only when the device opted in and we're sure the
-      // person is at the office — either the request came from the office network, or the
-      // browser's own fix lands inside the geofence.
+      // Auto check-in: once per page load, only when the device opted in and the browser's
+      // own fix lands inside the geofence.
       if (autoTried.current || !data || data.me?.checkedIn) return;
       if (localStorage.getItem(AUTO_CHECKIN_KEY) !== "1" || !data.email) return;
       autoTried.current = true;
-      if (data.onOfficeNetwork) {
-        if (await mark("in", null, true)) {
-          toast.success("Checked you in — office Wi-Fi spotted you");
-          await load();
-        }
-        return;
-      }
       if (!data.office) return;
       const pos = await position();
       if (pos && withinOffice(data.office, pos.coords.latitude, pos.coords.longitude)) {
@@ -187,7 +178,7 @@ export default function CheckInCard({ nextAway, initial }: { nextAway: string | 
         {checkedIn && (
           <span className="inline-flex items-center gap-1">
             <MapPin className="size-3.5" />
-            {status.onOfficeNetwork ? "On office Wi-Fi" : LOCATION_LABEL[me!.location]}
+            {LOCATION_LABEL[me!.location]}
           </span>
         )}
         {nextAway && <span className="truncate pl-3">{nextAway}</span>}

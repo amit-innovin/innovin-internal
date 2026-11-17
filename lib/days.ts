@@ -1,6 +1,6 @@
 // What Home and Days show about office days, and the one write behind "I'm in the office".
 // Server-only: reads the store. The rules themselves are pure and live in lib/office-days.ts.
-import { officeCheck, onOfficeNetwork } from "./geo";
+import { officeCheck } from "./geo";
 import { holidaysFor, isWorkingDay, nonWorkingReason } from "./leave";
 import { addDays, countOfficeDays, expectedOn, fixableFrom, monthBounds, officeDaysSummary, officeDayTarget } from "./office-days";
 import { attendanceLocation } from "./presence";
@@ -83,9 +83,9 @@ export type MarkResult =
   | { ok: true }
   | { ok: false; status: 403 | 409 | 422 | 428; code: "locked" | "future" | "outside" | "location-needed"; error: string; distanceM?: number };
 
-// One tap. Today: office is verified (Wi-Fi first, then location); remote is taken at its word.
+// One tap. Today: office is verified by location; remote is taken at its word.
 // A past day inside the self-fix window is recorded as late, with no location check, and logged.
-export async function markDay(input: { email: string; date: string; mode: DayMode | null; ip: string; lat: number | null; lng: number | null; accuracyM: number | null }): Promise<MarkResult> {
+export async function markDay(input: { email: string; date: string; mode: DayMode | null; lat: number | null; lng: number | null; accuracyM: number | null }): Promise<MarkResult> {
   const today = todayIST();
   if (input.date > today) return { ok: false, status: 409, code: "future", error: "You can't mark a day that hasn't happened yet" };
   const now = new Date().toISOString();
@@ -99,7 +99,7 @@ export async function markDay(input: { email: string; date: string; mode: DayMod
     let source: AttendanceRow["source"] = "self";
     let position = { lat: null as number | null, lng: null as number | null, accuracyM: null as number | null };
     if (input.mode === "office") {
-      const check = officeCheck({ onNetwork: onOfficeNetwork(input.ip), lat: input.lat, lng: input.lng });
+      const check = officeCheck({ lat: input.lat, lng: input.lng });
       if (!check.ok) {
         return check.code === "outside"
           ? { ok: false, status: 422, code: "outside", distanceM: check.distanceM, error: "You don't look like you're at the office" }

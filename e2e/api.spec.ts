@@ -235,9 +235,9 @@ test.describe("API: behaviour", () => {
     expect(mine.me.checkedIn).toBe(true);
     expect(mine.me.checkInAt).toBeTruthy();
     expect(mine.me.checkOutAt).toBeNull();
-    // `office` (the geofence) and `onOfficeNetwork` are exposed on purpose — the client needs
-    // them to decide auto check-in. Everyone else's sessions stay hidden.
-    expect(Object.keys(mine).sort()).toEqual(["count", "email", "me", "office", "onOfficeNetwork"]);
+    // `office` (the geofence) is exposed on purpose — the client needs it to decide auto
+    // check-in. Everyone else's sessions stay hidden.
+    expect(Object.keys(mine).sort()).toEqual(["count", "email", "me", "office"]);
 
     const stranger = await (await (await signedIn(email())).get("/api/attendance")).json();
     expect(stranger.count).toBe(mine.count);

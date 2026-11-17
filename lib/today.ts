@@ -2,7 +2,7 @@ import { attendanceLocation } from "@/lib/presence";
 // The shapes behind home's three action cards — shared between the API routes and the
 // server-rendered home page, so first paint already carries the data instead of the client
 // fetching it again after hydration.
-import { officeLocation, onOfficeNetwork } from "./geo";
+import { officeLocation } from "./geo";
 import { stepLeague } from "./member-features";
 import { STEP_GOAL, stepBoard, stepStreak } from "./steps";
 import { store } from "./store";
@@ -19,9 +19,8 @@ export async function attendanceStatus(email: string | null, ip: string | null) 
   return {
     count: new Set(rows.map((r) => r.email)).size,
     email,
-    // Lets the client do confident auto check-in: on office Wi-Fi (IP match) or inside the
-    // geofence. The office's own coordinates aren't secret to the people who work there.
-    onOfficeNetwork: onOfficeNetwork(ip ?? ""),
+    // Lets the client do confident auto check-in inside the geofence. The office's own
+    // coordinates aren't secret to the people who work there.
     office: officeLocation(),
     me: day
       ? {

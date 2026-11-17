@@ -25,6 +25,8 @@ export type EmployeeRow = {
   showBirthday?: boolean;
   createdAt: string;
   lastSeenAt: string;
+  // Feed: everything created up to this moment has been seen. Only ever moves forward.
+  feedSeenAt?: string | null;
 };
 
 // How a day got its mark. wifi / location: verified at the office. self: declared remote.
@@ -177,6 +179,10 @@ export type AnnouncementRow = {
   body: string;
   tag: string;
   createdAt: string;
+  // Important: shown once to everyone as a sheet and acknowledged, until pinnedUntil (a date).
+  important?: boolean;
+  authorName?: string | null;
+  pinnedUntil?: string | null;
 };
 
 export type WorkspaceProfile = {
@@ -292,6 +298,10 @@ export interface Store {
   getAnnouncement(id: string): Promise<AnnouncementRow | null>;
   deleteAnnouncement(id: string): Promise<void>;
   listAnnouncements(limit: number): Promise<AnnouncementRow[]>;
+  ackAnnouncement(id: string, email: string): Promise<void>;
+  listAckedAnnouncementIds(email: string): Promise<string[]>;
+  countAnnouncementAcks(ids: string[]): Promise<Record<string, number>>;
+  setFeedSeenAt(email: string, at: string): Promise<void>;
   addAway(row: AwayRow): Promise<AwayRow>;
   setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string, expected: AwayStatus): Promise<boolean>;
   getAway(id: string): Promise<AwayRow | null>;

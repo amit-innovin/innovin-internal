@@ -226,6 +226,16 @@ CREATE TABLE IF NOT EXISTS plan_overrides (
   PRIMARY KEY (email, date)
 );
 CREATE INDEX IF NOT EXISTS plan_overrides_date_idx ON plan_overrides (date);
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS feed_seen_at timestamptz;
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS important boolean NOT NULL DEFAULT false;
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS author_name text;
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS pinned_until text;
+CREATE TABLE IF NOT EXISTS announcement_acks (
+  announcement_id text NOT NULL,
+  email text NOT NULL,
+  at timestamptz NOT NULL,
+  PRIMARY KEY (announcement_id, email)
+);
 CREATE TABLE IF NOT EXISTS closed_days (
   date text PRIMARY KEY,
   reason text NOT NULL,
@@ -342,6 +352,9 @@ const announcement = (r: any): AnnouncementRow => ({
   body: r.body,
   tag: r.tag,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+  important: r.important ?? false,
+  authorName: r.author_name ?? null,
+  pinnedUntil: r.pinned_until ?? null,
 });
 // "owner" is the retired top role; such rows are admins now.
 const roleOf = (role: unknown): Role => (role === "admin" || role === "owner" ? "admin" : "member");
@@ -358,6 +371,7 @@ const employee = (r: any): EmployeeRow => ({
   showBirthday: r.show_birthday ?? false,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
+  feedSeenAt: r.feed_seen_at ? r.feed_seen_at.toISOString?.() ?? r.feed_seen_at : null,
 });
 const pushSubscription = (r: any): PushSubscriptionRow => ({
   sessionRef: r.session_ref ?? null,
@@ -719,8 +733,8 @@ class PgStore implements Store {
   }
   async addAnnouncement(row: AnnouncementRow) {
     const res = await this.q(
-      `INSERT INTO announcements (id, title, body, tag, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [row.id, row.title, row.body, row.tag, row.createdAt],
+      `INSERT INTO announcements (id, title, body, tag, created_at, important, author_name, pinned_until) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [row.id, row.title, row.body, row.tag, row.createdAt, row.important ?? false, row.authorName ?? null, row.pinnedUntil ?? null],
     );
     return announcement(res.rows[0]);
   }
@@ -731,6 +745,20 @@ class PgStore implements Store {
   async listAnnouncements(limit: number) {
     const res = await this.q(`SELECT * FROM announcements ORDER BY created_at DESC LIMIT $1`, [limit]);
     return res.rows.map(announcement);
+  }
+  async ackAnnouncement(id: string, email: string) {
+    await this.q(`INSERT INTO announcement_acks (announcement_id, email, at) VALUES ($1,$2,now()) ON CONFLICT DO NOTHING`, [id, email]);
+  }
+  async listAckedAnnouncementIds(email: string) {
+    const res = await this.q(`SELECT announcement_id FROM announcement_acks WHERE email = $1`, [email]);
+    return res.rows.map((r: any) => r.announcement_id as string);
+  }
+  async countAnnouncementAcks(ids: string[]) {
+    const res = await this.q(`SELECT announcement_id, count(*)::int AS n FROM announcement_acks WHERE announcement_id = ANY($1) GROUP BY announcement_id`, [ids]);
+    return Object.fromEntries(ids.map((id) => [id, res.rows.find((r: any) => r.announcement_id === id)?.n ?? 0]));
+  }
+  async setFeedSeenAt(email: string, at: string) {
+    await this.q(`UPDATE employees SET feed_seen_at = $2 WHERE email = $1 AND (feed_seen_at IS NULL OR feed_seen_at < $2)`, [email, at]);
   }
   async upsertEmployee(row: EmployeeRow) {
     const res = await this.q(

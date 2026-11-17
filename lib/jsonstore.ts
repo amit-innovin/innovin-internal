@@ -46,11 +46,13 @@ type DB = {
   readings: ReadingRow[];
   planOverrides: PlanOverrideRow[];
   closedDays: ClosedDayRow[];
+  announcementAcks: { announcementId: string; email: string; at: string }[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
-const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [] });
+const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, feedSeenAt: e.feedSeenAt ?? null });
+const readAnnouncement = (a: AnnouncementRow): AnnouncementRow => ({ ...a, important: a.important ?? false, authorName: a.authorName ?? null, pinnedUntil: a.pinnedUntil ?? null });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -339,14 +341,29 @@ export const jsonStore: Store = {
       db.announcements.unshift(row);
       return { result: row, changed: true };
     }),
-  getAnnouncement: id=>query(db=>db.announcements.find(a=>a.id===id)??null),
+  getAnnouncement: id=>query(db=>{const a=db.announcements.find(a=>a.id===id);return a?readAnnouncement(a):null;}),
   deleteAnnouncement: (id) =>
     mutate((db) => {
       const before = db.announcements.length;
       db.announcements = db.announcements.filter((r) => r.id !== id);
       return { result: undefined, changed: db.announcements.length < before };
     }),
-  listAnnouncements: (limit) => query((db) => db.announcements.sort(newestFirst).slice(0, limit)),
+  listAnnouncements: (limit) => query((db) => db.announcements.sort(newestFirst).slice(0, limit).map(readAnnouncement)),
+  ackAnnouncement: (id, email) =>
+    mutate((db) => {
+      if (db.announcementAcks.some((a) => a.announcementId === id && a.email === email)) return { result: undefined, changed: false };
+      db.announcementAcks.push({ announcementId: id, email, at: new Date().toISOString() });
+      return { result: undefined, changed: true };
+    }),
+  listAckedAnnouncementIds: (email) => query((db) => db.announcementAcks.filter((a) => a.email === email).map((a) => a.announcementId)),
+  countAnnouncementAcks: (ids) => query((db) => Object.fromEntries(ids.map((id) => [id, db.announcementAcks.filter((a) => a.announcementId === id).length]))),
+  setFeedSeenAt: (email, at) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (!row || (row.feedSeenAt && row.feedSeenAt >= at)) return { result: undefined, changed: false };
+      row.feedSeenAt = at;
+      return { result: undefined, changed: true };
+    }),
 
   upsertEmployee: (row) =>
     mutate((db) => {

@@ -34,6 +34,30 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.deleteEvent(event.id,iso(1000))).toBe(true);
     });
 
+    it("moves a person's feed watermark forward only", async () => {
+      await store.upsertEmployee(employee({ email: "a@innovinlabs.com" }));
+      expect((await store.getEmployee("a@innovinlabs.com"))?.feedSeenAt ?? null).toBeNull();
+      await store.setFeedSeenAt("a@innovinlabs.com", iso(60_000));
+      await store.setFeedSeenAt("a@innovinlabs.com", iso());
+      expect((await store.getEmployee("a@innovinlabs.com"))?.feedSeenAt).toBe(iso(60_000));
+      await store.setFeedSeenAt("a@innovinlabs.com", iso(120_000));
+      expect((await store.getEmployee("a@innovinlabs.com"))?.feedSeenAt).toBe(iso(120_000));
+    });
+
+    it("keeps important announcements and counts each person's acknowledgement once", async () => {
+      await store.addAnnouncement({ id: "plain", title: "Parking", body: "", tag: "general", createdAt: iso() });
+      await store.addAnnouncement({ id: "imp", title: "Office closed", body: "Maintenance", tag: "general", createdAt: iso(1000), important: true, authorName: "Anita", pinnedUntil: "2026-11-27" });
+      const [imp, plain] = await store.listAnnouncements(10);
+      expect(imp).toMatchObject({ id: "imp", important: true, authorName: "Anita", pinnedUntil: "2026-11-27" });
+      expect(plain).toMatchObject({ id: "plain", important: false, authorName: null, pinnedUntil: null });
+      await store.ackAnnouncement("imp", "a@innovinlabs.com");
+      await store.ackAnnouncement("imp", "a@innovinlabs.com");
+      await store.ackAnnouncement("imp", "b@innovinlabs.com");
+      expect(await store.listAckedAnnouncementIds("a@innovinlabs.com")).toEqual(["imp"]);
+      expect(await store.listAckedAnnouncementIds("c@innovinlabs.com")).toEqual([]);
+      expect(await store.countAnnouncementAcks(["imp", "plain"])).toEqual({ imp: 2, plain: 0 });
+    });
+
     it("keeps one plan override per person and date, and lists a date's overrides for everyone", async () => {
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", true);
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", false);

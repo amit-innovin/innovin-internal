@@ -236,6 +236,14 @@ describe("Zoho snapshot reconciliation", () => {
     expect(s.ledger.find((l) => l.type === "cl")).toMatchObject({ used: 3, remaining: 0.5 });
   });
 
+  it("charges no leave for a day the office closed after the request was filed", () => {
+    // Mon 23 – Wed 25 Nov 2026 filed as 3 days; Tuesday is then closed.
+    const filed = away({ startDate: "2026-11-23", endDate: "2026-11-25", days: 3, status: "approved", createdAt: "2026-11-01T00:00:00Z" });
+    const before = summarize(employee, [filed], 2026, "2026-11-20");
+    const after = summarize(employee, [filed], 2026, "2026-11-20", undefined, new Map([["2026-11-24", "Maintenance"]]));
+    expect(after.ledger.find((r) => r.type === "cl")!.used).toBe(before.ledger.find((r) => r.type === "cl")!.used - 1);
+  });
+
   it("retains policy history for types omitted from a partial snapshot", () => {
     const old = away({ createdAt: "2026-09-01T00:00:00Z", days: 1 });
     const result = summarize(employee, [old], 2026, "2026-10-26", snapshot({ sl: 5 }));

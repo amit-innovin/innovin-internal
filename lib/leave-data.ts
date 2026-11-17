@@ -5,11 +5,14 @@ import {
   holidaysFor,
   leaveLedger,
   leaveCost,
+  NO_CLOSED,
+  type Closed,
   POLICY_ENTITLEMENT,
   round,
   type LeaveLedger,
   type LeaveType,
 } from "./leave";
+import { closedMap } from "./days";
 import { store } from "./store";
 import type { AwayRow, EmployeeRow, LeaveBalanceRow } from "./types";
 import type { ZohoLeaveResult } from "./zoho-people";
@@ -51,13 +54,21 @@ export function summarize(
   year: number,
   today: string,
   balance?: LeaveBalanceRow,
+  closed: Closed = NO_CLOSED,
 ): LeaveSummary {
   // Only explicitly reconciled approved requests are included in a copied figure.
   // Missing types retain their complete local history. Pending requests are never hidden.
   const requests = rows
     .filter(r => r.type === "leave" && r.leaveType && r.startDate <= `${year}-12-31` && r.endDate >= `${year}-01-01`)
     .filter(r => !(balance?.available[r.leaveType as typeof BALANCE_TYPES[number]] !== undefined && balance?.reconciledRequestIds?.includes(r.id) && r.status === "approved"))
-    .map(r => ({ type: r.leaveType as LeaveType, days: r.startDate.startsWith(String(year)) && r.endDate.startsWith(String(year)) ? r.days : leaveCost(r.startDate < `${year}-01-01` ? `${year}-01-01` : r.startDate, r.endDate > `${year}-12-31` ? `${year}-12-31` : r.endDate, r.halfDay), status: r.status }));
+    // A day the office closed after the request was filed costs nothing, so the cost is worked
+    // out again whenever a closed date falls inside the request.
+    .map(r => {
+      const inYear = r.startDate.startsWith(String(year)) && r.endDate.startsWith(String(year));
+      const closedInside = [...closed.keys()].some(d => d >= r.startDate && d <= r.endDate);
+      const days = inYear && !closedInside ? r.days : leaveCost(r.startDate < `${year}-01-01` ? `${year}-01-01` : r.startDate, r.endDate > `${year}-12-31` ? `${year}-12-31` : r.endDate, r.halfDay, closed);
+      return { type: r.leaveType as LeaveType, days, status: r.status };
+    });
 
   const entitlement = entitlementFor(employee, year);
   const ledger = leaveLedger({ entitlement, requests }).map((row) => {
@@ -93,6 +104,7 @@ export function summarize(
 
 // Everyone's balances for the admin overview.
 export async function leaveOverview(year: number, today: string) {
+  const closed = await closedMap(`${year}-01-01`, `${year}-12-31`);
   const employees = await store.listEmployees();
   const [away, balances] = await Promise.all([
     Promise.all(employees.map(e => store.listAwayByEmail(e.email, 2147483647))).then(rows => rows.flat()),
@@ -111,7 +123,7 @@ export async function leaveOverview(year: number, today: string) {
       snapshotAvailable: balanceFor.get(e.email)?.available ?? {},
       reconciledRequestIds: balanceFor.get(e.email)?.reconciledRequestIds ?? [],
       approvedRequests: (byEmail.get(e.email) ?? []).filter(r => r.type === "leave" && r.status === "approved" && r.startDate <= `${year}-12-31` && r.endDate >= `${year}-01-01`).map(({ id, startDate, endDate, leaveType, days }) => ({ id, startDate, endDate, leaveType, days })),
-      summary: summarize(e, byEmail.get(e.email) ?? [], year, today, balanceFor.get(e.email)),
+      summary: summarize(e, byEmail.get(e.email) ?? [], year, today, balanceFor.get(e.email), closed),
     })),
   };
 }

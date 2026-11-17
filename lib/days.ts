@@ -2,8 +2,8 @@
 // Server-only: reads the store. The rules themselves are pure and live in lib/office-days.ts.
 import { officeCheck } from "./geo";
 import { type Closed, holidaysFor, isWorkingDay, nonWorkingReason } from "./leave";
-import { addDays, countOfficeDays, expectedOn, fixableFrom, monthBounds, officeDaysSummary, officeDayTarget, weekdayIndex } from "./office-days";
-import { isPlanned } from "./plan";
+import { countOfficeDays, fixableFrom, monthBounds, officeDaysSummary, officeDayTarget, weekdayIndex } from "./office-days";
+import { isPlanned, plannedOn } from "./plan";
 import { attendanceLocation } from "./presence";
 import { id, store } from "./store";
 import { todayIST } from "./time";
@@ -18,12 +18,6 @@ export function dayMode(row: AttendanceRow | null | undefined): DayMode | null {
 
 const firstName = (name: string, email: string) => (name.trim() || email.split("@")[0]).split(/\s+/)[0];
 
-function nextWorkingDay(after: string, closed: Closed) {
-  let date = addDays(after, 1);
-  for (let i = 0; i < 14 && !isWorkingDay(date, closed); i += 1) date = addDays(date, 1);
-  return date;
-}
-
 // Admin-set closures between two dates, as date → reason.
 export async function closedMap(from: string, to: string): Promise<Closed> {
   return new Map((await store.listClosedDays(from, to)).map((r) => [r.date, r.reason]));
@@ -32,16 +26,15 @@ export async function closedMap(from: string, to: string): Promise<Closed> {
 export async function daysView(email: string, month: string) {
   const today = todayIST();
   const { first, last } = monthBounds(month);
-  const closed = await closedMap(first < today ? first : today, last > addDays(today, 31) ? last : addDays(today, 31));
-  const next = nextWorkingDay(today, closed);
-  const [me, rows, leave, todayRows, employees, overrides, nextOverrides] = await Promise.all([
+  const closed = await closedMap(first < today ? first : today, last > today ? last : today);
+  const [me, rows, leave, todayRows, employees, overrides, todayOverride] = await Promise.all([
     store.getEmployee(email),
     store.listAttendanceRange(email, first, last),
     store.listAwayByEmail(email, 200),
     store.listAttendance(today),
     store.listEmployees(),
     store.listPlanOverrides(email, first, last),
-    store.listPlanOverridesOn(next),
+    store.listPlanOverrides(email, today, today),
   ]);
   const officeDays = me?.officeDays ?? [];
   const holidays = holidaysFor(Number(month.slice(0, 4)));
@@ -76,11 +69,6 @@ export async function daysView(email: string, month: string) {
   const mine = todayRows.find((r) => r.email === email);
   const byEmail = new Map(employees.map((e) => [e.email, e]));
   const inToday = todayRows.filter((r) => dayMode(r) === "office").map((r) => firstName(byEmail.get(r.email)?.name ?? "", r.email));
-  const expectedNext = employees.filter((e) => {
-    if (e.officeExempt) return false;
-    const override = nextOverrides.find((o) => o.email === e.email)?.planned;
-    return override ?? expectedOn(e.officeDays ?? [], next, closed);
-  });
 
   return {
     today,
@@ -91,11 +79,11 @@ export async function daysView(email: string, month: string) {
     // Only an office check-in counts as marked: remote isn't a state any more, and old remote rows
     // read as not in the office.
     me: mine && dayMode(mine) === "office" ? { mode: "office" as const, source: mine.source ?? null, at: mine.checkInAt } : null,
-    isOfficeDayToday: expectedOn(officeDays, today, closed),
+    // Your usual days plus single dates planned in or out ahead of time.
+    isOfficeDayToday: plannedOn({ date: today, officeDays, override: todayOverride[0]?.planned, working: isWorkingDay(today, closed), leave: false }),
     days,
     around: {
       inToday: { count: inToday.length, names: inToday.slice(0, 6) },
-      next: { date: next, count: expectedNext.length, names: expectedNext.slice(0, 6).map((e) => firstName(e.name, e.email)), mine: expectedNext.some((e) => e.email === email) },
     },
   };
 }
@@ -112,6 +100,8 @@ export async function markDay(input: { email: string; date: string; mode: DayMod
   if (input.date > today) return { ok: false, status: 409, code: "future", error: "You can't mark a day that hasn't happened yet" };
   const now = new Date().toISOString();
   const before = dayMode(await store.getAttendance(input.email, input.date));
+  // Nobody is in the office on a closed day, today or when fixing a past day.
+  if (input.mode === "office" && (await closedMap(input.date, input.date)).has(input.date)) return { ok: false, status: 409, code: "closed", error: "The office is closed that day" };
 
   if (input.date === today) {
     if (input.mode === null) {
@@ -121,7 +111,6 @@ export async function markDay(input: { email: string; date: string; mode: DayMod
     let source: AttendanceRow["source"] = "self";
     let position = { lat: null as number | null, lng: null as number | null, accuracyM: null as number | null };
     if (input.mode === "office") {
-      if ((await closedMap(today, today)).has(today)) return { ok: false, status: 409, code: "closed", error: "The office is closed that day" };
       const check = officeCheck({ lat: input.lat, lng: input.lng });
       if (!check.ok) {
         return check.code === "outside"

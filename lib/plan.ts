@@ -3,9 +3,17 @@
 import type { DaysView } from "./days";
 import { weekdayIndex } from "./office-days";
 
-export function isPlanned(input: { date: string; today: string; officeDays: number[]; override: boolean | undefined; working: boolean; leave: boolean }): boolean {
-  if (input.date <= input.today || !input.working || input.leave) return false;
+type PlanInput = { date: string; officeDays: number[]; override: boolean | undefined; working: boolean; leave: boolean };
+
+// Whether a date is one you plan to be in, ignoring whether it's past: Home asks this about today.
+export function plannedOn(input: PlanInput): boolean {
+  if (!input.working || input.leave) return false;
   return input.override ?? input.officeDays.includes(weekdayIndex(input.date));
+}
+
+// A future day you plan to come in. Today and the past are never "planned".
+export function isPlanned(input: PlanInput & { today: string }): boolean {
+  return input.date > input.today && plannedOn(input);
 }
 
 // The next planned days after today, in date order; `usual` when it's one of the weekly days.

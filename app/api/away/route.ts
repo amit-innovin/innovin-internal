@@ -8,7 +8,6 @@ import { enforce } from "@/lib/guard";
 import { fmtShortDate } from "@/lib/format";
 import { closedMap } from "@/lib/days";
 import { isLeaveType, leaveCost, needsApproval, nonWorkingReason } from "@/lib/leave";
-import { weekdayIndex } from "@/lib/office-days";
 import { todayIST } from "@/lib/time";
 import { sendPush } from "@/lib/push";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
@@ -97,21 +96,9 @@ export async function POST(req: NextRequest) {
     decidedAt: null,
     createdAt: new Date().toISOString(),
   });
-  await unplanLeaveDays(email, startDate, endDate);
   const res = NextResponse.json(row);
   setSubmitterCookie(res, identity.deviceId);
   return res;
-}
-
-// Days taken as leave come out of the plan: usual days get a "not planned" override and days
-// added on top are dropped. Cancelling the leave doesn't put them back; the person replans.
-async function unplanLeaveDays(email: string, startDate: string, endDate: string) {
-  const [me, overrides] = await Promise.all([store.getEmployee(email), store.listPlanOverrides(email, startDate, endDate)]);
-  const usual = me?.officeDays ?? [];
-  for (let d = startDate; d <= endDate; d = new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)) {
-    if (usual.includes(weekdayIndex(d))) await store.setPlanOverride(email, d, false);
-    else if (overrides.some((o) => o.date === d && o.planned)) await store.setPlanOverride(email, d, null);
-  }
 }
 
 const notify = (row: { id: string; type: AwayType; startDate: string; email: string }, title: string, email?: string) =>

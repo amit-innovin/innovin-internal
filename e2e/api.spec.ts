@@ -119,6 +119,24 @@ test.describe("API: office days", () => {
     expect((await plan("2026-13-01", true)).status()).toBe(400);
   });
 
+  test("the days view says nothing about who else is coming in", async () => {
+    const ctx = await signedIn(email());
+    const view = await (await ctx.get("/api/days")).json();
+    expect(view.around.next).toBeUndefined();
+  });
+
+  test("a usual day is planned again once leave over it is cancelled", async () => {
+    const ctx = await signedIn(email());
+    const weekday = (new Date(`${FUTURE}T00:00:00Z`).getUTCDay() + 6) % 7;
+    await ctx.patch("/api/days", { data: { officeDays: [weekday] } });
+    const planned = async () => (await (await ctx.get(`/api/days?month=${FUTURE.slice(0, 7)}`)).json()).days.find((d: { date: string }) => d.date === FUTURE).planned;
+    expect(await planned()).toBe(true);
+    const leave = await (await ctx.post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE, halfDay: false, reason: "" } })).json();
+    expect(await planned()).toBe(false);
+    expect((await ctx.patch("/api/away", { data: { id: leave.id, status: "cancelled" } })).status()).toBe(200);
+    expect(await planned()).toBe(true);
+  });
+
   test("admins close a day: nobody can plan it or check in, and leave over it costs nothing", async () => {
     const adm = await admin();
     const member = await signedIn(email());

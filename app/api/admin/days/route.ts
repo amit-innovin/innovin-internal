@@ -15,8 +15,9 @@ export async function POST(req: NextRequest) {
   if (limited) return limited;
   const body = await readJSON(req);
   const email = str(body?.email).trim().toLowerCase(), date = str(body?.date);
-  const mode = body?.mode === "office" || body?.mode === "remote" ? body.mode : body?.mode === "none" ? null : undefined;
-  if (!email || !validDate(date) || mode === undefined) return badRequest("Pick a person, a day and office, remote or clear");
+  // Remote isn't a mark: "none" records not in office.
+  const mode = body?.mode === "office" ? "office" : body?.mode === "none" ? null : undefined;
+  if (!email || !validDate(date) || mode === undefined) return badRequest("Pick a person, a day and office or not in office");
   if (date > todayIST()) return NextResponse.json({ error: "You can't mark a day that hasn't happened yet" }, { status: 409 });
   if (!(await store.getEmployee(email))) return NextResponse.json({ error: "Person not found" }, { status: 404 });
   const now = new Date().toISOString();

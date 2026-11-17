@@ -17,7 +17,7 @@ export const fmtClock = (iso: string) => new Intl.DateTimeFormat("en-IN", { time
 export const monthName = (month: string) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", month: "long" }).format(new Date(`${month}-01T00:00:00Z`));
 
 export const STATUS: Record<OfficeDayStatus, [string, Tone]> = { behind: ["Behind", "pink"], "on-track": ["On track", "sky"], done: ["Done", "green"], exempt: ["Exempt", "soft"] };
-export const TODAY_LABEL = { office: "Office", remote: "Remote", leave: "Leave" } as const;
+export const TODAY_LABEL = { office: "Office", leave: "Leave" } as const;
 export const toneBg = (tone: Tone) => (tone === "gold" ? "var(--duo-gold-soft)" : tone === "soft" ? "var(--duo-soft)" : `var(--duo-${tone})`);
 
 export function StatusPill({ status }: { status: OfficeDayStatus }) {
@@ -78,12 +78,12 @@ export function FixDaySheet({ people, start, onClose }: { people: PersonRow[]; s
   const [date, setDate] = useState(start?.date ?? todayIST());
   const [busy, setBusy] = useState(false);
   const refresh = useAdminRefresh();
-  const save = async (mode: "office" | "remote" | "none") => {
+  const save = async (mode: "office" | "none") => {
     if (!email) return toast.error("Pick a person");
     setBusy(true);
     try {
       await post("/api/admin/days", "POST", { email, date, mode });
-      toast.success(mode === "none" ? "Day cleared" : `Marked ${mode}`);
+      toast.success(mode === "none" ? "Marked not in office" : "Marked in office");
       refresh();
       onClose();
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
@@ -103,10 +103,9 @@ export function FixDaySheet({ people, start, onClose }: { people: PersonRow[]; s
       <label style={{ display: "flex", flexDirection: "column", gap: 6 }}><span className="duo-label">Day</span>
         <input type="date" className="duo-input" value={date} max={todayIST()} onChange={(e) => setDate(e.target.value)} />
       </label>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
-        <Button disabled={busy} onClick={() => save("office")}>Office</Button>
-        <Button variant="ghost" disabled={busy} onClick={() => save("remote")}>Remote</Button>
-        <Button variant="ghost" disabled={busy} onClick={() => save("none")}>Clear</Button>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+        <Button disabled={busy} onClick={() => save("office")}>In office</Button>
+        <Button variant="ghost" disabled={busy} onClick={() => save("none")}>Not in office</Button>
       </div>
       <span className="duo-sub" style={{ fontSize: 12 }}>Every change you make is logged with your name.</span>
     </Sheet>
@@ -142,7 +141,7 @@ export function PersonPanel({ person, month, onFix }: { person: PersonRow; month
         {(detail.data?.days ?? []).map((d) => (
           <span key={d.date} role="gridcell" aria-label={`${fmtDay(d.date)}: ${d.mode ?? (d.working ? "not marked" : "office closed")}`}
             style={{ height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--duo-display)", fontSize: 12, fontWeight: 600, boxSizing: "border-box",
-              ...(d.mode === "office" ? { background: "var(--duo-green)", color: "var(--duo-green-text)" } : d.mode === "remote" ? { background: "var(--duo-sky)" } : d.mode === "leave" ? { background: "var(--duo-gold-soft)", color: "var(--duo-gold-text)" } : { color: d.working ? "var(--duo-ink)" : "var(--duo-line)" }) }}>
+              ...(d.mode === "office" ? { background: "var(--duo-green)", color: "var(--duo-green-text)" } : d.mode === "leave" ? { background: "var(--duo-gold-soft)", color: "var(--duo-gold-text)" } : { color: d.working ? "var(--duo-ink)" : "var(--duo-line)" }) }}>
             {Number(d.date.slice(8))}
           </span>
         ))}

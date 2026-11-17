@@ -142,11 +142,10 @@ function Dashboard({ data, snacks }: { data: AdminData; snacks?: Snacks }) {
         </div>
         <Button variant="ghost" onClick={() => setFix(true)}>Fix someone’s day</Button>
       </header>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
         <StatTile label="In office" value={data.counts.office} sub={`${pct(data.counts.office, data.total)}% of ${data.total}`} tone="green" />
-        <StatTile label="Remote" value={data.counts.remote} sub={`${pct(data.counts.remote, data.total)}%`} tone="sky" />
         <StatTile label="On leave" value={data.counts.leave} sub="today" tone="gold" />
-        <StatTile label="Not marked" value={data.counts.notMarked} sub={`as of ${asOf}`} tone="soft" />
+        <StatTile label="Not in office" value={data.counts.notIn} sub={`as of ${asOf}`} tone="soft" />
         <StatTile label="Chai cups" value={data.tea.count} sub="round at 4 PM" tone="grape" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 16, alignItems: "start" }}>

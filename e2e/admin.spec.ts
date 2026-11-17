@@ -1,4 +1,5 @@
-import { adminLogin, adminTab, expect, test, uniqueText, signInOffice, signInEmployee } from "./fixtures";
+import { futureWorkday } from "./dates";
+import { ADMIN_EMAIL, adminLogin, adminTab, expect, test, uniqueText, signInOffice, signInEmployee } from "./fixtures";
 
 test.describe("Admin", () => {
   test("an admin's Google sign-in opens the dashboard with today's stats", async ({ page }) => {
@@ -127,5 +128,27 @@ test.describe("Admin", () => {
     await context.addCookies([{ ...cookie, value: cookie.value.replace(/.$/, (ch) => (ch === "a" ? "b" : "a")) }]);
     await page.reload();
     await expect(page).toHaveURL(/\/sign-in\?next=/);
+  });
+});
+
+test.describe("Admin: closed days and today's counts", () => {
+  test("close the office on a date with a reason, see it listed, and reopen it", async ({ page }) => {
+    const date = futureWorkday(5);
+    await signInEmployee(page, ADMIN_EMAIL, "/admin/today");
+    const closed = page.getByRole("region", { name: "Closed days" });
+    await expect(closed).toContainText("They're greyed out on everyone's Days calendar");
+    await expect(closed.getByRole("button", { name: "Mark closed" })).toBeDisabled();
+    await closed.getByLabel("Date").fill(date);
+    await closed.getByLabel("Reason").fill("Building maintenance");
+    await closed.getByRole("button", { name: "Mark closed" }).click();
+    await expect(closed).toContainText("Building maintenance");
+    await closed.getByRole("button", { name: new RegExp(`^Remove .*${Number(date.slice(8))}`) }).click();
+    await expect(closed).not.toContainText("Building maintenance");
+  });
+
+  test("today's counts have no remote: in office, not in office, on leave", async ({ page }) => {
+    await signInEmployee(page, ADMIN_EMAIL, "/admin/today");
+    await expect(page.getByText("Not in office", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Remote", { exact: true })).toHaveCount(0);
   });
 });

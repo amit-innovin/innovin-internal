@@ -1,8 +1,9 @@
 // What Home and Days show about office days, and the one write behind "I'm in the office".
 // Server-only: reads the store. The rules themselves are pure and live in lib/office-days.ts.
 import { officeCheck } from "./geo";
-import { holidaysFor, isWorkingDay, nonWorkingReason } from "./leave";
-import { addDays, countOfficeDays, expectedOn, fixableFrom, monthBounds, officeDaysSummary, officeDayTarget } from "./office-days";
+import { type Closed, holidaysFor, isWorkingDay, nonWorkingReason } from "./leave";
+import { addDays, countOfficeDays, expectedOn, fixableFrom, monthBounds, officeDaysSummary, officeDayTarget, weekdayIndex } from "./office-days";
+import { isPlanned } from "./plan";
 import { attendanceLocation } from "./presence";
 import { id, store } from "./store";
 import { todayIST } from "./time";
@@ -17,22 +18,30 @@ export function dayMode(row: AttendanceRow | null | undefined): DayMode | null {
 
 const firstName = (name: string, email: string) => (name.trim() || email.split("@")[0]).split(/\s+/)[0];
 
-function nextWorkingDay(after: string) {
+function nextWorkingDay(after: string, closed: Closed) {
   let date = addDays(after, 1);
-  for (let i = 0; i < 14 && !isWorkingDay(date); i += 1) date = addDays(date, 1);
+  for (let i = 0; i < 14 && !isWorkingDay(date, closed); i += 1) date = addDays(date, 1);
   return date;
+}
+
+// Admin-set closures between two dates, as date → reason.
+export async function closedMap(from: string, to: string): Promise<Closed> {
+  return new Map((await store.listClosedDays(from, to)).map((r) => [r.date, r.reason]));
 }
 
 export async function daysView(email: string, month: string) {
   const today = todayIST();
   const { first, last } = monthBounds(month);
-  const next = nextWorkingDay(today);
-  const [me, rows, leave, todayRows, employees] = await Promise.all([
+  const closed = await closedMap(first < today ? first : today, last > addDays(today, 31) ? last : addDays(today, 31));
+  const next = nextWorkingDay(today, closed);
+  const [me, rows, leave, todayRows, employees, overrides, nextOverrides] = await Promise.all([
     store.getEmployee(email),
     store.listAttendanceRange(email, first, last),
     store.listAwayByEmail(email, 200),
     store.listAttendance(today),
     store.listEmployees(),
+    store.listPlanOverrides(email, first, last),
+    store.listPlanOverridesOn(next),
   ]);
   const officeDays = me?.officeDays ?? [];
   const holidays = holidaysFor(Number(month.slice(0, 4)));
@@ -42,14 +51,21 @@ export async function daysView(email: string, month: string) {
     const date = `${month}-${String(i + 1).padStart(2, "0")}`;
     const row = rows.find((r) => r.date === date);
     const away = leave.find((r) => r.type === "leave" && (r.status === "pending" || r.status === "approved") && date >= r.startDate && date <= r.endDate);
+    const working = isWorkingDay(date, closed);
+    const override = overrides.find((o) => o.date === date)?.planned;
+    const planned = isPlanned({ date, today, officeDays, override, working, leave: !!away });
     return {
       date,
       mode: dayMode(row),
       // Added after the day itself, by the person or an admin.
       late: row?.source === "late" || row?.source === "admin",
-      working: isWorkingDay(date),
-      off: holidays[date] ?? nonWorkingReason(date),
-      planned: date > today && expectedOn(officeDays, date),
+      working,
+      off: closed.has(date) ? null : holidays[date] ?? nonWorkingReason(date),
+      // The reason, when an admin closed the office that day.
+      closed: closed.get(date) ?? null,
+      planned,
+      // Planned on top of the usual weekdays.
+      added: planned && !officeDays.includes(weekdayIndex(date)),
       leave: away ? away.status : null,
       fixable: date < today && date >= from,
     };
@@ -60,20 +76,26 @@ export async function daysView(email: string, month: string) {
   const mine = todayRows.find((r) => r.email === email);
   const byEmail = new Map(employees.map((e) => [e.email, e]));
   const inToday = todayRows.filter((r) => dayMode(r) === "office").map((r) => firstName(byEmail.get(r.email)?.name ?? "", r.email));
-  const expectedNext = employees.filter((e) => !e.officeExempt && expectedOn(e.officeDays ?? [], next));
+  const expectedNext = employees.filter((e) => {
+    if (e.officeExempt) return false;
+    const override = nextOverrides.find((o) => o.email === e.email)?.planned;
+    return override ?? expectedOn(e.officeDays ?? [], next, closed);
+  });
 
   return {
     today,
     month,
     fixableFrom: from,
     officeDays,
-    summary: officeDaysSummary({ done, target, month, today }),
-    me: mine ? { mode: dayMode(mine), source: mine.source ?? null, at: mine.checkInAt } : null,
-    isOfficeDayToday: expectedOn(officeDays, today),
+    summary: officeDaysSummary({ done, target, month, today, closed }),
+    // Only an office check-in counts as marked: remote isn't a state any more, and old remote rows
+    // read as not in the office.
+    me: mine && dayMode(mine) === "office" ? { mode: "office" as const, source: mine.source ?? null, at: mine.checkInAt } : null,
+    isOfficeDayToday: expectedOn(officeDays, today, closed),
     days,
     around: {
       inToday: { count: inToday.length, names: inToday.slice(0, 6) },
-      next: { date: next, count: expectedNext.length, names: expectedNext.slice(0, 6).map((e) => firstName(e.name, e.email)), mine: expectedOn(officeDays, next) },
+      next: { date: next, count: expectedNext.length, names: expectedNext.slice(0, 6).map((e) => firstName(e.name, e.email)), mine: expectedNext.some((e) => e.email === email) },
     },
   };
 }

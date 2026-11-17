@@ -33,6 +33,9 @@ export type AttendanceSource = "wifi" | "location" | "self" | "late" | "admin";
 export type DayMode = "office" | "remote";
 
 // One entry per day changed after the fact, by the person or by an admin.
+export type PlanOverrideRow = { email: string; date: string; planned: boolean };
+export type ClosedDayRow = { date: string; reason: string; createdBy: string; createdAt: string };
+
 export type AttendanceChangeRow = {
   id: string;
   email: string;
@@ -259,6 +262,14 @@ export interface Store {
   addAttendanceChange(row: AttendanceChangeRow): Promise<AttendanceChangeRow>;
   listAttendanceChanges(email: string, limit: number): Promise<AttendanceChangeRow[]>;
   setOfficeDays(email: string, days: number[]): Promise<boolean>;
+  // One date added to or taken out of someone's usual office days; null removes the override.
+  setPlanOverride(email: string, date: string, planned: boolean | null): Promise<void>;
+  listPlanOverrides(email: string, from: string, to: string): Promise<PlanOverrideRow[]>;
+  listPlanOverridesOn(date: string): Promise<PlanOverrideRow[]>;
+  // Admin-set office closures. addClosedDay is false when the date is already closed.
+  listClosedDays(from: string, to: string): Promise<ClosedDayRow[]>;
+  addClosedDay(row: ClosedDayRow): Promise<boolean>;
+  removeClosedDay(date: string): Promise<boolean>;
   // Admin-set: no 8-office-day target for this person (e.g. fully remote).
   setOfficeExempt(email: string, exempt: boolean): Promise<boolean>;
   // The currently open session, or null.

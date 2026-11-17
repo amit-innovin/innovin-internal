@@ -19,6 +19,8 @@ import type {
   WifiRow,
   WorkspaceProfile,
   AttendanceChangeRow,
+  ClosedDayRow,
+  PlanOverrideRow,
   SnackItem,
   BookRow,
   ReadingRow,
@@ -216,6 +218,20 @@ CREATE TABLE IF NOT EXISTS attendance_changes (
   at timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS attendance_changes_email_idx ON attendance_changes (email, at DESC);
+-- Days: one date added to or removed from someone's usual office days, and admin-set closures.
+CREATE TABLE IF NOT EXISTS plan_overrides (
+  email text NOT NULL,
+  date text NOT NULL,
+  planned boolean NOT NULL,
+  PRIMARY KEY (email, date)
+);
+CREATE INDEX IF NOT EXISTS plan_overrides_date_idx ON plan_overrides (date);
+CREATE TABLE IF NOT EXISTS closed_days (
+  date text PRIMARY KEY,
+  reason text NOT NULL,
+  created_by text NOT NULL,
+  created_at timestamptz NOT NULL
+);
 -- The rebuilt member app: poll votes, the daily tea round, the snack shelf, the reading list
 -- and birthdays (day and month only).
 CREATE TABLE IF NOT EXISTS poll_votes (
@@ -289,6 +305,8 @@ const snack = (r: any): SnackItem => ({
   orderedAt: r.ordered_at ? r.ordered_at.toISOString?.() ?? r.ordered_at : null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
+const planOverride = (r: any): PlanOverrideRow => ({ email: r.email, date: r.date, planned: r.planned });
+const closedDay = (r: any): ClosedDayRow => ({ date: r.date, reason: r.reason, createdBy: r.created_by, createdAt: r.created_at?.toISOString?.() ?? r.created_at });
 const attendanceChange = (r: any): AttendanceChangeRow => ({
   id: r.id,
   email: r.email,
@@ -610,6 +628,30 @@ class PgStore implements Store {
   }
   async setOfficeExempt(email: string, exempt: boolean) {
     const res = await this.q(`UPDATE employees SET office_exempt = $2 WHERE email = $1`, [email, exempt]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async setPlanOverride(email: string, date: string, planned: boolean | null) {
+    if (planned === null) await this.q(`DELETE FROM plan_overrides WHERE email = $1 AND date = $2`, [email, date]);
+    else await this.q(`INSERT INTO plan_overrides (email, date, planned) VALUES ($1,$2,$3) ON CONFLICT (email, date) DO UPDATE SET planned = EXCLUDED.planned`, [email, date, planned]);
+  }
+  async listPlanOverrides(email: string, from: string, to: string) {
+    const res = await this.q(`SELECT email, date, planned FROM plan_overrides WHERE email = $1 AND date >= $2 AND date <= $3 ORDER BY date`, [email, from, to]);
+    return res.rows.map(planOverride);
+  }
+  async listPlanOverridesOn(date: string) {
+    const res = await this.q(`SELECT email, date, planned FROM plan_overrides WHERE date = $1 ORDER BY email`, [date]);
+    return res.rows.map(planOverride);
+  }
+  async listClosedDays(from: string, to: string) {
+    const res = await this.q(`SELECT * FROM closed_days WHERE date >= $1 AND date <= $2 ORDER BY date`, [from, to]);
+    return res.rows.map(closedDay);
+  }
+  async addClosedDay(row: ClosedDayRow) {
+    const res = await this.q(`INSERT INTO closed_days (date, reason, created_by, created_at) VALUES ($1,$2,$3,$4) ON CONFLICT (date) DO NOTHING`, [row.date, row.reason, row.createdBy, row.createdAt]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async removeClosedDay(date: string) {
+    const res = await this.q(`DELETE FROM closed_days WHERE date = $1`, [date]);
     return (res.rowCount ?? 0) > 0;
   }
   async setOfficeDays(email: string, days: number[]) {

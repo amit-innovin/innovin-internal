@@ -34,6 +34,33 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.deleteEvent(event.id,iso(1000))).toBe(true);
     });
 
+    it("keeps one plan override per person and date, and lists a date's overrides for everyone", async () => {
+      await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", true);
+      await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", false);
+      await store.setPlanOverride("a@innovinlabs.com", "2026-11-19", true);
+      await store.setPlanOverride("b@innovinlabs.com", "2026-11-18", true);
+      expect(await store.listPlanOverrides("a@innovinlabs.com", "2026-11-01", "2026-11-30")).toEqual([
+        { email: "a@innovinlabs.com", date: "2026-11-18", planned: false },
+        { email: "a@innovinlabs.com", date: "2026-11-19", planned: true },
+      ]);
+      expect(await store.listPlanOverrides("a@innovinlabs.com", "2026-11-19", "2026-11-19")).toHaveLength(1);
+      expect((await store.listPlanOverridesOn("2026-11-18")).map((r) => r.email).sort()).toEqual(["a@innovinlabs.com", "b@innovinlabs.com"]);
+      await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", null);
+      expect(await store.listPlanOverridesOn("2026-11-18")).toEqual([{ email: "b@innovinlabs.com", date: "2026-11-18", planned: true }]);
+    });
+
+    it("keeps one closed day per date and reports removals", async () => {
+      const row = { date: "2026-11-27", reason: "Building maintenance", createdBy: "admin@innovinlabs.com", createdAt: iso() };
+      expect(await store.addClosedDay(row)).toBe(true);
+      expect(await store.addClosedDay({ ...row, reason: "Again" })).toBe(false);
+      await store.addClosedDay({ ...row, date: "2026-12-01", reason: "Offsite" });
+      expect(await store.listClosedDays("2026-11-01", "2026-11-30")).toEqual([row]);
+      expect(await store.listClosedDays("2026-11-01", "2026-12-31")).toHaveLength(2);
+      expect(await store.removeClosedDay("2026-11-27")).toBe(true);
+      expect(await store.removeClosedDay("2026-11-27")).toBe(false);
+      expect(await store.listClosedDays("2026-11-01", "2026-11-30")).toEqual([]);
+    });
+
     it("persists public notes while discarding anonymous authors and toggling one reaction per employee", async () => {
       const note = await store.addNotice({ id: uid(), kind: "quote", title: "", body: "Make things that matter", attribution: "", color: "yellow", anonymous: true, authorEmail: "a@innovinlabs.com", authorName: "Asha", createdAt: iso() });
       expect(note.authorEmail).toBeNull();

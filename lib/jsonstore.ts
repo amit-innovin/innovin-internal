@@ -16,7 +16,7 @@ import type {
   Store,
   WifiRow,
   WorkspaceProfile,
- AttendanceChangeRow, PollVote, TeaRow, SnackItem, SnackVote, BookRow, ReadingRow } from "./types";
+ AttendanceChangeRow, PollVote, TeaRow, SnackItem, SnackVote, BookRow, ReadingRow, PlanOverrideRow, ClosedDayRow } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -44,11 +44,13 @@ type DB = {
   snackVotes: SnackVote[];
   books: BookRow[];
   readings: ReadingRow[];
+  planOverrides: PlanOverrideRow[];
+  closedDays: ClosedDayRow[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
 const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [] });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -250,6 +252,28 @@ export const jsonStore: Store = {
       const row = db.employees.find((e) => e.email === email);
       if (row) row.officeExempt = exempt;
       return { result: !!row, changed: !!row };
+    }),
+  setPlanOverride: (email, date, planned) =>
+    mutate((db) => {
+      db.planOverrides = db.planOverrides.filter((r) => !(r.email === email && r.date === date));
+      if (planned !== null) db.planOverrides.push({ email, date, planned });
+      return { result: undefined, changed: true };
+    }),
+  listPlanOverrides: (email, from, to) =>
+    query((db) => db.planOverrides.filter((r) => r.email === email && r.date >= from && r.date <= to).sort((a, b) => a.date.localeCompare(b.date))),
+  listPlanOverridesOn: (date) => query((db) => db.planOverrides.filter((r) => r.date === date)),
+  listClosedDays: (from, to) => query((db) => db.closedDays.filter((r) => r.date >= from && r.date <= to).sort((a, b) => a.date.localeCompare(b.date))),
+  addClosedDay: (row) =>
+    mutate((db) => {
+      if (db.closedDays.some((r) => r.date === row.date)) return { result: false, changed: false };
+      db.closedDays.push(row);
+      return { result: true, changed: true };
+    }),
+  removeClosedDay: (date) =>
+    mutate((db) => {
+      const before = db.closedDays.length;
+      db.closedDays = db.closedDays.filter((r) => r.date !== date);
+      return { result: db.closedDays.length < before, changed: db.closedDays.length < before };
     }),
   setOfficeDays: (email, days) =>
     mutate((db) => {

@@ -13,7 +13,6 @@ import { useDays, useFeed, useMarkDay, useNotifications, useSend, useTea, useWor
 
 const IST = "Asia/Kolkata";
 const longDate = (date: string) => new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
-const shortDay = (date: string) => new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 const at = (iso: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-IN", { timeZone: IST, ...o }).format(new Date(iso));
 const hhmm = (t: string) => { const [h, m] = t.split(":").map(Number); return `${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; };
 
@@ -141,19 +140,7 @@ function ThisWeek({ days }: { days: DaysView }) {
 }
 
 function Crowd({ days }: { days: DaysView }) {
-  const { inToday, next } = days.around;
-  if (days.me?.mode === "remote") {
-    return (
-      <section aria-label="Your crowd" className="m3-card" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ display: "flex", paddingLeft: 8 }} aria-hidden="true">{next.names.slice(0, 4).map((n, i) => <span key={`${n}-${i}`} style={{ marginLeft: -8, border: "2px solid #FFFFFF", borderRadius: "50%" }}><Avatar name={n} size={32} /></span>)}</span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontWeight: 600 }}>{next.names.length ? `Your crowd is in on ${shortDay(next.date)}` : `Nobody from your crowd is planned for ${shortDay(next.date)}`}</span>
-          <span className="m3-small">{next.mine ? "You're planned for that day too" : "It's not one of your days"}</span>
-        </span>
-        <Link href="/days" className="m3-btn m3-btn-text" style={{ flex: "none" }}>Days</Link>
-      </section>
-    );
-  }
+  const { inToday } = days.around;
   if (!inToday.names.length) return null;
   return (
     <section aria-label="Your crowd today" style={{ display: "flex", flexDirection: "column", gap: 10 }}>

@@ -16,7 +16,8 @@ export type LeagueRow = { email: string; name: string; steps: number; streak: nu
 
 export function stepLeague(employees: EmployeeRow[], rows: StepsRow[], today: string, viewer: string) {
   const from = weekStart(today);
-  const byEmail = new Map(employees.map((e) => [e.email, e]));
+  // Only people who joined the league are listed (owner ruling: the league is opt-in).
+  const byEmail = new Map(employees.filter((e) => e.stepsLeague).map((e) => [e.email, e]));
   const table = (filter: (r: StepsRow) => boolean): LeagueRow[] => {
     const totals = new Map<string, number>();
     for (const r of rows) if (filter(r) && byEmail.has(r.email)) totals.set(r.email, (totals.get(r.email) ?? 0) + counted(r));

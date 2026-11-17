@@ -18,9 +18,9 @@ test.describe("Navigation & studio shell", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Days" })).toBeVisible();
     await expect(main.getByRole("link", { name: "Days", exact: true })).toHaveAttribute("aria-current", "page");
 
-    await main.getByRole("link", { name: "Feed", exact: true }).click();
+    await main.getByRole("link", { name: /^Feed(, \d+ new)?$/ }).click();
     await expect(page).toHaveURL(/\/feed$/);
-    await expect(main.getByRole("link", { name: "Feed", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(main.getByRole("link", { name: /^Feed(, \d+ new)?$/ })).toHaveAttribute("aria-current", "page");
 
     await page.goto("/");
     if (isMobile) {
@@ -123,9 +123,9 @@ test.describe("Navigation & studio shell", () => {
     await signInEmployee(page, undefined, "/");
     const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
     await expect(main.getByRole("link").first()).toBeAttached();
-    if (isMobile) await expect(main.getByRole("link")).toHaveText(["Home", "Feed", "Days", "Snacks", "Account"]);
+    if (isMobile) await expect(main.getByRole("link")).toHaveText(["Home", /^Feed/, "Days", "Snacks", "Account"]);
     else {
-      await expect(main.getByRole("link", { name: /^(Home|Feed|Days|Tea & snacks|10K steps|Speak up)$/ })).toHaveCount(6);
+      await expect(main.getByRole("link", { name: /^(Home|Feed(, \d+ new)?|Days|Tea & snacks|10K steps|Speak up)$/ })).toHaveCount(6);
       await page.getByRole("button", { name: "Account menu" }).click();
       await expect(page.getByRole("menuitem")).toHaveText(["Settings", "Help", "Sign out"]);
     }

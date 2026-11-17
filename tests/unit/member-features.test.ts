@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { celebrationsFor, pollResults, stepLeague, weekStart } from "@/lib/member-features";
 import type { EmployeeRow, StepsRow } from "@/lib/types";
 
-const person = (email: string, p: Partial<EmployeeRow> = {}): EmployeeRow => ({ email, name: email.split("@")[0], picture: "", role: "member", joinedOn: null, stepsOffset: 0, officeDays: [], officeExempt: false, birthday: null, showBirthday: false, createdAt: "", lastSeenAt: "", ...p });
+const person = (email: string, p: Partial<EmployeeRow> = {}): EmployeeRow => ({ email, name: email.split("@")[0], picture: "", role: "member", joinedOn: null, stepsOffset: 0, officeDays: [], officeExempt: false, birthday: null, showBirthday: false, createdAt: "", lastSeenAt: "", stepsLeague: true, ...p });
 const steps = (email: string, date: string, n: number | null, hit = (n ?? 0) >= 10_000): StepsRow => ({ id: `${email}${date}`, email, date, hit, steps: n, createdAt: "" });
 
 describe("step league", () => {
@@ -10,6 +10,15 @@ describe("step league", () => {
     expect(weekStart("2026-11-11")).toBe("2026-11-09");
     expect(weekStart("2026-11-09")).toBe("2026-11-09");
     expect(weekStart("2026-11-15")).toBe("2026-11-09");
+  });
+
+  it("lists only people who joined the league", () => {
+    const today = "2026-11-11";
+    const rows = [steps("a@x.com", today, 9000), steps("b@x.com", today, 12000)];
+    const league = stepLeague([person("a@x.com"), person("b@x.com", { stepsLeague: false })], rows, today, "a@x.com");
+    expect(league.week.map((r) => r.email)).toEqual(["a@x.com"]);
+    expect(league.today.map((r) => r.email)).toEqual(["a@x.com"]);
+    expect(league.nudge.week).toBeNull();
   });
 
   it("ranks this week's and today's step totals, and says how far to pass the next person", () => {

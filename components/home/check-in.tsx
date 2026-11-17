@@ -1,107 +1,88 @@
 "use client";
-import { useState } from "react";
-import { Building2, Check, LoaderCircle, Lock, MapPin } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { House, LoaderCircle, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Flat, Tile, type Tone } from "@/components/duo";
-import { Sheet } from "@/components/duo/sheet";
+import { Button, Card } from "@/components/m3";
 import type { DaysView } from "@/lib/days";
 import { MarkDayError, useMarkDay } from "@/lib/queries";
 
-type Step = null | "ask" | "locating" | "outside" | "blocked";
-const SOURCE: Record<string, string> = { wifi: "Verified on office Wi-Fi", location: "Verified by location", self: "Marked by you", late: "Added later", admin: "Set by an admin" };
-const time = (iso: string) => new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(iso));
+type Step = "idle" | "checking" | "success" | "remote" | "outside" | "blocked";
 const km = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`);
+export const timeIST = (iso: string) => new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(iso)).replace(/\s?(am|pm)$/i, "");
 
 const position = () => new Promise<GeolocationPosition>((resolve, reject) => {
   if (!("geolocation" in navigator)) return reject(new Error("unsupported"));
   navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 });
 });
 
-function Explain({ icon, tone, title, children }: { icon: React.ReactNode; tone: Tone; title: string; children: React.ReactNode }) {
-  return (
-    <>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Tile tone={tone}>{icon}</Tile>
-        <h2 className="duo-h2" style={{ fontSize: 21, lineHeight: 1.15 }}>{title}</h2>
-      </div>
-      <p style={{ margin: 0, fontSize: 15, lineHeight: 1.45 }}>{children}</p>
-    </>
-  );
-}
-
-// "I'm in the office" and "Working remote today". Office is checked by the server: office
-// Wi-Fi first, and only if that can't prove it do we ask for a location, once. No check-out.
+// "Check in" and "Working remote" from the prototype's Home. The location is read once, on the
+// tap, and checked by the server against the office geofence. Once the day is marked, the card
+// plays its confirmation and disappears; the header chip takes over (no check-out).
 export function CheckIn({ days }: { days: DaysView }) {
   const mark = useMarkDay();
-  const [step, setStep] = useState<Step>(null);
+  const [step, setStep] = useState<Step>("idle");
   const [distance, setDistance] = useState<number | null>(null);
-  const mode = days.me?.mode ?? null;
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
+  const settle = (next: Step, ms: number) => { setStep(next); timer.current = setTimeout(() => setStep("idle"), ms); };
   const fail = (error: unknown) => {
-    if (error instanceof MarkDayError && error.code === "location-needed") return setStep("ask");
     if (error instanceof MarkDayError && error.code === "outside") { setDistance(error.distanceM ?? null); return setStep("outside"); }
-    setStep(null);
+    if (error instanceof MarkDayError && error.code === "location-needed") return setStep("blocked");
+    setStep("idle");
     toast.error(error instanceof Error ? error.message : "That didn't work. Please try again.");
   };
-  const office = () => mark.mutate({ mode: "office" }, { onSuccess: () => setStep(null), onError: fail });
-  const remote = () => mark.mutate({ mode: "remote" }, { onSuccess: () => setStep(null), onError: fail });
-  const withLocation = async () => {
-    setStep("locating");
-    try {
-      const { coords } = await position();
-      mark.mutate({ mode: "office", lat: coords.latitude, lng: coords.longitude, accuracyM: coords.accuracy }, { onSuccess: () => setStep(null), onError: fail });
-    } catch {
-      setStep("blocked");
-    }
+  const checkIn = async () => {
+    setStep("checking");
+    let coords: GeolocationCoordinates;
+    try { coords = (await position()).coords; } catch { return setStep("blocked"); }
+    mark.mutate({ mode: "office", lat: coords.latitude, lng: coords.longitude, accuracyM: coords.accuracy }, { onSuccess: () => settle("success", 1100), onError: fail });
   };
-  const busy = mark.isPending || step === "locating";
+  const remote = () => mark.mutate({ mode: "remote" }, { onSuccess: () => settle("remote", 900), onError: fail });
+
+  if (days.me && step === "idle") return null;
+  const busy = step === "checking" || mark.isPending;
+  const tone = step === "success" ? "var(--m3-success-container)" : step === "remote" ? "var(--m3-surface-container)" : "var(--m3-surface)";
 
   return (
-    <>
-      {mode === "office" ? (
-        <div className="duo-in">
-          <span className="duo-tile" style={{ background: "var(--duo-seg-on)", borderRadius: 20, width: 40, height: 40 }} aria-hidden="true"><Check size={22} strokeWidth={2.6} /></span>
-          <span style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-            <span style={{ fontFamily: "var(--duo-display)", fontSize: 20, fontWeight: 700 }}>You're in today</span>
-            <span style={{ fontSize: 12, fontWeight: 800 }}>{SOURCE[days.me?.source ?? "self"]} · {days.me ? time(days.me.at) : ""}</span>
+    <Card aria-label="Check in" role="region" className="m3-stack" style={{ background: tone, transition: "background-color .3s ease" }}>
+      {step === "success" ? (
+        <div role="status" style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span aria-hidden="true" className="m3-done-mark">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" className="m3-draw" /></svg>
           </span>
-          <Button variant="text" style={{ color: "var(--duo-green-text)", textDecoration: "underline" }} disabled={busy} onClick={() => mark.mutate({ mode: "none" }, { onError: fail })}>Change</Button>
+          <span>
+            <span style={{ display: "block", fontSize: 20, lineHeight: "26px", fontWeight: 600, color: "var(--m3-on-success-container)" }}>You're in</span>
+            <span className="m3-small" style={{ color: "var(--m3-on-success-container)" }}>Checked in{days.me ? ` at ${timeIST(days.me.at)}` : ""} · location confirmed</span>
+          </span>
+        </div>
+      ) : step === "remote" ? (
+        <div role="status" style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span aria-hidden="true" className="m3-done-mark" style={{ background: "var(--m3-on-surface-variant)" }}><House size={26} /></span>
+          <span>
+            <span style={{ display: "block", fontSize: 20, lineHeight: "26px", fontWeight: 600 }}>Working remote today</span>
+            <span className="m3-small">Today comes out of your plan</span>
+          </span>
         </div>
       ) : (
-        <button type="button" className="duo-btn duo-btn-p duo-checkin" disabled={busy} aria-busy={busy} onClick={office}>
-          {busy && step !== "ask" ? <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><LoaderCircle size={24} className="duo-spin" aria-hidden="true" />Checking…</span> : <><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Building2 size={22} aria-hidden="true" />I'm in the office</span><small>tap to mark today</small></>}
-        </button>
+        <>
+          <h2 className="m3-title" style={{ fontSize: 20, lineHeight: "26px" }}>{days.isOfficeDayToday ? "One of your office days" : "Not checked in yet"}</h2>
+          {step === "checking" ? (
+            <div role="status" style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 48 }}><LoaderCircle size={22} className="m3-spin" aria-hidden="true" />Checking your location…</div>
+          ) : step === "outside" || step === "blocked" ? (
+            <div role="alert" style={{ background: "var(--m3-warn-container)", color: "var(--m3-on-warn-container)", borderRadius: 16, padding: 14, display: "flex", flexDirection: "column", gap: 4 }}>
+              <b>{step === "outside" ? `You're about ${distance !== null ? km(distance) : "a long way"} from the office` : "Location is off for innovin"}</b>
+              <span className="m3-body">{step === "outside" ? "Check-in works close to the office. If you're at the door, step outside for a better signal and try again." : "Allow location for this site in your browser settings, then try again. It's only read when you tap Check in."}</span>
+            </div>
+          ) : (
+            <span className="m3-small" style={{ display: "flex", gap: 8, alignItems: "flex-start" }}><MapPin size={18} aria-hidden="true" style={{ flex: "none", marginTop: 1 }} />We check your location once, when you tap Check in. It isn't tracked.</span>
+          )}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+            <Button className="m3-btn-lg" disabled={busy} onClick={checkIn}>{step === "outside" || step === "blocked" ? "Try again" : "Check in"}</Button>
+            <Button className="m3-btn-lg" variant={step === "outside" || step === "blocked" ? "outlined" : "tonal"} disabled={busy} onClick={remote}>Working remote</Button>
+          </div>
+        </>
       )}
-      {mode !== "office" && (
-        <Button variant="ghost" style={{ width: "100%" }} aria-pressed={mode === "remote"} disabled={busy} onClick={mode === "remote" ? () => mark.mutate({ mode: "none" }, { onError: fail }) : remote}>
-          {mode === "remote" ? <><Check size={18} aria-hidden="true" />Remote today · tap to undo</> : "Working remote today"}
-        </Button>
-      )}
-
-      {(step === "ask" || step === "locating") && (
-        <Sheet label="Location check" onClose={() => setStep(null)}>
-          <Explain icon={<MapPin size={22} />} tone="sky" title="Quick check that you're at the office">You're not on office Wi-Fi, so we need your location once to mark an office day. It's checked against the office and not stored as a trail.</Explain>
-          <Button style={{ width: "100%" }} disabled={busy} onClick={withLocation}>{step === "locating" ? <><LoaderCircle size={18} className="duo-spin" aria-hidden="true" />Checking…</> : <><MapPin size={18} aria-hidden="true" />Allow location</>}</Button>
-          <Button variant="ghost" style={{ width: "100%" }} disabled={busy} onClick={remote}>Working remote today</Button>
-          <Flat style={{ padding: 12 }}><span className="duo-sub" style={{ fontSize: 12 }}>On office Wi-Fi you're never asked: the network is the proof.</span></Flat>
-        </Sheet>
-      )}
-      {step === "outside" && (
-        <Sheet label="Not at the office" onClose={() => setStep(null)}>
-          <Explain icon={<MapPin size={22} />} tone="pink" title="You don't look like you're at the office">Your location puts you {distance ? `about ${km(distance)} away` : "outside the office"}, so today can't be marked as an office day from here.</Explain>
-          <Button style={{ width: "100%" }} disabled={busy} onClick={remote}>Working remote today</Button>
-          <Button variant="ghost" style={{ width: "100%" }} disabled={busy} onClick={withLocation}>Try again</Button>
-          <Flat style={{ padding: 12 }}><span className="duo-sub" style={{ fontSize: 12 }}>At your desk and it still won't verify? Join office Wi-Fi and try again, or ask an admin to fix your day.</span></Flat>
-        </Sheet>
-      )}
-      {step === "blocked" && (
-        <Sheet label="Location blocked" onClose={() => setStep(null)}>
-          <Explain icon={<Lock size={22} />} tone="gold" title="We couldn't get your location">Location is blocked or unavailable for this site. Join office Wi-Fi and tap again, or allow location for this site in your browser settings.</Explain>
-          <Button style={{ width: "100%" }} disabled={busy} onClick={withLocation}>Try again</Button>
-          <Button variant="ghost" style={{ width: "100%" }} disabled={busy} onClick={remote}>Working remote today</Button>
-          <Flat style={{ padding: 12 }}><span className="duo-sub" style={{ fontSize: 12 }}>Remote days never need your location.</span></Flat>
-        </Sheet>
-      )}
-    </>
+    </Card>
   );
 }

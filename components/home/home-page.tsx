@@ -1,163 +1,210 @@
 "use client";
 import Link from "next/link";
-import { BookOpen, CalendarDays, ChevronRight, Footprints, Megaphone, Wifi } from "lucide-react";
-import { Avatar, Button, Card, Flat } from "@/components/duo";
-import { BellLink } from "@/components/duo/bell";
-import { Lappy } from "@/components/duo/lappy";
-import { CheckIn } from "@/components/home/check-in";
-import { Battery } from "@/components/days/battery";
+import { useState } from "react";
+import { Bell, ChevronRight, Footprints, Wifi } from "lucide-react";
+import { toast } from "sonner";
+import { Avatar, Button, Card, IconCircle, QueryState, StatusChip } from "@/components/m3";
+import { TeaLappy } from "@/components/m3/art";
+import { PageHero } from "@/components/m3/hero";
+import { CheckIn, timeIST } from "@/components/home/check-in";
 import type { DaysView } from "@/lib/days";
-import { boardHref, eventHref } from "@/lib/journey";
-import { useDays, useReading, useWorkspace } from "@/lib/queries";
+import { paceVerdict, plannedCount, timeOfDayIST, weekStrip, type WeekDay } from "@/lib/pace";
+import { useDays, useFeed, useMarkDay, useNotifications, useSend, useTea, useWorkspace, type FeedPost, type Tea } from "@/lib/queries";
 
 const IST = "Asia/Kolkata";
-const fmt = (iso: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-IN", { timeZone: IST, ...options }).format(new Date(iso));
-const dayLabel = (date: string) => new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
-const greeting = () => {
-  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: IST, hour: "numeric", hourCycle: "h23" }).format(new Date()));
-  return hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
+const longDate = (date: string) => new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+const shortDay = (date: string) => new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+const at = (iso: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-IN", { timeZone: IST, ...o }).format(new Date(iso));
+const hhmm = (t: string) => { const [h, m] = t.split(":").map(Number); return `${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; };
+
+function TimeCell({ top, bottom }: { top: string; bottom: string }) {
+  return <span style={{ flex: "none", width: 60 }}><span style={{ display: "block", fontSize: 15, fontWeight: 700, lineHeight: "20px" }}>{top}</span><span className="m3-small">{bottom}</span></span>;
+}
+
+function Header({ firstName, days }: { firstName: string; days: DaysView | undefined }) {
+  const time = timeOfDayIST(new Date());
+  const unread = useNotifications().data?.unread ?? 0;
+  const mark = useMarkDay();
+  const me = days?.me;
+  return (
+    <PageHero page="home" time={time}
+      title={`Good ${time}, ${firstName}`}
+      subtitle={days ? longDate(days.today) : " "}
+      actions={<>
+        <Link href="/wifi?check=1" className="m3-hero-btn" aria-label="Check office Wi-Fi"><Wifi size={22} aria-hidden="true" /></Link>
+        <Link href="/notifications" className="m3-hero-btn" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}>
+          <Bell size={22} aria-hidden="true" />
+          {unread > 0 && <span className="m3-dot-badge" aria-hidden="true">{unread > 9 ? "9+" : unread}</span>}
+        </Link>
+        <Link href="/account" aria-label="Account"><Avatar name={firstName} size={40} /></Link>
+      </>}>
+      {me && (
+        <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 8, flexWrap: "nowrap" }}>
+          <span className={`m3-chip ${me.mode === "office" ? "m3-chip-success" : "m3-chip-neutral"} m3-chip-enter`}>{me.mode === "office" ? `In office · ${timeIST(me.at)}` : "Remote today"}</span>
+          <Button variant="text" style={{ height: 32, padding: "0 8px", fontSize: 13, color: time === "evening" ? "#FFFFFF" : undefined }} aria-label="Change today's status" disabled={mark.isPending}
+            onClick={() => mark.mutate({ mode: "none" }, { onError: (e) => toast.error(e.message) })}>Change</Button>
+        </div>
+      )}
+    </PageHero>
+  );
+}
+
+function TeaRow({ tea }: { tea: Tea }) {
+  const toggle = useSend<{ going: boolean }, Tea>(["tea"], "/api/tea", "POST", { replace: true });
+  const [skipped, setSkipped] = useState(false);
+  const answered = tea.mine || skipped;
+  const go = (going: boolean) => toggle.mutate({ going }, { onError: (e) => toast.error(e.message) });
+  return (
+    <div className="m3-row" style={{ alignItems: "flex-start" }}>
+      <TimeCell top={hhmm(tea.roundAt).replace(/ (am|pm)$/, "")} bottom="Today" />
+      <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+        <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <span>
+            <span style={{ display: "block", fontWeight: 600 }}>{tea.mine ? "You're on the tea list" : skipped ? "Skipping tea today" : "Tea round"}</span>
+            <span className="m3-small">{answered ? `You can change your answer until ${hhmm(tea.countsAt)}.` : `Answer by ${hhmm(tea.countsAt)}.`}</span>
+          </span>
+          {tea.mine && <TeaLappy />}
+        </span>
+        {answered ? (
+          <Button variant="text" style={{ alignSelf: "flex-start", height: 32, padding: 0 }} disabled={toggle.isPending} onClick={() => { setSkipped(false); if (tea.mine) go(false); }}>Change answer</Button>
+        ) : (
+          <span style={{ display: "flex", gap: 8 }}>
+            <Button style={{ height: 36, padding: "0 16px" }} disabled={toggle.isPending} onClick={() => go(true)}>Yes, I'll have tea</Button>
+            <Button variant="text" style={{ height: 36 }} onClick={() => setSkipped(true)}>Skip</Button>
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+function UpNext({ days }: { days: DaysView }) {
+  const tea = useTea().data;
+  const feed = useFeed().data;
+  const rsvp = useSend<{ eventId: string; going: boolean }>(["feed"], "/api/events", "PATCH");
+  const now = Date.now();
+  const event = feed?.posts
+    .filter((p): p is Extract<FeedPost, { type: "event" }> => p.type === "event" && !p.cancelled && Date.parse(p.startsAt) > now)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
+  const poll = feed?.posts.find((p): p is Extract<FeedPost, { type: "poll" }> => p.type === "poll" && !p.closed && !p.options.some((o) => o.mine));
+  const showTea = days.me?.mode === "office" && !!tea;
+  if (!showTea && !event && !poll) return null;
+  return (
+    <section aria-label="Up next" className="m3-card" style={{ padding: "6px 0" }}>
+      <h2 className="m3-title" style={{ padding: "12px 16px 4px" }}>Up next</h2>
+      {showTea && <TeaRow tea={tea} />}
+      {event && (
+        <div className="m3-row">
+          <TimeCell top={at(event.startsAt, { weekday: "short" })} bottom={at(event.startsAt, { hour: "numeric", minute: "2-digit" })} />
+          <span style={{ flex: 1, minWidth: 0 }}><span style={{ display: "block", fontWeight: 600 }}>{event.title}</span><span className="m3-small">{event.going} going{event.location ? ` · ${event.location}` : ""}</span></span>
+          <Button variant={event.mine ? "tonal" : "outlined"} aria-pressed={event.mine} style={{ height: 36, padding: "0 14px", flex: "none" }} disabled={rsvp.isPending}
+            onClick={() => rsvp.mutate({ eventId: event.id, going: !event.mine }, { onError: (e) => toast.error(e.message) })}>{event.mine ? "Going" : "I'm in"}</Button>
+        </div>
+      )}
+      {poll && (
+        <Link href="/feed" className="m3-row">
+          <TimeCell top={poll.closesAt ? at(poll.closesAt, { weekday: "short" }) : "Open"} bottom={poll.closesAt ? "closes" : "poll"} />
+          <span style={{ flex: 1, minWidth: 0 }}><span style={{ display: "block", fontWeight: 600 }}>Poll: {poll.question}</span><span className="m3-small">Waiting for your vote</span></span>
+          <ChevronRight size={20} color="var(--m3-on-surface-variant)" aria-hidden="true" />
+        </Link>
+      )}
+    </section>
+  );
+}
+
+const DAY_STYLE: Record<WeekDay["state"], { background: string; color: string; border: string }> = {
+  done: { background: "var(--m3-primary)", color: "#FFFFFF", border: "0" },
+  planned: { background: "transparent", color: "var(--m3-primary)", border: "1.5px solid var(--m3-primary)" },
+  leave: { background: "var(--m3-tertiary-container)", color: "var(--m3-on-tertiary-container)", border: "0" },
+  off: { background: "transparent", color: "var(--m3-outline)", border: "1px solid transparent" },
+  empty: { background: "transparent", color: "var(--m3-outline)", border: "1px dashed var(--m3-outline-variant)" },
 };
 
-function lappyLine(days: DaysView) {
-  const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: "UTC" }).format(new Date(`${days.today}T00:00:00Z`));
-  const { done, target } = days.summary;
-  if (days.me?.mode === "office") return target ? `Checked in! That's ${done} of your ${target} office days this month.` : "Checked in! Good to see you.";
-  if (days.me?.mode === "remote") return "Remote today, noted.";
-  return days.isOfficeDayToday ? `It's ${weekday}, one of your days. Coming in?` : `It's ${weekday}. In the office or remote today?`;
-}
-
-function Faces({ names }: { names: string[] }) {
-  return <span className="duo-faces">{names.slice(0, 4).map((name, i) => <Avatar key={`${name}-${i}`} name={name} size={32} />)}</span>;
-}
-
-function Around({ days }: { days: DaysView }) {
-  const { inToday, next } = days.around;
-  const list = (names: string[], count: number) => (names.length ? `${names.slice(0, 3).join(", ")}${count > 3 ? " and others" : ""}` : "Nobody yet");
+function ThisWeek({ days }: { days: DaysView }) {
+  const pace = paceVerdict({ done: days.summary.done, planned: plannedCount(days), target: days.summary.target, month: days.month });
   return (
-    <Flat aria-label="Who's around" role="group" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "1 1 200px" }}>
-        <Faces names={inToday.names} />
-        <span style={{ marginLeft: inToday.names.length ? 8 : 0, display: "flex", flexDirection: "column" }}>
-          <span style={{ fontFamily: "var(--duo-display)", fontSize: 16, fontWeight: 600 }}>{inToday.count} in today</span>
-          <span className="duo-sub" style={{ fontSize: 12 }}>{list(inToday.names, inToday.count)}</span>
-        </span>
+    <section aria-label="This week" className="m3-card m3-stack">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}><h2 className="m3-title">This week</h2><StatusChip tone={pace.tone}>{pace.short}</StatusChip></span>
+        <Link href="/days" className="m3-btn m3-btn-text" style={{ height: 36, padding: "0 8px" }}>Plan days</Link>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "1 1 200px" }}>
-        <Faces names={next.names} />
-        <span style={{ marginLeft: next.names.length ? 8 : 0, display: "flex", flexDirection: "column" }}>
-          <span style={{ fontFamily: "var(--duo-display)", fontSize: 16, fontWeight: 600 }}>{next.count} expected next</span>
-          <span className="duo-sub" style={{ fontSize: 12 }}>{dayLabel(next.date)} · {next.mine ? "one of your days" : "not one of your days"}</span>
-        </span>
+      <div role="img" aria-label={pace.long} style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 6, textAlign: "center" }}>
+        {weekStrip(days).map((d) => (
+          <span key={d.date} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: d.today ? 700 : 500, color: "var(--m3-on-surface-variant)" }}>{d.label}</span>
+            <span style={{ width: 40, height: 40, borderRadius: 20, display: "grid", placeItems: "center", fontSize: 15, fontWeight: 600, ...DAY_STYLE[d.state], outline: d.today ? "2px solid var(--m3-on-surface)" : "none", outlineOffset: 2 }}>{d.day}</span>
+          </span>
+        ))}
       </div>
-    </Flat>
+    </section>
   );
 }
 
+function Crowd({ days }: { days: DaysView }) {
+  const { inToday, next } = days.around;
+  if (days.me?.mode === "remote") {
+    return (
+      <section aria-label="Your crowd" className="m3-card" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ display: "flex", paddingLeft: 8 }} aria-hidden="true">{next.names.slice(0, 4).map((n, i) => <span key={`${n}-${i}`} style={{ marginLeft: -8, border: "2px solid #FFFFFF", borderRadius: "50%" }}><Avatar name={n} size={32} /></span>)}</span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontWeight: 600 }}>{next.names.length ? `Your crowd is in on ${shortDay(next.date)}` : `Nobody from your crowd is planned for ${shortDay(next.date)}`}</span>
+          <span className="m3-small">{next.mine ? "You're planned for that day too" : "It's not one of your days"}</span>
+        </span>
+        <Link href="/days" className="m3-btn m3-btn-text" style={{ flex: "none" }}>Days</Link>
+      </section>
+    );
+  }
+  if (!inToday.names.length) return null;
+  return (
+    <section aria-label="Your crowd today" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <h2 className="m3-title" style={{ padding: "0 4px" }}>Your crowd today</h2>
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -18px", padding: "0 18px" }}>
+        {inToday.names.map((n, i) => (
+          <div key={`${n}-${i}`} className="m3-card" style={{ flex: "none", width: 112, padding: "14px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" }}>
+            <Avatar name={n} size={52} />
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{n}</span>
+            <span className="m3-small" style={{ fontSize: 12 }}>In today</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StepsTile() {
+  const steps = useWorkspace().data?.steps.me;
+  const today = steps?.today?.steps ?? 0;
+  const pct = Math.min(100, today / 100);
+  return (
+    <Link href="/steps" className="m3-card" style={{ display: "flex", alignItems: "center", gap: 14, color: "inherit", textDecoration: "none" }} aria-label={`10K steps: ${today.toLocaleString("en-IN")} today`}>
+      <IconCircle tone="success"><Footprints size={20} /></IconCircle>
+      <span style={{ flex: 1 }}>
+        <span style={{ display: "block", fontSize: 20, lineHeight: "26px", fontWeight: 600 }}>{today.toLocaleString("en-IN")}</span>
+        <span className="m3-small">steps today{steps?.rank ? ` · #${steps.rank} on the board` : ""}</span>
+      </span>
+      <svg aria-hidden="true" width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#EEF0F3" strokeWidth="5" /><circle cx="22" cy="22" r="18" fill="none" stroke="var(--m3-primary)" strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(pct * 1.131).toFixed(1)} 113.1`} transform="rotate(-90 22 22)" /></svg>
+    </Link>
+  );
+}
+
+// Home from the Material 3 prototype: what needs you today, in time order. Tea, today's crowd
+// and similar office-only items disappear on a remote day.
 export function HomePage({ firstName }: { firstName: string }) {
   const days = useDays();
-  const workspace = useWorkspace();
-  const events = (workspace.data?.events ?? []).filter((e) => !e.cancelledAt).slice(0, 3);
-  const pinned = workspace.data?.announcements[0];
-  const steps = workspace.data?.steps.me;
-  const book = useReading().data?.current;
-
-  const comingUp = events.length > 0 && (
-    <Card style={{ display: "flex", flexDirection: "column", gap: 12, padding: 14 }}>
-      <span className="duo-h2" style={{ fontSize: 18 }}>Coming up</span>
-      {events.map((e) => (
-        <Link key={e.id} href={eventHref(e.id)} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 46 }}>
-          <span className="duo-tone-grape" style={{ width: 42, height: 46, borderRadius: 12, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "var(--duo-display)" }}>
-            <span style={{ fontSize: 17, fontWeight: 700, lineHeight: 1 }}>{fmt(e.startsAt, { day: "numeric" })}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>{fmt(e.startsAt, { month: "short" })}</span>
-          </span>
-          <span style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-            <span style={{ fontFamily: "var(--duo-display)", fontSize: 15, fontWeight: 600, lineHeight: 1.15 }}>{e.title}</span>
-            <span className="duo-sub" style={{ fontSize: 12 }}>{fmt(e.startsAt, { weekday: "short", hour: "numeric", minute: "2-digit" })} · {e.going} going</span>
-          </span>
-        </Link>
-      ))}
-    </Card>
-  );
-
   return (
-    <>
-      <div className="duo-col duo-with-rail duo-screen-in">
-        <header style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-          <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-            <span className="duo-sub">{days.data ? dayLabel(days.data.today) : " "}</span>
-            <h1 className="duo-h1" style={{ fontSize: 26 }}>{greeting()}, {firstName}</h1>
-          </div>
-          <Link href="/wifi?check=1" className="duo-btn duo-btn-g duo-btn-icon" aria-label="Wi-Fi check"><Wifi size={22} strokeWidth={2.2} aria-hidden="true" /></Link>
-          <BellLink />
-        </header>
-
-        {days.isPending ? (
-          <div aria-busy="true" aria-label="Loading your day" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div className="duo-flat" style={{ height: 120 }} /><div className="duo-flat" style={{ height: 76 }} /><div className="duo-flat" style={{ height: 140 }} />
-          </div>
-        ) : days.isError ? (
-          <Card role="alert" style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "flex-start" }}>
-            <span className="duo-h2">Couldn't load your day</span>
-            <span className="duo-sub">{days.error.message}</span>
-            <Button onClick={() => days.refetch()}>Try again</Button>
-          </Card>
-        ) : (
-          <>
-            <div className="duo-hero">
-              <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end" }}><Lappy pose={days.data.me?.mode === "office" ? "office" : "idle"} width={days.data.me?.mode === "office" ? 150 : 128} /></div>
-              <Card className="duo-bubble" aria-live="polite">{lappyLine(days.data)}</Card>
-            </div>
-            <CheckIn days={days.data} />
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <Link href="/steps" className="duo-btn duo-btn-g duo-tilebtn">
-                <span className="duo-tag" style={{ display: "flex", alignItems: "center", gap: 6 }}><Footprints size={14} aria-hidden="true" />10K steps</span>
-                <span style={{ fontSize: 18, fontWeight: 700 }}>{steps?.rank ? `#${steps.rank} on the board` : "Join the board"}</span>
-                <span className="duo-sub" style={{ fontSize: 12 }}>{steps?.today?.steps ? `${steps.today.steps.toLocaleString("en-IN")} today` : steps?.today?.hit ? "10K done today" : "Nothing logged today"}</span>
-              </Link>
-              <Link href="/reading" className="duo-btn duo-btn-g duo-tilebtn">
-                <span className="duo-tag" style={{ display: "flex", alignItems: "center", gap: 6 }}><BookOpen size={14} aria-hidden="true" />Reading list</span>
-                <span style={{ fontSize: 18, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{book ? book.title : "Between books"}</span>
-                <span className="duo-sub" style={{ fontSize: 12 }}>{book ? `${book.pct}% read` : "Pick one from the shelf"}</span>
-              </Link>
-            </div>
-
-            {(pinned || events[0]) && (
-              <section style={{ display: "flex", flexDirection: "column", gap: 10 }} aria-label="From the feed">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h2 className="duo-h2">From the feed</h2>
-                  <Link href={boardHref()} className="duo-btn duo-btn-text">Open feed<ChevronRight size={18} aria-hidden="true" /></Link>
-                </div>
-                {pinned && (
-                  <Link href={boardHref(pinned.id)} className="duo-btn duo-peek" style={{ background: "var(--duo-hero)", color: "#fff", boxShadow: "0 5px 0 var(--duo-ink)" }}>
-                    <span className="duo-tile" style={{ background: "var(--duo-gold)", color: "var(--duo-ink)", transform: "rotate(-6deg)" }} aria-hidden="true"><Megaphone size={20} /></span>
-                    <span style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-                      <span className="duo-tag" style={{ color: "var(--duo-gold)" }}>Announcement</span>
-                      <span style={{ fontSize: 17, fontWeight: 700 }}>{pinned.title}</span>
-                    </span>
-                    <ChevronRight size={18} aria-hidden="true" />
-                  </Link>
-                )}
-                {events[0] && (
-                  <Link href={eventHref(events[0].id)} className="duo-btn duo-btn-g duo-peek duo-rail-hide">
-                    <span className="duo-tile duo-tone-grape" aria-hidden="true"><CalendarDays size={20} /></span>
-                    <span style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-                      <span className="duo-tag">Event · {fmt(events[0].startsAt, { weekday: "short", day: "numeric", month: "short" })}</span>
-                      <span style={{ fontSize: 17, fontWeight: 700 }}>{events[0].title}</span>
-                      <span className="duo-sub" style={{ fontSize: 12 }}>{events[0].going} going</span>
-                    </span>
-                    <ChevronRight size={18} aria-hidden="true" />
-                  </Link>
-                )}
-              </section>
-            )}
-
-            <Battery days={days.data} />
-            <Around days={days.data} />
-          </>
-        )}
-      </div>
-      {comingUp && <aside className="duo-rail" aria-label="Coming up" style={{ paddingTop: 66 }}>{comingUp}</aside>}
-    </>
+    <div className="m3-home m3-stack">
+      <Header firstName={firstName} days={days.data} />
+      {days.isPending || days.isError ? (
+        <QueryState error={days.error} onRetry={() => days.refetch()} what="your day" />
+      ) : (
+        <>
+          <CheckIn days={days.data} />
+          <UpNext days={days.data} />
+          <ThisWeek days={days.data} />
+          <Crowd days={days.data} />
+          <StepsTile />
+        </>
+      )}
+    </div>
   );
 }

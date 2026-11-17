@@ -27,3 +27,8 @@ const HOME_ART: Record<TimeOfDay, React.ReactNode> = {
 export function HomeScene({ time }: { time: TimeOfDay }) {
   return <svg role="img" aria-label={HOME_LABEL[time]} viewBox="0 0 220 150" className="m3-hero-art">{HOME_ART[time]}</svg>;
 }
+
+// Lappy with a cup, shown in the tea row once you've said yes (the reward, never the question).
+export function TeaLappy({ size = 36 }: { size?: number }) {
+  return <svg role="img" aria-label="Lappy holding a cup of tea" width={size} height={size} viewBox="0 0 64 64" style={{ flex: "none" }}><rect x="6" y="6" width="44" height="34" rx="7" fill="#A5A7C3"></rect><rect x="10" y="10" width="36" height="26" rx="4" fill="#4B4E6C"></rect><path d="M18 23q4-5 8 0M30 23q4-5 8 0" stroke="#FFFFFF" strokeWidth="2.4" fill="none" strokeLinecap="round"></path><path d="M23 29q5 4 10 0" stroke="#FFFFFF" strokeWidth="2.2" fill="none" strokeLinecap="round"></path><path d="M2 40h48l-4 9H6z" fill="#B6B8CF"></path><rect x="42" y="42" width="14" height="14" rx="3" fill="#FFFFFF" stroke="#65587B" strokeWidth="2"></rect><path d="M56 46h2a3 3 0 0 1 0 6h-2" stroke="#65587B" strokeWidth="2" fill="none"></path><path d="M46 38q-2-3 0-6M51 38q-2-3 0-6" stroke="#65587B" strokeWidth="1.8" fill="none" strokeLinecap="round"></path></svg>;
+}

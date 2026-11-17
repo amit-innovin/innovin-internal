@@ -149,3 +149,13 @@
   .m3 .m3-hero-text { max-width: 55%; }
   .m3 .m3-hero .m3-h1 { font-size: 34px; line-height: 42px; }
 }
+
+/* Check-in confirmation (components/home/check-in.tsx) and header chip entrance */
+.m3 .m3-done-mark { width: 52px; height: 52px; border-radius: 26px; flex: none; display: grid; place-items: center; background: var(--m3-success); color: #FFFFFF; animation: m3-pop .35s ease-out; }
+.m3 .m3-draw { stroke-dasharray: 24; stroke-dashoffset: 24; animation: m3-draw .45s .15s ease-out forwards; }
+.m3 .m3-chip-enter { animation: m3-chip-in .3s ease-out; }
+.m3 .m3-dot-badge { position: absolute; top: 4px; right: 4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #B3261E; color: #FFFFFF; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
+@media (prefers-reduced-motion: reduce) {
+  .m3 .m3-done-mark, .m3 .m3-chip-enter { animation: none; }
+  .m3 .m3-draw { animation: none; stroke-dashoffset: 0; }
+}

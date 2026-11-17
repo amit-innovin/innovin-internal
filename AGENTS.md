@@ -52,16 +52,18 @@ Then deploy (`npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"`, token in 
 smoke-test production, and delete any test rows created by the smoke test.
 
 ## Design: the canvas is the source of truth
-- Every screen is built from the design canvas, not from spec prose: https://claude.ai/artifact/DEsTmRtTRB5vP2G5ugddyE.
-  A snapshot of its boards is in `docs/design/canvas/`; `docs/design/canvas-map.md` maps each board to routes, components and APIs.
-  Read the board (and refresh the snapshot if the canvas changed) before planning or building a screen. If a state is not drawn,
-  add a board first; don't invent it in code.
-- The app is being rebuilt screen by screen. Rebuilt screens live in `app/(member)/(duo)/` and render inside the new shell
-  (`components/shell/app-shell.tsx`); `lib/nav.ts` lists which routes those are. Everything else still uses the legacy nav and CSS.
-  When a screen is rebuilt: move its route into `(duo)`, add it to `DUO_ROUTES` and point its nav item at it in `lib/nav.ts`.
-- New-design UI uses the Duo primitives in `components/duo` and the classes and tokens in `app/duo.css` (all scoped under `.duo`),
-  and `Lappy` for the mascot. Rule: a solid bottom edge means tappable, flat means information. Don't use the legacy
-  stylesheets or shadcn styling on a rebuilt screen.
+- Every screen is built from the Material 3 prototype canvas, not from spec prose: https://claude.ai/artifact/DFhALZi4uN4Sxm7ng8CGN6
+  (phone `Prototype.dc.html`, desktop `DesktopPrototype.dc.html`). A snapshot and the route map are in `docs/design/m3/`;
+  the reasons behind each design choice are at https://claude.ai/artifact/BDMRzx3hjYJtsmx6DucccG.
+  Read the prototype (and refresh the snapshot if the canvas changed) before planning or building a screen. If a state is not
+  drawn, add it to the prototype first; don't invent it in code.
+- The Duo Pop design (old canvas https://claude.ai/artifact/DEsTmRtTRB5vP2G5ugddyE, `docs/design/canvas/`) stays on the
+  `phase2-shell` branch so the owner can switch back. The Material 3 work lives on its own branch and is not merged to `main`.
+- Rebuilt screens live in `app/(member)/(duo)/` and render inside the shell `components/m3/app-shell.tsx`; `lib/nav.ts` lists the routes.
+  New UI uses the primitives in `components/m3` and the tokens and classes in `app/m3.css` (scoped under `.m3`). Screens not
+  rebuilt yet keep their Duo styling (`components/duo`, `app/duo.css`) inside the new shell until their stage.
+- Tappable means a filled, tonal or outlined button, or a row with a chevron; flat means information. Lappy appears only where
+  the prototype draws it (Home header, celebrations, empty states), never on attendance, leave or reminders.
 
 ## Conventions
 - Legacy UI (screens not rebuilt yet): shadcn/ui primitives in `components/ui`, beUI motion components in `components/motion`, shared blocks in `components/kit.tsx`, transitions.dev CSS in `app/transitions.css`. Brand tokens (innovinlabs.com) live in `app/globals.css`.

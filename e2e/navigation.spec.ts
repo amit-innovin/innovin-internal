@@ -29,7 +29,7 @@ test.describe("Navigation & studio shell", () => {
     } else {
       await main.getByRole("link", { name: "10K steps", exact: true }).click();
       await expect(page).toHaveURL(/\/steps$/);
-      for (const [item, heading] of [["Settings", "Settings"], ["Speak up", "Speak Up"], ["Wi-Fi check", "Wi-Fi Quality"], ["Help", "Help"]]) {
+      for (const [item, heading] of [["Settings", "Settings"], ["Help", "Help"]]) {
         await page.goto("/");
         await page.getByRole("button", { name: "Account menu" }).click();
         await page.getByRole("menuitem", { name: item, exact: true }).click();
@@ -107,7 +107,7 @@ test.describe("Navigation & studio shell", () => {
     else {
       await expect(main.getByRole("link", { name: /^(Home|Feed|Days|10K steps)$/ })).toHaveCount(4);
       await page.getByRole("button", { name: "Account menu" }).click();
-      await expect(page.getByRole("menuitem")).toHaveText(["Settings", "Speak up", "Wi-Fi check", "Help", "Sign out"]);
+      await expect(page.getByRole("menuitem")).toHaveText(["Settings", "Help", "Sign out"]);
     }
     await expect(page.getByRole("link", { name: /pantry|snack|plans|people/i, includeHidden: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Admin", exact: true, includeHidden: true })).toHaveCount(0);

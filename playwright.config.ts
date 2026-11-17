@@ -20,8 +20,6 @@ const serverEnv = (name: string) => ({
   OFFICE_LAT: "12.935",
   OFFICE_LNG: "77.624",
   OFFICE_RADIUS_M: "1000",
-  // A made-up office connection: requests arriving from this address count as "on office Wi-Fi".
-  OFFICE_IPS: "203.0.113.7",
   // Google sign-in against the local OAuth mock (e2e/google-mock.ts, started in global-setup).
   GOOGLE_CLIENT_ID: "e2e-client",
   GOOGLE_CLIENT_SECRET: "e2e-secret",

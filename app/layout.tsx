@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Playfair_Display, JetBrains_Mono, Caveat, Fredoka, Nunito } from "next/font/google";
+import { Plus_Jakarta_Sans, Playfair_Display, JetBrains_Mono, Caveat, Fredoka, Nunito, Figtree } from "next/font/google";
 import "./globals.css";
 import { WorkspaceNav } from "@/components/workspace/nav";
 import { LegacyFrame } from "@/components/shell/legacy-frame";
@@ -16,6 +16,7 @@ import "./ios.css";
 import "./workspace-polish.css";
 import "./mobile-shell.css";
 import "./duo.css";
+import "./m3.css";
 
 // Font families used by the supplied workspace design.
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
@@ -25,6 +26,8 @@ const hand = Caveat({ subsets: ["latin"], variable: "--font-handwriting" });
 // The new design (Duo Pop): Fredoka for headings and buttons, Nunito for body text.
 const fredoka = Fredoka({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-fredoka" });
 const nunito = Nunito({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-nunito" });
+// The Material 3 rebuild: Figtree for everything.
+const figtree = Figtree({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-figtree" });
 
 export const metadata: Metadata = {
   title: "Innovin Internal",
@@ -42,7 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // members never see it render then vanish, and admins don't wait for a client fetch.
   const [showAdmin, user] = await Promise.all([isAdmin(), currentUser()]);
   return (
-    <html lang="en" className={cn("font-sans", jakarta.variable, editorial.variable, mono.variable, hand.variable, fredoka.variable, nunito.variable)}>
+    <html lang="en" className={cn("font-sans", jakarta.variable, editorial.variable, mono.variable, hand.variable, fredoka.variable, nunito.variable, figtree.variable)}>
       <body className="antialiased">
         <Providers>
           <TooltipProvider delayDuration={200}>

@@ -1,0 +1,96 @@
+/* Material 3 design (prototype: docs/design/m3/). Everything is scoped under .m3 so the Duo
+   screens that haven't moved yet keep their own styles. Colours are the prototype's tokens. */
+.m3 {
+  --m3-primary: #006493;
+  --m3-on-primary: #FFFFFF;
+  --m3-primary-container: #CAE6FF;
+  --m3-on-primary-container: #001E30;
+  --m3-secondary-container: #D3E5F5;
+  --m3-on-secondary-container: #0C1D29;
+  --m3-tertiary: #65587B;
+  --m3-tertiary-container: #EBDCFF;
+  --m3-on-tertiary-container: #20142F;
+  --m3-ground: #F1F4FA;
+  --m3-surface: #FFFFFF;
+  --m3-surface-container: #EBEEF4;
+  --m3-on-surface: #181C20;
+  --m3-on-surface-variant: #41474D;
+  --m3-outline: #71787E;
+  --m3-outline-variant: #C1C7CE;
+  --m3-success: #2E7D4F;
+  --m3-success-container: #CDEBD6;
+  --m3-on-success-container: #0B3D1F;
+  --m3-warn-container: #FFDDB0;
+  --m3-on-warn-container: #4A2800;
+  --m3-error: #BA1A1A;
+  --m3-speak: #24222F;
+  --m3-font: var(--font-figtree), system-ui, sans-serif;
+  --m3-ease: cubic-bezier(.2, .8, .2, 1);
+  font-family: var(--m3-font);
+  color: var(--m3-on-surface);
+}
+.m3 .m3-h1 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.01em; }
+.m3 .m3-title { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; }
+.m3 .m3-body { font-size: 15px; line-height: 22px; }
+.m3 .m3-small { font-size: 13px; line-height: 18px; color: var(--m3-on-surface-variant); }
+.m3 .m3-stack { display: flex; flex-direction: column; gap: 14px; }
+
+/* Buttons */
+.m3 .m3-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 20px; border-radius: 20px; border: 0;
+  font: 600 14px/1 var(--m3-font); cursor: pointer; text-decoration: none; white-space: nowrap;
+  transition: transform .12s ease, background-color .2s ease, color .2s ease, border-color .2s ease; }
+.m3 .m3-btn-lg { height: 48px; border-radius: 24px; font-size: 15px; }
+.m3 .m3-btn-filled { background: var(--m3-primary); color: var(--m3-on-primary); }
+.m3 .m3-btn-tonal { background: var(--m3-secondary-container); color: var(--m3-on-secondary-container); }
+.m3 .m3-btn-outlined { background: transparent; color: var(--m3-primary); border: 1px solid var(--m3-outline); }
+.m3 .m3-btn-text { background: transparent; color: var(--m3-primary); padding: 0 12px; }
+.m3 .m3-btn:disabled { opacity: .45; cursor: default; }
+
+/* Surfaces */
+.m3 .m3-card { background: var(--m3-surface); border-radius: 24px; padding: 18px; }
+.m3 .m3-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.m3 .m3-chip-success { background: var(--m3-success-container); color: var(--m3-on-success-container); }
+.m3 .m3-chip-warn { background: var(--m3-warn-container); color: var(--m3-on-warn-container); }
+.m3 .m3-chip-neutral { background: var(--m3-surface-container); color: var(--m3-on-surface-variant); }
+.m3 .m3-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 10px 16px; border: 0; background: transparent;
+  text-align: left; color: inherit; font: inherit; text-decoration: none; cursor: pointer; transition: transform .12s ease, background-color .2s ease; }
+.m3 div.m3-row { cursor: default; }
+.m3 .m3-row + .m3-row { border-top: 1px solid #DFE3E8; }
+.m3 .m3-icon { flex: none; width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; }
+.m3 .m3-tone-primary { background: var(--m3-primary-container); color: var(--m3-on-primary-container); }
+.m3 .m3-tone-secondary { background: var(--m3-secondary-container); color: var(--m3-on-secondary-container); }
+.m3 .m3-tone-tertiary { background: var(--m3-tertiary-container); color: var(--m3-on-tertiary-container); }
+.m3 .m3-tone-success { background: var(--m3-success-container); color: var(--m3-on-success-container); }
+.m3 .m3-tone-warn { background: var(--m3-warn-container); color: var(--m3-on-warn-container); }
+.m3 .m3-tone-neutral { background: var(--m3-surface-container); color: var(--m3-on-surface-variant); }
+.m3 .m3-avatar { flex: none; border-radius: 50%; display: grid; place-items: center; font-weight: 600; background: var(--m3-primary-container); color: var(--m3-on-primary-container); }
+
+/* Speak up floating button */
+.m3 .m3-fab { position: fixed; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 45; width: 56px; height: 56px; border-radius: 16px;
+  display: grid; place-items: center; background: var(--m3-speak); color: #FFFFFF; box-shadow: 0 4px 10px rgba(0,0,0,.18), 0 1px 3px rgba(0,0,0,.3);
+  transition: transform .12s ease; }
+
+/* Sheets: bottom sheet on phones, centred dialog from 1100px */
+.m3-sheet-wrap { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(0,0,0,.36); }
+.m3-sheet { background: var(--m3-surface, #FFFFFF); border-radius: 28px 28px 0 0; padding: 12px 20px calc(24px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px;
+  max-height: 90dvh; overflow-y: auto; outline: none; animation: m3-sheet-up .3s var(--m3-ease, ease-out); }
+.m3-sheet::before { content: ""; align-self: center; width: 32px; height: 4px; border-radius: 2px; background: #C1C7CE; }
+@media (min-width: 1100px) {
+  .m3-sheet-wrap { align-items: center; justify-content: center; padding: 16px; }
+  .m3-sheet { width: 100%; max-width: 480px; border-radius: 28px; padding: 22px 24px 24px; }
+  .m3-sheet::before { display: none; }
+}
+
+/* Microinteractions */
+.m3 button:active:not(:disabled), .m3 a.m3-row:active, .m3 .m3-btn:active { transform: scale(.96); }
+.m3 [aria-pressed="true"] { animation: m3-pop .32s var(--m3-ease); }
+.m3 .m3-bar-fill { transition: width .45s var(--m3-ease); }
+.m3 .m3-spin { animation: m3-spin .8s linear infinite; }
+@keyframes m3-pop { 0% { transform: scale(.92); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes m3-spin { to { transform: rotate(360deg); } }
+@keyframes m3-sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes m3-draw { to { stroke-dashoffset: 0; } }
+@keyframes m3-chip-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .m3 *, .m3-sheet { animation-duration: 0s !important; animation-delay: 0s !important; transition: none !important; }
+}

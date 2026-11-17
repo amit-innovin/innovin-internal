@@ -7,10 +7,11 @@ const WEEK_MS = 7 * 86_400_000;
 export const defaultSeenAt = (today: string) => new Date(`${addDays(today, -1)}T00:00:00+05:30`).toISOString();
 
 // Posts made after the watermark and within the last week, oldest first. Important announcements
-// reach people through their own sheet instead, so they never join the stack.
-export function newPostIds(posts: { id: string; at: string; type: string; important?: boolean }[], seenAt: string, now: number): string[] {
+// reach people through their own sheet instead, so they never join the stack, and nothing you
+// posted yourself is news to you.
+export function newPostIds(posts: { id: string; at: string; type: string; important?: boolean; mine?: boolean }[], seenAt: string, now: number): string[] {
   return posts
-    .filter((p) => p.at > seenAt && Date.parse(p.at) >= now - WEEK_MS && !(p.type === "announcement" && p.important))
+    .filter((p) => p.at > seenAt && Date.parse(p.at) >= now - WEEK_MS && !p.mine && !(p.type === "announcement" && p.important))
     .sort((a, b) => a.at.localeCompare(b.at))
     .map((p) => p.id);
 }

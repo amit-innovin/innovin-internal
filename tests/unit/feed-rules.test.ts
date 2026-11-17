@@ -16,6 +16,8 @@ describe("newPostIds", () => {
     expect(newPostIds(posts, at(9), NOW)).toEqual(["a", "b"]));
   it("keeps a post made while you were mid-stack new for next time", () =>
     expect(newPostIds([{ id: "late", type: "quote", at: at(1) }], at(2), NOW)).toEqual(["late"]));
+  it("never counts your own posts as new to you", () =>
+    expect(newPostIds([{ id: "mine", type: "kudos", at: at(1), mine: true }, { id: "theirs", type: "kudos", at: at(1) }], at(9), NOW)).toEqual(["theirs"]));
   it("starts a first-time reader at the beginning of yesterday, office time", () =>
     expect(defaultSeenAt("2026-11-18")).toBe("2026-11-16T18:30:00.000Z"));
 });

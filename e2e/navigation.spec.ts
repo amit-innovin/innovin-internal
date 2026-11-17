@@ -18,18 +18,18 @@ test.describe("Navigation & studio shell", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Days" })).toBeVisible();
     await expect(main.getByRole("link", { name: "Days", exact: true })).toHaveAttribute("aria-current", "page");
 
-    // The Feed is still the legacy notice board until it is rebuilt.
     await main.getByRole("link", { name: "Feed", exact: true }).click();
-    await expect(page).toHaveURL(/\/board\?view=board$/);
+    await expect(page).toHaveURL(/\/feed$/);
+    await expect(main.getByRole("link", { name: "Feed", exact: true })).toHaveAttribute("aria-current", "page");
 
     await page.goto("/");
     if (isMobile) {
       await main.getByRole("link", { name: "Account", exact: true }).click();
-      await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
     } else {
       await main.getByRole("link", { name: "10K steps", exact: true }).click();
       await expect(page).toHaveURL(/\/steps$/);
-      for (const [item, heading] of [["Settings", "Settings"], ["Help", "Help"]]) {
+      for (const [item, heading] of [["Settings", "Account"], ["Help", "Help"]]) {
         await page.goto("/");
         await page.getByRole("button", { name: "Account menu" }).click();
         await page.getByRole("menuitem", { name: item, exact: true }).click();
@@ -38,8 +38,9 @@ test.describe("Navigation & studio shell", () => {
     }
   });
 
+  // /attendance, /help and /admin/tools haven't been rebuilt; they keep the old top bar.
   test("legacy pages keep their own top bar, with Events and a way back Home", async ({ page }) => {
-    await signInEmployee(page, undefined, "/events");
+    await signInEmployee(page, undefined, "/help");
     await page.locator(".reference-more summary").click();
     const more = page.getByRole("navigation", { name: "More workspace tools", exact: true });
     await expect(more.getByRole("link", { name: "Events", exact: true })).toBeVisible();
@@ -48,29 +49,48 @@ test.describe("Navigation & studio shell", () => {
     await expect(page.getByRole("button", { name: "Check in", exact: true })).toBeVisible();
   });
 
-  test("support pages remain reachable through the studio shell", async ({ page }) => {
-    // An admin, so Settings also links to the dashboard.
-    await signInEmployee(page, ADMIN_EMAIL, "/settings");
-    await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Admin dashboard/ })).toBeVisible();
+  test("retired routes redirect to their new homes", async ({ page }) => {
+    await signInEmployee(page, undefined, "/");
+    for (const [from, to] of [["/settings", /\/account$/], ["/events", /\/feed\?filter=event$/], ["/board", /\/feed$/]] as const) {
+      await page.goto(from);
+      await expect(page).toHaveURL(to);
+    }
+  });
+
+  test("an admin reaches the dashboard from Account, and Help from the legacy More menu", async ({ page }) => {
+    await signInEmployee(page, ADMIN_EMAIL, "/account");
+    await page.getByRole("link", { name: /^Admin/ }).filter({ visible: true }).first().click();
+    await expect(page.getByRole("heading", { level: 1, name: "Admin" })).toBeVisible();
+    await page.goto("/help");
     await page.locator(".reference-more summary").click();
     await page.getByRole("navigation", { name: "More workspace tools" }).getByRole("link", { name: "Help", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Is Speak Up really anonymous?" })).toBeVisible();
   });
 
-  test("feature pages use the persistent shell without redundant back links", async ({ page }) => {
+  test("main pages have no redundant back links; detail pages get one on phones", async ({ page, isMobile }) => {
     await signInEmployee(page, undefined, "/");
-    for (const path of ["/events", "/settings", "/help", "/attendance", "/wifi"]) {
+    for (const path of ["/feed", "/days", "/snacks", "/account"]) {
+      await page.goto(path);
+      await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
+      await expect(page.getByRole("navigation", { name: "Main" }).filter({ visible: true })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Innovin Internal home" })).toHaveCount(0);
+    }
+    for (const path of ["/help", "/attendance"]) {
       await page.goto(path);
       await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "Innovin Internal home" })).toBeVisible();
+    }    // Opened from the bell / the Home tile, these show a back arrow where there's no sidebar.
+    for (const path of ["/notifications", "/steps"]) {
+      await page.goto(path);
+      await expect(page.getByRole("link", { name: "Back to home" }).filter({ visible: true })).toHaveCount(isMobile ? 1 : 0);
     }
   });
 
-  test("Home reflects a day marked on the legacy screen", async ({ page }) => {
+  test("Home reflects a day already marked", async ({ page }) => {
     await signInOffice(page);
     await page.goto("/");
-    await expect(page.getByText("You're in today")).toBeVisible();
+    await expect(page.getByText(/^In office · \d{1,2}:\d{2}/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Check in", exact: true })).toHaveCount(0);
   });
 
   test("unknown pages show the branded 404 with a way home", async ({ page }) => {
@@ -103,27 +123,20 @@ test.describe("Navigation & studio shell", () => {
     await signInEmployee(page, undefined, "/");
     const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
     await expect(main.getByRole("link").first()).toBeAttached();
-    if (isMobile) await expect(main.getByRole("link")).toHaveText(["Home", "Feed", "Days", "Account"]);
+    if (isMobile) await expect(main.getByRole("link")).toHaveText(["Home", "Feed", "Days", "Snacks", "Account"]);
     else {
-      await expect(main.getByRole("link", { name: /^(Home|Feed|Days|10K steps)$/ })).toHaveCount(4);
+      await expect(main.getByRole("link", { name: /^(Home|Feed|Days|Tea & snacks|10K steps|Speak up)$/ })).toHaveCount(6);
       await page.getByRole("button", { name: "Account menu" }).click();
       await expect(page.getByRole("menuitem")).toHaveText(["Settings", "Help", "Sign out"]);
     }
-    await expect(page.getByRole("link", { name: /pantry|snack|plans|people/i, includeHidden: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /pantry|plans|people|reading/i, includeHidden: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Admin", exact: true, includeHidden: true })).toHaveCount(0);
     await expect(page.getByRole("menuitem", { name: "Admin", includeHidden: true })).toHaveCount(0);
   });
 
-  test("an admin finds Admin under More", async ({ page }) => {
-    await signInEmployee(page, ADMIN_EMAIL, "/events");
-    await page.locator(".reference-more summary").click();
-    await page.getByRole("navigation", { name: "More workspace tools" }).getByRole("link", { name: "Admin", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
-  });
-
   test("signed-in pages never overflow horizontally", async ({ page }) => {
     await signInOffice(page);
-    for (const path of ["/", "/days", "/notifications", "/board", "/steps", "/attendance", "/grievances", "/wifi", "/events", "/settings", "/help", "/admin"]) {
+    for (const path of ["/", "/days", "/notifications", "/feed", "/snacks", "/steps", "/account", "/attendance", "/grievances", "/wifi", "/help"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBeLessThanOrEqual(0);

@@ -39,18 +39,19 @@ export async function signInEmployee(page: Page, email?: string, next = "/attend
   if (email) await page.request.get(`${MOCK_URL}/as?email=${encodeURIComponent(email)}&name=${encodeURIComponent(email.split("@")[0].split(".")[0].replace(/^./, c => c.toUpperCase()))}`);
   try {
     await page.goto(`/api/auth/google?next=${encodeURIComponent(next)}`);
-    await expect(page).toHaveURL(new URL(next, "http://localhost:3210").toString());
+    // Signed in once we land on a page that isn't sign-in. Not always `next` itself: retired
+    // routes redirect (/settings → /account, /events → /feed?filter=event; see next.config.ts).
+    await page.waitForURL((url) => !url.pathname.startsWith("/api/auth") && url.pathname !== "/sign-in");
   } finally { if (email) await page.request.get(`${MOCK_URL}/as?reset=1`); }
 }
 
-// Signs in as a verified company employee and declares the day as in-office, using the legacy
-// workspace screen at /board (it still hosts the notice board, events card and ID pass).
+// Signs in as a verified company employee and marks today as in-office, from a position inside
+// the test office geofence (playwright.config: OFFICE_LAT/LNG 12.935,77.624). Check-in is
+// location-only, so this is the same request Home's "Check in" button sends.
 export async function signInOffice(page: Page, email?: string) {
-  if (email) await page.request.get(`${MOCK_URL}/as?email=${encodeURIComponent(email)}&name=${encodeURIComponent(email)}`);
-  try { await page.goto("/api/auth/google?next=/board"); await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible(); }
-  finally { if (email) await page.request.get(`${MOCK_URL}/as?reset=1`); }
-  await page.getByRole("button", { name: "In office", exact: true }).click();
-  await expect(page.getByRole("button", { name: "In office", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await signInEmployee(page, email, "/");
+  const res = await page.request.post("/api/days", { data: { mode: "office", lat: 12.9352, lng: 77.6241, accuracyM: 20 } });
+  expect(res.status(), "office check-in").toBe(200);
 }
 
 export type AdminTab = "today" | "approvals" | "people" | "publish";

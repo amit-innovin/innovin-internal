@@ -41,7 +41,7 @@ export type DayMode = "office" | "remote";
 // One entry per day changed after the fact, by the person or by an admin.
 export type HiKind = "wave" | "five" | "thanks" | "chai" | "lunch" | "walk";
 // One wave or invite, today. atTime: "now", "30" (minutes) or "HH:MM" for invites; reply only for invites.
-export type HiRow = { id: string; date: string; from: string; to: string; kind: HiKind; atTime: string | null; reply: "yes" | "no" | null; createdAt: string };
+export type HiRow = { id: string; date: string; from: string; to: string; kind: HiKind; atTime: string | null; reply: "yes" | "no" | null; createdAt: string; repliedAt?: string | null };
 
 export type PlanOverrideRow = { email: string; date: string; planned: boolean };
 export type ClosedDayRow = { date: string; reason: string; createdBy: string; createdAt: string };
@@ -337,7 +337,9 @@ export interface Store {
   // One nudge per sender, recipient and day; false when it was already sent.
   addNudge(date: string, from: string, to: string): Promise<boolean>;
   setSayHi(email: string, on: boolean): Promise<boolean>;
-  addHi(row: HiRow): Promise<HiRow>;
+  // Adds it only while the sender is under `limit` today and hasn't sent to this person today;
+  // null otherwise. Checked and written together, so sends at the same moment can't beat it.
+  addHi(row: HiRow, limit: number): Promise<HiRow | null>;
   listHiFrom(date: string, from: string): Promise<HiRow[]>;
   listHiTo(date: string, to: string): Promise<HiRow[]>;
   // Only the recipient, only an unanswered invite; false otherwise.

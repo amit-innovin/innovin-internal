@@ -392,13 +392,19 @@ export const jsonStore: Store = {
       if (row) row.sayHi = on;
       return { result: !!row, changed: !!row };
     }),
-  addHi: (row) => mutate((db) => { db.hi.push(row); return { result: row, changed: true }; }),
+  addHi: (row, limit) =>
+    mutate((db) => {
+      const today = db.hi.filter((h) => h.date === row.date && h.from === row.from);
+      if (today.length >= limit || today.some((h) => h.to === row.to)) return { result: null, changed: false };
+      db.hi.push(row);
+      return { result: row, changed: true };
+    }),
   listHiFrom: (date, from) => query((db) => db.hi.filter((h) => h.date === date && h.from === from).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
   listHiTo: (date, to) => query((db) => db.hi.filter((h) => h.date === date && h.to === to).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
   setHiReply: (id, to, reply) =>
     mutate((db) => {
       const row = db.hi.find((h) => h.id === id && h.to === to && ["chai", "lunch", "walk"].includes(h.kind) && h.reply === null);
-      if (row) row.reply = reply;
+      if (row) { row.reply = reply; row.repliedAt = new Date().toISOString(); }
       return { result: !!row, changed: !!row };
     }),
   setStepsLeague: (email, on) =>

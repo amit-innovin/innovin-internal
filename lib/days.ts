@@ -70,7 +70,10 @@ export async function daysView(email: string, month: string) {
   const mine = todayRows.find((r) => r.email === email);
   const byEmail = new Map(employees.map((e) => [e.email, e]));
   const inOffice = todayRows.filter((r) => dayMode(r) === "office");
-  const inToday = inOffice.map((r) => firstName(byEmail.get(r.email)?.name ?? "", r.email));
+  // Names of others in (never you). Emails and Say hi flags only go to someone who can wave:
+  // opted in and checked in at the office themselves.
+  const inToday = inOffice.filter((r) => r.email !== email).map((r) => firstName(byEmail.get(r.email)?.name ?? "", r.email));
+  const canWave = !!me?.sayHi && dayMode(todayRows.find((r) => r.email === email)) === "office";
   // Say hi: who's in (and whether they take waves), and what you've sent today.
   const sentToday = me?.sayHi ? await store.listHiFrom(today, email) : [];
 
@@ -89,7 +92,7 @@ export async function daysView(email: string, month: string) {
     isOfficeDayToday: plannedOn({ date: today, officeDays, override: todayOverride[0]?.planned, working: isWorkingDay(today, closed), leave: false }),
     days,
     around: {
-      inToday: { count: inToday.length, names: inToday.slice(0, 6), people: inOffice.filter((r) => r.email !== email).map((r) => ({ email: r.email, name: firstName(byEmail.get(r.email)?.name ?? "", r.email), sayHi: !!byEmail.get(r.email)?.sayHi })) },
+      inToday: { count: inToday.length, names: inToday.slice(0, 6), people: canWave ? inOffice.filter((r) => r.email !== email).map((r) => ({ email: r.email, name: firstName(byEmail.get(r.email)?.name ?? "", r.email), sayHi: !!byEmail.get(r.email)?.sayHi })) : [] },
     },
   };
 }

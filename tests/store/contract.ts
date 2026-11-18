@@ -143,9 +143,9 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.setSayHi("a@innovinlabs.com", true)).toBe(true);
       expect((await store.getEmployee("a@innovinlabs.com"))?.sayHi).toBe(true);
       const at = iso();
-      await store.addHi({ id: "h1", date: "2026-11-18", from: "a@innovinlabs.com", to: "b@innovinlabs.com", kind: "wave", atTime: null, reply: null, createdAt: at });
-      await store.addHi({ id: "h2", date: "2026-11-18", from: "a@innovinlabs.com", to: "c@innovinlabs.com", kind: "chai", atTime: "now", reply: null, createdAt: iso(1000) });
-      await store.addHi({ id: "h3", date: "2026-11-17", from: "a@innovinlabs.com", to: "b@innovinlabs.com", kind: "wave", atTime: null, reply: null, createdAt: iso(-86_400_000) });
+      await store.addHi({ id: "h1", date: "2026-11-18", from: "a@innovinlabs.com", to: "b@innovinlabs.com", kind: "wave", atTime: null, reply: null, createdAt: at }, 10);
+      await store.addHi({ id: "h2", date: "2026-11-18", from: "a@innovinlabs.com", to: "c@innovinlabs.com", kind: "chai", atTime: "now", reply: null, createdAt: iso(1000) }, 10);
+      await store.addHi({ id: "h3", date: "2026-11-17", from: "a@innovinlabs.com", to: "b@innovinlabs.com", kind: "wave", atTime: null, reply: null, createdAt: iso(-86_400_000) }, 10);
       expect((await store.listHiFrom("2026-11-18", "a@innovinlabs.com")).map((h) => h.id).sort()).toEqual(["h1", "h2"]);
       expect((await store.listHiTo("2026-11-18", "c@innovinlabs.com")).map((h) => h.id)).toEqual(["h2"]);
       expect(await store.setHiReply("h2", "b@innovinlabs.com", "yes")).toBe(false); // not the recipient
@@ -153,6 +153,18 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.setHiReply("h2", "c@innovinlabs.com", "yes")).toBe(true);
       expect(await store.setHiReply("h2", "c@innovinlabs.com", "no")).toBe(false); // one reply
       expect((await store.listHiFrom("2026-11-18", "a@innovinlabs.com")).find((h) => h.id === "h2")?.reply).toBe("yes");
+    });
+
+    it("adds a Say hi only under the daily limit and once per person, and dates a reply", async () => {
+      const hi = (id: string, to: string) => ({ id, date: "2026-11-18", from: "a@innovinlabs.com", to, kind: "chai" as const, atTime: "now", reply: null, createdAt: iso() });
+      expect(await store.addHi(hi("x1", "b@innovinlabs.com"), 3)).not.toBeNull();
+      expect(await store.addHi(hi("x2", "b@innovinlabs.com"), 3)).toBeNull(); // same person again
+      const [p, q, r] = await Promise.all([store.addHi(hi("x3", "c@innovinlabs.com"), 3), store.addHi(hi("x4", "d@innovinlabs.com"), 3), store.addHi(hi("x5", "e@innovinlabs.com"), 3)]);
+      expect([p, q, r].filter(Boolean)).toHaveLength(2); // the limit holds when sends race
+      expect(await store.listHiFrom("2026-11-18", "a@innovinlabs.com")).toHaveLength(3);
+      expect(await store.setHiReply("x1", "b@innovinlabs.com", "yes")).toBe(true);
+      const answered = (await store.listHiFrom("2026-11-18", "a@innovinlabs.com")).find((h) => h.id === "x1");
+      expect(answered?.repliedAt).toBeTruthy();
     });
 
     it("keeps one plan override per person and date, and lists a date's overrides for everyone", async () => {

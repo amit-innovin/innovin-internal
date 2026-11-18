@@ -242,6 +242,7 @@ CREATE TABLE IF NOT EXISTS hi_messages (
   created_at timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS hi_messages_to_idx ON hi_messages (to_email, date);
+ALTER TABLE hi_messages ADD COLUMN IF NOT EXISTS replied_at timestamptz;
 CREATE INDEX IF NOT EXISTS hi_messages_from_idx ON hi_messages (from_email, date);
 ALTER TABLE wifi ADD COLUMN IF NOT EXISTS area text;
 CREATE TABLE IF NOT EXISTS nudges (
@@ -364,7 +365,7 @@ const snack = (r: any): SnackItem => ({
   orderedAt: r.ordered_at ? r.ordered_at.toISOString?.() ?? r.ordered_at : null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
-const hiRow = (r: any): HiRow => ({ id: r.id, date: r.date, from: r.from_email, to: r.to_email, kind: r.kind, atTime: r.at_time ?? null, reply: r.reply ?? null, createdAt: r.created_at?.toISOString?.() ?? r.created_at });
+const hiRow = (r: any): HiRow => ({ id: r.id, date: r.date, from: r.from_email, to: r.to_email, kind: r.kind, atTime: r.at_time ?? null, reply: r.reply ?? null, createdAt: r.created_at?.toISOString?.() ?? r.created_at, repliedAt: r.replied_at ? r.replied_at.toISOString?.() ?? r.replied_at : null });
 const planOverride = (r: any): PlanOverrideRow => ({ email: r.email, date: r.date, planned: r.planned });
 const closedDay = (r: any): ClosedDayRow => ({ date: r.date, reason: r.reason, createdBy: r.created_by, createdAt: r.created_at?.toISOString?.() ?? r.created_at });
 const attendanceChange = (r: any): AttendanceChangeRow => ({
@@ -859,9 +860,20 @@ class PgStore implements Store {
     const res = await this.q(`UPDATE employees SET say_hi = $2 WHERE email = $1`, [email, on]);
     return (res.rowCount ?? 0) > 0;
   }
-  async addHi(row: HiRow) {
-    await this.q(`INSERT INTO hi_messages (id, date, from_email, to_email, kind, at_time, reply, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [row.id, row.date, row.from, row.to, row.kind, row.atTime, row.reply, row.createdAt]);
-    return row;
+  async addHi(row: HiRow, limit: number) {
+    await this.init();
+    const client = await this.db().connect();
+    try {
+      await client.query("BEGIN");
+      // One sender's sends for the day are counted and written under one lock.
+      await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [`hi:${row.date}:${row.from}`]);
+      const today = await client.query(`SELECT to_email FROM hi_messages WHERE date = $1 AND from_email = $2`, [row.date, row.from]);
+      if (today.rows.length >= limit || today.rows.some((r: any) => r.to_email === row.to)) { await client.query("COMMIT"); return null; }
+      await client.query(`INSERT INTO hi_messages (id, date, from_email, to_email, kind, at_time, reply, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [row.id, row.date, row.from, row.to, row.kind, row.atTime, row.reply, row.createdAt]);
+      await client.query("COMMIT");
+      return row;
+    } catch (error) { await client.query("ROLLBACK"); throw error; }
+    finally { client.release(); }
   }
   async listHiFrom(date: string, from: string) {
     const res = await this.q(`SELECT * FROM hi_messages WHERE date = $1 AND from_email = $2 ORDER BY created_at`, [date, from]);
@@ -872,7 +884,7 @@ class PgStore implements Store {
     return res.rows.map(hiRow);
   }
   async setHiReply(id: string, to: string, reply: "yes" | "no") {
-    const res = await this.q(`UPDATE hi_messages SET reply = $3 WHERE id = $1 AND to_email = $2 AND reply IS NULL AND kind IN ('chai','lunch','walk')`, [id, to, reply]);
+    const res = await this.q(`UPDATE hi_messages SET reply = $3, replied_at = now() WHERE id = $1 AND to_email = $2 AND reply IS NULL AND kind IN ('chai','lunch','walk')`, [id, to, reply]);
     return (res.rowCount ?? 0) > 0;
   }
   async setStepsLeague(email: string, on: boolean) {

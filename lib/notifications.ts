@@ -98,7 +98,8 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
       items.push({ id: `hi-${h.id}`, kind: "hi", title: hiTitle(h, first(h.from)), body: "", at: h.createdAt, href: "/notifications", hi: { id: h.id, invite: INVITES.includes(h.kind), reply: h.reply, from: first(h.from) } });
     }
     for (const h of await store.listHiFrom(today, email)) {
-      if (h.reply) items.push({ id: `hi-reply-${h.id}`, kind: "hi", title: hiReplyTitle(h, first(h.to)), body: "", at: h.createdAt, href: "/" });
+      // Dated when they answered, so the answer counts as unread for you.
+      if (h.reply) items.push({ id: `hi-reply-${h.id}`, kind: "hi", title: hiReplyTitle(h, first(h.to)), body: "", at: h.repliedAt ?? h.createdAt, href: "/" });
     }
     const times = await snackTimes();
     const round = currentRound(new Date(opts.now), times);

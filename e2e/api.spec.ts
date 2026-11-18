@@ -1117,6 +1117,34 @@ test.describe("Say hi (Stage 7)", () => {
     expect((await c.ctx.post("/api/hi/reply", { data: { id: wave.id, reply: "yes" } })).status()).toBe(409);
   });
 
+  test("one hi per person a day, invites only for later today, and replies count as unread", async () => {
+    const a = await person(), b = await person();
+    expect((await hi(a.ctx, b.email, "wave")).status()).toBe(200);
+    const again = await hi(a.ctx, b.email, "thanks");
+    expect(again.status()).toBe(409);
+    expect(await again.json()).toMatchObject({ code: "already" });
+    const c = await person();
+    const istNow = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(11, 16);
+    if (istNow > "09:00") expect((await hi(a.ctx, c.email, "lunch", "09:00")).status()).toBe(400); // already past today
+    const invite = await (await hi(a.ctx, c.email, "chai", "now")).json();
+    expect((await a.ctx.post("/api/notifications")).status()).toBe(200); // the sender looks first
+    await c.ctx.post("/api/hi/reply", { data: { id: invite.id, reply: "yes" } });
+    const feed = await (await a.ctx.get("/api/notifications")).json();
+    expect(feed.items.some((i: { id: string }) => i.id === `hi-reply-${invite.id}`)).toBe(true);
+    expect(feed.unread).toBeGreaterThan(0);
+  });
+
+  test("who's in, with emails, only reaches people who can wave", async () => {
+    const a = await person();
+    const lurker = await person({ on: false });
+    const remote = await person({ office: false });
+    for (const viewer of [lurker, remote]) {
+      const view = await (await viewer.ctx.get("/api/days")).json();
+      expect(view.around.inToday.people).toEqual([]);
+      expect(JSON.stringify(view.around)).not.toContain(a.email);
+    }
+  });
+
   test("turning Say hi off takes you out of everyone's options at once", async () => {
     const a = await person(), b = await person();
     const listed = async () => (await (await a.ctx.get("/api/days")).json()).around.inToday.people.find((p: { email: string }) => p.email === b.email);

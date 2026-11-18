@@ -82,8 +82,9 @@ export function InOfficeToday({ days }: { days: DaysView }) {
   const { inToday } = days.around;
   const turnOn = useSayHiSetting();
   const [hiFor, setHiFor] = useState<{ email: string; name: string } | null>(null);
-  const people = inToday.people;
   const inOffice = days.me?.mode === "office";
+  // People with emails come only when you can wave; otherwise just their names.
+  const people = inToday.people.length ? inToday.people : inToday.names.map((name) => ({ email: name, name, sayHi: false }));
   if (!people.length) return null;
   const sentToday = Object.keys(days.sent).length;
   return (

@@ -263,6 +263,7 @@ input,select,textarea{font-family:inherit}
 <div style="display: flex; gap: 12px; flex-wrap: wrap"><div class="fcol" style="flex: 1 1 160px"><label for="ev-d" class="lbl">Date</label><input id="ev-d" type="date" class="field" min="2026-11-18" value="{{ pub.e.date }}" onChange="{{ pub.e.onDate }}"></div><div class="fcol" style="flex: 1 1 120px"><label for="ev-tm" class="lbl">Time (IST)</label><input id="ev-tm" type="time" class="field" value="{{ pub.e.time }}" onChange="{{ pub.e.onTime }}"></div></div>
 <sc-if value="{{ pub.e.dateBad }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Pick today or a later date.</p></sc-if>
 <div style="display: flex; gap: 12px; flex-wrap: wrap"><div class="fcol" style="flex: 2 1 200px"><label for="ev-p" class="lbl">Place</label><input id="ev-p" class="field" placeholder="Big room" value="{{ pub.e.place }}" onChange="{{ pub.e.onPlace }}"></div><div class="fcol" style="flex: 1 1 140px"><label for="ev-c" class="lbl">Category</label><select id="ev-c" class="field" onChange="{{ pub.e.onCat }}"><sc-for list="{{ pub.e.catOpts }}" as="o" hint-placeholder-count="5"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for></select></div></div>
+<div class="fcol"><label for="ev-b" class="lbl">Details (optional)</label><textarea id="ev-b" class="field" style="height: 96px; padding: 12px 14px; line-height: 22px; resize: vertical" placeholder="What to bring, who it's for" value="{{ pub.e.body }}" onChange="{{ pub.e.onBody }}"></textarea></div>
 <sc-if value="{{ pub.g.on }}" hint-placeholder-val="{{ true }}"><div style="display: flex; align-items: center; gap: 16px"><div style="flex: 1; min-width: 0"><span id="ev-g" style="display: block; font-weight: 600">Invite everyone in Google Calendar</span></div><button class="swb" role="switch" aria-checked="{{ pub.e.gSw.aria }}" aria-labelledby="ev-g" onClick="{{ pub.e.toggleGcal }}" style="border: {{ pub.e.gSw.border }}; background: {{ pub.e.gSw.track }}"><span class="swt" style="left: {{ pub.e.gSw.left }}; width: {{ pub.e.gSw.size }}; height: {{ pub.e.gSw.size }}; background: {{ pub.e.gSw.thumb }}"></span></button></div></sc-if>
 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ pub.e.op }}" disabled="{{ pub.e.cant }}" onClick="{{ pub.e.add }}">Post event</button><sc-if value="{{ pub.e.hasMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ pub.e.msg }}</span></sc-if></div>
 </section>
@@ -273,7 +274,7 @@ input,select,textarea{font-family:inherit}
 <span aria-hidden="true" style="flex: none; width: 52px; border-radius: 14px; background: #EBEEF4; text-align: center; padding: 6px 0"><span style="display: block; font-size: 12px; font-weight: 600; color: #41474D; line-height: 16px">{{ e.mon }}</span><span style="display: block; font-size: 20px; font-weight: 700; line-height: 24px">{{ e.day }}</span></span>
 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span style="font-weight: 600">{{ e.title }}</span><span class="tag" style="background: {{ e.catBg }}; color: {{ e.catFg }}">{{ e.cat }}</span></div><span class="sm">{{ e.whenPlace }}</span><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 2px"><span class="sm" style="font-weight: 600; color: #181C20">{{ e.going }}</span><sc-if value="{{ e.gcal }}" hint-placeholder-val="{{ true }}"><span class="tag" style="background: #D3E5F5; color: #0C1D29">In Google Calendar</span></sc-if></div><sc-if value="{{ e.gFail }}" hint-placeholder-val="{{ false }}"><span class="sm" style="color: #BA1A1A; font-weight: 600">Google invite didn’t go out</span></sc-if><sc-if value="{{ e.gOrphan }}" hint-placeholder-val="{{ false }}"><span class="sm">Google invite can’t be changed from here</span></sc-if></div>
 </div>
-<sc-if value="{{ e.idle }}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap"><sc-if value="{{ e.canResend }}" hint-placeholder-val="{{ false }}"><button class="bt" aria-label="Send invite for {{ e.title }} again" onClick="{{ e.resend }}">Send again</button></sc-if><sc-if value="{{ e.live }}" hint-placeholder-val="{{ true }}"><button class="bo" aria-label="Cancel {{ e.title }}" onClick="{{ e.cancel }}">Cancel event</button></sc-if><button class="bx" aria-label="Delete {{ e.title }}" onClick="{{ e.askDel }}">Delete</button></div></sc-if>
+<sc-if value="{{ e.idle }}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap"><sc-if value="{{ e.canResend }}" hint-placeholder-val="{{ false }}"><button class="bt" aria-label="Send invite for {{ e.title }} again" onClick="{{ e.resend }}">Send again</button></sc-if><sc-if value="{{ e.live }}" hint-placeholder-val="{{ true }}"><button class="bo" aria-label="Edit {{ e.title }}" onClick="{{ e.edit }}">Edit</button><button class="bo" aria-label="Cancel {{ e.title }}" onClick="{{ e.cancel }}">Cancel event</button></sc-if><button class="bx" aria-label="Delete {{ e.title }}" onClick="{{ e.askDel }}">Delete</button></div></sc-if>
 <sc-if value="{{ e.confirm }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="Confirm delete" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #FFDAD6; color: #410002; border-radius: 16px; padding: 10px 12px"><span style="flex: 1; min-width: 160px; font-size: 14px">Delete it? It disappears without a notification. Cancel tells people.</span><button class="bx" style="color: #410002" onClick="{{ e.keep }}">Keep</button><button class="bd" onClick="{{ e.del }}">Delete</button></div></sc-if>
 </div></sc-for>
 <sc-if value="{{ pub.evEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 4px 20px 20px">No events coming up.</p></sc-if>
@@ -376,6 +377,20 @@ input,select,textarea{font-family:inherit}
 <sc-for list="{{ mobItems }}" as="it" hint-placeholder-count="5"><button onClick="{{ it.go }}" aria-current="{{ it.cur }}" style="flex: 1; min-width: 0; border: 0; background: transparent; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; color: {{ it.color }}"><span style="position: relative; width: 56px; height: 32px; border-radius: 16px; background: {{ it.pill }}; display: grid; place-items: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.icon }}"></path></svg><sc-if value="{{ it.hasBadge }}" hint-placeholder-val="{{ false }}"><span class="badge" aria-hidden="true" style="position: absolute; top: -4px; right: 6px; min-width: 18px; height: 18px; line-height: 18px; font-size: 11px">{{ it.badge }}</span></sc-if></span><span style="font-size: 12px; line-height: 16px; font-weight: {{ it.weight }}">{{ it.label }}<span class="vh">{{ it.badgeSr }}</span></span></button></sc-for>
 </nav>
 
+<!-- Edit an event -->
+<sc-if value="{{ pub.ed.open }}" hint-placeholder-val="{{ false }}"><div style="position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px">
+<button aria-label="Close" onClick="{{ pub.ed.close }}" style="position: absolute; inset: 0; border: 0; background: rgba(0,0,0,0.32); padding: 0"></button>
+<div role="dialog" aria-modal="true" aria-labelledby="ed-h" style="position: relative; width: 100%; max-width: 520px; max-height: calc(100vh - 32px); overflow-y: auto; background: #FFFFFF; border-radius: 28px; padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+<h2 id="ed-h" class="tm" style="font-size: 22px; line-height: 28px">Edit event</h2>
+<div class="fcol"><label for="ed-t" class="lbl">Title</label><input id="ed-t" class="field" value="{{ pub.ed.title }}" onChange="{{ pub.ed.onTitle }}"></div>
+<div style="display: flex; gap: 12px; flex-wrap: wrap"><div class="fcol" style="flex: 1 1 160px"><label for="ed-d" class="lbl">Date</label><input id="ed-d" type="date" class="field" min="2026-11-18" value="{{ pub.ed.date }}" onChange="{{ pub.ed.onDate }}"></div><div class="fcol" style="flex: 1 1 120px"><label for="ed-tm" class="lbl">Time (IST)</label><input id="ed-tm" type="time" class="field" value="{{ pub.ed.time }}" onChange="{{ pub.ed.onTime }}"></div></div>
+<div class="fcol"><label for="ed-p" class="lbl">Place</label><input id="ed-p" class="field" value="{{ pub.ed.place }}" onChange="{{ pub.ed.onPlace }}"></div>
+<div class="fcol"><label for="ed-b" class="lbl">Details (optional)</label><textarea id="ed-b" class="field" style="height: 96px; padding: 12px 14px; line-height: 22px; resize: vertical" value="{{ pub.ed.body }}" onChange="{{ pub.ed.onBody }}"></textarea></div>
+<sc-if value="{{ pub.ed.bad }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Pick today or a later date.</p></sc-if>
+<div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap"><button class="bx" onClick="{{ pub.ed.close }}">Cancel</button><button class="bf" style="opacity: {{ pub.ed.op }}" disabled="{{ pub.ed.cant }}" onClick="{{ pub.ed.save }}">Save</button></div>
+</div>
+</div></sc-if>
+
 <!-- Phone "More" sheet -->
 <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}"><div style="position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; justify-content: flex-end">
 <button aria-label="Close menu" onClick="{{ closeMore }}" style="position: absolute; inset: 0; border: 0; background: rgba(0,0,0,0.32); padding: 0"></button>
@@ -439,7 +454,8 @@ class Component extends DCLogic {
         { id: 'a2', title: 'Today’s snack options are up', body: 'Makhana, dark chocolate or banana chips. Pick yours before 12:00.', until: '', posted: 'Today', seen: 23 },
         { id: 'a3', title: 'New guest Wi-Fi name', body: 'Guests now join “innovin-guest”. Ask at the front desk for the password.', until: '', posted: 'Thu 12 Nov', seen: 44 }
       ],
-      eTitle: '', eDate: '', eTime: '', ePlace: '', eCat: 'Celebration', eGcal: true, eMsg: '', gConn: true, gConfirm: false,
+      eTitle: '', eDate: '', eTime: '', ePlace: '', eBody: '', eCat: 'Celebration', eGcal: true, eMsg: '', gConn: true, gConfirm: false,
+      edId: '', ed: { title: '', date: '', time: '', place: '', body: '' },
       evs: [
         { id: 'e1', title: 'Diwali potluck', date: '2026-11-19', time: '16:30', place: 'Big room', cat: 'Celebration', going: 14, gcal: 'sent', cancelled: false },
         { id: 'e2', title: 'Book club: Deep Work', date: '2026-11-24', time: '17:30', place: 'Library corner', cat: 'Learning', going: 6, gcal: 'sent', cancelled: false },
@@ -655,17 +671,18 @@ class Component extends DCLogic {
       anns: s.anns.map((a, i) => ({ title: a.title, body: a.body, meta: 'Posted ' + (a.posted === 'Today' ? 'today' : a.posted), pinned: !!a.until, pinLine: a.until ? 'Pinned until ' + label(a.until) : '', seenLine: 'Seen by ' + a.seen + ' of ' + TOTAL, line: i === 0 ? '0' : '1px solid #DFE3E8', confirm: s.delId === a.id, idle: s.delId !== a.id, askDel: () => set({ delId: a.id }), keep: () => set({ delId: '' }), del: () => set({ anns: self.state.anns.filter((x) => x.id !== a.id), delId: '', toast: '“' + a.title + '” deleted. It’s gone from everyone’s app.' }) })),
       annEmpty: s.anns.length === 0,
       e: {
-        title: s.eTitle, date: s.eDate, time: s.eTime, place: s.ePlace,
+        title: s.eTitle, date: s.eDate, time: s.eTime, place: s.ePlace, body: s.eBody, onBody: (e) => set({ eBody: e.target.value, eMsg: '' }),
         gSw: sw(s.eGcal, false), toggleGcal: () => set({ eGcal: !self.state.eGcal, eMsg: '' }),
         onTitle: (e) => set({ eTitle: e.target.value, eMsg: '' }), onDate: (e) => set({ eDate: e.target.value, eMsg: '' }), onTime: (e) => set({ eTime: e.target.value, eMsg: '' }), onPlace: (e) => set({ ePlace: e.target.value, eMsg: '' }), onCat: (e) => set({ eCat: e.target.value, eMsg: '' }),
         catOpts: cats.map((c) => ({ v: c, label: c, sel: s.eCat === c })),
         dateBad: eDateBad, cant: eCant, op: eCant ? 0.4 : 1,
-        add: () => { if (eCant) return; const ev = { id: 'e' + Date.now(), title: eTitle, date: s.eDate, time: s.eTime, place: ePlace, cat: s.eCat, going: 0, gcal: s.gConn && s.eGcal ? 'sent' : false, cancelled: false }; set({ evs: self.state.evs.concat([ev]), eTitle: '', eDate: '', eTime: '', ePlace: '', eGcal: true, eMsg: 'Posted.' }); },
+        add: () => { if (eCant) return; const ev = { id: 'e' + Date.now(), title: eTitle, date: s.eDate, time: s.eTime, place: ePlace, cat: s.eCat, body: (s.eBody || '').trim(), going: 0, gcal: s.gConn && s.eGcal ? 'sent' : false, cancelled: false }; set({ evs: self.state.evs.concat([ev]), eTitle: '', eDate: '', eTime: '', ePlace: '', eBody: '', eGcal: true, eMsg: 'Posted.' }); },
         hasMsg: !!s.eMsg, msg: s.eMsg
       },
       evs: s.evs.slice().sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1)).map((e, i) => ({
         title: e.title, when: label(e.date) + ' · ' + fmtT(e.time), place: e.place, whenPlace: label(e.date) + ' · ' + fmtT(e.time) + ' · ' + e.place, cat: e.cat, catBg: catC[e.cat][0], catFg: catC[e.cat][1],
         going: e.cancelled ? 'Cancelled' : e.going + ' going', gcal: e.gcal === 'sent' && !e.cancelled, gFail: e.gcal === 'failed' && !e.cancelled, gOrphan: e.gcal === 'orphaned' && !e.cancelled, canResend: e.gcal === 'failed' && !e.cancelled && s.gConn,
+        edit: () => set({ edId: e.id, ed: { title: e.title, date: e.date, time: e.time, place: e.place, body: e.body || '' } }),
         resend: () => set({ evs: self.state.evs.map((x) => (x.id === e.id ? Object.assign({}, x, { gcal: 'sent' }) : x)), toast: 'Invites sent.' }),
         cancelled: e.cancelled, live: !e.cancelled, line: i === 0 ? '0' : '1px solid #DFE3E8', mon: mn[Number(e.date.slice(5, 7)) - 1], day: String(Number(e.date.slice(8))),
         confirm: s.delId === e.id, idle: s.delId !== e.id, askDel: () => set({ delId: e.id }), keep: () => set({ delId: '' }),
@@ -673,6 +690,17 @@ class Component extends DCLogic {
         del: () => set({ evs: self.state.evs.filter((x) => x.id !== e.id), delId: '', toast: e.title + ' deleted.' })
       })),
       evEmpty: s.evs.length === 0,
+      ed: (() => {
+        const d = s.ed; const upd = (k) => (ev) => set({ ed: Object.assign({}, self.state.ed, { [k]: ev.target.value }) });
+        const bad = !!d.date && d.date < '2026-11-18';
+        const cant = !(d.title || '').trim() || !d.date || bad || !d.time || !(d.place || '').trim();
+        return {
+          open: !!s.edId, title: d.title, date: d.date, time: d.time, place: d.place, body: d.body, bad: bad, cant: cant, op: cant ? 0.4 : 1,
+          onTitle: upd('title'), onDate: upd('date'), onTime: upd('time'), onPlace: upd('place'), onBody: upd('body'),
+          close: () => set({ edId: '' }),
+          save: () => { if (cant) return; const id = s.edId; set({ edId: '', toast: 'Saved. People going were told.', evs: self.state.evs.map((x) => (x.id === id ? Object.assign({}, x, { title: d.title.trim(), date: d.date, time: d.time, place: d.place.trim(), body: (d.body || '').trim() }) : x)) }); }
+        };
+      })(),
       g: (() => {
         const owned = s.evs.filter((x) => x.gcal === 'sent' && !x.cancelled).length;
         const next = s.people.filter((p) => p.admin && !p.left && p.id !== 'anita')[0];

@@ -1,10 +1,11 @@
 "use client";
-import type { CSSProperties, ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/m3";
 import { Lappy } from "@/components/m3/lappy";
 import type { FeedPost } from "@/lib/feed";
 import type { Celebration } from "@/lib/member-features";
+import { readError, send } from "@/lib/fetcher";
 import { useReact, useRsvp, useVote } from "@/lib/queries";
 
 // One Feed card from the prototype: kind chip, who and when, title, body, and one action.
@@ -65,6 +66,29 @@ export function PollOptions({ post, compact }: { post: Extract<FeedPost, { type:
   );
 }
 
+// "Report": quietly tells admins a post may be inappropriate. They see a count, never who.
+function ReportPost({ id }: { id: string }) {
+  const [asking, setAsking] = useState(false);
+  const [done, setDone] = useState(false);
+  if (done) return <span className="m3-small">Reported</span>;
+  if (!asking) return <button type="button" className="m3-btn m3-btn-text" style={{ alignSelf: "flex-start", height: 28, padding: 0, fontSize: 13, color: "var(--m3-on-surface-variant)" }} onClick={() => setAsking(true)}>Report</button>;
+  const report = async () => {
+    const res = await send("/api/notices/report", { method: "POST", json: { id } });
+    if (!res.ok && res.status !== 409) return toast.error(await readError(res));
+    setDone(true);
+    toast.success("Reported. An admin will take a look.");
+  };
+  return (
+    <div role="group" aria-label="Report this post" style={{ display: "flex", flexDirection: "column", gap: 6, padding: 10, borderRadius: 12, background: "rgba(255,255,255,.7)" }}>
+      <span className="m3-small" style={{ color: "var(--m3-on-surface)" }}>Report this post to admins? They&apos;ll see it was reported, not by whom.</span>
+      <span style={{ display: "flex", gap: 8 }}>
+        <button type="button" className="m3-btn m3-btn-filled" style={{ height: 32, padding: "0 14px", fontSize: 13 }} onClick={report}>Report post</button>
+        <button type="button" className="m3-btn m3-btn-text" style={{ height: 32, padding: "0 10px", fontSize: 13 }} onClick={() => setAsking(false)}>Cancel</button>
+      </span>
+    </div>
+  );
+}
+
 export function PostCard({ item, onWish, style, footer }: { item: CardItem; onWish?: (email: string) => void; style?: CSSProperties; footer?: ReactNode }) {
   const kind = KIND[item.type];
   let author: ReactNode = null, title = "", body = "", meta = "", action: ReactNode = null, avatar: ReactNode = null;
@@ -104,6 +128,7 @@ export function PostCard({ item, onWish, style, footer }: { item: CardItem; onWi
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
         {action}
         {meta && <span className="m3-small">{meta}</span>}
+        {"reactions" in item && !item.mine && <ReportPost id={item.id} />}
         {footer}
       </div>
     </article>

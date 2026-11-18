@@ -175,3 +175,24 @@ test.describe("Feed freshness", () => {
     await expect(page.getByText("Nothing new since yesterday")).toBeVisible();
   });
 });
+
+test.describe("Reporting a post", () => {
+  test("someone else's post can be reported quietly, once", async ({ page, browser }) => {
+    const authorContext = await browser.newContext();
+    const author = await authorContext.newPage();
+    await signInEmployee(author, uniqueEmail("feed-reported"), "/");
+    const body = uniqueText("A quote to report");
+    expect((await author.request.post("/api/notices", { data: { kind: "quote", body, title: "", attribution: "", color: "purple", anonymous: false } })).status()).toBe(201);
+    await authorContext.close();
+    await signInEmployee(page, uniqueEmail("feed-reporter"), "/");
+    // Seen up to now, so the post is under Earlier on every screen size.
+    await seenNow(page);
+    await page.goto("/feed");
+    await page.getByRole("region", { name: "Earlier" }).getByRole("button", { name: new RegExp(body.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).click();
+    const target = page.locator("article").filter({ hasText: body }).filter({ visible: true }).first();
+    await target.getByRole("button", { name: "Report" }).click();
+    await target.getByRole("button", { name: "Report post" }).click();
+    await expect(page.getByText("Reported. An admin will take a look.")).toBeVisible();
+    await expect(target.getByText("Reported", { exact: true })).toBeVisible();
+  });
+});

@@ -3,6 +3,7 @@
 import { officeCheck } from "./geo";
 import { type Closed, holidaysFor, isWorkingDay, nonWorkingReason } from "./leave";
 import { countOfficeDays, fixableFrom, monthBounds, officeDaysSummary, officeDayTarget, weekdayIndex } from "./office-days";
+import { sentLabel } from "./hi";
 import { isPlanned, plannedOn } from "./plan";
 import { attendanceLocation } from "./presence";
 import { id, store } from "./store";
@@ -68,7 +69,10 @@ export async function daysView(email: string, month: string) {
   const done = countOfficeDays(days.map((d) => ({ date: d.date, declaredMode: d.mode })));
   const mine = todayRows.find((r) => r.email === email);
   const byEmail = new Map(employees.map((e) => [e.email, e]));
-  const inToday = todayRows.filter((r) => dayMode(r) === "office").map((r) => firstName(byEmail.get(r.email)?.name ?? "", r.email));
+  const inOffice = todayRows.filter((r) => dayMode(r) === "office");
+  const inToday = inOffice.map((r) => firstName(byEmail.get(r.email)?.name ?? "", r.email));
+  // Say hi: who's in (and whether they take waves), and what you've sent today.
+  const sentToday = me?.sayHi ? await store.listHiFrom(today, email) : [];
 
   return {
     today,
@@ -80,10 +84,12 @@ export async function daysView(email: string, month: string) {
     // read as not in the office.
     me: mine && dayMode(mine) === "office" ? { mode: "office" as const, source: mine.source ?? null, at: mine.checkInAt } : null,
     // Your usual days plus single dates planned in or out ahead of time.
+    sayHi: !!me?.sayHi,
+    sent: Object.fromEntries(sentToday.map((h) => [h.to, sentLabel(h)])),
     isOfficeDayToday: plannedOn({ date: today, officeDays, override: todayOverride[0]?.planned, working: isWorkingDay(today, closed), leave: false }),
     days,
     around: {
-      inToday: { count: inToday.length, names: inToday.slice(0, 6) },
+      inToday: { count: inToday.length, names: inToday.slice(0, 6), people: inOffice.filter((r) => r.email !== email).map((r) => ({ email: r.email, name: firstName(byEmail.get(r.email)?.name ?? "", r.email), sayHi: !!byEmail.get(r.email)?.sayHi })) },
     },
   };
 }

@@ -2,6 +2,7 @@ import { boardHref,attendanceHref,eventHref } from "./journey";
 import { fmtShortDate } from "./format";
 import { LEAVE_LABELS, needsApproval } from "./leave";
 import { inOfficeToday, snackTimes } from "./snack-times";
+import { hiReplyTitle, hiTitle, INVITES } from "./hi";
 import { currentRound } from "./snacks-rules";
 import { store } from "./store";
 import { todayIST } from "./time";
@@ -20,7 +21,9 @@ import type { GrievanceRow } from "./types";
 
 export type Notification = {
   id: string;
-  kind: "announcement" | "event" | "away" | "grievance" | "kudos" | "tea";
+  kind: "announcement" | "event" | "away" | "grievance" | "kudos" | "tea" | "hi";
+  // Say hi invites you received: answer inline. yes/no once answered.
+  hi?: { id: string; invite: boolean; reply: "yes" | "no" | null; from: string };
   title: string;
   body: string;
   at: string;
@@ -89,6 +92,14 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
       items.push({ id: `kudos-${n.id}`, kind: "kudos", title: `${(n.authorName || "Someone").split(/\s+/)[0]} gave you kudos`, body: n.body.slice(0, 80), at: n.createdAt, href: "/feed" });
     }
     const today = todayIST();
+    const people = await store.listEmployees();
+    const first = (e: string) => ((people.find((p) => p.email === e)?.name || e).split(/[\s@]/)[0]);
+    for (const h of await store.listHiTo(today, email)) {
+      items.push({ id: `hi-${h.id}`, kind: "hi", title: hiTitle(h, first(h.from)), body: "", at: h.createdAt, href: "/notifications", hi: { id: h.id, invite: INVITES.includes(h.kind), reply: h.reply, from: first(h.from) } });
+    }
+    for (const h of await store.listHiFrom(today, email)) {
+      if (h.reply) items.push({ id: `hi-reply-${h.id}`, kind: "hi", title: hiReplyTitle(h, first(h.to)), body: "", at: h.createdAt, href: "/" });
+    }
     const times = await snackTimes();
     const round = currentRound(new Date(opts.now), times);
     if (round?.open && (await inOfficeToday(email, today))) {

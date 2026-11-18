@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { ArrowLeft, CalendarCheck, CalendarDays, Coffee, Heart, Megaphone, MessageSquare, type LucideIcon } from "lucide-react";
+import { ArrowLeft, CalendarCheck, CalendarDays, Coffee, Hand, Heart, Megaphone, MessageSquare, type LucideIcon } from "lucide-react";
 import { QueryState } from "@/components/m3";
 import { relativeTime } from "@/lib/format";
 import type { Notification } from "@/lib/notifications";
@@ -9,6 +9,7 @@ import { useMarkNotificationsRead, useNotifications } from "@/lib/queries";
 
 const KIND: Record<Notification["kind"], { icon: LucideIcon; bg: string; color: string }> = {
   tea: { icon: Coffee, bg: "#EBDCFF", color: "#20142F" },
+  hi: { icon: Hand, bg: "#FFE08A", color: "#3D2E00" },
   kudos: { icon: Heart, bg: "#FFD9E2", color: "#5C1130" },
   event: { icon: CalendarDays, bg: "#D3E5F5", color: "#0C1D29" },
   away: { icon: CalendarCheck, bg: "#CDEBD6", color: "#0B3D1F" },

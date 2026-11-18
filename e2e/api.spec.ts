@@ -1074,3 +1074,55 @@ test.describe("Speak up and Feed reports (Stage 6)", () => {
     expect(JSON.stringify(item)).not.toMatch(/reporter/i);
   });
 });
+
+test.describe("Say hi (Stage 7)", () => {
+  const person = async (opts: { on?: boolean; office?: boolean } = {}) => {
+    const ctx = await signedIn(email());
+    if (opts.office !== false) expect((await ctx.post("/api/days", { data: { mode: "office", lat: 12.9352, lng: 77.6241, accuracyM: 20 } })).status()).toBe(200);
+    if (opts.on !== false) expect((await ctx.post("/api/hi/setting", { data: { on: true } })).status()).toBe(200);
+    const me = (await (await ctx.get("/api/account")).json()).email as string;
+    return { ctx, email: me };
+  };
+  const hi = (from: APIRequestContext, to: string, kind: string, time?: string) => from.post("/api/hi", { data: { to, kind, time } });
+
+  test("waves need both people opted in and in the office, and stop at 3 a day", async () => {
+    const a = await person(), b = await person(), c = await person(), d = await person();
+    const off = await person({ on: false }), remote = await person({ office: false });
+    expect((await hi(a.ctx, off.email, "wave")).status()).toBe(403);
+    expect((await hi(a.ctx, remote.email, "wave")).status()).toBe(403);
+    expect((await hi(a.ctx, a.email, "wave")).status()).toBe(400);
+    expect((await hi(a.ctx, b.email, "dance")).status()).toBe(400);
+    expect((await hi(a.ctx, b.email, "chai")).status()).toBe(400); // an invite needs a time
+    expect((await hi(a.ctx, b.email, "lunch", "23:00")).status()).toBe(400); // 9:00–19:00 only
+    for (const to of [b, c, d]) expect((await hi(a.ctx, to.email, "wave")).status()).toBe(200);
+    const fourth = await hi(a.ctx, b.email, "five");
+    expect(fourth.status()).toBe(409);
+    const view = await (await a.ctx.get("/api/days")).json();
+    expect(view.sayHi).toBe(true);
+    expect(Object.keys(view.sent).sort()).toEqual([b.email, c.email, d.email].sort());
+  });
+
+  test("an invite is answered once, by its recipient, and the sender sees the answer", async () => {
+    const a = await person(), b = await person(), c = await person();
+    const sent = await (await hi(a.ctx, b.email, "chai", "now")).json();
+    const received = (await (await b.ctx.get("/api/notifications")).json()).items.find((i: { id: string }) => i.id === `hi-${sent.id}`);
+    expect(received).toMatchObject({ kind: "hi" });
+    expect(received.title).toMatch(/: chai break now\?$/);
+    expect((await c.ctx.post("/api/hi/reply", { data: { id: sent.id, reply: "yes" } })).status()).toBe(409);
+    expect((await b.ctx.post("/api/hi/reply", { data: { id: sent.id, reply: "yes" } })).status()).toBe(200);
+    expect((await b.ctx.post("/api/hi/reply", { data: { id: sent.id, reply: "no" } })).status()).toBe(409);
+    const back = (await (await a.ctx.get("/api/notifications")).json()).items.find((i: { id: string }) => i.id === `hi-reply-${sent.id}`);
+    expect(back.title).toMatch(/ is in for chai$/);
+    const wave = await (await hi(a.ctx, c.email, "wave")).json();
+    expect((await c.ctx.post("/api/hi/reply", { data: { id: wave.id, reply: "yes" } })).status()).toBe(409);
+  });
+
+  test("turning Say hi off takes you out of everyone's options at once", async () => {
+    const a = await person(), b = await person();
+    const listed = async () => (await (await a.ctx.get("/api/days")).json()).around.inToday.people.find((p: { email: string }) => p.email === b.email);
+    expect((await listed()).sayHi).toBe(true);
+    await b.ctx.post("/api/hi/setting", { data: { on: false } });
+    expect((await listed()).sayHi).toBe(false);
+    expect((await hi(a.ctx, b.email, "wave")).status()).toBe(403);
+  });
+});

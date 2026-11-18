@@ -116,7 +116,7 @@ input,select,textarea{font-family:inherit}
 <sc-if value="{{ ov.noNeeds }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 8px 16px 14px">Nothing needs you right now.</p></sc-if>
 </section>
 <section aria-label="Today in the office" class="card" style="max-width: 760px; width: 100%; display: flex; flex-direction: column; gap: 14px">
-<div style="display: flex; flex-wrap: wrap; gap: 8px 28px"><sc-for list="{{ ov.stats }}" as="t" hint-placeholder-count="3"><div style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 28px; line-height: 36px; font-weight: 600">{{ t.n }}</span><span class="sm" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #181C20"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 5px; background: {{ t.dot }}"></span>{{ t.label }}</span></div></sc-for></div>
+<div style="display: flex; flex-direction: column; gap: 10px"><sc-for list="{{ ov.who }}" as="w" hint-placeholder-count="2"><div style="display: flex; gap: 6px 12px; align-items: baseline; flex-wrap: wrap"><span class="sm" style="flex: none; width: 96px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #181C20"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 5px; background: {{ w.dot }}"></span>{{ w.label }}</span><span style="flex: 1; min-width: 180px">{{ w.names }}</span></div></sc-for></div>
 <div style="border-top: 1px solid #DFE3E8; padding-top: 12px; display: flex; flex-direction: column; gap: 6px">
 <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap"><span style="flex: 1; min-width: 180px; font-weight: 600">{{ ov.tea.line }}</span><button class="bx" aria-expanded="{{ ov.tea.expanded }}" aria-controls="tea-names" onClick="{{ ov.tea.toggle }}">{{ ov.tea.btn }}</button></div>
 <sc-if value="{{ ov.tea.open }}" hint-placeholder-val="{{ false }}"><p id="tea-names" class="bm" style="margin: 0; color: #181C20">{{ ov.tea.names }}</p></sc-if>
@@ -133,19 +133,23 @@ input,select,textarea{font-family:inherit}
 <div style="position: relative"><label for="p-q" class="vh">Search people</label><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 14px; top: 12px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><input id="p-q" type="search" class="field" style="padding-left: 44px; border-radius: 22px" placeholder="Search by name" value="{{ pp.q }}" onChange="{{ pp.onQ }}"></div>
 <div role="group" aria-label="Filter people" style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{ pp.chips }}" as="c" hint-placeholder-count="4"><button class="chip" aria-pressed="{{ c.pressed }}" onClick="{{ c.pick }}" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}"><sc-if value="{{ c.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>{{ c.label }}</button></sc-for></div>
 </section>
-<section aria-label="People" class="card" style="padding: 0; overflow: hidden">
-<div style="display: flex; justify-content: space-between; gap: 8px; padding: 14px 16px 8px"><span class="sm">{{ pp.countLine }}</span><span class="sm">This month</span></div>
-<ul style="list-style: none; margin: 0; padding: 0; border-top: 1px solid #DFE3E8">
-<sc-for list="{{ pp.rows }}" as="r" hint-placeholder-count="6"><li style="border-top: {{ r.line }}"><button class="li" aria-current="{{ r.cur }}" onClick="{{ r.pick }}" style="background: {{ r.bg }}; min-height: 64px"><span aria-hidden="true" class="av" style="background: {{ r.avBg }}">{{ r.ini }}</span><span style="flex: 1; min-width: 0"><span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600">{{ r.name }}<sc-if value="{{ r.admin }}" hint-placeholder-val="{{ false }}"><span class="tag" style="background: #D3E5F5; color: #0C1D29">Admin</span></sc-if><sc-if value="{{ r.left }}" hint-placeholder-val="{{ false }}"><span class="tag" style="background: #E5E8EE; color: #41474D">Left</span></sc-if></span><span class="sm">{{ r.usual }}</span></span><span style="flex: none; min-width: 36px; text-align: right; font-weight: 600"><span aria-hidden="true">{{ r.count }}</span><span class="vh">{{ r.countSr }}</span></span><span class="tag" style="flex: none; min-width: 64px; justify-content: center; background: {{ r.chipBg }}; color: {{ r.chipFg }}">{{ r.status }}</span></button></li></sc-for>
-</ul>
+<section aria-labelledby="grid-h" class="card" style="padding: 0; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 4px; padding: 8px 8px 4px 16px"><h2 id="grid-h" class="tm" style="flex: 1">Office days · {{ pp.month }}</h2><button aria-label="Previous month" onClick="{{ pp.prev }}" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; color: #41474D; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button><button aria-label="Next month" onClick="{{ pp.next }}" disabled="{{ pp.noNext }}" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; color: #41474D; opacity: {{ pp.nextOp }}; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></button></div>
+<div style="overflow-x: auto">
+<table style="border-collapse: collapse; width: max-content; min-width: 100%">
+<thead><tr><th scope="col" style="position: sticky; left: 0; z-index: 1; background: #FFFFFF; text-align: left; padding: 4px 12px 6px 16px"><span class="vh">Person</span></th><sc-for list="{{ pp.cols }}" as="c" hint-placeholder-count="21"><th scope="col" style="width: 30px; padding: 4px 0 6px; text-align: center; font-size: 12px; line-height: 16px; font-weight: 600; color: {{ c.color }}"><span style="display: block; font-size: 11px; font-weight: 500">{{ c.dow }}</span>{{ c.n }}</th></sc-for></tr></thead>
+<tbody><sc-for list="{{ pp.rows }}" as="r" hint-placeholder-count="8"><tr style="border-top: 1px solid #DFE3E8; background: {{ r.bg }}"><th scope="row" style="position: sticky; left: 0; z-index: 1; background: {{ r.stickyBg }}; padding: 0; text-align: left"><button onClick="{{ r.pick }}" aria-current="{{ r.cur }}" style="border: 0; background: transparent; min-height: 44px; padding: 8px 12px 8px 16px; font-size: 14px; font-weight: 600; color: #181C20; text-align: left; white-space: nowrap">{{ r.name }}</button></th><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="21"><td style="text-align: center; padding: 0"><span aria-hidden="true" style="display: inline-block; width: 12px; height: 12px; border-radius: 6px; box-sizing: border-box; background: {{ c.bg }}; border: {{ c.border }}"></span><span class="vh">{{ c.aria }}</span></td></sc-for></tr></sc-for></tbody>
+</table>
+</div>
 <sc-if value="{{ pp.empty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 16px">No one matches. Try another name or filter.</p></sc-if>
+<div class="sm" style="display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 16px 14px"><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; background: #006493"></span>In office</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; background: #EBDCFF; border: 1px solid #7D5BA6; box-sizing: border-box"></span>Leave</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; border: 1px dashed #71787E; box-sizing: border-box"></span>Closed</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; border: 1px solid #C1C7CE; box-sizing: border-box"></span>Not in</span></div>
 </section>
 </div>
 
 <sc-if value="{{ pp.has }}" hint-placeholder-val="{{ false }}"><aside class="ppanel" aria-labelledby="pp-h">
 <div style="display: flex; align-items: flex-start; gap: 12px">
 <span aria-hidden="true" class="av" style="width: 48px; height: 48px; border-radius: 24px; font-size: 15px; background: {{ panel.p.avBg }}">{{ panel.p.ini }}</span>
-<div style="flex: 1; min-width: 0"><h2 id="pp-h" style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">{{ panel.p.name }}</h2><span class="sm">{{ panel.p.roleLine }}</span><div style="padding-top: 6px"><span class="tag" style="background: {{ panel.p.chipBg }}; color: {{ panel.p.chipFg }}">{{ panel.p.status }}</span></div></div>
+<div style="flex: 1; min-width: 0"><h2 id="pp-h" style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">{{ panel.p.name }}</h2><span class="sm">{{ panel.p.roleLine }}</span></div>
 <button onClick="{{ panel.close }}" aria-label="Close {{ panel.p.name }}" style="flex: none; width: 48px; height: 48px; border-radius: 24px; border: 0; background: transparent; color: #41474D; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
 </div>
 
@@ -528,11 +532,11 @@ class Component extends DCLogic {
     const pstats = (p) => { let done = 0; let plan = 0; for (let d = 1; d <= 30; d++) { const k = dayKind(p, d); if (k === 'in') done++; if (k === 'plan') plan++; } return { done: done, plan: plan, status: p.exempt ? 'Exempt' : (done + plan >= 8 ? 'On track' : 'Behind') }; };
     const chipC = { 'On track': ['#CDEBD6', '#0B3D1F'], 'Behind': ['#FFDDB0', '#4A2800'], 'Exempt': ['#E5E8EE', '#41474D'] };
     const ppl = s.people.map((p) => Object.assign({}, p, pstats(p)));
-    const behindN = ppl.filter((p) => p.status === 'Behind').length;
     const q = (s.q || '').trim().toLowerCase();
-    const pfDefs = [['all', 'Everyone', ppl.length], ['behind', 'Behind', behindN], ['exempt', 'Exempt', ppl.filter((p) => p.exempt).length], ['admin', 'Admins', ppl.filter((p) => p.admin).length]];
-    const pass = (p) => (s.pf === 'all' || (s.pf === 'behind' && p.status === 'Behind') || (s.pf === 'exempt' && p.exempt) || (s.pf === 'admin' && p.admin)) && (!q || p.name.toLowerCase().indexOf(q) >= 0);
+    const pfDefs = [['all', 'Everyone'], ['exempt', 'Exempt'], ['admin', 'Admins'], ['left', 'Left']];
+    const pass = (p) => (s.pf === 'left' ? !!p.left : !p.left && (s.pf === 'all' || (s.pf === 'exempt' && p.exempt) || (s.pf === 'admin' && p.admin))) && (!q || p.name.toLowerCase().indexOf(q) >= 0);
     const filtered = ppl.filter(pass);
+    const gridDays = []; for (let d = 1; d <= 30; d++) { const dw = dowN(d); if (dw !== 0 && dw !== 6) gridDays.push(d); }
     const upd = (id, fn) => self.state.people.map((x) => (x.id === id ? fn(Object.assign({}, x)) : x));
     const pickPerson = (p) => () => set({ sel: p.id, fixDate: '', fixWhere: '', pMsg: '', bdD: p.bd.d, bdM: p.bd.m, bdShow: p.bd.show, bdMsg: '' });
     const selP = ppl.filter((p) => p.id === s.sel)[0] || null;
@@ -573,7 +577,7 @@ class Component extends DCLogic {
       const plog = s.log.filter((l) => l.id === selP.id);
       const addLog = (text) => [{ id: selP.id, text: text }].concat(self.state.log);
       panel = {
-        p: { name: selP.name, ini: selP.ini, avBg: selP.bg, role: selP.role, usual: selP.usual.join(', '), roleLine: selP.role + ' · usually ' + selP.usual.join(', '), status: selP.status, chipBg: chipC[selP.status][0], chipFg: chipC[selP.status][1], count: selP.exempt ? selP.done + ' office days (exempt)' : selP.done + ' of 8 office days', calTitle: 'November · ' + (selP.exempt ? selP.done + ' office days (exempt)' : selP.done + ' of 8 office days'), admin: selP.admin },
+        p: { name: selP.name, ini: selP.ini, avBg: selP.bg, role: selP.role, usual: selP.usual.join(', '), roleLine: selP.role + ' · usually ' + selP.usual.join(', '), status: selP.status, chipBg: chipC[selP.status][0], chipFg: chipC[selP.status][1], count: selP.exempt ? selP.done + ' office days (exempt)' : selP.done + ' of 8 office days', calTitle: 'November', admin: selP.admin },
         close: () => set({ sel: '' }),
         cal: cal,
         fixDate: fd, onFixDate: (e) => set({ fixDate: e.target.value, pMsg: '' }),
@@ -611,9 +615,13 @@ class Component extends DCLogic {
     }
     const pp = {
       q: s.q, onQ: (e) => set({ q: e.target.value }),
-      chips: pfDefs.map((c) => Object.assign(chip(s.pf === c[0]), { label: c[1] + ' ' + c[2], pick: () => set({ pf: c[0] }) })),
-      countLine: plural(filtered.length, 'person', 'people'),
-      rows: filtered.map((p, i) => { const on = p.id === s.sel; return { name: p.name, ini: p.ini, avBg: p.bg, admin: p.admin, left: !!p.left, usual: 'Usually ' + p.usual.join(', '), count: p.done + '/8', countSr: p.done + ' of 8 office days this month', status: p.status, chipBg: chipC[p.status][0], chipFg: chipC[p.status][1], cur: on ? 'true' : 'false', bg: on ? '#E8F1FA' : 'transparent', line: i === 0 ? '0' : '1px solid #DFE3E8', pick: pickPerson(p) }; }),
+      chips: pfDefs.map((c) => Object.assign(chip(s.pf === c[0]), { label: c[1], pick: () => set({ pf: c[0] }) })),
+      month: s.gridPrev ? 'October' : 'November', prev: () => set({ gridPrev: true }), next: () => set({ gridPrev: false }), noNext: !s.gridPrev, nextOp: s.gridPrev ? 1 : 0.38,
+      cols: gridDays.map((d) => ({ n: String(d), dow: 'MTWTF'[dowN(d) - 1], color: d === TODAY && !s.gridPrev ? '#006493' : '#41474D' })),
+      rows: filtered.map((p) => { const on = p.id === s.sel; return { name: p.name, cur: on ? 'true' : 'false', bg: on ? '#E8F1FA' : 'transparent', stickyBg: on ? '#E8F1FA' : '#FFFFFF', pick: pickPerson(p),
+        cells: gridDays.map((d) => { const k = s.gridPrev ? (p.usual.indexOf(dn[dowN(d)]) >= 0 ? 'in' : 'out') : dayKind(p, d); const fut = !s.gridPrev && d > TODAY;
+          const look = fut ? ['transparent', '0', ''] : k === 'in' ? ['#006493', '0', 'In office'] : k === 'leave' ? ['#EBDCFF', '1px solid #7D5BA6', 'On leave'] : k === 'closed' ? ['transparent', '1px dashed #71787E', 'Office closed'] : ['transparent', '1px solid #C1C7CE', 'Not in'];
+          return { bg: look[0], border: look[1], aria: look[2] ? (s.gridPrev ? 'Oct ' : label(novIso(d)) + ': ') + look[2] : '' }; }) }; }),
       empty: filtered.length === 0,
       has: !!selP, none: !selP
     };
@@ -792,14 +800,14 @@ class Component extends DCLogic {
     if (repN) needDefs.push({ title: plural(repN, 'reported Feed post', 'reported Feed posts'), icon: ICON.flag, bg: '#FFDAD6', fg: '#410002', go: go('speak', { sf: 'open' }) });
     if (pinAnn) needDefs.push({ title: pinAnn.title + ' · seen by ' + pinAnn.seen + ' of ' + TOTAL, icon: ICON.publish, bg: '#FFDDB0', fg: '#4A2800', go: go('publish', { pubTab: 'ann' }) });
     if (todayN) needDefs.push({ title: plural(todayN, 'slow Wi-Fi report', 'slow Wi-Fi reports') + ' today', icon: ICON.wifi, bg: '#E5E8EE', fg: '#41474D', go: go('wifi', { wf: 'today' }) });
-    if (behindN) needDefs.push({ title: plural(behindN, 'person', 'people') + ' behind on 8 office days', icon: ICON.people, bg: '#FFF1C2', fg: '#3D2E00', go: go('people', { pf: 'behind', q: '' }) });
     if (!s.ordered) needDefs.push({ title: 'Snack order goes in at ' + hm(T.order), icon: ICON.snack, bg: '#CDEBD6', fg: '#0B3D1F', go: go('office', { offTab: 'shelf' }) });
     const ov = {
-      stats: [
-        { label: 'In office', n: '19', dot: '#006493' },
-        { label: 'Not in office', n: '22', dot: '#71787E' },
-        { label: 'On leave', n: '4', dot: '#7D5BA6' }
-      ],
+      who: (() => {
+        const first = (p) => p.name.split(' ')[0];
+        const inNow = ppl.filter((p) => !p.left && dayKind(p, TODAY) === 'in').map(first);
+        const away = ppl.filter((p) => !p.left && dayKind(p, TODAY) === 'leave').map(first);
+        return [{ label: 'In office', dot: '#006493', names: inNow.length ? inNow.join(', ') : 'No one yet' }, { label: 'On leave', dot: '#7D5BA6', names: away.length ? away.join(', ') : 'No one' }];
+      })(),
       tea: {
         line: 'Morning tea at ' + fmtT(T.am) + ' · ' + teaNamesAm.length + ' having tea',
         open: curRound, expanded: curRound ? 'true' : 'false', btn: curRound ? 'Hide names' : 'Show names', names: teaNamesAm.join(', '),
@@ -807,8 +815,7 @@ class Component extends DCLogic {
         next: 'Afternoon at ' + fmtT(T.pm) + ' · ' + teaNamesPm.length + ' so far'
       },
       needs: needDefs.map((n, i) => Object.assign(n, { line: i === 0 ? '0' : '1px solid #DFE3E8' })),
-      hasNeeds: needDefs.length > 0, noNeeds: needDefs.length === 0,
-      behind: String(behindN)
+      hasNeeds: needDefs.length > 0, noNeeds: needDefs.length === 0
     };
 
     // ---------- shell ----------

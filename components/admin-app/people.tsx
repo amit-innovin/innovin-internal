@@ -1,22 +1,20 @@
 "use client";
-// Admin › People: a searchable list; picking someone opens their panel (month, Fix a day,
-// exempt, admin, birthday). Filter and person live in the URL.
+// Admin › People (canvas: M3AdminApp › People): a month grid of who was in on which day, with no
+// counts or verdicts; a name opens that person's panel (month, Fix a day, exempt, admin, left,
+// birthday). Filter, month and person live in the URL.
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { Avatar } from "@/components/m3";
 import { Sheet } from "@/components/m3/sheet";
-import { useAdminOverview, useAdminPerson, useFixDay, useSetPerson, type PersonMonth, type PersonRow } from "@/lib/queries";
-import { Chips, Loading, PageHead, Switch, dayLabel, plural, todayIST, useMe, useSnack } from "./ui";
+import { useAdminOverview, useAdminPerson, useFixDay, useSetPerson, useTeamMonth, type PersonMonth, type PersonRow, type TeamMonth } from "@/lib/queries";
+import { Chips, Loading, PageHead, Switch, dayLabel, todayIST, useMe, useSnack } from "./ui";
 
-type Filter = "all" | "behind" | "exempt" | "admin";
+type Filter = "all" | "exempt" | "admin" | "left";
 type Kind = "in" | "leave" | "closed" | "out" | "none" | "wk";
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const MAX_DAY = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const KIND_LABEL: Record<Kind, string> = { in: "in office", leave: "leave", closed: "office closed", out: "not in office", none: "nothing marked", wk: "weekend" };
-const STATUS: Record<PersonRow["status"], [string, string, string]> = {
-  behind: ["Behind", "#FFDDB0", "#4A2800"], "on-track": ["On track", "#CDEBD6", "#0B3D1F"], done: ["On track", "#CDEBD6", "#0B3D1F"], exempt: ["Exempt", "#E5E8EE", "#41474D"],
-};
 const usual = (p: PersonRow) => (p.exempt ? "Fully remote" : p.schedule === "Not set" ? "Usual days not set" : `Usually ${p.schedule.replace(/ \+ /g, ", ")}`);
 const weekend = (date: string) => [0, 6].includes(new Date(`${date}T00:00:00Z`).getUTCDay());
 
@@ -27,9 +25,69 @@ function kindOf(d: PersonMonth["days"][number], today: string): Kind {
   return d.date < today ? "out" : "none";
 }
 
-function StatusTag({ p }: { p: PersonRow }) {
-  const [label, bg, fg] = STATUS[p.status];
-  return <span className="m3a-tag" style={{ flex: "none", minWidth: 64, justifyContent: "center", background: bg, color: fg }}>{label}</span>;
+const shiftMonth = (month: string, by: number) => { const d = new Date(`${month}-01T00:00:00Z`); d.setUTCMonth(d.getUTCMonth() + by); return d.toISOString().slice(0, 7); };
+const MARK: Record<"office" | "leave" | "closed" | "out", [string, string, string]> = {
+  office: ["#006493", "0", "In office"], leave: ["#EBDCFF", "1px solid #7D5BA6", "On leave"], closed: ["transparent", "1px dashed #71787E", "Office closed"], out: ["transparent", "1px solid #C1C7CE", "Not in"],
+};
+
+// Who was in on which day: a row per person, a column per working day, a dot per day.
+function OfficeDays({ team, people, selected, onPick, month, onMonth }: { team: TeamMonth | undefined; people: TeamMonth["people"]; selected: string | null; onPick: (email: string) => void; month: string; onMonth: (m: string) => void }) {
+  const monthName = MONTHS[Number(month.slice(5)) - 1];
+  const thisMonth = todayIST().slice(0, 7);
+  return (
+    <section aria-labelledby="grid-h" className="m3a-card m3a-flush">
+      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 8px 4px 16px" }}>
+        <h2 id="grid-h" className="m3-title" style={{ flex: 1 }}>Office days · {monthName}</h2>
+        <button type="button" className="m3-btn m3-btn-text" aria-label="Previous month" style={{ width: 44, padding: 0 }} onClick={() => onMonth(shiftMonth(month, -1))}><ChevronLeft size={20} aria-hidden="true" /></button>
+        <button type="button" className="m3-btn m3-btn-text" aria-label="Next month" style={{ width: 44, padding: 0 }} disabled={month >= thisMonth} onClick={() => onMonth(shiftMonth(month, 1))}><ChevronRight size={20} aria-hidden="true" /></button>
+      </div>
+      {!team ? <div style={{ padding: "4px 16px 16px" }}><span className="m3-small">Loading the month…</span></div> : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ borderCollapse: "collapse", width: "max-content", minWidth: "100%" }}>
+            <thead>
+              <tr>
+                <th scope="col" style={{ position: "sticky", left: 0, zIndex: 1, background: "var(--m3-surface)", padding: "4px 12px 6px 16px" }}><span className="vh">Person</span></th>
+                {team.days.map((d) => {
+                  const dt = new Date(`${d.date}T00:00:00Z`);
+                  return <th key={d.date} scope="col" style={{ width: 30, padding: "4px 0 6px", textAlign: "center", fontSize: 12, lineHeight: "16px", fontWeight: 600, color: d.date === team.today ? "var(--m3-primary)" : "var(--m3-on-surface-variant)" }}>
+                    <span aria-hidden="true" style={{ display: "block", fontSize: 11, fontWeight: 500 }}>{"SMTWTFS"[dt.getUTCDay()]}</span><span aria-hidden="true">{dt.getUTCDate()}</span><span className="vh">{dayLabel(d.date)}</span>
+                  </th>;
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {people.map((p) => {
+                const on = p.email === selected;
+                const bg = on ? "#E8F1FA" : "var(--m3-surface)";
+                return (
+                  <tr key={p.email} style={{ borderTop: "1px solid #DFE3E8", background: bg }}>
+                    <th scope="row" style={{ position: "sticky", left: 0, zIndex: 1, background: bg, padding: 0, textAlign: "left" }}>
+                      <button type="button" aria-current={on ? "true" : undefined} onClick={() => onPick(p.email)} style={{ border: 0, background: "transparent", minHeight: 44, padding: "8px 12px 8px 16px", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: "var(--m3-on-surface)", textAlign: "left", whiteSpace: "nowrap", cursor: "pointer" }}>{p.name}</button>
+                    </th>
+                    {team.days.map((d) => {
+                      const kind = d.closed ? "closed" : d.future ? null : p.marks[d.date] ?? "out";
+                      const [fill, border, label] = kind ? MARK[kind] : ["transparent", "0", ""];
+                      return <td key={d.date} style={{ textAlign: "center", padding: 0 }}>
+                        <span aria-hidden="true" style={{ display: "inline-block", width: 12, height: 12, borderRadius: 6, boxSizing: "border-box", background: fill, border }} />
+                        {label && <span className="vh">{dayLabel(d.date)}: {label}</span>}
+                      </td>;
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {team && people.length === 0 && <p className="m3-body" style={{ margin: 0, padding: 16, color: "var(--m3-on-surface-variant)" }}>No one matches. Try another name or filter.</p>}
+      <div className="m3-small" style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px", padding: "10px 16px 14px" }}>
+        <span className="m3a-key"><i style={{ background: "#006493" }} />In office</span>
+        <span className="m3a-key"><i style={{ background: "#EBDCFF", border: "1px solid #7D5BA6" }} />Leave</span>
+        <span className="m3a-key"><i style={{ border: "1px dashed #71787E" }} />Closed</span>
+        <span className="m3a-key"><i style={{ border: "1px solid #C1C7CE" }} />Not in</span>
+      </div>
+    </section>
+  );
 }
 
 export function PeoplePage() {
@@ -37,24 +95,25 @@ export function PeoplePage() {
   const params = useSearchParams();
   const router = useRouter();
   const [q, setQ] = useState("");
-  const filter = (["all", "behind", "exempt", "admin"] as const).find((f) => f === params.get("show")) ?? "all";
+  const filter = (["all", "exempt", "admin", "left"] as const).find((f) => f === params.get("show")) ?? "all";
+  const thisMonth = todayIST().slice(0, 7);
+  const month = /^\d{4}-\d{2}$/.test(params.get("month") ?? "") && params.get("month")! <= thisMonth ? params.get("month")! : thisMonth;
+  const team = useTeamMonth(month);
   const selectedEmail = params.get("person");
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
     if (value === null) next.delete(key); else next.set(key, value);
     router.replace(`/admin/people${next.size ? `?${next}` : ""}`, { scroll: false });
   };
-  const data = overview.data;
   const shown = useMemo(() => {
-    if (!data) return [];
     const needle = q.trim().toLowerCase();
-    const pass = (p: PersonRow) => filter === "all" || (filter === "behind" && p.status === "behind") || (filter === "exempt" && p.exempt) || (filter === "admin" && p.role === "admin");
-    return data.people.filter((p) => pass(p) && (!needle || p.name.toLowerCase().includes(needle) || p.email.includes(needle)));
-  }, [data, q, filter]);
+    const pass = (p: TeamMonth["people"][number]) => (filter === "left" ? p.left : !p.left && (filter === "all" || (filter === "exempt" && p.exempt) || (filter === "admin" && p.role === "admin")));
+    return (team.data?.people ?? []).filter((p) => pass(p) && (!needle || p.name.toLowerCase().includes(needle) || p.email.includes(needle)));
+  }, [team.data, q, filter]);
 
-  if (!data) return <><PageHead title="People" /><Loading what="people" error={overview.error} onRetry={() => overview.refetch()} /></>;
+  const data = overview.data;
+  if (!data) return <><PageHead title="People" /><Loading what="people" error={overview.error ?? team.error} onRetry={() => { overview.refetch(); team.refetch(); }} /></>;
   const selected = data.people.find((p) => p.email === selectedEmail) ?? null;
-  const count = (f: Filter) => data.people.filter((p) => f === "all" || (f === "behind" && p.status === "behind") || (f === "exempt" && p.exempt) || (f === "admin" && p.role === "admin")).length;
 
   return (
     <>
@@ -68,32 +127,12 @@ export function PeoplePage() {
               <input id="p-q" type="search" className="m3a-field" style={{ paddingLeft: 44, borderRadius: 22 }} placeholder="Search by name" value={q} onChange={(e) => setQ(e.target.value)} />
             </div>
             <Chips label="Filter people" value={filter} onPick={(f) => setParam("show", f === "all" ? null : f)}
-              options={[["all", `Everyone ${count("all")}`], ["behind", `Behind ${count("behind")}`], ["exempt", `Exempt ${count("exempt")}`], ["admin", `Admins ${count("admin")}`]]} />
+              options={[["all", "Everyone"], ["exempt", "Exempt"], ["admin", "Admins"], ["left", "Left"]]} />
           </section>
-          <section aria-label="People" className="m3a-card m3a-flush">
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "14px 16px 8px" }}><span className="m3-small">{plural(shown.length, "person", "people")}</span><span className="m3-small">This month</span></div>
-            <ul className="m3a-list m3a-topline">
-              {shown.map((p) => {
-                const on = p.email === selectedEmail;
-                return (
-                  <li key={p.email}>
-                    <button type="button" className="m3a-li" aria-current={on ? "true" : undefined} onClick={() => setParam("person", on ? null : p.email)} style={{ minHeight: 64, background: on ? "#E8F1FA" : undefined }}>
-                      <Avatar name={p.name} size={36} />
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontWeight: 600 }}>{p.name}{p.role === "admin" && <span className="m3a-tag" style={{ background: "#D3E5F5", color: "#0C1D29" }}>Admin</span>}{p.left && <span className="m3a-tag" style={{ background: "#E5E8EE", color: "#41474D" }}>Left</span>}</span>
-                        <span className="m3-small">{usual(p)}</span>
-                      </span>
-                      {p.target !== null && <span style={{ flex: "none", minWidth: 36, textAlign: "right", fontWeight: 600 }}><span aria-hidden="true">{p.done}/{p.target}</span><span className="vh">{p.done} of {p.target} office days this month</span></span>}
-                      <StatusTag p={p} />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {shown.length === 0 && <p className="m3-body" style={{ margin: 0, padding: 16, color: "var(--m3-on-surface-variant)" }}>No one matches. Try another name or filter.</p>}
-          </section>
+          <OfficeDays team={team.data} people={shown} selected={selectedEmail} month={month}
+            onPick={(email) => setParam("person", email === selectedEmail ? null : email)} onMonth={(m) => setParam("month", m === thisMonth ? null : m)} />
         </div>
-        {selected && <PersonPanel key={selected.email} person={selected} month={data.month} onClose={() => setParam("person", null)} />}
+        {selected && <PersonPanel key={`${selected.email}-${month}`} person={selected} month={month} onClose={() => setParam("person", null)} />}
       </div>
     </>
   );
@@ -109,7 +148,6 @@ function PersonPanel({ person, month, onClose }: { person: PersonRow; month: str
   const days = detail.data?.days ?? [];
   const lead = (new Date(`${month}-01T00:00:00Z`).getUTCDay() + 6) % 7;
   const monthName = MONTHS[Number(month.slice(5)) - 1];
-  const calTitle = `${monthName} · ${person.target === null ? `${person.done} office days (exempt)` : `${person.done} of ${person.target} office days`}`;
   const isSelf = person.email === me.toLowerCase();
   const act = (input: Parameters<typeof setPerson.mutate>[0], ok: string) => setPerson.mutate(input, { onSuccess: () => snack(ok), onError: (e) => snack(e.message) });
 
@@ -133,13 +171,12 @@ function PersonPanel({ person, month, onClose }: { person: PersonRow; month: str
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2 id="pp-h" style={{ margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 600 }}>{person.name}</h2>
           <span className="m3-small" style={{ overflowWrap: "anywhere" }}>{person.email} · {usual(person).replace(/^Usually/, "usually")}</span>
-          <div style={{ paddingTop: 6 }}><StatusTag p={person} /></div>
         </div>
         <button type="button" onClick={onClose} aria-label={`Close ${person.name}`} style={{ flex: "none", width: 48, height: 48, borderRadius: 24, border: 0, background: "transparent", color: "#41474D", display: "grid", placeItems: "center", padding: 0, cursor: "pointer" }}><X size={22} strokeWidth={2} aria-hidden="true" /></button>
       </div>
 
       <section aria-labelledby="cal-h" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <h3 id="cal-h" className="m3-title">{calTitle}</h3>
+        <h3 id="cal-h" className="m3-title">{monthName}</h3>
         <div className="m3a-cal" aria-hidden="true">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, i) => <span key={d} className="m3-small" style={{ fontWeight: i < 5 ? 600 : 400 }}>{d}</span>)}</div>
         <div className="m3a-cal">
           {Array.from({ length: lead }, (_, i) => <span key={`l${i}`} />)}

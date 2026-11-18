@@ -206,7 +206,6 @@ describe("Calendar invites when Google misbehaves", () => {
     await store.setLeftOn("gone@innovinlabs.com", "2026-11-18");
     const o = await adminOverview();
     expect(o.total).toBe(3);
-    expect(o.counts.notIn).toBe(3);
     expect(o.people.find((p) => p.email === "gone@innovinlabs.com")?.left).toBe(true);
   });
 });

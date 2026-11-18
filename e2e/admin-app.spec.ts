@@ -52,6 +52,28 @@ test.describe("Admin app", () => {
     await expect(fix).toHaveCount(0);
   });
 
+  test("People: a month grid of who was in on which day, with no counts or verdicts", async ({ page, browser }) => {
+    const someone = await member(browser, `grid${Date.now().toString(36)}`);
+    const name = someone.email.split("@")[0].split(".")[0].replace(/^./, (c) => c.toUpperCase());
+    await someone.close();
+    await admin(page, "/admin/people");
+    const grid = page.getByRole("region", { name: /^Office days · / });
+    await expect(grid.getByRole("table")).toBeVisible();
+    const row = grid.getByRole("row").filter({ has: page.getByRole("rowheader", { name }) });
+    const today = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short" }).format(new Date()).replace(",", "");
+    await expect(row.getByText(`${today}: In office`)).toHaveCount(1);
+    await expect(page.getByText(/\b\d+\/\d+\b|\bBehind\b|On track|of 8 office days/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Everyone", exact: true })).toBeVisible();
+    await grid.getByRole("button", { name }).click();
+    await expect(page.getByRole("region", { name })).toBeVisible();
+
+    await page.goto("/admin");
+    const todayCard = page.getByRole("region", { name: "Today in the office" });
+    await expect(todayCard).toContainText(name);
+    await expect(todayCard.getByText(/^\d+$/)).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Needs you" })).not.toContainText("behind");
+  });
+
   test("Speak up: keep a reported post; reply to a message", async ({ page, browser }) => {
     const author = await member(browser, "admin-author");
     const body = uniqueText("Reported quote");

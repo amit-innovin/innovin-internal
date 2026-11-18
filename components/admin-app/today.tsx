@@ -2,9 +2,9 @@
 // Admin › Today: "Needs you" first, then one compact card for the day in the office.
 import Link from "next/link";
 import { useState } from "react";
-import { CalendarX, ChevronRight, Cookie, Flag, Megaphone, ShieldCheck, Users, Wifi, type LucideIcon } from "lucide-react";
+import { CalendarX, ChevronRight, Cookie, Flag, Megaphone, ShieldCheck, Wifi, type LucideIcon } from "lucide-react";
 import { useAdminOverview, useSnacks, useTea, type AdminData } from "@/lib/queries";
-import { Loading, PageHead, dayLabel, fmtTime, hm, plural, todayIST } from "./ui";
+import { Loading, PageHead, dayLabel, fmtTime, hm, todayIST } from "./ui";
 
 type Need = { id: string; title: string; href: string; icon: LucideIcon; tone: [string, string] };
 const KIND: Record<AdminData["needsYou"][number]["kind"], [LucideIcon, [string, string]]> = {
@@ -25,12 +25,17 @@ export function TodayPage() {
   if (!data) return <>{head}<Loading what="today" error={overview.error} onRetry={() => overview.refetch()} /></>;
 
   const needs: Need[] = data.needsYou.map((n) => ({ id: n.id, title: n.title, href: n.href, icon: KIND[n.kind][0], tone: KIND[n.kind][1] }));
-  if (data.status.behind) needs.push({ id: "behind", title: `${plural(data.status.behind, "person", "people")} behind on 8 office days`, href: "/admin/people?show=behind", icon: Users, tone: ["#FFF1C2", "#3D2E00"] });
   if (snacks.data && !snacks.data.today.ordered) needs.push({ id: "order", title: `Snack order goes in at ${hm(snacks.data.today.orderAt)}`, href: "/admin/office?tab=shelf", icon: Cookie, tone: ["#CDEBD6", "#0B3D1F"] });
 
   const t = data.tea;
   const nextPm = t.round === "am" && tea.data ? `Afternoon at ${fmtTime(tea.data.times.pm)} · ${tea.data.counts?.pm ?? 0} so far` : null;
-  const stats: [number, string, string][] = [[data.counts.office, "In office", "#006493"], [data.counts.notIn, "Not in office", "#71787E"], [data.counts.leave, "On leave", "#7D5BA6"]];
+  // Names, not counts: who's in today and who's on leave (people marked as left aren't listed).
+  const first = (name: string) => name.split(" ")[0];
+  const here = data.people.filter((p) => !p.left);
+  const who: [string, string, string][] = [
+    ["In office", "#006493", here.filter((p) => p.today === "office").map((p) => first(p.name)).join(", ") || "No one yet"],
+    ["On leave", "#7D5BA6", here.filter((p) => p.today === "leave").map((p) => first(p.name)).join(", ") || "No one"],
+  ];
 
   return (
     <>
@@ -52,11 +57,11 @@ export function TodayPage() {
         ) : <p className="m3-body" style={{ margin: 0, padding: "8px 16px 14px", color: "var(--m3-on-surface-variant)" }}>Nothing needs you right now.</p>}
       </section>
       <section aria-label="Today in the office" className="m3a-card m3a-narrow" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 28px" }}>
-          {stats.map(([n, label, dot]) => (
-            <div key={label} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontSize: 28, lineHeight: "36px", fontWeight: 600 }}>{n}</span>
-              <span className="m3-small" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600, color: "var(--m3-on-surface)" }}><span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 5, background: dot }} />{label}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {who.map(([label, dot, names]) => (
+            <div key={label} style={{ display: "flex", alignItems: "baseline", gap: "6px 12px", flexWrap: "wrap" }}>
+              <span className="m3-small" style={{ flex: "none", width: 96, display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600, color: "var(--m3-on-surface)" }}><span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 5, background: dot }} />{label}</span>
+              <span style={{ flex: 1, minWidth: 180 }}>{names}</span>
             </div>
           ))}
         </div>

@@ -1033,3 +1033,44 @@ test.describe("Steps, Wi-Fi and notifications (Stage 5)", () => {
     expect(kudos[0].title).toMatch(/gave you kudos$/);
   });
 });
+
+test.describe("Speak up and Feed reports (Stage 6)", () => {
+  test("a Speak up message keeps the day only and nothing about who sent it", async () => {
+    const guest = await device();
+    const body = `The pantry tap leaks ${Date.now()}`;
+    const sent = await guest.post("/api/grievances", { data: { body, topic: "Facilities" } });
+    expect(sent.status()).toBe(200);
+    const row = await sent.json();
+    expect(row.createdAt).toMatch(/T18:30:00\.000Z$|T00:00:00/); // midnight IST, no time of day
+    expect(row.topic).toBe("Facilities");
+    expect((await guest.post("/api/grievances", { data: { body: "x", topic: "Gossip" } })).status()).toBe(400);
+    const adm = await admin();
+    const list = await (await adm.get("/api/grievances")).json();
+    const seen = list.find((g: { body: string }) => g.body === body);
+    expect(JSON.stringify(seen)).not.toMatch(/submitterRef|@innovinlabs\.com/);
+    expect((await adm.patch("/api/grievances", { data: { id: seen.id, reply: "Plumber booked for Friday" } })).status()).toBe(200);
+    const mine = await (await guest.get("/api/grievances?scope=mine")).json();
+    expect(mine.find((g: { id: string }) => g.id === seen.id)).toMatchObject({ topic: "Facilities", reply: "Plumber booked for Friday" });
+    const other = await device();
+    expect((await (await other.get("/api/grievances?scope=mine")).json()).some((g: { id: string }) => g.id === seen.id)).toBe(false);
+  });
+
+  test("a Feed post can be reported once per person, never your own, and admins see only counts", async () => {
+    const author = await signedIn(email()), reader = await signedIn(email());
+    const body = `A quote ${Date.now()}`;
+    await author.post("/api/notices", { data: { kind: "quote", body, title: "", attribution: "", color: "purple", anonymous: false } });
+    const post = (await (await reader.get("/api/feed")).json()).posts.find((p: { body?: string }) => p.body === body);
+    expect((await reader.post("/api/notices/report", { data: { id: post.id } })).status()).toBe(200);
+    expect((await reader.post("/api/notices/report", { data: { id: post.id } })).status()).toBe(409);
+    expect((await author.post("/api/notices/report", { data: { id: post.id } })).status()).toBe(400);
+    expect((await reader.post("/api/notices/report", { data: { id: "missing" } })).status()).toBe(404);
+    expect((await reader.get("/api/admin/reported")).status()).toBe(401);
+    const reported = await (await (await admin()).get("/api/admin/reported")).json();
+    const item = reported.find((r: { id: string }) => r.id === post.id);
+    expect(item).toMatchObject({ reports: 1 });
+    // The post's own author shows (it's a public post); nothing about who reported it does.
+    const readerEmail = (await (await reader.get("/api/account")).json()).email;
+    expect(JSON.stringify(item)).not.toContain(readerEmail);
+    expect(JSON.stringify(item)).not.toMatch(/reporter/i);
+  });
+});

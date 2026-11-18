@@ -106,42 +106,23 @@ input,select,textarea{font-family:inherit}
 </header>
 
 <main class="content">
-<header style="display: flex; flex-direction: column; gap: 2px"><h1 class="h1">{{ head.title }}</h1><span class="bm">{{ head.sub }}</span></header>
+<header style="display: flex; flex-direction: column; gap: 2px"><h1 class="h1">{{ head.title }}</h1><sc-if value="{{ head.hasSub }}" hint-placeholder-val="{{ true }}"><span class="bm">{{ head.sub }}</span></sc-if></header>
 
 <!-- ============ TODAY ============ -->
 <sc-if value="{{ v.today }}" hint-placeholder-val="{{ true }}">
-<section aria-label="Today in numbers" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px">
-<sc-for list="{{ ov.stats }}" as="t" hint-placeholder-count="3"><div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 2px"><span class="sm" style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #181C20"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 5px; background: {{ t.dot }}"></span>{{ t.label }}</span><span style="font-size: 36px; line-height: 44px; font-weight: 600">{{ t.n }}</span><span class="sm">{{ t.note }}</span></div></sc-for>
+<section aria-labelledby="need-h" class="card" style="padding: 6px 0; max-width: 760px; width: 100%">
+<h2 id="need-h" class="tm" style="padding: 12px 16px 4px">Needs you</h2>
+<sc-if value="{{ ov.hasNeeds }}" hint-placeholder-val="{{ true }}"><ul style="list-style: none; margin: 0; padding: 0"><sc-for list="{{ ov.needs }}" as="n" hint-placeholder-count="5"><li style="border-top: {{ n.line }}"><button class="li" onClick="{{ n.go }}" style="min-height: 60px"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: {{ n.bg }}; color: {{ n.fg }}; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg></span><span style="flex: 1; min-width: 0; font-weight: 600">{{ n.title }}</span><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M9 6l6 6-6 6"></path></svg></button></li></sc-for></ul></sc-if>
+<sc-if value="{{ ov.noNeeds }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 8px 16px 14px">Nothing needs you right now.</p></sc-if>
 </section>
-<div class="cols">
-<div class="main">
-<section aria-labelledby="tea-h" style="background: #EBDCFF; color: #20142F; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
-<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap"><h2 id="tea-h" class="tm" style="font-size: 18px">{{ ov.tea.title }}</h2><span class="tag" style="background: #FFFFFF; color: #20142F">{{ ov.tea.state }}</span></div>
-<div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap"><span style="font-size: 36px; line-height: 44px; font-weight: 600">{{ ov.tea.n }}</span><span>having tea</span><span style="flex: 1"></span><button class="bt" style="background: #FFFFFF; color: #20142F" aria-expanded="{{ ov.tea.expanded }}" aria-controls="tea-names" onClick="{{ ov.tea.toggle }}">{{ ov.tea.btn }}</button></div>
-<sc-if value="{{ ov.tea.open }}" hint-placeholder-val="{{ false }}"><p id="tea-names" style="margin: 0; font-size: 15px; line-height: 22px; color: #20142F">{{ ov.tea.names }}</p></sc-if>
-<span style="font-size: 13px; line-height: 18px; color: #20142F">{{ ov.tea.next }}. Tea is the one thing that isn't anonymous: only admins see names, so whoever makes it knows whose cup to pour.</span>
-</section>
-<section aria-labelledby="need-h" class="card" style="padding: 6px 0">
-<h2 id="need-h" class="tm" style="padding: 12px 16px 4px">Things that need you</h2>
-<sc-for list="{{ ov.needs }}" as="n" hint-placeholder-count="4"><button class="li" onClick="{{ n.go }}" style="border-top: {{ n.line }}; min-height: 68px"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: {{ n.bg }}; color: {{ n.fg }}; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg></span><span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">{{ n.title }}</span><span class="sm">{{ n.sub }}</span></span><sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}"><span class="badge" aria-hidden="true">{{ n.count }}</span></sc-if><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M9 6l6 6-6 6"></path></svg></button></sc-for>
-</section>
+<section aria-label="Today in the office" class="card" style="max-width: 760px; width: 100%; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; gap: 8px 28px"><sc-for list="{{ ov.stats }}" as="t" hint-placeholder-count="3"><div style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 28px; line-height: 36px; font-weight: 600">{{ t.n }}</span><span class="sm" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #181C20"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 5px; background: {{ t.dot }}"></span>{{ t.label }}</span></div></sc-for></div>
+<div style="border-top: 1px solid #DFE3E8; padding-top: 12px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap"><span style="flex: 1; min-width: 180px; font-weight: 600">{{ ov.tea.line }}</span><button class="bx" aria-expanded="{{ ov.tea.expanded }}" aria-controls="tea-names" onClick="{{ ov.tea.toggle }}">{{ ov.tea.btn }}</button></div>
+<sc-if value="{{ ov.tea.open }}" hint-placeholder-val="{{ false }}"><p id="tea-names" class="bm" style="margin: 0; color: #181C20">{{ ov.tea.names }}</p></sc-if>
+<span class="sm">{{ ov.tea.next }}</span>
 </div>
-<aside class="rail">
-<section aria-labelledby="month-h" class="card" style="display: flex; flex-direction: column; gap: 8px">
-<h2 id="month-h" class="tm">This month</h2>
-<div style="display: flex; align-items: baseline; gap: 10px"><span style="font-size: 36px; line-height: 44px; font-weight: 600; color: #4A2800">{{ ov.behind }}</span><span style="font-weight: 600">{{ ov.behindLine }}</span></div>
-<span class="sm">{{ ov.daysLeft }}</span>
-<div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px"><button class="bt" onClick="{{ ov.seeBehind }}">See who in People</button><button class="bx" onClick="{{ ov.seeAll }}">Everyone</button></div>
 </section>
-<section aria-labelledby="soon-h" class="card" style="padding: 6px 0">
-<h2 id="soon-h" class="tm" style="padding: 12px 16px 4px">Coming up</h2>
-<button class="li" onClick="{{ ov.goEvents }}"><span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">{{ ov.evLine }}</span><span class="sm">{{ ov.evSub }}</span></span><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M9 6l6 6-6 6"></path></svg></button>
-<div class="div"></div>
-<button class="li" onClick="{{ ov.goClosed }}"><span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">{{ ov.closedLine }}</span><span class="sm">{{ ov.closedSub }}</span></span><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M9 6l6 6-6 6"></path></svg></button>
-</section>
-<p class="sm" style="margin: 0 4px">Leave requests are approved in Zoho People by each person's approver. This app only shows the status.</p>
-</aside>
-</div>
 </sc-if>
 
 <!-- ============ PEOPLE ============ -->
@@ -161,17 +142,15 @@ input,select,textarea{font-family:inherit}
 </section>
 </div>
 
-<sc-if value="{{ pp.none }}" hint-placeholder-val="{{ true }}"><aside class="pphint card" style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start"><span aria-hidden="true" style="width: 48px; height: 48px; border-radius: 24px; background: #D3E5F5; color: #0C1D29; display: grid; place-items: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"></path></svg></span><h2 class="tm">Pick someone</h2><p class="bm" style="margin: 0">See their month, fix a past day, mark them exempt from the 8 days, make them an admin, or add their birthday.</p></aside></sc-if>
-
 <sc-if value="{{ pp.has }}" hint-placeholder-val="{{ false }}"><aside class="ppanel" aria-labelledby="pp-h">
 <div style="display: flex; align-items: flex-start; gap: 12px">
 <span aria-hidden="true" class="av" style="width: 48px; height: 48px; border-radius: 24px; font-size: 15px; background: {{ panel.p.avBg }}">{{ panel.p.ini }}</span>
-<div style="flex: 1; min-width: 0"><h2 id="pp-h" style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">{{ panel.p.name }}</h2><span class="sm">{{ panel.p.role }} · usually {{ panel.p.usual }}</span><div style="padding-top: 6px"><span class="tag" style="background: {{ panel.p.chipBg }}; color: {{ panel.p.chipFg }}">{{ panel.p.status }}</span></div></div>
+<div style="flex: 1; min-width: 0"><h2 id="pp-h" style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">{{ panel.p.name }}</h2><span class="sm">{{ panel.p.roleLine }}</span><div style="padding-top: 6px"><span class="tag" style="background: {{ panel.p.chipBg }}; color: {{ panel.p.chipFg }}">{{ panel.p.status }}</span></div></div>
 <button onClick="{{ panel.close }}" aria-label="Close {{ panel.p.name }}" style="flex: none; width: 48px; height: 48px; border-radius: 24px; border: 0; background: transparent; color: #41474D; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
 </div>
 
 <section aria-labelledby="cal-h" style="display: flex; flex-direction: column; gap: 10px">
-<h3 id="cal-h" class="tm">November · {{ panel.p.count }}</h3>
+<h3 id="cal-h" class="tm">{{ panel.p.calTitle }}</h3>
 <div class="calg" aria-hidden="true"><span class="sm" style="font-weight: 600">Mon</span><span class="sm" style="font-weight: 600">Tue</span><span class="sm" style="font-weight: 600">Wed</span><span class="sm" style="font-weight: 600">Thu</span><span class="sm" style="font-weight: 600">Fri</span><span class="sm">Sat</span><span class="sm">Sun</span></div>
 <div class="calg">
 <sc-for list="{{ panel.cal }}" as="c" hint-placeholder-count="36"><div style="display: flex; justify-content: center"><sc-if value="{{ c.btn }}" hint-placeholder-val="{{ false }}"><button class="cell" aria-label="{{ c.aria }}" onClick="{{ c.pick }}" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}; outline: {{ c.outline }}">{{ c.n }}</button></sc-if><sc-if value="{{ c.span }}" hint-placeholder-val="{{ true }}"><span class="cell" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}; outline: {{ c.outline }}"><span aria-hidden="true">{{ c.n }}</span><span class="vh">{{ c.aria }}</span></span></sc-if></div></sc-for>
@@ -181,7 +160,7 @@ input,select,textarea{font-family:inherit}
 </section>
 
 <section aria-labelledby="fix-h" style="display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #DFE3E8; padding-top: 18px">
-<div><h3 id="fix-h" class="tm">Fix a day</h3><span class="sm">For a past day they forgot to check in, or marked by mistake. There's no location check, and every change is logged.</span></div>
+<h3 id="fix-h" class="tm">Fix a day</h3>
 <div class="fcol"><label for="fx-d" class="lbl">Date</label><input id="fx-d" type="date" class="field" min="2026-11-01" max="2026-11-17" value="{{ panel.fixDate }}" onChange="{{ panel.onFixDate }}"></div>
 <span id="fx-q" class="lbl">Where were they?</span>
 <div role="radiogroup" aria-labelledby="fx-q" style="display: flex; gap: 8px; flex-wrap: wrap">
@@ -194,13 +173,13 @@ input,select,textarea{font-family:inherit}
 </section>
 
 <section aria-label="Rules and access" style="border-top: 1px solid #DFE3E8; margin: 0 -20px">
-<div class="srow" style="padding: 8px 20px"><div style="flex: 1; min-width: 0"><span id="ex-l" style="display: block; font-weight: 600">Exempt from the 8 days</span><span id="ex-d" class="sm">For long leave or an agreed arrangement. They won't see a target or a Behind status.</span></div><button class="swb" role="switch" aria-checked="{{ panel.exSw.aria }}" aria-labelledby="ex-l" aria-describedby="ex-d" onClick="{{ panel.toggleEx }}" style="border: {{ panel.exSw.border }}; background: {{ panel.exSw.track }}"><span class="swt" style="left: {{ panel.exSw.left }}; width: {{ panel.exSw.size }}; height: {{ panel.exSw.size }}; background: {{ panel.exSw.thumb }}"></span></button></div>
+<div class="srow" style="padding: 8px 20px"><div style="flex: 1; min-width: 0"><span id="ex-l" style="display: block; font-weight: 600">Exempt from the 8 days</span></div><button class="swb" role="switch" aria-checked="{{ panel.exSw.aria }}" aria-labelledby="ex-l" onClick="{{ panel.toggleEx }}" style="border: {{ panel.exSw.border }}; background: {{ panel.exSw.track }}"><span class="swt" style="left: {{ panel.exSw.left }}; width: {{ panel.exSw.size }}; height: {{ panel.exSw.size }}; background: {{ panel.exSw.thumb }}"></span></button></div>
 <div class="div" style="margin: 0 20px"></div>
-<div class="srow" style="padding: 8px 20px"><div style="flex: 1; min-width: 0"><span id="ad-l" style="display: block; font-weight: 600">Admin</span><span id="ad-d" class="sm">{{ panel.adNote }}</span></div><button class="swb" role="switch" aria-checked="{{ panel.adSw.aria }}" aria-labelledby="ad-l" aria-describedby="ad-d" disabled="{{ panel.adDisabled }}" onClick="{{ panel.toggleAd }}" style="border: {{ panel.adSw.border }}; background: {{ panel.adSw.track }}; opacity: {{ panel.adSw.op }}"><span class="swt" style="left: {{ panel.adSw.left }}; width: {{ panel.adSw.size }}; height: {{ panel.adSw.size }}; background: {{ panel.adSw.thumb }}"></span></button></div>
+<div class="srow" style="padding: 8px 20px"><div style="flex: 1; min-width: 0"><span id="ad-l" style="display: block; font-weight: 600">Admin</span><sc-if value="{{ panel.hasAdNote }}" hint-placeholder-val="{{ false }}"><span id="ad-d" class="sm">{{ panel.adNote }}</span></sc-if></div><button class="swb" role="switch" aria-checked="{{ panel.adSw.aria }}" aria-labelledby="ad-l" disabled="{{ panel.adDisabled }}" onClick="{{ panel.toggleAd }}" style="border: {{ panel.adSw.border }}; background: {{ panel.adSw.track }}; opacity: {{ panel.adSw.op }}"><span class="swt" style="left: {{ panel.adSw.left }}; width: {{ panel.adSw.size }}; height: {{ panel.adSw.size }}; background: {{ panel.adSw.thumb }}"></span></button></div>
 </section>
 
 <section aria-labelledby="bd-h" style="display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #DFE3E8; padding-top: 18px">
-<div><h3 id="bd-h" class="tm">Birthday</h3><span class="sm">Admins enter birthdays. Day and month only, never the year.</span></div>
+<h3 id="bd-h" class="tm">Birthday</h3>
 <div style="display: flex; gap: 12px; flex-wrap: wrap">
 <div class="fcol" style="flex: 1 1 100px"><label for="bd-d" class="lbl">Day</label><select id="bd-d" class="field" onChange="{{ panel.onBdD }}"><option value="" selected="{{ panel.bdNoD }}">Not set</option><sc-for list="{{ panel.dayOpts }}" as="o" hint-placeholder-count="31"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for></select></div>
 <div class="fcol" style="flex: 2 1 160px"><label for="bd-m" class="lbl">Month</label><select id="bd-m" class="field" onChange="{{ panel.onBdM }}"><option value="" selected="{{ panel.bdNoM }}">Not set</option><sc-for list="{{ panel.monOpts }}" as="o" hint-placeholder-count="12"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for></select></div>
@@ -218,7 +197,10 @@ input,select,textarea{font-family:inherit}
 <sc-if value="{{ v.speak }}" hint-placeholder-val="{{ false }}">
 <div class="cols">
 <div class="main">
-<section role="note" aria-label="Anonymous by design" style="background: #D3E5F5; color: #0C1D29; border-radius: 24px; padding: 18px 20px; display: flex; gap: 14px; align-items: flex-start"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path></svg><div><b style="display: block">Anonymous by design</b><span style="font-size: 14px; line-height: 20px">You see the topic, the message and the day it was sent. Never a name, email, device or time. You can't reply to the sender, so the status and note you set here are what they see on their device.</span></div></section>
+<sc-if value="{{ sp.hasReported }}" hint-placeholder-val="{{ true }}"><section aria-labelledby="rp-h" class="card" style="padding: 0; overflow: hidden">
+<h2 id="rp-h" class="tm" style="padding: 16px 20px 8px">{{ sp.reportedTitle }}</h2>
+<ul style="list-style: none; margin: 0; padding: 0; border-top: 1px solid #DFE3E8"><sc-for list="{{ sp.reported }}" as="r" hint-placeholder-count="2"><li style="border-top: {{ r.line }}; padding: 14px 20px; display: flex; flex-direction: column; gap: 8px"><span class="sm">{{ r.meta }}</span><p style="margin: 0; font-size: 16px; line-height: 24px">{{ r.text }}</p><div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end"><button class="bx" aria-label="Keep {{ r.author }}'s post" onClick="{{ r.keep }}">Keep</button><button class="bd" aria-label="Remove {{ r.author }}'s post" onClick="{{ r.remove }}">Remove post</button></div></li></sc-for></ul>
+</section></sc-if>
 <div role="group" aria-label="Filter messages" style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{ sp.chips }}" as="c" hint-placeholder-count="3"><button class="chip" aria-pressed="{{ c.pressed }}" onClick="{{ c.pick }}" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}"><sc-if value="{{ c.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>{{ c.label }}</button></sc-for></div>
 <sc-for list="{{ sp.rows }}" as="m" hint-placeholder-count="2"><article class="card" aria-label="{{ m.aria }}" style="display: flex; flex-direction: column; gap: 14px">
 <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span class="tag" style="background: transparent; border: 1px solid #71787E; color: #181C20">{{ m.topic }}</span><span class="sm">{{ m.day }}</span><span style="flex: 1"></span><span class="tag" style="background: {{ m.stBg }}; color: {{ m.stFg }}">{{ m.status }}</span></div>
@@ -229,21 +211,10 @@ input,select,textarea{font-family:inherit}
 <button role="radio" aria-checked="{{ m.sRes.checked }}" onClick="{{ m.sRes.set }}" style="height: 40px; padding: 0 14px; border: 0; border-left: 1px solid #71787E; background: {{ m.sRes.bg }}; color: {{ m.sRes.color }}; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 0"><sc-if value="{{ m.sRes.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>Resolved</button>
 </div></div>
 <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end"><div class="fcol" style="flex: 1 1 240px"><label for="{{ m.nid }}" class="lbl">Note shown with the status (optional)</label><input id="{{ m.nid }}" class="field" value="{{ m.draft }}" placeholder="For example: Facilities are looking at it this week" onChange="{{ m.onNote }}"></div><button class="bo" style="height: 44px; flex: none; opacity: {{ m.saveOp }}" disabled="{{ m.cantSave }}" onClick="{{ m.saveNote }}">Save note</button></div>
-<sc-if value="{{ m.hasNote }}" hint-placeholder-val="{{ false }}"><span class="sm">They see: “{{ m.note }}”</span></sc-if>
+<sc-if value="{{ m.hasNote }}" hint-placeholder-val="{{ false }}"><span class="sm">{{ m.noteLine }}</span></sc-if>
 </article></sc-for>
-<sc-if value="{{ sp.empty }}" hint-placeholder-val="{{ false }}"><div class="card"><p class="bm" style="margin: 0">Nothing here. When someone speaks up, it shows here with the day it was sent.</p></div></sc-if>
+<sc-if value="{{ sp.empty }}" hint-placeholder-val="{{ false }}"><div class="card"><p class="bm" style="margin: 0">Nothing here.</p></div></sc-if>
 </div>
-<aside class="rail">
-<section aria-labelledby="sp-c-h" class="card" style="display: flex; flex-direction: column; gap: 12px">
-<h2 id="sp-c-h" class="tm">By status</h2>
-<sc-for list="{{ sp.counts }}" as="c" hint-placeholder-count="3"><div style="display: flex; align-items: center; gap: 10px"><span class="tag" style="background: {{ c.bg }}; color: {{ c.fg }}">{{ c.label }}</span><span style="flex: 1"></span><span style="font-weight: 600">{{ c.n }}</span></div></sc-for>
-</section>
-<section aria-labelledby="sp-how-h" class="card" style="display: flex; flex-direction: column; gap: 8px">
-<h2 id="sp-how-h" class="tm">What the sender sees</h2>
-<p class="bm" style="margin: 0">Their message under My reports, with the status and your note. Only the device they sent it from can see it.</p>
-<p class="bm" style="margin: 0">If a message names someone, handle it offline. Don't try to work out who sent it.</p>
-</section>
-</aside>
 </div>
 </sc-if>
 
@@ -257,8 +228,7 @@ input,select,textarea{font-family:inherit}
 <h2 id="an-h" class="tm">New announcement</h2>
 <div class="fcol"><label for="an-t" class="lbl">Title</label><input id="an-t" class="field" placeholder="Office closed on Friday" value="{{ pub.a.title }}" onChange="{{ pub.a.onTitle }}"></div>
 <div class="fcol"><label for="an-b" class="lbl">Message</label><textarea id="an-b" class="field" style="height: 120px; padding: 12px 14px; line-height: 22px; resize: vertical" placeholder="What people need to know" value="{{ pub.a.body }}" onChange="{{ pub.a.onBody }}"></textarea></div>
-<div style="display: flex; align-items: center; gap: 16px"><div style="flex: 1"><span id="an-i" style="display: block; font-weight: 600">Important</span><span id="an-id" class="sm">Shown once as a dialog, and pinned at the top of the Feed until the date you pick.</span></div><button class="swb" role="switch" aria-checked="{{ pub.a.sw.aria }}" aria-labelledby="an-i" aria-describedby="an-id" onClick="{{ pub.a.toggleImp }}" style="border: {{ pub.a.sw.border }}; background: {{ pub.a.sw.track }}"><span class="swt" style="left: {{ pub.a.sw.left }}; width: {{ pub.a.sw.size }}; height: {{ pub.a.sw.size }}; background: {{ pub.a.sw.thumb }}"></span></button></div>
-<sc-if value="{{ pub.a.imp }}" hint-placeholder-val="{{ false }}"><div class="fcol"><label for="an-u" class="lbl">Pinned until</label><input id="an-u" type="date" class="field" min="2026-11-18" value="{{ pub.a.until }}" onChange="{{ pub.a.onUntil }}"><span class="sm">You'll see "Seen by N of 45". Never who.</span></div></sc-if>
+<div class="fcol"><label for="an-u" class="lbl">Pin to the top of the Feed until (optional)</label><input id="an-u" type="date" class="field" min="2026-11-18" value="{{ pub.a.until }}" onChange="{{ pub.a.onUntil }}"></div>
 <sc-if value="{{ pub.a.untilBad }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Pick today or a later date.</p></sc-if>
 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ pub.a.op }}" disabled="{{ pub.a.cant }}" onClick="{{ pub.a.publish }}">Publish</button><sc-if value="{{ pub.a.hasMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ pub.a.msg }}</span></sc-if></div>
 </section>
@@ -267,7 +237,7 @@ input,select,textarea{font-family:inherit}
 <sc-for list="{{ pub.anns }}" as="a" hint-placeholder-count="3"><div style="border-top: {{ a.line }}; padding: 14px 20px; display: flex; flex-direction: column; gap: 8px">
 <div style="display: flex; gap: 12px; align-items: flex-start"><div style="flex: 1; min-width: 0"><div style="font-weight: 600">{{ a.title }}</div><div class="sm">{{ a.meta }}</div></div><sc-if value="{{ a.idle }}" hint-placeholder-val="{{ true }}"><button class="bx" aria-label="Delete {{ a.title }}" onClick="{{ a.askDel }}" style="flex: none">Delete</button></sc-if></div>
 <p class="bm" style="margin: 0">{{ a.body }}</p>
-<sc-if value="{{ a.imp }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; gap: 6px"><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span class="tag" style="background: #FFDDB0; color: #4A2800">Important · pinned until {{ a.until }}</span><span style="flex: 1"></span><span style="font-size: 14px; font-weight: 600">Seen by {{ a.seen }} of {{ a.total }}</span></div><div role="img" aria-label="{{ a.seenAria }}" style="height: 6px; border-radius: 3px; background: #E5E8EE"><div style="height: 6px; border-radius: 3px; background: #006493; width: {{ a.pct }}"></div></div></div></sc-if>
+<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><sc-if value="{{ a.pinned }}" hint-placeholder-val="{{ false }}"><span class="tag" style="background: #FFDDB0; color: #4A2800">{{ a.pinLine }}</span></sc-if><span style="flex: 1"></span><span style="font-size: 14px; font-weight: 600">{{ a.seenLine }}</span></div>
 <sc-if value="{{ a.confirm }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="Confirm delete" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #FFDAD6; color: #410002; border-radius: 16px; padding: 10px 12px"><span style="flex: 1; min-width: 160px; font-size: 14px">Delete it from everyone's app?</span><button class="bx" style="color: #410002" onClick="{{ a.keep }}">Keep</button><button class="bd" onClick="{{ a.del }}">Delete</button></div></sc-if>
 </div></sc-for>
 <sc-if value="{{ pub.annEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 4px 20px 20px">Nothing published.</p></sc-if>
@@ -283,6 +253,7 @@ input,select,textarea{font-family:inherit}
 <div style="display: flex; gap: 12px; flex-wrap: wrap"><div class="fcol" style="flex: 1 1 160px"><label for="ev-d" class="lbl">Date</label><input id="ev-d" type="date" class="field" min="2026-11-18" value="{{ pub.e.date }}" onChange="{{ pub.e.onDate }}"></div><div class="fcol" style="flex: 1 1 120px"><label for="ev-tm" class="lbl">Time (IST)</label><input id="ev-tm" type="time" class="field" value="{{ pub.e.time }}" onChange="{{ pub.e.onTime }}"></div></div>
 <sc-if value="{{ pub.e.dateBad }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Pick today or a later date.</p></sc-if>
 <div style="display: flex; gap: 12px; flex-wrap: wrap"><div class="fcol" style="flex: 2 1 200px"><label for="ev-p" class="lbl">Place</label><input id="ev-p" class="field" placeholder="Big room" value="{{ pub.e.place }}" onChange="{{ pub.e.onPlace }}"></div><div class="fcol" style="flex: 1 1 140px"><label for="ev-c" class="lbl">Category</label><select id="ev-c" class="field" onChange="{{ pub.e.onCat }}"><sc-for list="{{ pub.e.catOpts }}" as="o" hint-placeholder-count="5"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for></select></div></div>
+<div style="display: flex; align-items: center; gap: 16px"><div style="flex: 1; min-width: 0"><span id="ev-g" style="display: block; font-weight: 600">Invite everyone in Google Calendar</span><span id="ev-gd" class="sm">Adds it to each person's Google Calendar as an invite.</span></div><button class="swb" role="switch" aria-checked="{{ pub.e.gSw.aria }}" aria-labelledby="ev-g" aria-describedby="ev-gd" onClick="{{ pub.e.toggleGcal }}" style="border: {{ pub.e.gSw.border }}; background: {{ pub.e.gSw.track }}"><span class="swt" style="left: {{ pub.e.gSw.left }}; width: {{ pub.e.gSw.size }}; height: {{ pub.e.gSw.size }}; background: {{ pub.e.gSw.thumb }}"></span></button></div>
 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ pub.e.op }}" disabled="{{ pub.e.cant }}" onClick="{{ pub.e.add }}">Post event</button><sc-if value="{{ pub.e.hasMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ pub.e.msg }}</span></sc-if></div>
 </section>
 <section aria-labelledby="el-h" class="half card" style="padding: 0; overflow: hidden; gap: 0">
@@ -290,7 +261,7 @@ input,select,textarea{font-family:inherit}
 <sc-for list="{{ pub.evs }}" as="e" hint-placeholder-count="3"><div style="border-top: {{ e.line }}; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px">
 <div style="display: flex; gap: 14px; align-items: flex-start">
 <span aria-hidden="true" style="flex: none; width: 52px; border-radius: 14px; background: #EBEEF4; text-align: center; padding: 6px 0"><span style="display: block; font-size: 12px; font-weight: 600; color: #41474D; line-height: 16px">{{ e.mon }}</span><span style="display: block; font-size: 20px; font-weight: 700; line-height: 24px">{{ e.day }}</span></span>
-<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span style="font-weight: 600">{{ e.title }}</span><span class="tag" style="background: {{ e.catBg }}; color: {{ e.catFg }}">{{ e.cat }}</span></div><span class="sm">{{ e.when }} · {{ e.place }}</span><span class="sm" style="font-weight: 600; color: #181C20">{{ e.going }}</span></div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span style="font-weight: 600">{{ e.title }}</span><span class="tag" style="background: {{ e.catBg }}; color: {{ e.catFg }}">{{ e.cat }}</span></div><span class="sm">{{ e.whenPlace }}</span><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 2px"><span class="sm" style="font-weight: 600; color: #181C20">{{ e.going }}</span><sc-if value="{{ e.gcal }}" hint-placeholder-val="{{ true }}"><span class="tag" style="background: #D3E5F5; color: #0C1D29">In Google Calendar</span></sc-if></div></div>
 </div>
 <sc-if value="{{ e.idle }}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap"><sc-if value="{{ e.live }}" hint-placeholder-val="{{ true }}"><button class="bo" aria-label="Cancel {{ e.title }}" onClick="{{ e.cancel }}">Cancel event</button></sc-if><button class="bx" aria-label="Delete {{ e.title }}" onClick="{{ e.askDel }}">Delete</button></div></sc-if>
 <sc-if value="{{ e.confirm }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="Confirm delete" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #FFDAD6; color: #410002; border-radius: 16px; padding: 10px 12px"><span style="flex: 1; min-width: 160px; font-size: 14px">Delete it? It disappears without a notification. Cancel tells people.</span><button class="bx" style="color: #410002" onClick="{{ e.keep }}">Keep</button><button class="bd" onClick="{{ e.del }}">Delete</button></div></sc-if>
@@ -306,7 +277,6 @@ input,select,textarea{font-family:inherit}
 <div class="tabs" role="tablist" aria-label="Office settings"><sc-for list="{{ office.tabs }}" as="t" hint-placeholder-count="3"><button class="tab" role="tab" aria-selected="{{ t.sel }}" onClick="{{ t.pick }}" style="color: {{ t.color }}; border-bottom: 3px solid {{ t.line }}">{{ t.label }}</button></sc-for></div>
 
 <sc-if value="{{ office.closedTab }}" hint-placeholder-val="{{ true }}">
-<p class="bm" style="margin: 0; max-width: 720px">Dates the office is closed. They're greyed out on everyone's Days calendar, can't be planned, and nobody is expected in. They don't change the monthly target.</p>
 <div class="cols">
 <section aria-labelledby="cd-add-h" class="half card" style="gap: 14px">
 <h2 id="cd-add-h" class="tm">Add a closed day</h2>
@@ -316,18 +286,16 @@ input,select,textarea{font-family:inherit}
 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ office.c.op }}" disabled="{{ office.c.cant }}" onClick="{{ office.c.add }}">Mark closed</button><sc-if value="{{ office.c.hasMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ office.c.msg }}</span></sc-if></div>
 </section>
 <section aria-labelledby="cd-list-h" class="half card" style="padding: 0; overflow: hidden; gap: 0">
-<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 16px 20px 8px"><h2 id="cd-list-h" class="tm">Upcoming closed days</h2><span class="sm">{{ office.c.countLine }}</span></div>
+<h2 id="cd-list-h" class="tm" style="padding: 16px 20px 8px">Upcoming closed days</h2>
 <ul style="list-style: none; margin: 0; padding: 0; border-top: 1px solid #DFE3E8">
-<sc-for list="{{ office.c.rows }}" as="r" hint-placeholder-count="1"><li style="display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 20px; box-sizing: border-box; border-top: {{ r.line }}; flex-wrap: wrap"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #E5E8EE; border: 1px dashed #71787E; box-sizing: border-box; display: grid; place-items: center; font-size: 14px; font-weight: 600; color: #41474D">{{ r.dayNum }}</span><div style="flex: 1; min-width: 160px"><div style="font-weight: 600">{{ r.dateLabel }} · {{ r.reason }}</div><div class="sm">Added by {{ r.by }}</div></div><button class="bo" aria-label="Remove {{ r.dateLabel }}" onClick="{{ r.remove }}">Remove</button></li></sc-for>
+<sc-for list="{{ office.c.rows }}" as="r" hint-placeholder-count="1"><li style="display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 20px; box-sizing: border-box; border-top: {{ r.line }}; flex-wrap: wrap"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #E5E8EE; border: 1px dashed #71787E; box-sizing: border-box; display: grid; place-items: center; font-size: 14px; font-weight: 600; color: #41474D">{{ r.dayNum }}</span><div style="flex: 1; min-width: 160px"><div style="font-weight: 600">{{ r.titleLine }}</div><div class="sm">{{ r.byLine }}</div></div><button class="bo" aria-label="Remove {{ r.dateLabel }}" onClick="{{ r.remove }}">Remove</button></li></sc-for>
 </ul>
 <sc-if value="{{ office.c.empty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 12px 20px 20px">No closed days coming up.</p></sc-if>
-<p class="sm" style="margin: 0; padding: 12px 20px 16px; border-top: 1px solid #DFE3E8">Public holidays come from the company calendar and aren't listed here.</p>
 </section>
 </div>
 </sc-if>
 
 <sc-if value="{{ office.teaTab }}" hint-placeholder-val="{{ false }}">
-<p class="bm" style="margin: 0; max-width: 720px">Times for the tea rounds and the daily snack order. People see these times in the app.</p>
 <div class="cols">
 <section aria-labelledby="times-h" class="half card" style="gap: 14px">
 <h2 id="times-h" class="tm">Times</h2>
@@ -339,44 +307,40 @@ input,select,textarea{font-family:inherit}
 <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center"><button class="bf" style="opacity: {{ office.t.op }}" disabled="{{ office.t.cant }}" onClick="{{ office.t.save }}">Save times</button><sc-if value="{{ office.t.hasMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ office.t.msg }}</span></sc-if></div>
 </section>
 <section aria-labelledby="ttoday-h" class="half card" style="padding: 0; overflow: hidden; gap: 0">
-<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 16px 20px 8px; flex-wrap: wrap"><h2 id="ttoday-h" class="tm">Today</h2><span class="sm">Read only</span></div>
+<h2 id="ttoday-h" class="tm" style="padding: 16px 20px 8px">Today</h2>
 <ul style="list-style: none; margin: 0; padding: 0">
 <sc-for list="{{ office.t.rounds }}" as="r" hint-placeholder-count="2"><li style="display: flex; flex-direction: column; gap: 6px; padding: 12px 20px; box-sizing: border-box; border-top: 1px solid #DFE3E8">
 <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-height: 40px"><div style="flex: 1; min-width: 180px; font-weight: 600">{{ r.line }}</div><button class="bx" aria-expanded="{{ r.expanded }}" aria-controls="{{ r.listId }}" onClick="{{ r.toggle }}">{{ r.btn }}</button></div>
 <sc-if value="{{ r.open }}" hint-placeholder-val="{{ false }}"><p id="{{ r.listId }}" class="bm" style="margin: 0">{{ r.names }}</p></sc-if>
 </li></sc-for>
 </ul>
-<p class="sm" style="margin: 0; padding: 12px 20px 16px; border-top: 1px solid #DFE3E8">Tea is the one thing that isn't anonymous, so whoever makes it knows whose cup to pour.</p>
 </section>
 </div>
 </sc-if>
 
 <sc-if value="{{ office.shelfTab }}" hint-placeholder-val="{{ false }}">
-<p class="bm" style="margin: 0; max-width: 720px">Snack picks and suggestions are anonymous. You only ever see totals.</p>
-<div class="cols">
-<div class="half">
-<section aria-labelledby="ord-h" class="card" style="display: flex; flex-direction: column; gap: 14px">
-<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap"><h2 id="ord-h" class="tm">Today's order</h2><sc-if value="{{ office.sh.open }}" hint-placeholder-val="{{ true }}"><span class="tag" style="background: #FFDDB0; color: #4A2800">Goes in at {{ office.sh.orderAt }}</span></sc-if><sc-if value="{{ office.sh.ordered }}" hint-placeholder-val="{{ false }}"><span class="tag" style="background: #CDEBD6; color: #0B3D1F">Ordered · picks closed</span></sc-if></div>
-<sc-for list="{{ office.sh.picks }}" as="p" hint-placeholder-count="3"><div style="display: flex; flex-direction: column; gap: 4px"><div style="display: flex; justify-content: space-between; gap: 8px"><span>{{ p.name }}</span><span class="sm">{{ p.n }}</span></div><div aria-hidden="true" style="height: 6px; border-radius: 3px; background: #E5E8EE"><div style="height: 6px; border-radius: 3px; background: #006493; width: {{ p.pct }}"></div></div></div></sc-for>
-<span class="sm">{{ office.sh.picksLine }}</span>
-<div style="display: flex; gap: 8px; flex-wrap: wrap"><sc-if value="{{ office.sh.open }}" hint-placeholder-val="{{ true }}"><button class="bf" onClick="{{ office.sh.markOrdered }}">Mark ordered</button></sc-if><sc-if value="{{ office.sh.ordered }}" hint-placeholder-val="{{ false }}"><button class="bx" onClick="{{ office.sh.undoOrdered }}">Undo</button></sc-if></div>
+<div style="display: flex; flex-direction: column; gap: 16px; max-width: 640px; width: 100%">
+<section aria-labelledby="ord-h" class="card" style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap"><h2 id="ord-h" class="tm">Today's order</h2><sc-if value="{{ office.sh.open }}" hint-placeholder-val="{{ true }}"><span class="tag" style="background: #FFDDB0; color: #4A2800">{{ office.sh.orderChip }}</span></sc-if><sc-if value="{{ office.sh.ordered }}" hint-placeholder-val="{{ false }}"><span class="tag" style="background: #CDEBD6; color: #0B3D1F">{{ office.sh.orderedLine }}</span></sc-if></div>
+<ul style="list-style: none; margin: 0; padding: 0"><sc-for list="{{ office.sh.picks }}" as="p" hint-placeholder-count="3"><li style="padding: 10px 0; border-top: {{ p.sep }}; font-size: 16px">{{ p.line }}</li></sc-for></ul>
+<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ office.sh.orderOp }}" disabled="{{ office.sh.cantOrder }}" onClick="{{ office.sh.markOrdered }}">Mark ordered</button><sc-if value="{{ office.sh.ordered }}" hint-placeholder-val="{{ false }}"><button class="bx" onClick="{{ office.sh.undoOrdered }}">Undo</button></sc-if></div>
 </section>
-<section aria-labelledby="sug-h" class="card" style="padding: 0; overflow: hidden">
-<div style="padding: 16px 20px 8px"><h2 id="sug-h" class="tm">Suggestions</h2><span class="sm">Anonymous. Each +1 is one person.</span></div>
-<ul style="list-style: none; margin: 0; padding: 0; border-top: 1px solid #DFE3E8">
-<sc-for list="{{ office.sh.ideas }}" as="x" hint-placeholder-count="3"><li style="display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 12px 8px 20px; box-sizing: border-box; border-top: {{ x.line }}; flex-wrap: wrap"><span style="flex: 1; min-width: 120px">{{ x.name }}</span><span class="tag" style="background: #D3E5F5; color: #0C1D29"><span aria-hidden="true">{{ x.n }}</span><span class="vh">{{ x.sr }}</span></span><button class="bt" style="height: 36px; padding: 0 14px" aria-label="Add {{ x.name }} to the shelf" onClick="{{ x.add }}">Add to shelf</button><button class="bx" style="height: 36px" aria-label="Dismiss {{ x.name }}" onClick="{{ x.dismiss }}">Dismiss</button></li></sc-for>
+<section aria-label="Suggestions and shelf" class="card" style="padding: 0; overflow: hidden">
+<div class="tabs" role="tablist" aria-label="Suggestions and shelf" style="padding: 0 8px"><sc-for list="{{ office.sh.tabs }}" as="t" hint-placeholder-count="2"><button class="tab" role="tab" aria-selected="{{ t.sel }}" onClick="{{ t.pick }}" style="color: {{ t.color }}; border-bottom: 3px solid {{ t.line }}">{{ t.label }}</button></sc-for></div>
+<sc-if value="{{ office.sh.ideasTab }}" hint-placeholder-val="{{ true }}"><div role="tabpanel" aria-label="Suggestions">
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{ office.sh.ideas }}" as="x" hint-placeholder-count="3"><li style="display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 12px 8px 20px; box-sizing: border-box; border-top: {{ x.line }}; flex-wrap: wrap"><span style="flex: 1; min-width: 120px">{{ x.name }}</span><span class="sm" style="font-weight: 600; color: #181C20"><span aria-hidden="true">{{ x.n }}</span><span class="vh">{{ x.sr }}</span></span><button class="bt" style="height: 36px; padding: 0 14px" aria-label="Add {{ x.name }} to the shelf" onClick="{{ x.add }}">Add to shelf</button><button class="bx" style="height: 36px" aria-label="Dismiss {{ x.name }}" onClick="{{ x.dismiss }}">Dismiss</button></li></sc-for>
 </ul>
-<sc-if value="{{ office.sh.ideasEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 12px 20px 20px">No suggestions right now.</p></sc-if>
-</section>
-</div>
-<section aria-labelledby="shelf-h" class="half card" style="padding: 0; overflow: hidden; gap: 0">
-<div style="padding: 16px 20px 8px"><h2 id="shelf-h" class="tm">On the shelf</h2><span class="sm">Snacks that can go into a coming day's options.</span></div>
-<ul style="list-style: none; margin: 0; padding: 0; border-top: 1px solid #DFE3E8">
+<sc-if value="{{ office.sh.ideasEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 16px 20px 20px">No new suggestions.</p></sc-if>
+</div></sc-if>
+<sc-if value="{{ office.sh.shelfTab }}" hint-placeholder-val="{{ false }}"><div role="tabpanel" aria-label="Shelf">
+<ul style="list-style: none; margin: 0; padding: 0">
 <sc-for list="{{ office.sh.shelf }}" as="x" hint-placeholder-count="4"><li style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 12px 6px 20px; box-sizing: border-box; border-top: {{ x.line }}"><span style="flex: 1">{{ x.name }}</span><button class="bx" aria-label="Remove {{ x.name }}" onClick="{{ x.remove }}">Remove</button></li></sc-for>
 </ul>
 <sc-if value="{{ office.sh.shelfEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 12px 20px">The shelf is empty.</p></sc-if>
 <div style="display: flex; gap: 8px; padding: 12px 20px 16px; border-top: 1px solid #DFE3E8; align-items: flex-end"><div class="fcol" style="flex: 1"><label for="sh-new" class="lbl">Add a snack</label><input id="sh-new" class="field" placeholder="Roasted chana" value="{{ office.sh.newItem }}" onChange="{{ office.sh.onNew }}"></div><button class="bo" style="height: 44px; flex: none; opacity: {{ office.sh.addOp }}" disabled="{{ office.sh.cantAdd }}" onClick="{{ office.sh.addItem }}">Add</button></div>
 <sc-if value="{{ office.sh.itemDup }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; padding: 0 20px 16px; font-size: 14px; line-height: 20px; color: #4A2800">That's already on the shelf.</p></sc-if>
+</div></sc-if>
 </section>
 </div>
 </sc-if>
@@ -384,10 +348,8 @@ input,select,textarea{font-family:inherit}
 
 <!-- ============ WI-FI ============ -->
 <sc-if value="{{ v.wifi }}" hint-placeholder-val="{{ false }}">
-<section aria-label="Wi-Fi in numbers" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px">
-<sc-for list="{{ wifi.stats }}" as="t" hint-placeholder-count="3"><div class="card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 2px"><span class="sm" style="font-weight: 600; color: #181C20">{{ t.label }}</span><span style="font-size: 28px; line-height: 36px; font-weight: 600">{{ t.n }}</span><span class="sm">{{ t.note }}</span></div></sc-for>
-</section>
-<div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><div role="group" aria-label="Filter reports" style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{ wifi.chips }}" as="c" hint-placeholder-count="2"><button class="chip" aria-pressed="{{ c.pressed }}" onClick="{{ c.pick }}" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}"><sc-if value="{{ c.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>{{ c.label }}</button></sc-for></div><span class="sm">Anonymous: day, area, speeds and an optional note. No name, device or time.</span></div>
+<p class="bm" style="margin: 0; color: #181C20">{{ wifi.topLine }}</p>
+<div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><div role="group" aria-label="Filter reports" style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{ wifi.chips }}" as="c" hint-placeholder-count="2"><button class="chip" aria-pressed="{{ c.pressed }}" onClick="{{ c.pick }}" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}"><sc-if value="{{ c.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>{{ c.label }}</button></sc-for></div></div>
 <section aria-label="Reports" class="card" style="padding: 0; overflow: hidden">
 <div class="wrow whead" aria-hidden="true"><span>Day</span><span>Area</span><span>Down / up</span><span>Note</span></div>
 <ul style="list-style: none; margin: 0; padding: 0">
@@ -449,6 +411,10 @@ class Component extends DCLogic {
       ],
       // speak up
       sf: 'open', notes: {},
+      reported: [
+        { id: 'r1', author: 'Rahul Verma', day: 'Today', text: 'Whoever keeps taking my lunch from the fridge: I know who you are.' },
+        { id: 'r2', author: 'Kiran Menon', day: 'Tue 17 Nov', text: 'Selling my old bike, barely used. Message me for the price.' }
+      ],
       msgs: [
         { id: 'm1', topic: 'Facilities', day: 'Mon 16 Nov', text: 'The AC on the second floor is too cold in the afternoons. Several of us bring jackets now.', status: 'New', note: '' },
         { id: 'm2', topic: 'Workload', day: 'Fri 13 Nov', text: 'Late-evening calls with the US team happen most weeks now. Could we agree on a cut-off time?', status: 'New', note: '' },
@@ -457,24 +423,24 @@ class Component extends DCLogic {
       ],
       // publish
       pubTab: 'ann', delId: '',
-      aTitle: '', aBody: '', aImp: false, aUntil: '', aMsg: '',
+      aTitle: '', aBody: '', aUntil: '', aMsg: '',
       anns: [
-        { id: 'a1', title: 'Office closed Fri 27 Nov', body: 'Building maintenance. The office is closed for the day.', imp: true, until: '2026-11-27', posted: 'Mon 16 Nov', seen: 31 },
-        { id: 'a2', title: 'Today’s snack options are up', body: 'Makhana, dark chocolate or banana chips. Pick yours before 12:00.', imp: false, until: '', posted: 'Today', seen: 0 },
-        { id: 'a3', title: 'New guest Wi-Fi name', body: 'Guests now join “innovin-guest”. Ask at the front desk for the password.', imp: false, until: '', posted: 'Thu 12 Nov', seen: 0 }
+        { id: 'a1', title: 'Office closed Fri 27 Nov', body: 'Building maintenance. The office is closed for the day.', until: '2026-11-27', posted: 'Mon 16 Nov', seen: 31 },
+        { id: 'a2', title: 'Today’s snack options are up', body: 'Makhana, dark chocolate or banana chips. Pick yours before 12:00.', until: '', posted: 'Today', seen: 23 },
+        { id: 'a3', title: 'New guest Wi-Fi name', body: 'Guests now join “innovin-guest”. Ask at the front desk for the password.', until: '', posted: 'Thu 12 Nov', seen: 44 }
       ],
-      eTitle: '', eDate: '', eTime: '', ePlace: '', eCat: 'Celebration', eMsg: '',
+      eTitle: '', eDate: '', eTime: '', ePlace: '', eCat: 'Celebration', eGcal: true, eMsg: '',
       evs: [
-        { id: 'e1', title: 'Diwali potluck', date: '2026-11-19', time: '16:30', place: 'Big room', cat: 'Celebration', going: 14, cancelled: false },
-        { id: 'e2', title: 'Book club: Deep Work', date: '2026-11-24', time: '17:30', place: 'Library corner', cat: 'Learning', going: 6, cancelled: false },
-        { id: 'e3', title: 'Badminton evening', date: '2026-12-04', time: '18:00', place: 'Court near the office', cat: 'Sports', going: 9, cancelled: false }
+        { id: 'e1', title: 'Diwali potluck', date: '2026-11-19', time: '16:30', place: 'Big room', cat: 'Celebration', going: 14, gcal: true, cancelled: false },
+        { id: 'e2', title: 'Book club: Deep Work', date: '2026-11-24', time: '17:30', place: 'Library corner', cat: 'Learning', going: 6, gcal: true, cancelled: false },
+        { id: 'e3', title: 'Badminton evening', date: '2026-12-04', time: '18:00', place: 'Court near the office', cat: 'Sports', going: 9, gcal: false, cancelled: false }
       ],
       // office
       offTab: 'closed',
       closed: [{ iso: '2026-11-27', reason: 'Building maintenance', by: 'Anita' }], cDate: '', cReason: '', cMsg: '',
       tSaved: times, tDraft: Object.assign({}, times), tMsg: '', showAm: false, showPm: false,
       picks: [{ name: 'Samosa', n: 9 }, { name: 'Fruit bowl', n: 6 }, { name: 'Biscuits', n: 2 }],
-      ordered: false,
+      ordered: false, orderedAt: '', shTab: 'ideas',
       shelf: ['Makhana', 'Banana chips', 'Dark chocolate', 'Murukku'], newItem: '',
       ideas: [{ name: 'Masala peanuts', n: 7 }, { name: 'Dhokla', n: 5 }, { name: 'Protein bars', n: 2 }],
       // wifi
@@ -497,6 +463,7 @@ class Component extends DCLogic {
     const novIso = (d) => '2026-11-' + (d < 10 ? '0' + d : String(d));
     const dowN = (d) => (d - 1) % 7; // 1 Nov 2026 is a Sunday
     const fmtT = (t) => { if (!t) return ''; const p = t.split(':').map(Number); const h = p[0] % 12 === 0 ? 12 : p[0] % 12; return h + ':' + (p[1] < 10 ? '0' + p[1] : p[1]) + (p[0] < 12 ? ' AM' : ' PM'); };
+    const hm = (t) => { if (!t) return ''; const p = t.split(':'); return Number(p[0]) + ':' + p[1]; };
     const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
     const sw = (on, disabled) => ({ aria: on ? 'true' : 'false', track: on ? '#006493' : '#E1E2E8', border: on ? '2px solid #006493' : '2px solid #71787E', thumb: on ? '#FFFFFF' : '#71787E', left: on ? '22px' : '6px', size: on ? '24px' : '16px', op: disabled ? 0.38 : 1 });
     const chip = (on) => ({ pressed: on ? 'true' : 'false', bg: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#41474D', border: on ? '1px solid #D3E5F5' : '1px solid #71787E', check: on });
@@ -511,6 +478,7 @@ class Component extends DCLogic {
       office: 'M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h3a1 1 0 0 1 1 1v11M2 21h20M8 7h4M8 11h4M8 15h4',
       wifi: 'M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.3a5 5 0 0 1 7 0M12 19.5h.01',
       more: 'M4 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0M11 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0M18 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0',
+      flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
       snack: 'M4 11h16a8 8 0 0 1-16 0zM8 7c0-1.5 1-2 2-2M12 7c0-1.5 1-2 2-2'
     };
 
@@ -579,7 +547,7 @@ class Component extends DCLogic {
       const plog = s.log.filter((l) => l.id === selP.id);
       const addLog = (text) => [{ id: selP.id, text: text }].concat(self.state.log);
       panel = {
-        p: { name: selP.name, ini: selP.ini, avBg: selP.bg, role: selP.role, usual: selP.usual.join(', '), status: selP.status, chipBg: chipC[selP.status][0], chipFg: chipC[selP.status][1], count: selP.exempt ? selP.done + ' office days (exempt)' : selP.done + ' of 8 office days', admin: selP.admin },
+        p: { name: selP.name, ini: selP.ini, avBg: selP.bg, role: selP.role, usual: selP.usual.join(', '), roleLine: selP.role + ' · usually ' + selP.usual.join(', '), status: selP.status, chipBg: chipC[selP.status][0], chipFg: chipC[selP.status][1], count: selP.exempt ? selP.done + ' office days (exempt)' : selP.done + ' of 8 office days', calTitle: 'November · ' + (selP.exempt ? selP.done + ' office days (exempt)' : selP.done + ' of 8 office days'), admin: selP.admin },
         close: () => set({ sel: '' }),
         cal: cal,
         fixDate: fd, onFixDate: (e) => set({ fixDate: e.target.value, pMsg: '' }),
@@ -589,13 +557,13 @@ class Component extends DCLogic {
         saveFix: () => {
           if (cantFix) return;
           const fixes = Object.assign({}, self.state.fixes); fixes[selP.id + ':' + Number(fd.slice(8))] = s.fixWhere;
-          set({ fixes: fixes, log: addLog(label(fd) + ' changed to ' + (s.fixWhere === 'in' ? 'In office' : 'Not in office') + ' · by Anita · today'), fixDate: '', fixWhere: '', pMsg: 'Saved. ' + selP.name.split(' ')[0] + ' sees the change on their Days calendar.' });
+          set({ fixes: fixes, log: addLog(label(fd) + ' changed to ' + (s.fixWhere === 'in' ? 'In office' : 'Not in office') + ' · by Anita · today'), fixDate: '', fixWhere: '', pMsg: 'Saved.' });
         },
         hasPMsg: !!s.pMsg, pMsg: s.pMsg,
         log: plog, hasLog: plog.length > 0,
         exSw: sw(selP.exempt, false),
         toggleEx: () => set({ people: upd(selP.id, (x) => { x.exempt = !x.exempt; return x; }), log: addLog((selP.exempt ? 'Exemption removed' : 'Marked exempt from the 8 days') + ' · by Anita · today') }),
-        adSw: sw(selP.admin, isSelf), adDisabled: isSelf, adNote: isSelf ? 'You can’t remove yourself. Ask another admin.' : (selP.admin ? 'Can open the admin app.' : 'Opens the admin app from Account → Admin.'),
+        adSw: sw(selP.admin, isSelf), adDisabled: isSelf, adNote: isSelf ? 'You can’t remove yourself. Ask another admin.' : '', hasAdNote: isSelf,
         toggleAd: () => { if (isSelf) return; set({ people: upd(selP.id, (x) => { x.admin = !x.admin; return x; }), log: addLog((selP.admin ? 'Admin removed' : 'Made an admin') + ' · by Anita · today') }); },
         dayOpts: dayOpts, monOpts: monOpts, bdNoD: !s.bdD, bdNoM: !s.bdM,
         onBdD: (e) => set({ bdD: e.target.value, bdMsg: '' }), onBdM: (e) => set({ bdM: e.target.value, bdMsg: '' }),
@@ -607,7 +575,7 @@ class Component extends DCLogic {
         saveBd: () => {
           if (cantBd) return;
           const bd = { d: s.bdD, m: s.bdM, show: s.bdShow };
-          const msg = !s.bdD ? 'Birthday removed.' : (s.bdShow ? 'Saved. The Feed shows it on ' + s.bdD + ' ' + mnLong[Number(s.bdM) - 1] + '.' : 'Saved. It won’t show in the Feed.');
+          const msg = !s.bdD ? 'Birthday removed.' : 'Saved.';
           set({ people: upd(selP.id, (x) => { x.bd = bd; return x; }), bdMsg: msg });
         },
         hasBdMsg: !!s.bdMsg, bdMsg: s.bdMsg
@@ -631,57 +599,61 @@ class Component extends DCLogic {
     const setMsg = (id, fn) => self.state.msgs.map((x) => (x.id === id ? fn(Object.assign({}, x)) : x));
     const sRows = s.msgs.filter(sPass).map((m) => {
       const draft = s.notes[m.id] !== undefined ? s.notes[m.id] : m.note;
-      const mk = (val) => Object.assign(seg(m.status === val), { set: () => set({ msgs: setMsg(m.id, (x) => { x.status = val; return x; }), toast: 'Status set to ' + val + '. It shows on the sender’s device.' }) });
+      const mk = (val) => Object.assign(seg(m.status === val), { set: () => set({ msgs: setMsg(m.id, (x) => { x.status = val; return x; }), toast: 'Status set to ' + val + '.' }) });
       return {
         topic: m.topic, day: m.day, text: m.text, status: m.status, stBg: stC[m.status][0], stFg: stC[m.status][1],
         aria: m.topic + ' message from ' + m.day, qid: 'sq-' + m.id, nid: 'sn-' + m.id,
         sNew: mk('New'), sProg: mk('In progress'), sRes: mk('Resolved'),
         draft: draft, onNote: (e) => { const n = Object.assign({}, self.state.notes); n[m.id] = e.target.value; set({ notes: n }); },
         cantSave: draft.trim() === m.note, saveOp: draft.trim() === m.note ? 0.4 : 1,
-        saveNote: () => { if (draft.trim() === m.note) return; const n = Object.assign({}, self.state.notes); delete n[m.id]; set({ msgs: setMsg(m.id, (x) => { x.note = draft.trim(); return x; }), notes: n, toast: draft.trim() ? 'Note saved. The sender sees it with the status.' : 'Note removed.' }); },
-        hasNote: !!m.note, note: m.note
+        saveNote: () => { if (draft.trim() === m.note) return; const n = Object.assign({}, self.state.notes); delete n[m.id]; set({ msgs: setMsg(m.id, (x) => { x.note = draft.trim(); return x; }), notes: n, toast: draft.trim() ? 'Note saved.' : 'Note removed.' }); },
+        hasNote: !!m.note, note: m.note, noteLine: 'They see: “' + m.note + '”'
       };
     });
     const sp = {
       chips: sfDefs.map((c) => Object.assign(chip(s.sf === c[0]), { label: c[1] + ' ' + c[2], pick: () => set({ sf: c[0] }) })),
       rows: sRows, empty: sRows.length === 0,
-      counts: [['New', newN], ['In progress', s.msgs.filter((m) => m.status === 'In progress').length], ['Resolved', s.msgs.length - openN]].map((c) => ({ label: c[0], n: String(c[1]), bg: stC[c[0]][0], fg: stC[c[0]][1] }))
+      hasReported: s.reported.length > 0, reportedTitle: 'Reported posts · ' + s.reported.length,
+      reported: s.reported.map((r, i) => ({ author: r.author, meta: r.author + ' · ' + r.day, text: r.text, line: i === 0 ? '0' : '1px solid #DFE3E8',
+        remove: () => set({ reported: self.state.reported.filter((x) => x.id !== r.id), toast: r.author.split(' ')[0] + '’s post removed from the Feed.' }),
+        keep: () => set({ reported: self.state.reported.filter((x) => x.id !== r.id), toast: 'Post kept.' }) }))
     };
+    const repN = s.reported.length;
 
     // ---------- publish ----------
     const aTitle = (s.aTitle || '').trim(); const aBody = (s.aBody || '').trim();
-    const aUntilBad = s.aImp && !!s.aUntil && s.aUntil < '2026-11-18';
-    const aCant = !aTitle || !aBody || (s.aImp && (!s.aUntil || aUntilBad));
+    const aUntilBad = !!s.aUntil && s.aUntil < '2026-11-18';
+    const aCant = !aTitle || !aBody || aUntilBad;
     const eTitle = (s.eTitle || '').trim(); const ePlace = (s.ePlace || '').trim();
     const eDateBad = !!s.eDate && s.eDate < '2026-11-18';
     const eCant = !eTitle || !s.eDate || eDateBad || !s.eTime || !ePlace;
     const cats = ['Celebration', 'Food', 'Learning', 'Sports', 'Other'];
     const catC = { Celebration: ['#FFD9E2', '#3F0017'], Food: ['#FFF1C2', '#3D2E00'], Learning: ['#D3E5F5', '#0C1D29'], Sports: ['#CDEBD6', '#0B3D1F'], Other: ['#E5E8EE', '#41474D'] };
-    const impAnn = s.anns.filter((a) => a.imp)[0] || null;
+    const pinAnn = s.anns.filter((a) => a.until && a.until >= '2026-11-18' && a.seen < TOTAL)[0] || null;
     const pub = {
       tabs: [['ann', 'Announcements'], ['ev', 'Events']].map((t) => { const on = s.pubTab === t[0]; return { label: t[1], sel: on ? 'true' : 'false', color: on ? '#006493' : '#41474D', line: on ? '#006493' : 'transparent', pick: () => set({ pubTab: t[0], delId: '' }) }; }),
       ann: s.pubTab === 'ann', ev: s.pubTab === 'ev',
       a: {
-        title: s.aTitle, body: s.aBody, until: s.aUntil, imp: s.aImp, sw: sw(s.aImp, false),
+        title: s.aTitle, body: s.aBody, until: s.aUntil,
         onTitle: (e) => set({ aTitle: e.target.value, aMsg: '' }), onBody: (e) => set({ aBody: e.target.value, aMsg: '' }), onUntil: (e) => set({ aUntil: e.target.value, aMsg: '' }),
-        toggleImp: () => set({ aImp: !self.state.aImp, aMsg: '' }),
         untilBad: aUntilBad, cant: aCant, op: aCant ? 0.4 : 1,
-        publish: () => { if (aCant) return; const a = { id: 'a' + Date.now(), title: aTitle, body: aBody, imp: s.aImp, until: s.aImp ? s.aUntil : '', posted: 'Today', seen: 0 }; set({ anns: [a].concat(self.state.anns), aTitle: '', aBody: '', aImp: false, aUntil: '', aMsg: s.aImp ? 'Published. It shows once, as a dialog, the next time each person opens the app.' : 'Published to the Feed.' }); },
+        publish: () => { if (aCant) return; const a = { id: 'a' + Date.now(), title: aTitle, body: aBody, until: s.aUntil || '', posted: 'Today', seen: 0 }; set({ anns: [a].concat(self.state.anns), aTitle: '', aBody: '', aUntil: '', aMsg: 'Published.' }); },
         hasMsg: !!s.aMsg, msg: s.aMsg
       },
-      anns: s.anns.map((a, i) => ({ title: a.title, body: a.body, imp: a.imp, meta: 'Posted ' + (a.posted === 'Today' ? 'today' : a.posted) + (a.imp ? '' : ' · in the Feed'), until: a.until ? label(a.until) : '', seen: String(a.seen), total: String(TOTAL), pct: Math.round((a.seen / TOTAL) * 100) + '%', seenAria: 'Seen by ' + a.seen + ' of ' + TOTAL, line: i === 0 ? '0' : '1px solid #DFE3E8', confirm: s.delId === a.id, idle: s.delId !== a.id, askDel: () => set({ delId: a.id }), keep: () => set({ delId: '' }), del: () => set({ anns: self.state.anns.filter((x) => x.id !== a.id), delId: '', toast: '“' + a.title + '” deleted. It’s gone from everyone’s app.' }) })),
+      anns: s.anns.map((a, i) => ({ title: a.title, body: a.body, meta: 'Posted ' + (a.posted === 'Today' ? 'today' : a.posted), pinned: !!a.until, pinLine: a.until ? 'Pinned until ' + label(a.until) : '', seenLine: 'Seen by ' + a.seen + ' of ' + TOTAL, line: i === 0 ? '0' : '1px solid #DFE3E8', confirm: s.delId === a.id, idle: s.delId !== a.id, askDel: () => set({ delId: a.id }), keep: () => set({ delId: '' }), del: () => set({ anns: self.state.anns.filter((x) => x.id !== a.id), delId: '', toast: '“' + a.title + '” deleted. It’s gone from everyone’s app.' }) })),
       annEmpty: s.anns.length === 0,
       e: {
         title: s.eTitle, date: s.eDate, time: s.eTime, place: s.ePlace,
+        gSw: sw(s.eGcal, false), toggleGcal: () => set({ eGcal: !self.state.eGcal, eMsg: '' }),
         onTitle: (e) => set({ eTitle: e.target.value, eMsg: '' }), onDate: (e) => set({ eDate: e.target.value, eMsg: '' }), onTime: (e) => set({ eTime: e.target.value, eMsg: '' }), onPlace: (e) => set({ ePlace: e.target.value, eMsg: '' }), onCat: (e) => set({ eCat: e.target.value, eMsg: '' }),
         catOpts: cats.map((c) => ({ v: c, label: c, sel: s.eCat === c })),
         dateBad: eDateBad, cant: eCant, op: eCant ? 0.4 : 1,
-        add: () => { if (eCant) return; const ev = { id: 'e' + Date.now(), title: eTitle, date: s.eDate, time: s.eTime, place: ePlace, cat: s.eCat, going: 0, cancelled: false }; set({ evs: self.state.evs.concat([ev]), eTitle: '', eDate: '', eTime: '', ePlace: '', eMsg: 'Posted. It’s in the Feed and on Home under Up next.' }); },
+        add: () => { if (eCant) return; const ev = { id: 'e' + Date.now(), title: eTitle, date: s.eDate, time: s.eTime, place: ePlace, cat: s.eCat, going: 0, gcal: s.eGcal, cancelled: false }; set({ evs: self.state.evs.concat([ev]), eTitle: '', eDate: '', eTime: '', ePlace: '', eGcal: true, eMsg: 'Posted.' }); },
         hasMsg: !!s.eMsg, msg: s.eMsg
       },
       evs: s.evs.slice().sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1)).map((e, i) => ({
-        title: e.title, when: label(e.date) + ' · ' + fmtT(e.time), place: e.place, cat: e.cat, catBg: catC[e.cat][0], catFg: catC[e.cat][1],
-        going: e.cancelled ? 'Cancelled · people who were going got a notification' : plural(e.going, 'person', 'people') + ' going',
+        title: e.title, when: label(e.date) + ' · ' + fmtT(e.time), place: e.place, whenPlace: label(e.date) + ' · ' + fmtT(e.time) + ' · ' + e.place, cat: e.cat, catBg: catC[e.cat][0], catFg: catC[e.cat][1],
+        going: e.cancelled ? 'Cancelled' : e.going + ' going', gcal: !!e.gcal && !e.cancelled,
         cancelled: e.cancelled, live: !e.cancelled, line: i === 0 ? '0' : '1px solid #DFE3E8', mon: mn[Number(e.date.slice(5, 7)) - 1], day: String(Number(e.date.slice(8))),
         confirm: s.delId === e.id, idle: s.delId !== e.id, askDel: () => set({ delId: e.id }), keep: () => set({ delId: '' }),
         cancel: () => set({ evs: self.state.evs.map((x) => (x.id === e.id ? Object.assign({}, x, { cancelled: true }) : x)), toast: e.title + ' cancelled.' }),
@@ -703,8 +675,6 @@ class Component extends DCLogic {
     const teaNamesPm = ['Arjun K', 'Divya P', 'Meera S', 'Rohan D'];
     const T = s.tSaved;
     const rounds = [['am', 'Morning round', T.am, teaNamesAm, 'showAm'], ['pm', 'Afternoon round', T.pm, teaNamesPm, 'showPm']].map((r) => { const open = !!s[r[4]]; return { line: r[1] + ' at ' + fmtT(r[2]) + ': ' + r[3].length + ' having tea', open: open, expanded: open ? 'true' : 'false', btn: open ? 'Hide names' : 'Show names', listId: 'names-' + r[0], names: r[3].join(', '), toggle: () => { const o = {}; o[r[4]] = !open; set(o); } }; });
-    const picksTotal = s.picks.reduce((a, b) => a + b.n, 0);
-    const maxPick = s.picks.reduce((a, b) => Math.max(a, b.n), 1);
     const newItem = (s.newItem || '').trim();
     const itemDup = !!newItem && s.shelf.some((x) => x.toLowerCase() === newItem.toLowerCase());
     const office = {
@@ -713,27 +683,29 @@ class Component extends DCLogic {
       c: {
         date: s.cDate, reason: s.cReason, onDate: (e) => set({ cDate: e.target.value, cMsg: '' }), onReason: (e) => set({ cReason: e.target.value, cMsg: '' }),
         dup: cDup, cant: cCant, op: cCant ? 0.4 : 1,
-        add: () => { if (cCant) return; set({ closed: self.state.closed.concat([{ iso: s.cDate, reason: cReason, by: 'Anita' }]), cDate: '', cReason: '', cMsg: label(s.cDate) + ' is now closed on everyone’s calendar.' }); },
+        add: () => { if (cCant) return; set({ closed: self.state.closed.concat([{ iso: s.cDate, reason: cReason, by: 'Anita' }]), cDate: '', cReason: '', cMsg: label(s.cDate) + ' marked closed.' }); },
         hasMsg: !!s.cMsg, msg: s.cMsg,
         countLine: plural(closedSorted.length, 'day', 'days'), empty: closedSorted.length === 0,
-        rows: closedSorted.map((c, i) => ({ dateLabel: label(c.iso), dayNum: String(Number(c.iso.slice(8))), reason: c.reason, by: c.by, line: i === 0 ? '0' : '1px solid #DFE3E8', remove: () => set({ closed: self.state.closed.filter((x) => x.iso !== c.iso), cMsg: label(c.iso) + ' removed. It can be planned again.' }) }))
+        rows: closedSorted.map((c, i) => ({ dateLabel: label(c.iso), dayNum: String(Number(c.iso.slice(8))), reason: c.reason, by: c.by, titleLine: label(c.iso) + ' · ' + c.reason, byLine: 'Added by ' + c.by, line: i === 0 ? '0' : '1px solid #DFE3E8', remove: () => set({ closed: self.state.closed.filter((x) => x.iso !== c.iso), cMsg: label(c.iso) + ' removed.' }) }))
       },
       t: {
         f: d, on: tOn, amBad: amBad ? 'true' : 'false', pmBad: pmBad ? 'true' : 'false', amBadOn: amBad, pmBadOn: pmBad,
         cant: tCant, op: tCant ? 0.4 : 1,
-        save: () => { if (tCant) return; set({ tSaved: Object.assign({}, d), tMsg: 'Saved. The app shows the new times from now on.' }); },
+        save: () => { if (tCant) return; set({ tSaved: Object.assign({}, d), tMsg: 'Saved.' }); },
         hasMsg: !!s.tMsg, msg: s.tMsg, rounds: rounds
       },
       sh: {
-        orderAt: fmtT(T.order), ordered: s.ordered, open: !s.ordered,
-        markOrdered: () => set({ ordered: true, toast: 'Marked ordered. Picks are closed for today.' }), undoOrdered: () => set({ ordered: false }),
-        picks: s.picks.map((p) => ({ name: p.name, n: plural(p.n, 'pick', 'picks'), pct: Math.round((p.n / maxPick) * 100) + '%' })),
-        picksLine: plural(picksTotal, 'pick', 'picks') + ' so far · anonymous, totals only',
+        orderChip: 'Goes in at ' + hm(T.order), orderedLine: 'Ordered at ' + s.orderedAt, ordered: s.ordered, open: !s.ordered,
+        markOrdered: () => { if (self.state.ordered) return; set({ ordered: true, orderedAt: '11:42' }); }, undoOrdered: () => set({ ordered: false, orderedAt: '' }),
+        cantOrder: s.ordered, orderOp: s.ordered ? 0.4 : 1,
+        picks: s.picks.slice().sort((a, b) => b.n - a.n).map((p, i) => ({ line: p.name + ' · ' + p.n, sep: i === 0 ? '0' : '1px solid #DFE3E8' })),
+        tabs: [['ideas', 'Suggestions · ' + s.ideas.length], ['shelf', 'Shelf · ' + s.shelf.length]].map((t) => { const on = s.shTab === t[0]; return { label: t[1], sel: on ? 'true' : 'false', color: on ? '#006493' : '#41474D', line: on ? '#006493' : 'transparent', pick: () => set({ shTab: t[0] }) }; }),
+        ideasTab: s.shTab === 'ideas', shelfTab: s.shTab === 'shelf',
         shelf: s.shelf.map((x, i) => ({ name: x, line: i === 0 ? '0' : '1px solid #DFE3E8', remove: () => set({ shelf: self.state.shelf.filter((y) => y !== x), toast: x + ' taken off the shelf.' }) })),
         shelfEmpty: s.shelf.length === 0,
         newItem: s.newItem, onNew: (e) => set({ newItem: e.target.value }), itemDup: itemDup, cantAdd: !newItem || itemDup, addOp: !newItem || itemDup ? 0.4 : 1,
         addItem: () => { if (!newItem || itemDup) return; set({ shelf: self.state.shelf.concat([newItem]), newItem: '' }); },
-        ideas: s.ideas.slice().sort((a, b) => b.n - a.n).map((x, i) => ({ name: x.name, n: '+' + x.n, sr: x.n + ' people would like this', line: i === 0 ? '0' : '1px solid #DFE3E8', add: () => set({ ideas: self.state.ideas.filter((y) => y.name !== x.name), shelf: self.state.shelf.concat([x.name]), toast: x.name + ' added to the shelf.' }), dismiss: () => set({ ideas: self.state.ideas.filter((y) => y.name !== x.name), toast: x.name + ' dismissed.' }) })),
+        ideas: s.ideas.slice().sort((a, b) => b.n - a.n).map((x, i) => ({ name: x.name, n: '+' + x.n, sr: x.n + ' people asked for this', line: i === 0 ? '0' : '1px solid #DFE3E8', add: () => set({ ideas: self.state.ideas.filter((y) => y.name !== x.name), shelf: self.state.shelf.concat([x.name]), toast: x.name + ' added to the shelf.' }), dismiss: () => set({ ideas: self.state.ideas.filter((y) => y.name !== x.name), toast: x.name + ' dismissed.' }) })),
         ideasEmpty: s.ideas.length === 0
       }
     };
@@ -752,11 +724,7 @@ class Component extends DCLogic {
     const topArea = Object.keys(areaCount).sort((a, b) => areaCount[b] - areaCount[a])[0];
     const wifi = {
       chips: [['today', 'Today', todayN], ['week', 'This week', reports.length]].map((c) => Object.assign(chip(s.wf === c[0]), { label: c[1] + ' ' + c[2], pick: () => set({ wf: c[0] }) })),
-      stats: [
-        { label: 'Reports today', n: String(todayN), note: 'each one sent after a slow Wi-Fi check' },
-        { label: 'This week', n: String(reports.length), note: 'Monday to today' },
-        { label: 'Most reported area', n: topArea, note: plural(areaCount[topArea], 'report', 'reports') + ' this week', small: true }
-      ],
+      topArea: topArea, topLine: 'Most reported this week: ' + topArea,
       rows: wList.map((r, i) => ({ day: r.day, area: r.area, down: r.down, up: r.up, speedSr: r.down + ' megabits per second down, ' + r.up + ' up', note: r.note || 'No note', noteColor: r.note ? '#181C20' : '#41474D', line: i === 0 ? '0' : '1px solid #DFE3E8' }))
     };
 
@@ -765,51 +733,49 @@ class Component extends DCLogic {
     const nextClosed = closedSorted.filter((c) => c.iso >= '2026-11-18')[0];
     let workLeft = 0; for (let x = TODAY; x <= 30; x++) { const w = dowN(x); if (w !== 0 && w !== 6 && closedNov.indexOf(x) < 0) workLeft++; }
     const curRound = s.teaNames;
+    const needDefs = [];
+    if (newN) needDefs.push({ title: plural(newN, 'new Speak up message', 'new Speak up messages'), icon: ICON.speak, bg: '#D3E5F5', fg: '#0C1D29', go: go('speak', { sf: 'open' }) });
+    if (repN) needDefs.push({ title: plural(repN, 'reported Feed post', 'reported Feed posts'), icon: ICON.flag, bg: '#FFDAD6', fg: '#410002', go: go('speak', { sf: 'open' }) });
+    if (pinAnn) needDefs.push({ title: pinAnn.title + ' · seen by ' + pinAnn.seen + ' of ' + TOTAL, icon: ICON.publish, bg: '#FFDDB0', fg: '#4A2800', go: go('publish', { pubTab: 'ann' }) });
+    if (todayN) needDefs.push({ title: plural(todayN, 'slow Wi-Fi report', 'slow Wi-Fi reports') + ' today', icon: ICON.wifi, bg: '#E5E8EE', fg: '#41474D', go: go('wifi', { wf: 'today' }) });
+    if (behindN) needDefs.push({ title: plural(behindN, 'person', 'people') + ' behind on 8 office days', icon: ICON.people, bg: '#FFF1C2', fg: '#3D2E00', go: go('people', { pf: 'behind', q: '' }) });
+    if (!s.ordered) needDefs.push({ title: 'Snack order goes in at ' + hm(T.order), icon: ICON.snack, bg: '#CDEBD6', fg: '#0B3D1F', go: go('office', { offTab: 'shelf' }) });
     const ov = {
       stats: [
-        { label: 'In office', n: '19', note: 'checked in so far', dot: '#006493' },
-        { label: 'Not in office', n: '22', note: 'remote, or not checked in yet', dot: '#71787E' },
-        { label: 'On leave', n: '4', note: 'from Zoho People', dot: '#7D5BA6' }
+        { label: 'In office', n: '19', dot: '#006493' },
+        { label: 'Not in office', n: '22', dot: '#71787E' },
+        { label: 'On leave', n: '4', dot: '#7D5BA6' }
       ],
       tea: {
-        title: 'Morning tea round at ' + fmtT(T.am), state: 'Answers closed at ' + fmtT(T.amBy), n: String(teaNamesAm.length),
+        line: 'Morning tea at ' + fmtT(T.am) + ' · ' + teaNamesAm.length + ' having tea',
         open: curRound, expanded: curRound ? 'true' : 'false', btn: curRound ? 'Hide names' : 'Show names', names: teaNamesAm.join(', '),
         toggle: () => set({ teaNames: !self.state.teaNames }),
-        next: 'Afternoon round at ' + fmtT(T.pm) + ', answers close ' + fmtT(T.pmBy) + ' · ' + teaNamesPm.length + ' so far'
+        next: 'Afternoon at ' + fmtT(T.pm) + ' · ' + teaNamesPm.length + ' so far'
       },
-      needs: [
-        { title: newN ? plural(newN, 'new Speak up message', 'new Speak up messages') : 'No new Speak up messages', sub: plural(openN, 'message', 'messages') + ' open · anonymous', icon: ICON.speak, bg: '#D3E5F5', fg: '#0C1D29', go: go('speak', { sf: 'open' }), hasCount: newN > 0, count: String(newN) },
-        { title: impAnn ? 'Important: ' + impAnn.title : 'No important announcement pinned', sub: impAnn ? 'Seen by ' + impAnn.seen + ' of ' + TOTAL + ' · pinned until ' + label(impAnn.until) : 'Post one in Publish', icon: ICON.publish, bg: '#FFDDB0', fg: '#4A2800', go: go('publish', { pubTab: 'ann' }), hasCount: false, count: '' },
-        { title: plural(todayN, 'Wi-Fi report', 'Wi-Fi reports') + ' today', sub: 'Mostly ' + topArea, icon: ICON.wifi, bg: '#E5E8EE', fg: '#41474D', go: go('wifi', { wf: 'today' }), hasCount: false, count: '' },
-        { title: s.ordered ? 'Snack order marked ordered' : 'Snack order goes in at ' + fmtT(T.order), sub: s.picks.map((p) => p.name + ' ' + p.n).join(' · '), icon: ICON.snack, bg: '#FFF1C2', fg: '#3D2E00', go: go('office', { offTab: 'shelf' }), hasCount: false, count: '' }
-      ].map((n, i) => Object.assign(n, { line: i === 0 ? '0' : '1px solid #DFE3E8' })),
-      behind: String(behindN), behindLine: behindN === 1 ? 'person is behind on 8 office days' : 'people are behind on 8 office days',
-      daysLeft: plural(workLeft, 'working day', 'working days') + ' left in November, today included.',
-      seeBehind: go('people', { pf: 'behind', q: '' }),
-      seeAll: go('people', { pf: 'all', q: '' }),
-      evLine: nextEv ? nextEv.title : 'No events coming up', evSub: nextEv ? nextEv.when + ' · ' + nextEv.going : 'Post one in Publish',
-      closedLine: nextClosed ? 'Office closed ' + label(nextClosed.iso) : 'No closed days coming up', closedSub: nextClosed ? nextClosed.reason : 'Add one in Office',
-      goEvents: go('publish', { pubTab: 'ev' }), goClosed: go('office', { offTab: 'closed' })
+      needs: needDefs.map((n, i) => Object.assign(n, { line: i === 0 ? '0' : '1px solid #DFE3E8' })),
+      hasNeeds: needDefs.length > 0, noNeeds: needDefs.length === 0,
+      behind: String(behindN)
     };
 
     // ---------- shell ----------
-    const navDefs = [['today', 'Today', ''], ['people', 'People', ''], ['speak', 'Speak up', newN ? String(newN) : ''], ['publish', 'Publish', ''], ['office', 'Office', ''], ['wifi', 'Wi-Fi reports', '']];
+    const spBadge = newN + repN ? String(newN + repN) : '';
+    const navDefs = [['today', 'Today', ''], ['people', 'People', ''], ['speak', 'Speak up', spBadge], ['publish', 'Publish', ''], ['office', 'Office', ''], ['wifi', 'Wi-Fi reports', '']];
     const sideItems = navDefs.map((n) => { const on = vw === n[0]; return { label: n[1], icon: ICON[n[0]], badge: n[2], hasBadge: !!n[2], badgeSr: n[2] ? ', ' + n[2] + ' new' : '', go: go(n[0]), cur: on ? 'page' : 'false', bg: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#41474D', weight: on ? 700 : 500 }; });
     const moreOn = vw === 'office' || vw === 'wifi';
     const mobDefs = [['today', 'Today'], ['people', 'People'], ['speak', 'Speak up'], ['publish', 'Publish']];
-    const mobItems = mobDefs.map((n) => { const on = vw === n[0]; const b = n[0] === 'speak' && newN ? String(newN) : ''; return { label: n[1], icon: ICON[n[0]], badge: b, hasBadge: !!b, badgeSr: b ? ', ' + b + ' new' : '', go: go(n[0]), cur: on ? 'page' : 'false', pill: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#41474D', weight: on ? 700 : 500 }; }).concat([{ label: 'More', icon: ICON.more, badge: '', hasBadge: false, badgeSr: '', go: () => set({ more: true }), cur: moreOn ? 'page' : 'false', pill: moreOn ? '#D3E5F5' : 'transparent', color: moreOn ? '#0C1D29' : '#41474D', weight: moreOn ? 700 : 500 }]);
-    const moreItems = [['office', 'Office', 'Closed days, tea and snack times, snack shelf'], ['wifi', 'Wi-Fi reports', 'Anonymous reports from the Wi-Fi check']].map((n) => ({ label: n[1], sub: n[2], icon: ICON[n[0]], go: go(n[0]), cur: vw === n[0] ? 'page' : 'false' }));
+    const mobItems = mobDefs.map((n) => { const on = vw === n[0]; const b = n[0] === 'speak' ? spBadge : ''; return { label: n[1], icon: ICON[n[0]], badge: b, hasBadge: !!b, badgeSr: b ? ', ' + b + ' new' : '', go: go(n[0]), cur: on ? 'page' : 'false', pill: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#41474D', weight: on ? 700 : 500 }; }).concat([{ label: 'More', icon: ICON.more, badge: '', hasBadge: false, badgeSr: '', go: () => set({ more: true }), cur: moreOn ? 'page' : 'false', pill: moreOn ? '#D3E5F5' : 'transparent', color: moreOn ? '#0C1D29' : '#41474D', weight: moreOn ? 700 : 500 }]);
+    const moreItems = [['office', 'Office', 'Closed days, tea and snack times, snack shelf'], ['wifi', 'Wi-Fi reports', 'Slow Wi-Fi reports']].map((n) => ({ label: n[1], sub: n[2], icon: ICON[n[0]], go: go(n[0]), cur: vw === n[0] ? 'page' : 'false' }));
     const heads = {
       today: ['Today', 'Wednesday, 18 November'],
-      people: ['People', 'Office days this month, exemptions, admins and birthdays'],
-      speak: ['Speak up', 'Anonymous messages to admins'],
-      publish: ['Publish', 'Announcements and events'],
-      office: ['Office', 'Closed days, tea and snack times, and the snack shelf'],
-      wifi: ['Wi-Fi reports', 'Anonymous reports from the Wi-Fi check']
+      people: ['People', ''],
+      speak: ['Speak up', ''],
+      publish: ['Publish', ''],
+      office: ['Office', ''],
+      wifi: ['Wi-Fi reports', '']
     };
 
     return {
-      v: v, head: { title: heads[vw][0], sub: heads[vw][1] },
+      v: v, head: { title: heads[vw][0], sub: heads[vw][1], hasSub: !!heads[vw][1] },
       sideItems: sideItems, mobItems: mobItems, moreItems: moreItems,
       moreOpen: !!s.more, closeMore: () => set({ more: false }),
       openMember: () => set({ more: false, toast: 'This opens the member app at Home. Come back from Account → Admin.' }),

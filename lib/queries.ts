@@ -270,7 +270,7 @@ export type Reading = {
 };
 export const useReading = () => useQuery({ queryKey: ["reading"], queryFn: () => fetchJSON<Reading>("/api/reading") });
 
-export type Account = { email: string; name: string; role: "admin" | "member"; birthday: string | null; showBirthday: boolean; officeDays: number[] };
+export type Account = { email: string; name: string; role: "admin" | "member"; birthday: string | null; showBirthday: boolean; officeDays: number[]; sayHi: boolean };
 export const useAccount = () => useQuery({ queryKey: ["account"], queryFn: () => fetchJSON<Account>("/api/account") });
 
 export type Steps = Awaited<ReturnType<typeof import("@/lib/today").stepsBoard>>;

@@ -7,6 +7,7 @@ import { Avatar, Button, Card, IconCircle, QueryState, StatusChip } from "@/comp
 import { TeaLappy } from "@/components/m3/art";
 import { TeaActions, teaCopy } from "@/components/snacks/tea";
 import { teaToShow } from "@/lib/snacks-rules";
+import { InOfficeToday } from "./say-hi";
 import { PageHero } from "@/components/m3/hero";
 import { CheckIn, timeIST } from "@/components/home/check-in";
 import type { DaysView } from "@/lib/days";
@@ -133,25 +134,6 @@ function ThisWeek({ days }: { days: DaysView }) {
   );
 }
 
-function Crowd({ days }: { days: DaysView }) {
-  const { inToday } = days.around;
-  if (!inToday.names.length) return null;
-  return (
-    <section aria-label="In office today" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <h2 className="m3-title" style={{ padding: "0 4px" }}>In office today</h2>
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -18px", padding: "0 18px" }}>
-        {inToday.names.map((n, i) => (
-          <div key={`${n}-${i}`} className="m3-card" style={{ flex: "none", width: 112, padding: "14px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" }}>
-            <Avatar name={n} size={52} />
-            <span style={{ fontSize: 14, fontWeight: 600 }}>{n}</span>
-            <span className="m3-small" style={{ fontSize: 12 }}>In today</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function StepsTile() {
   const steps = useWorkspace().data?.steps.me;
   const today = steps?.today?.steps ?? 0;
@@ -182,7 +164,7 @@ export function HomePage({ firstName }: { firstName: string }) {
           <CheckIn days={days.data} />
           <UpNext days={days.data} />
           <ThisWeek days={days.data} />
-          <Crowd days={days.data} />
+          <InOfficeToday days={days.data} />
           <StepsTile />
         </>
       )}

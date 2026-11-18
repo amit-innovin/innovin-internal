@@ -11,7 +11,7 @@ const validDayMonth = (v: string) => MMDD.test(v) && !Number.isNaN(Date.parse(`2
 
 async function view(email: string) {
   const me = await store.getEmployee(email);
-  return { email, name: me?.name ?? email, role: me?.role ?? "member", birthday: me?.birthday ?? null, showBirthday: me?.showBirthday ?? false, officeDays: me?.officeDays ?? [] };
+  return { email, name: me?.name ?? email, role: me?.role ?? "member", birthday: me?.birthday ?? null, showBirthday: me?.showBirthday ?? false, officeDays: me?.officeDays ?? [], sayHi: me?.sayHi ?? false };
 }
 
 export async function GET(req: NextRequest) {

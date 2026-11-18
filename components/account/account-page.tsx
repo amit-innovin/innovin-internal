@@ -6,6 +6,7 @@ import { PageHero } from "@/components/m3/hero";
 import { Sheet } from "@/components/m3/sheet";
 import { readError, send } from "@/lib/fetcher";
 import { useAccount } from "@/lib/queries";
+import { useSayHiSetting } from "@/components/home/say-hi";
 import { usePush } from "@/lib/use-push";
 
 const DAY = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -20,8 +21,9 @@ async function signOut() {
   window.location.assign("/");
 }
 
-function NotificationSettings({ onClose }: { onClose: () => void }) {
+function NotificationSettings({ sayHi, onClose }: { sayHi: boolean; onClose: () => void }) {
   const push = usePush();
+  const setSayHi = useSayHiSetting();
   const on = push.state === "on";
   return (
     <Sheet open onClose={onClose} label="Notification settings">
@@ -39,6 +41,16 @@ function NotificationSettings({ onClose }: { onClose: () => void }) {
       </div>
       {push.state === "denied" && <p className="m3-small" style={{ margin: 0 }}>Notifications are blocked for this site in your browser settings.</p>}
       {push.state === "unsupported" && <p className="m3-small" style={{ margin: 0 }}>This browser can&apos;t show notifications. Add the app to your home screen to get them.</p>}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <span style={{ fontWeight: 600 }}>Say hi</span>
+          <span className="m3-small">Waves and invites from people in the office. Only people who turn it on can send or get them.</span>
+        </span>
+        <button type="button" role="switch" aria-checked={sayHi} aria-label="Say hi" disabled={setSayHi.isPending} onClick={() => setSayHi.mutate(!sayHi)}
+          style={{ flex: "none", width: 52, height: 32, borderRadius: 16, border: sayHi ? 0 : "2px solid #71787E", background: sayHi ? "var(--m3-primary)" : "#DFE3E8", padding: 0, position: "relative", cursor: "pointer" }}>
+          <span style={{ position: "absolute", top: "50%", left: sayHi ? 24 : 6, width: sayHi ? 24 : 16, height: sayHi ? 24 : 16, borderRadius: 12, background: sayHi ? "#FFFFFF" : "#71787E", transform: "translateY(-50%)" }} />
+        </button>
+      </div>
       <p className="m3-small" style={{ margin: 0 }}>Grievance updates are never sent as notifications.</p>
     </Sheet>
   );
@@ -62,7 +74,7 @@ export function AccountPage() {
         {a.role === "admin" && <ListRow href="/admin" title="Admin" subtitle="Opens the admin app" chevron />}
         <button type="button" className="m3-row" onClick={signOut} style={{ color: "var(--m3-error)", fontWeight: 600 }}>Sign out</button>
       </div>
-      {settings && <NotificationSettings onClose={() => setSettings(false)} />}
+      {settings && <NotificationSettings sayHi={a.sayHi} onClose={() => setSettings(false)} />}
     </div>
   );
 }

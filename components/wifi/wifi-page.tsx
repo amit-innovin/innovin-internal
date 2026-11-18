@@ -1,94 +1,175 @@
 "use client";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, LoaderCircle, Wifi, X } from "lucide-react";
+import { ArrowLeft, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Card, PageHeader, Pill, Split } from "@/components/duo";
-import { BellLink } from "@/components/duo/bell";
+import { Button } from "@/components/m3";
 import { readError, send } from "@/lib/fetcher";
-import { relativeTime } from "@/lib/format";
-import { useWifiReports } from "@/lib/queries";
+import { useDays, useWifiReports } from "@/lib/queries";
 import { measureDownload } from "@/lib/speedtest";
+import { wifiVerdict } from "@/lib/wifi-rules";
 
-type Test = { state: "ready" } | { state: "testing" } | { state: "done"; mbps: number; via: string | null };
+const AREAS = ["Desk area", "Meeting room", "Pantry", "Balcony"];
+const MIN_MS = 8000;
+type Result = { down: number; up: number; delayMs: number };
 
+async function measureUpload(): Promise<number> {
+  const payload = new Uint8Array(1_500_000);
+  const start = performance.now();
+  const res = await fetch("/api/wifi/upload", { method: "POST", body: payload, headers: { "Content-Type": "application/octet-stream" } });
+  if (!res.ok) throw new Error("upload failed");
+  const seconds = (performance.now() - start) / 1000;
+  return Math.round(((payload.length * 8) / seconds / 1_000_000) * 10) / 10;
+}
+
+async function measureDelay(): Promise<number> {
+  const times: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    const start = performance.now();
+    await fetch(`/api/wifi/ping?${i}-${Date.now()}`, { cache: "no-store" });
+    times.push(performance.now() - start);
+  }
+  return Math.round(times.sort((a, b) => a - b)[2]);
+}
+
+// "While you wait: catch the packets." Just for fun; the test runs either way.
+function Packets({ onCatch, caught }: { onCatch: () => void; caught: number }) {
+  const [pos, setPos] = useState({ x: 40, y: 40 });
+  useEffect(() => {
+    const t = setInterval(() => setPos({ x: 8 + Math.round(Math.random() * 78), y: 10 + Math.round(Math.random() * 70) }), 800);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="m3-stack" style={{ gap: 6 }}>
+      <span className="m3-small" style={{ fontWeight: 600, color: "var(--m3-on-surface)" }}>While you wait: catch the packets</span>
+      <div style={{ position: "relative", height: 180, borderRadius: 16, background: "var(--m3-surface-container)", overflow: "hidden" }}>
+        <button type="button" aria-label="Catch the packet" onClick={onCatch}
+          style={{ position: "absolute", left: `${pos.x}%`, top: `${pos.y}%`, width: 44, height: 44, borderRadius: 12, border: 0, background: "var(--m3-primary)", color: "var(--m3-on-primary)", fontWeight: 700, cursor: "pointer", transition: "left .3s ease, top .3s ease" }}>01</button>
+      </div>
+      <span className="m3-small" aria-live="polite">{caught} caught · Just for fun. The test runs either way.</span>
+    </div>
+  );
+}
+
+// Wi-Fi check from the Material 3 prototype: run it, see a plain verdict, and (from the office)
+// tell admins where it's slow. Reports keep no identity; only the result and the area.
 export function WifiPage() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const days = useDays();
   const reports = useWifiReports();
   const client = useQueryClient();
-  const [test, setTest] = useState<Test>({ state: "ready" });
+  const inOffice = days.data?.me?.mode === "office";
+  const [state, setState] = useState<"idle" | "running" | "done" | "sent">("idle");
+  const [result, setResult] = useState<Result | null>(null);
+  const [caught, setCaught] = useState(0);
+  const [reportAnyway, setReportAnyway] = useState(false);
+  const [area, setArea] = useState<string | null>(null);
   const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
   const started = useRef(false);
 
   const run = async () => {
-    setTest({ state: "testing" });
-    const result = await measureDownload();
-    if ("error" in result) { toast.error(result.error); setTest({ state: "ready" }); return; }
-    setTest({ state: "done", mbps: result.mbps, via: result.via });
+    setState("running"); setCaught(0); setResult(null); setReportAnyway(false); setArea(null); setNote("");
+    const begin = performance.now();
+    const down = await measureDownload();
+    const [up, delayMs] = await Promise.all([measureUpload().catch(() => 0), measureDelay().catch(() => 999)]);
+    const wait = MIN_MS - (performance.now() - begin);
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    setResult({ down: "mbps" in down ? down.mbps : 0, up, delayMs });
+    setState("done");
   };
 
-  // Home's Wi-Fi button links here with ?check=1: run the test straight away.
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    if (new URLSearchParams(window.location.search).get("check") === "1") {
-      window.history.replaceState(null, "", "/wifi");
+    if (params.get("check") === "1" && !started.current) {
+      started.current = true;
+      router.replace("/wifi", { scroll: false });
       run();
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
 
-  const report = async (quality: "good" | "poor") => {
-    setBusy(true);
-    const res = await send("/api/wifi", { method: "POST", json: { quality, note, downMbps: test.state === "done" ? test.mbps : null } });
-    setBusy(false);
+  const verdict = result ? wifiVerdict(result) : null;
+  const canReport = inOffice && (verdict === "slow" || reportAnyway);
+  const today = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
+  const othersToday = Math.max(0, (reports.data ?? []).filter((r) => r.quality === "poor" && new Date(new Date(r.createdAt).getTime() + 5.5 * 3600_000).toISOString().slice(0, 10) === today).length - 1);
+
+  const sendReport = async () => {
+    if (!result) return;
+    setSending(true);
+    const res = await send("/api/wifi", { method: "POST", json: { quality: verdict === "slow" ? "poor" : "good", downMbps: result.down, upMbps: result.up, area, note: note.trim() } });
+    setSending(false);
     if (!res.ok) return toast.error(await readError(res));
-    toast.success(quality === "good" ? "Thanks. Glad it’s working." : "Thanks. Admins will take a look.");
-    setNote("");
-    client.invalidateQueries({ queryKey: ["wifi"] });
+    await client.invalidateQueries({ queryKey: ["wifi"] });
+    setState("sent");
   };
 
-  const recent = (
-    <Card style={{ display: "flex", flexDirection: "column", gap: 6, padding: 14 }}>
-      <span style={{ fontFamily: "var(--duo-display)", fontSize: 18, fontWeight: 600 }}>Recent reports</span>
-      {reports.isError && <span className="duo-sub" role="alert">{reports.error.message}</span>}
-      {reports.data?.length === 0 && <span className="duo-sub" style={{ fontSize: 13 }}>No reports yet.</span>}
-      {reports.data?.slice(0, 8).map((r) => (
-        <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderTop: "2px solid var(--duo-line)" }}>
-          <Pill tone={r.quality === "good" ? "green" : "pink"}>{r.quality === "good" ? "Good" : "Poor"}</Pill>
-          <span style={{ fontSize: 14, fontWeight: 700, flexGrow: 1, minWidth: 0, overflowWrap: "anywhere" }}>{[r.note, r.downMbps != null ? `${Math.round(r.downMbps)} Mbps` : ""].filter(Boolean).join(" · ") || "No details"}</span>
-          <span className="duo-sub" style={{ fontSize: 12, flexShrink: 0 }}>{relativeTime(r.createdAt)}</span>
-        </div>
-      ))}
-    </Card>
-  );
-
   return (
-    <Split head={<PageHeader title="Wi-Fi check" subtitle="Test the office connection, flag it if it’s bad." actions={<BellLink />} back={{ href: "/account", label: "Back to account" }} />} rail={recent}>
-      <section aria-label="Speed test" style={{ background: "var(--duo-hero)", borderRadius: 24, padding: "28px 18px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18, color: "#fff" }}>
-        <div aria-live="polite" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, textAlign: "center" }}>
-          <span style={{ fontFamily: "var(--duo-display)", fontSize: test.state === "done" ? 72 : 44, fontWeight: 700, lineHeight: 1 }}>
-            {test.state === "done" ? Math.round(test.mbps) : test.state === "testing" ? "Testing…" : "Ready"}
-          </span>
-          <span style={{ fontSize: 14, fontWeight: 800, color: "var(--duo-hero-muted)" }}>
-            {test.state === "done" ? `Mbps down · measured just now${test.via ? ` · ${test.via}` : ""}` : test.state === "testing" ? "Downloading a test file" : "Takes about 8 seconds"}
-          </span>
-        </div>
-        <button type="button" className="duo-btn" disabled={test.state === "testing"} onClick={run} style={{ background: "#fff", color: "var(--duo-hero)", boxShadow: "0 4px 0 var(--duo-hero-muted)", minHeight: 52, fontSize: 18 }}>
-          {test.state === "testing" ? <LoaderCircle size={18} className="duo-spin" aria-hidden="true" /> : <Wifi size={18} aria-hidden="true" />}
-          {test.state === "done" ? "Run the test again" : test.state === "testing" ? "Measuring…" : "Check speed"}
-        </button>
+    <div className="m3 m3-page m3-stack">
+      <header style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0" }}>
+        <Link href="/" className="m3-btn m3-btn-text" aria-label="Back to home" style={{ width: 44, padding: 0 }}><ArrowLeft size={22} aria-hidden="true" /></Link>
+        <h1 className="m3-h1" style={{ fontSize: 28, lineHeight: "36px" }}>Wi-Fi check</h1>
+      </header>
+      <section className="m3-card m3-stack" style={{ gap: 12 }}>
+        <p className="m3-body" style={{ margin: 0 }}>Tests the connection you&apos;re on right now: download, upload and delay. It takes about 10 seconds.</p>
+        {state === "idle" && (
+          <>
+            <span className="m3-small">{inOffice ? "You're checked in, so you can report a problem to admins." : "You're not checked in. The check still runs, but reports are for the office Wi-Fi only."}</span>
+            <Button className="m3-btn-lg" onClick={run}>Run check</Button>
+          </>
+        )}
+        {state === "running" && (
+          <>
+            <div role="status" style={{ display: "flex", alignItems: "center", gap: 10 }}><LoaderCircle size={20} className="m3-spin" aria-hidden="true" />Testing download, upload and delay…</div>
+            <Packets caught={caught} onCatch={() => setCaught((n) => n + 1)} />
+          </>
+        )}
       </section>
-      <Card style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <span style={{ fontFamily: "var(--duo-display)", fontSize: 18, fontWeight: 600 }}>How’s it feeling?</span>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-          <button type="button" className="duo-btn duo-tone-green duo-tonebtn" disabled={busy} onClick={() => report("good")} style={{ borderColor: "var(--duo-green-edge)", boxShadow: "0 4px 0 var(--duo-green-edge)", minHeight: 52, fontSize: 18 }}><Check size={18} aria-hidden="true" />Good</button>
-          <button type="button" className="duo-btn duo-tone-pink duo-tonebtn" disabled={busy} onClick={() => report("poor")} style={{ borderColor: "var(--duo-pink-edge)", boxShadow: "0 4px 0 var(--duo-pink-edge)", minHeight: 52, fontSize: 18 }}><X size={18} aria-hidden="true" />Poor</button>
-        </div>
-        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <span className="duo-label">Where are you? (optional)</span>
-          <input className="duo-input" value={note} maxLength={120} onChange={(e) => setNote(e.target.value)} placeholder="Meeting room, 3rd floor" />
-        </label>
-      </Card>
-    </Split>
+
+      {(state === "done" || state === "sent") && result && (
+        <section aria-labelledby="wifi-verdict" className="m3-card m3-stack" style={{ gap: 10, background: verdict === "slow" ? "var(--m3-warn-container)" : "var(--m3-success-container)" }}>
+          <h2 id="wifi-verdict" className="m3-title">{verdict === "slow" ? "The connection is slow right now" : "The connection looks good"}</h2>
+          <span className="m3-small" style={{ color: "inherit" }}>You caught {caught} packet{caught === 1 ? "" : "s"} while you waited.</span>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+            {[[result.down, "Mbps down"], [result.up, "Mbps up"], [result.delayMs, "ms delay"]].map(([n, label]) => (
+              <span key={label as string} style={{ display: "flex", flexDirection: "column" }}><b style={{ fontSize: 24, fontVariantNumeric: "tabular-nums" }}>{n}</b><span className="m3-small" style={{ color: "inherit" }}>{label}</span></span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {state === "done" && verdict === "slow" && !inOffice && <p className="m3-small" style={{ margin: "0 4px" }}>Check in to report office Wi-Fi problems.</p>}
+      {state === "done" && verdict === "good" && inOffice && !reportAnyway && (
+        <p className="m3-small" style={{ margin: "0 4px" }}>Looks fine from here. Calls still dropping? <button type="button" className="m3-btn m3-btn-text" style={{ height: 32, padding: "0 4px" }} onClick={() => setReportAnyway(true)}>Report anyway</button></p>
+      )}
+
+      {state === "done" && canReport && (
+        <section aria-labelledby="wifi-report" className="m3-card m3-stack" style={{ gap: 12 }}>
+          <h2 id="wifi-report" className="m3-title">Report it to admins</h2>
+          <span className="m3-small">Your result is attached. Where are you sitting?</span>
+          <div role="radiogroup" aria-label="Where are you sitting?" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {AREAS.map((a) => (
+              <button key={a} type="button" role="radio" aria-checked={area === a} onClick={() => setArea(a)}
+                style={{ height: 36, padding: "0 14px", borderRadius: 8, fontFamily: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer", border: area === a ? 0 : "1px solid var(--m3-outline)", background: area === a ? "var(--m3-secondary-container)" : "transparent", color: area === a ? "var(--m3-on-secondary-container)" : "var(--m3-on-surface-variant)" }}>{a}</button>
+            ))}
+          </div>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span className="m3-small" style={{ fontWeight: 600, color: "var(--m3-on-surface)" }}>Anything else? (optional)</span>
+            <input value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} style={{ height: 44, borderRadius: 12, border: "1px solid var(--m3-outline)", padding: "0 12px", fontFamily: "inherit", fontSize: 15, background: "var(--m3-surface)" }} />
+          </label>
+          <Button disabled={sending} onClick={sendReport}>Send report</Button>
+        </section>
+      )}
+
+      {state === "sent" && (
+        <section className="m3-card m3-stack" style={{ gap: 8 }} role="status">
+          <h2 className="m3-title">Sent to admins with your result</h2>
+          <span className="m3-small">{othersToday ? `${othersToday} other ${othersToday === 1 ? "person" : "people"} reported slow Wi-Fi today.` : "Nobody else has reported slow Wi-Fi today."}</span>
+        </section>
+      )}
+      {(state === "done" || state === "sent") && <Button variant="outlined" style={{ alignSelf: "flex-start" }} onClick={run}>Run again</Button>}
+    </div>
   );
 }

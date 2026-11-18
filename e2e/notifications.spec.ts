@@ -1,42 +1,43 @@
-import { adminLogin, expect, test, uniqueEmail, uniqueText, signInEmployee } from "./fixtures";
+import { ADMIN_EMAIL, adminLogin, expect, test, uniqueEmail, uniqueText, signInEmployee, signInOffice } from "./fixtures";
 
 test.describe("Notifications", () => {
-  test("the bell opens the Notifications page, and Mark all read clears the unread count", async ({ page, browser }) => {
-    const title = uniqueText("Lift under maintenance");
-    const admin = await browser.newContext();
-    const a = await admin.newPage();
-    await adminLogin(a, "publish");
-    await a.getByRole("tab", { name: "Announcement" }).click();
-    await a.getByLabel("Title", { exact: true }).fill(title);
-    await a.getByRole("button", { name: "Post announcement" }).click();
-    await expect(a.getByText("Announcement posted")).toBeVisible();
-    await admin.close();
-
-    await signInEmployee(page, undefined, "/");
-    const bell = page.getByRole("link", { name: /Notifications/ }).filter({ visible: true });
-    // Unread count shows in the accessible name, so it's announced not just coloured.
-    await expect(bell).toHaveAccessibleName(/\d+ unread/);
-    await bell.click();
-    // The bell goes to its own page: not the Feed, not a popover.
-    await expect(page).toHaveURL(/\/notifications$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Notifications" })).toBeVisible();
-    const row = page.getByRole("link").filter({ hasText: title });
-    await expect(row).toHaveAttribute("data-unread", "true");
-
-    // The Unread filter is a link, so it survives a reload.
-    await page.getByRole("link", { name: /^Unread/ }).click();
-    await expect(page).toHaveURL(/filter=unread/);
-    await expect(row).toBeVisible();
-
-    await page.getByRole("button", { name: "Mark all read" }).click();
-    await expect(page.getByText("You're all caught up")).toBeVisible();
-    await expect(page.getByText("Nothing unread")).toBeVisible();
+  test("a kudos to you shows up, links to the Feed, and opening the page marks it read", async ({ page, browser }) => {
+    const me = uniqueEmail("notif-kudos");
+    await signInEmployee(page, me, "/");
+    const giverContext = await browser.newContext();
+    const giver = await giverContext.newPage();
+    await signInEmployee(giver, uniqueEmail("notif-giver"), "/");
+    expect((await giver.request.post("/api/notices", { data: { kind: "kudos", toEmail: me, body: "Thanks for covering" } })).status()).toBe(201);
+    await giverContext.close();
+    expect((await (await page.request.get("/api/notifications")).json()).unread).toBeGreaterThan(0);
     await page.goto("/notifications");
-    await expect(row).toHaveAttribute("data-unread", "false");
+    await expect(page.getByRole("heading", { level: 1, name: "Notifications" })).toBeVisible();
+    const kudos = page.getByRole("link", { name: /Notif-giver gave you kudos/ });
+    await expect(kudos).toBeVisible();
+    await expect.poll(async () => (await (await page.request.get("/api/notifications")).json()).unread).toBe(0);
+    await kudos.click();
+    await expect(page).toHaveURL(/\/feed$/);
+  });
 
-    // Back on Home the bell no longer announces a count.
-    await page.goto("/");
-    await expect(page.getByRole("link", { name: "Notifications", exact: true }).filter({ visible: true })).toBeVisible();
+  test("the tea reminder shows while the round is open and you haven't answered", async ({ page, browser }) => {
+    const adminContext = await browser.newContext();
+    const admin = await adminContext.newPage();
+    await signInEmployee(admin, ADMIN_EMAIL, "/");
+    const times = (t: object) => admin.request.patch("/api/admin/snack-times", { data: { amAt: "11:00", amClose: "10:45", pmAt: "16:00", pmClose: "15:30", orderAt: "12:00", ...t } });
+    try {
+      expect((await times({ amAt: "23:58", amClose: "23:57", pmAt: "23:59", pmClose: "23:58" })).status()).toBe(200);
+      await signInOffice(page, uniqueEmail("notif-tea"));
+      await page.goto("/notifications");
+      const tea = page.getByRole("link", { name: /^Tea round closes at/ });
+      await expect(tea).toHaveAttribute("href", "/snacks");
+      expect((await page.request.post("/api/tea", { data: { round: "am", going: true } })).status()).toBe(200);
+      await page.reload();
+      await expect(page.getByRole("heading", { level: 1, name: "Notifications" })).toBeVisible();
+      await expect(tea).toHaveCount(0);
+    } finally {
+      await times({});
+      await adminContext.close();
+    }
   });
 
   test("a published event reaches the feed and home", async ({ page, browser, isMobile }) => {
@@ -91,36 +92,6 @@ test.describe("Notifications", () => {
     await e.getByRole("link", { name: /Notifications/ }).filter({ visible: true }).click();
     await expect(e.getByRole("link").filter({ hasText: /leave approved/i })).toBeVisible();
     await employee.close();
-  });
-
-  test("the Notifications page sits in the new shell: bottom bar on phones, sidebar on wider screens", async ({ page, isMobile }) => {
-    await signInEmployee(page, uniqueEmail("shell"), "/notifications");
-    await expect(page.getByRole("heading", { level: 1, name: "Notifications" })).toBeVisible();
-    // The legacy top bar is not rendered on a rebuilt screen.
-    await expect(page.getByRole("navigation", { name: "Workspace navigation" })).toHaveCount(0);
-    const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
-    await expect(main).toHaveCount(1);
-    if (isMobile) {
-      await expect(main.getByRole("link")).toHaveText(["Home", "Feed", "Days", "Account"]);
-      // A child screen on the phone has a way back to Home.
-      await expect(page.getByRole("link", { name: "Back to home" })).toBeVisible();
-    } else {
-      await expect(main.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
-      await main.getByRole("button", { name: "Account menu" }).click();
-      const menu = page.getByRole("menu", { name: "Account" });
-      await expect(menu.getByRole("menuitem")).toHaveText(["Settings", "Speak up", "Wi-Fi check", "Help", "Sign out"]);
-      // A member never sees Admin.
-      await expect(menu.getByRole("menuitem", { name: "Admin" })).toHaveCount(0);
-      await page.keyboard.press("Escape");
-      await expect(menu).toHaveCount(0);
-    }
-    // Home stays lit: Notifications belongs to Home.
-    await expect(main.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
-    await page.screenshot({ path: `output/playwright/duo-notifications-${test.info().project.name}.png`, fullPage: true });
-    if (!isMobile) {
-      await page.setViewportSize({ width: 834, height: 1100 });
-      await page.screenshot({ path: "output/playwright/duo-notifications-tablet.png" });
-    }
   });
 
   test("the feed is device-scoped for grievances and never leaks between devices", async ({ page, browser }) => {

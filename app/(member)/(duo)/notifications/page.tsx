@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { NotificationsPage } from "@/components/notifications-page";
+import { NotificationsPage } from "@/components/notifications/notifications-page";
 
 export const metadata: Metadata = { title: "Notifications · Innovin" };
 

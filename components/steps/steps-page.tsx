@@ -1,151 +1,127 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Crown, Flag } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Avatar, Button, Card, Flat, PageHeader, QueryState, Split } from "@/components/duo";
-import { BellLink } from "@/components/duo/bell";
-import { Celebrate } from "@/components/duo/celebrate";
-import { Lappy } from "@/components/duo/lappy";
-import type { LeagueRow } from "@/lib/member-features";
-import { useSend, useSteps, type Steps } from "@/lib/queries";
+import { Avatar, Button, QueryState } from "@/components/m3";
+import { PageHero } from "@/components/m3/hero";
+import { Lappy } from "@/components/m3/lappy";
+import { readError, send } from "@/lib/fetcher";
+import { useSteps } from "@/lib/queries";
+import { sevenDays } from "@/lib/steps-rules";
 
-const n = (v: number) => v.toLocaleString("en-IN");
 const GOAL = 10_000;
+const fmt = (n: number) => n.toLocaleString("en-IN");
+const weekday = (date: string) => new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 
-function Ring({ steps }: { steps: number }) {
-  const c = 2 * Math.PI * 62;
-  const done = Math.min(1, steps / GOAL) * c;
-  return (
-    <svg width="150" height="150" viewBox="0 0 150 150" role="img" aria-label={`${n(steps)} of 10,000 steps today`}>
-      <circle cx="75" cy="75" r="62" fill="none" stroke="var(--duo-soft)" strokeWidth="16" />
-      {steps > 0 && <circle cx="75" cy="75" r="62" fill="none" stroke="var(--duo-seg-on)" strokeWidth="16" strokeLinecap="round" strokeDasharray={`${done} ${c}`} transform="rotate(-90 75 75)" style={{ transition: "stroke-dasharray .6s" }} />}
-      <text x="75" y="72" textAnchor="middle" fontFamily="var(--duo-display)" fontSize="28" fontWeight="700" fill="var(--duo-ink)">{n(steps)}</text>
-      <text x="75" y="94" textAnchor="middle" fontFamily="var(--duo-body)" fontSize="13" fontWeight="800" fill="var(--duo-muted)">of 10,000</text>
-    </svg>
-  );
+function useStepsWrite<T>(url: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: T) => {
+      const res = await send(url, { method: "POST", json: input });
+      if (!res.ok) throw new Error(await readError(res));
+    },
+    onSuccess: () => client.invalidateQueries({ queryKey: ["steps"] }),
+  });
 }
 
-function Podium({ rows }: { rows: LeagueRow[] }) {
-  // Second, first, third — the classic podium order.
-  const order = [rows[1], rows[0], rows[2]];
-  const height = [64, 92, 48];
-  return (
-    <ol aria-label="Top three" style={{ listStyle: "none", margin: 0, display: "flex", alignItems: "flex-end", gap: 12, padding: "8px clamp(0px, 6vw, 40px) 0" }}>
-      {order.map((r, i) => {
-        const rank = [2, 1, 3][i];
-        if (!r) return <li key={rank} style={{ flex: "1 1 0" }} aria-hidden="true" />;
-        return (
-          <li key={r.email} style={{ flex: "1 1 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 0 }} aria-label={`${rank}. ${r.name}${r.me ? " (you)" : ""}, ${n(r.steps)} steps`}>
-            {rank === 1 && <Crown size={20} color="var(--duo-gold)" fill="var(--duo-gold)" aria-hidden="true" />}
-            <span style={{ borderRadius: 999, background: "#fff" }}><Avatar name={r.name} size={rank === 1 ? 52 : 44} /></span>
-            <span style={{ fontFamily: "var(--duo-display)", fontSize: 15, fontWeight: 600, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.me ? "You" : r.name}</span>
-            <span style={{ fontSize: 12, fontWeight: 800, color: "var(--duo-hero-muted)" }}>{n(r.steps)}</span>
-            <div aria-hidden="true" style={{ width: "100%", height: height[i], borderRadius: "14px 14px 0 0", background: rank === 1 ? "var(--duo-gold)" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--duo-display)", fontSize: 22, fontWeight: 700, color: "var(--duo-hero)" }}>{rank}</div>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
-function League({ league }: { league: NonNullable<Steps["league"]> }) {
-  const [tab, setTab] = useState<"week" | "today">("week");
-  const rows = league[tab];
-  const nudge = league.nudge[tab];
-  return (
-    <>
-      <section aria-label="Step league" style={{ background: "var(--duo-hero)", color: "#fff", borderRadius: 24, padding: rows.length ? "18px 18px 0" : 18, display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-            <span style={{ fontFamily: "var(--duo-display)", fontSize: 22, fontWeight: 700 }}>Step league</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--duo-hero-muted)" }}>{tab === "week" ? "This week · resets Monday" : "Today so far"}</span>
-          </span>
-          <div role="group" aria-label="League period" style={{ display: "flex", gap: 4, padding: 4, borderRadius: 14, background: "rgba(255,255,255,.16)", width: 200 }}>
-            {(["week", "today"] as const).map((t) => (
-              <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)}
-                style={{ cursor: "pointer", flex: "1 1 0", height: 36, border: "none", borderRadius: 10, background: tab === t ? "#fff" : "transparent", color: tab === t ? "var(--duo-hero)" : "#fff", fontFamily: "var(--duo-display)", fontSize: 15, fontWeight: 600 }}>{t === "week" ? "Week" : "Today"}</button>
-            ))}
-          </div>
-        </div>
-        {rows.length ? <Podium rows={rows} /> : <span style={{ fontSize: 14, fontWeight: 700, color: "var(--duo-hero-muted)" }}>Nobody has logged steps {tab === "week" ? "this week" : "today"} yet. Log yours to take the top spot.</span>}
-      </section>
-      {nudge && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--duo-gold-soft)", color: "var(--duo-gold-text)", borderRadius: 14, padding: "10px 14px", fontSize: 14, fontWeight: 800 }}>
-          <Flag size={18} aria-hidden="true" />Pass {nudge.name} with {n(nudge.steps)} more steps
-        </div>
-      )}
-      {rows.length > 3 && (
-        <Card style={{ padding: 10 }}>
-          <ol start={4} style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-            {rows.slice(3).map((r, i) => (
-              <li key={r.email} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 14, background: r.me ? "var(--duo-sky)" : "transparent" }}>
-                <span style={{ width: 22, fontFamily: "var(--duo-display)", fontWeight: 700, color: "var(--duo-muted)" }}>{i + 4}</span>
-                <Avatar name={r.name} size={34} />
-                <span style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontFamily: "var(--duo-display)", fontSize: 15, fontWeight: 600 }}>{r.name}{r.me ? " (you)" : ""}</span>
-                  {r.streak > 1 && <span className="duo-sub" style={{ fontSize: 12 }}>{r.streak}-day streak</span>}
-                </span>
-                <span style={{ fontFamily: "var(--duo-display)", fontSize: 16, fontWeight: 700 }}>{n(r.steps)}</span>
-              </li>
-            ))}
-          </ol>
-        </Card>
-      )}
-    </>
-  );
-}
-
-function LogToday({ data, onTenK }: { data: Steps; onTenK: () => void }) {
-  const today = data.league?.me.todaySteps ?? data.me?.today?.steps ?? 0;
-  const [draft, setDraft] = useState(today ? String(today) : "");
-  const log = useSend<{ steps: number }, { hit: boolean; steps: number }>(["steps"], "/api/steps", "POST");
-  const left = Math.max(0, GOAL - today);
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const steps = Number(draft.replace(/[,\s]/g, ""));
-    if (!Number.isInteger(steps) || steps < 0) return toast.error("Type your steps as a whole number");
-    const wasHit = today >= GOAL;
-    log.mutate({ steps }, { onSuccess: (r) => { if (r.hit && !wasHit) onTenK(); else toast.success("Steps logged"); }, onError: (err) => toast.error(err.message) });
-  };
-  return (
-    <>
-      <Card>
-        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <span style={{ fontFamily: "var(--duo-display)", fontSize: 18, fontWeight: 600 }}>Today</span>
-          <div style={{ display: "flex", justifyContent: "center" }}><Ring steps={today} /></div>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span className="duo-label">Today’s steps</span>
-            <input className="duo-input" inputMode="numeric" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="7400" />
-          </label>
-          <Button type="submit" disabled={log.isPending || !draft.trim()} style={{ width: "100%", minHeight: 50 }}>Log steps</Button>
-          <span className="duo-sub" style={{ fontSize: 12 }}>Type the number from your phone or watch. You can update it any time today.</span>
-        </form>
-      </Card>
-      <Flat style={{ display: "flex", alignItems: "center", gap: 10, padding: 12 }}>
-        <div style={{ flexShrink: 0 }}><Lappy pose="run" width={84} decorative /></div>
-        <span style={{ display: "flex", flexDirection: "column" }}>
-          <span style={{ fontFamily: "var(--duo-display)", fontSize: 17, fontWeight: 600 }}>{left ? `${n(left)} to go` : "10K done today!"}</span>
-          <span className="duo-sub" style={{ fontSize: 12 }}>{left ? "Hit 10,000 and Lappy does a lap." : data.league?.me.streak ? `${data.league.me.streak}-day streak. Keep it going tomorrow.` : "Lappy is proud of you."}</span>
-        </span>
-      </Flat>
-    </>
-  );
-}
-
+// 10K steps from the Material 3 prototype: your own count and week for everyone; the league
+// (with "steps to pass" and once-a-day nudges) only among people who chose to join.
 export function StepsPage() {
   const steps = useSteps();
-  const router = useRouter();
-  const [party, setParty] = useState(false);
-  const head = <PageHeader title="10K steps" subtitle="Log today, climb the league" actions={<BellLink />} back={{ href: "/", label: "Back to home" }} />;
-  if (!steps.data) return <Split head={head}><QueryState error={steps.error} onRetry={() => steps.refetch()} what="the step league" /></Split>;
+  const add = useStepsWrite<{ add: number }>("/api/steps");
+  const league = useStepsWrite<{ on: boolean }>("/api/steps/league");
+  const nudge = useStepsWrite<{ email: string }>("/api/steps/nudge");
+  const [value, setValue] = useState("");
+  const [period, setPeriod] = useState<"week" | "today">("week");
+  const data = steps.data;
+  if (!data?.me) return <div className="m3 m3-page m3-stack"><PageHero page="steps" title="10K steps" /><QueryState error={steps.error} onRetry={() => steps.refetch()} what="your steps" /></div>;
+
+  const today = data.me.today?.steps ?? 0;
+  const days = sevenDays(data.me.recent.map((r) => ({ date: r.date, steps: r.steps ?? (r.hit ? GOAL : 0) })), data.today);
+  const top = Math.max(GOAL, ...days.map((d) => d.steps));
+  const table = data.league ? (period === "week" ? data.league.week : data.league.today) : [];
+  const gap = data.league?.nudge[period];
+  const leaderSteps = Math.max(1, ...table.map((r) => r.steps));
+  const meFirst = table[0]?.me;
+
+  const submit = () => {
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 1) return toast.error("Enter the steps as a whole number");
+    add.mutate({ add: n }, { onSuccess: () => setValue(""), onError: (e) => toast.error(e.message) });
+  };
+
   return (
-    <>
-      <Split head={head} railFirst="phone" rail={<LogToday key={steps.data.league?.me.todaySteps ?? 0} data={steps.data} onTenK={() => setParty(true)} />}>
-        {steps.data.league && <League league={steps.data.league} />}
-      </Split>
-      {party && <Celebrate pose="run" title="10K UNLOCKED!" sub="Ten thousand steps today. Lappy did a lap in your honour." onDone={() => setParty(false)}
-        onBrag={() => router.push(`/feed?new=quote&text=${encodeURIComponent("Just hit 10,000 steps today! 🏃")}`)} />}
-    </>
+    <div className="m3 m3-page m3-stack">
+      <PageHero page="steps" title="10K steps" subtitle="Walk a little more, at your own pace" back="/" />
+
+      <section aria-labelledby="steps-today" className="m3-card m3-stack" style={{ gap: 12 }}>
+        <h2 id="steps-today" className="m3-title" style={{ fontSize: 28, lineHeight: "34px", fontVariantNumeric: "tabular-nums" }}>{fmt(today)} <span className="m3-small" style={{ fontSize: 16 }}>/ 10,000</span></h2>
+        <span aria-hidden="true" style={{ height: 8, borderRadius: 4, background: "#EEF0F3" }}><span style={{ display: "block", height: 8, borderRadius: 4, width: `${Math.min(100, (100 * today) / GOAL)}%`, background: "var(--m3-primary)" }} /></span>
+        <form style={{ display: "flex", gap: 8, alignItems: "flex-end" }} onSubmit={(e) => { e.preventDefault(); submit(); }}>
+          <label style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+            <span className="m3-small">Add steps from your phone&apos;s step counter</span>
+            <input inputMode="numeric" placeholder="e.g. 2500" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d]/g, ""))}
+              style={{ height: 44, borderRadius: 12, border: "1px solid var(--m3-outline)", padding: "0 12px", fontFamily: "inherit", fontSize: 15, background: "var(--m3-surface)" }} />
+          </label>
+          <Button type="submit" disabled={!value || add.isPending} style={{ height: 44 }}>Add</Button>
+        </form>
+      </section>
+
+      {today >= GOAL && (
+        <section className="m3-card" style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--m3-success-container)" }}>
+          <Lappy size={52} />
+          <span style={{ display: "flex", flexDirection: "column" }}><b>10,000 today</b><span className="m3-small" style={{ color: "inherit" }}>That&apos;s your goal for the day. Anything more is a bonus.</span></span>
+        </section>
+      )}
+
+      <section aria-labelledby="steps-week" className="m3-card m3-stack" style={{ gap: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><h2 id="steps-week" className="m3-title">Last 7 days</h2><span className="m3-small">Goal line: 10,000</span></div>
+        <div role="img" aria-label={days.map((d) => `${weekday(d.date)} ${fmt(d.steps)}`).join(", ")} style={{ position: "relative", height: 110, display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, alignItems: "end" }}>
+          <span aria-hidden="true" style={{ position: "absolute", left: 0, right: 0, bottom: `${(100 * GOAL) / top}%`, borderTop: "1px dashed #9AA0A6" }} />
+          {days.map((d, i) => <span key={d.date} style={{ height: `${Math.max(3, (100 * d.steps) / top)}%`, borderRadius: 6, background: d.steps >= GOAL ? "var(--m3-primary)" : i === 6 ? "#4F9BCB" : "#B8D8EE" }} />)}
+        </div>
+        <div aria-hidden="true" style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, textAlign: "center", fontSize: 12 }}>
+          {days.map((d, i) => <span key={d.date} style={{ fontWeight: i === 6 ? 700 : 500 }}>{i === 6 ? "Today" : weekday(d.date)}</span>)}
+        </div>
+      </section>
+
+      {data.inLeague ? (
+        <section aria-labelledby="steps-league" className="m3-card m3-stack" style={{ gap: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <h2 id="steps-league" className="m3-title">Step league</h2>
+            <div role="group" aria-label="Period" style={{ display: "flex", gap: 6 }}>
+              {(["week", "today"] as const).map((p) => <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)} className={`m3-btn ${period === p ? "m3-btn-tonal" : "m3-btn-text"}`} style={{ height: 32, padding: "0 12px", fontSize: 13 }}>{p === "week" ? "Last 7 days" : "Today"}</button>)}
+            </div>
+          </div>
+          <span className="m3-small">{gap ? `${fmt(gap.steps)} steps to pass ${gap.name} ${period === "week" ? "this week" : "today"}` : meFirst ? "You're leading. Enjoy the view." : table.length ? "" : "Nobody in the league has logged steps yet."}</span>
+          {table.map((r, i) => {
+            const nudged = data.nudged.includes(r.email);
+            return (
+              <div key={r.email} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ width: 20, textAlign: "right", fontWeight: 600 }}>{i + 1}</span>
+                <Avatar name={r.name} size={32} />
+                <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: r.me ? 700 : 500 }}>{r.me ? `${r.name} (you)` : r.name}</span><span className="m3-small">{fmt(r.steps)}</span></span>
+                  <span aria-hidden="true" style={{ height: 6, borderRadius: 3, background: "#EEF0F3" }}><span style={{ display: "block", height: 6, borderRadius: 3, width: `${(100 * r.steps) / leaderSteps}%`, background: r.me ? "var(--m3-primary)" : "#9CCAE8" }} /></span>
+                </span>
+                {!r.me && (
+                  <button type="button" aria-pressed={nudged} aria-label={nudged ? `Nudged ${r.name}` : `Nudge ${r.name}`} disabled={nudged || nudge.isPending}
+                    onClick={() => nudge.mutate({ email: r.email }, { onSuccess: () => toast.success(`Nudged ${r.name}`), onError: (e) => toast.error(e.message) })}
+                    className={`m3-btn ${nudged ? "m3-btn-tonal" : "m3-btn-outlined"}`} style={{ height: 32, padding: "0 12px", fontSize: 13, flex: "none" }}>{nudged ? "Nudged" : "Nudge"}</button>
+                )}
+              </div>
+            );
+          })}
+          <p className="m3-small" style={{ margin: 0 }}>A nudge sends one friendly &ldquo;time for a walk?&rdquo; and only to people in the league, at most once a day each. You joined the league; leave it any time here.</p>
+          <Button variant="text" style={{ alignSelf: "flex-start" }} disabled={league.isPending} onClick={() => league.mutate({ on: false }, { onError: (e) => toast.error(e.message) })}>Leave the league</Button>
+        </section>
+      ) : (
+        <section aria-labelledby="steps-join" className="m3-card m3-stack" style={{ gap: 10 }}>
+          <h2 id="steps-join" className="m3-title">Step league</h2>
+          <p className="m3-body" style={{ margin: 0 }}>See how your week compares with others who joined, and send a friendly nudge. Only people who join are listed, and you can leave any time.</p>
+          <Button variant="tonal" style={{ alignSelf: "flex-start" }} disabled={league.isPending} onClick={() => league.mutate({ on: true }, { onError: (e) => toast.error(e.message) })}>Join the league</Button>
+        </section>
+      )}
+    </div>
   );
 }

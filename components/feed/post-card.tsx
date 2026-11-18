@@ -2,6 +2,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/m3";
+import { Lappy } from "@/components/m3/lappy";
 import type { FeedPost } from "@/lib/feed";
 import type { Celebration } from "@/lib/member-features";
 import { useReact, useRsvp, useVote } from "@/lib/queries";
@@ -31,15 +32,6 @@ export const when = (iso: string) => {
   return ist(iso, { weekday: "short", day: "numeric", month: "short" });
 };
 
-function Lappy() {
-  return (
-    <svg role="img" aria-label="Lappy" width="40" height="40" viewBox="0 0 64 64">
-      <rect x="10" y="6" width="44" height="34" rx="7" fill="#A5A7C3" /><rect x="14" y="10" width="36" height="26" rx="4" fill="#4B4E6C" />
-      <circle cx="26" cy="22" r="5" fill="#FFFFFF" /><circle cx="38" cy="22" r="5" fill="#FFFFFF" /><circle cx="27" cy="23" r="2.4" fill="#4B4E6C" /><circle cx="39" cy="23" r="2.4" fill="#4B4E6C" />
-      <path d="M28 30q4 3 8 0" stroke="#FFFFFF" strokeWidth="2" fill="none" strokeLinecap="round" /><path d="M6 40h52l-4 9H10z" fill="#B6B8CF" />
-    </svg>
-  );
-}
 
 const actionStyle = (on: boolean): CSSProperties => ({ alignSelf: "flex-start", height: 44, padding: "0 20px", borderRadius: 22, border: 0, fontSize: 15, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", background: on ? "var(--m3-secondary-container)" : "var(--m3-primary)", color: on ? "var(--m3-on-secondary-container)" : "var(--m3-on-primary)" });
 

@@ -104,6 +104,8 @@
 /* Phones: the last row must scroll clear of the bottom bar and the Speak up button above it. */
 @media (max-width: 767px) { .m3-app:has(.m3-fab) .m3-main { padding-bottom: calc(176px + env(safe-area-inset-bottom)); } }
 @media (min-width: 768px) { .m3-page { max-width: 760px; } }
+/* Detail screens' back arrow: phones only; wider screens have the sidebar. */
+@media (min-width: 768px) { .m3 .m3-back, .m3 .m3-hero-btn.m3-back { display: none; } }
 .m3-side { display: none; }
 .m3-bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; padding: 12px 0 calc(16px + env(safe-area-inset-bottom)); background: var(--m3-surface-container); }
 .m3-tab { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--m3-on-surface-variant); text-decoration: none; }

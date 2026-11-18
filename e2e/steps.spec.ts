@@ -1,73 +1,51 @@
-import { adminLogin, expect, test, uniqueText } from "./fixtures";
-import { MOCK_URL } from "./mock-url";
 import type { Browser } from "@playwright/test";
+import { expect, test, uniqueEmail, signInEmployee } from "./fixtures";
 
-// The mock Google provider pins who signs in, then the round-trip completes in the browser.
-const MOCK = MOCK_URL;
-async function signInAs(browser: Browser, email: string, name: string) {
-  const ctx = await browser.newContext();
-  const page = await ctx.newPage();
-  await page.request.get(`${MOCK}/as?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`);
-  await page.goto("/api/auth/google?next=/settings");
-  await expect(page.getByText("Verified with Google")).toBeVisible();
-  await page.request.get(`${MOCK}/as?reset=1`);
-  return { ctx, page };
+// The Material 3 10K steps screen (prototype: docs/design/m3/Prototype.dc.html, "Steps"). The
+// league is opt-in: only people who join are listed, nudged, or can nudge.
+async function walker(browser: Browser, prefix: string) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const email = uniqueEmail(prefix);
+  await signInEmployee(page, email, "/");
+  return { page, email, name: prefix.replace(/^./, (c) => c.toUpperCase()), close: () => context.close() };
 }
 
-test.describe("10K Steps", () => {
-  test("a signed-in walker logs a count and appears on the board", async ({ browser }) => {
-    const name = uniqueText("Wanda");
-    const { ctx, page } = await signInAs(browser, `walker.${Date.now().toString(36)}@innovinlabs.com`, name);
-    await page.goto("/steps");
-    await page.getByLabel("Today's total steps").fill("10000");
-    await page.getByRole("button", { name: "Save unsaved steps" }).click();
-    await expect(page.getByText("Today's steps saved")).toBeVisible();
-    await expect(page.locator(".ranking-list .is-me")).toContainText(name);
-    await page.getByRole("button", { name: "10k+ days", exact: true }).click();
-    await expect(page.locator(".ranking-list .is-me")).toContainText("1");
-    await ctx.close();
-  });
-
-  test("an exact count decides the day and stays editable", async ({ browser }) => {
-    const { ctx, page } = await signInAs(browser, `counter.${Date.now().toString(36)}@innovinlabs.com`, uniqueText("Carl"));
-    await page.goto("/steps");
-    for (const [count, hit] of [[9500, false], [12400, true]] as const) {
-      await page.getByLabel("Today's total steps").fill(String(count));
-      await page.getByRole("button", { name: "Save unsaved steps" }).click();
-      await expect(page.getByText("Today's steps saved")).toBeVisible();
-      const data = await (await page.request.get("/api/steps")).json();
-      expect(data.me.today).toMatchObject({ steps: count, hit });
-      await page.reload();
-      await expect(page.getByLabel("Today's total steps")).toHaveValue(String(count));
+test.describe("10K steps", () => {
+  test("steps added through the day add up", async ({ page }) => {
+    await signInEmployee(page, uniqueEmail("steps-add"), "/steps");
+    const today = page.getByRole("region", { name: /\/ 10,000/ });
+    for (const total of ["2,500", "5,000"]) {
+      await page.getByRole("textbox", { name: "Add steps from your phone's step counter" }).fill("2500");
+      await page.getByRole("button", { name: "Add", exact: true }).click();
+      await expect(today).toContainText(total);
     }
-    await ctx.close();
+    await expect(today).toContainText("5,000");
+    await expect(page.getByRole("region", { name: "Last 7 days" })).toBeVisible();
   });
 
-  test("unsigned visitors need Google to join and cannot log via the API", async ({ page }) => {
-    await page.goto("/steps");
-    await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Save unsaved steps" })).toHaveCount(0);
-    expect((await page.request.get("/api/steps")).status()).toBe(401);
-    expect((await page.request.post("/api/steps", { data: { hit: true } })).status()).toBe(401);
+  test("join the league, nudge someone once, and leave", async ({ page, browser }) => {
+    const prefix = `sl${Date.now().toString(36)}`;
+    const other = await walker(browser, prefix);
+    await other.page.request.post("/api/steps", { data: { add: 4000 } });
+    await other.page.request.post("/api/steps/league", { data: { on: true } });
+    await other.close();
+
+    await signInEmployee(page, uniqueEmail("steps-me"), "/steps");
+    await page.request.post("/api/steps", { data: { add: 3000 } });
+    await page.reload();
+    await page.getByRole("button", { name: "Join the league" }).click();
+    const league = page.getByRole("region", { name: "Step league" });
+    await expect(league).toContainText("(you)");
+    await expect(league).toContainText(/steps to pass|You're leading/);
+    await league.getByRole("button", { name: `Nudge ${other.name}` }).click();
+    await expect(league.getByRole("button", { name: `Nudged ${other.name}` })).toBeDisabled();
+    await league.getByRole("button", { name: "Leave the league" }).click();
+    await expect(page.getByRole("button", { name: "Join the league" })).toBeVisible();
+    await page.screenshot({ path: `output/playwright/m3-steps-${test.info().project.name}.png`, fullPage: true });
   });
 
-  test("an admin banks sheet days on a person and the board adds them", async ({ page, browser }) => {
-    const name = uniqueText("Bill");
-    const { ctx, page: walker } = await signInAs(browser, `banker.${Date.now().toString(36)}@innovinlabs.com`, name);
-    await walker.goto("/steps");
-    await expect(walker.locator(".ranking-list .is-me")).toHaveCount(0);
-
-    await adminLogin(page, "people");
-    await page.getByRole("searchbox", { name: "Search people" }).fill(name);
-    await page.getByRole("button", { name: new RegExp(`Edit balances for ${name}`) }).click();
-    await page.getByLabel(`Fitness history: prior 10k+ days for ${name}`).fill("45");
-    await page.getByLabel(`Fitness history: prior 10k+ days for ${name}`).press("Tab");
-    await expect(page.getByText("Fitness history saved separately")).toBeVisible();
-
-    await walker.reload();
-    await walker.getByRole("button", { name: "10k+ days", exact: true }).click();
-    await expect(walker.locator(".ranking-list .is-me")).toContainText("45");
-    await expect(walker.locator(".ranking-list .is-me")).toContainText("admin sheet total");
-    await ctx.close();
+  test("signed-out visitors can't log steps", async ({ request }) => {
+    expect((await request.post("/api/steps", { data: { add: 100 } })).status()).toBe(401);
   });
 });

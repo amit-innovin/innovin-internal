@@ -25,7 +25,8 @@ test.describe("Navigation & studio shell", () => {
     await page.goto("/");
     if (isMobile) {
       await main.getByRole("link", { name: "Account", exact: true }).click();
-      await expect(page.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
+      // Account's header is your name (prototype); the page is known by its Sign out row.
+      await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
     } else {
       await main.getByRole("link", { name: "10K steps", exact: true }).click();
       await expect(page).toHaveURL(/\/steps$/);
@@ -33,7 +34,8 @@ test.describe("Navigation & studio shell", () => {
         await page.goto("/");
         await page.getByRole("button", { name: "Account menu" }).click();
         await page.getByRole("menuitem", { name: item, exact: true }).click();
-        await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+        if (heading === "Account") await expect(page.getByRole("button", { name: "Sign out" }).filter({ visible: true }).last()).toBeVisible();
+        else await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
       }
     }
   });
@@ -123,7 +125,7 @@ test.describe("Navigation & studio shell", () => {
     await signInEmployee(page, undefined, "/");
     const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
     await expect(main.getByRole("link").first()).toBeAttached();
-    if (isMobile) await expect(main.getByRole("link")).toHaveText(["Home", /^Feed/, "Days", "Snacks", "Account"]);
+    if (isMobile) await expect(main.getByRole("link")).toHaveText(["Home", /^\d*Feed$/, "Days", "Snacks", "Account"]);
     else {
       await expect(main.getByRole("link", { name: /^(Home|Feed(, \d+ new)?|Days|Tea & snacks|10K steps|Speak up)$/ })).toHaveCount(6);
       await page.getByRole("button", { name: "Account menu" }).click();

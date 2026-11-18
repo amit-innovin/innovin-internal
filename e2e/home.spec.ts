@@ -1,4 +1,4 @@
-import { expect, test, uniqueEmail, signInEmployee } from "./fixtures";
+import { expect, test, uniqueEmail, signInEmployee, signInOffice } from "./fixtures";
 
 // The Material 3 Home (prototype: docs/design/m3/Prototype.dc.html, "Home").
 // Check-in is verified by location only; the office network is not proof.
@@ -11,7 +11,11 @@ test.describe("Home", () => {
     await page.reload();
   }
 
-  test("near the office: checks in by location and collapses to a chip", async ({ page, context }) => {
+  test("near the office: checks in by location and collapses to a chip", async ({ page, context, browser }) => {
+    // Someone else is in, so "In office today" has a person to show (it never lists you).
+    const other = await browser.newContext();
+    await signInOffice(await other.newPage(), uniqueEmail("home-colleague"));
+    await other.close();
     await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({ latitude: 12.9352, longitude: 77.6241 });
     await signInEmployee(page, uniqueEmail("home-in"), "/");

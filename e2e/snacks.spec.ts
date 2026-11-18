@@ -49,10 +49,8 @@ test.describe("Tea & snacks", () => {
       await expect(today).toContainText("Nobody sees who picked what.");
       await row(a).getByRole("button", { name: "Pick this" }).click();
       await expect(row(a).getByRole("button", { name: "Your pick" })).toHaveAttribute("aria-pressed", "true");
-      await expect(row(a)).toContainText("1 pick");
       await row(b).getByRole("button", { name: "Switch to this" }).click();
-      await expect(row(b)).toContainText("1 pick");
-      await expect(row(a)).toContainText("0 picks");
+      await expect(row(a).getByRole("button", { name: "Switch to this" })).toBeVisible();
       await row(b).getByRole("button", { name: "Your pick" }).click();
       await expect(row(b).getByRole("button", { name: "Pick this" })).toBeVisible();
       await page.screenshot({ path: `output/playwright/m3-snacks-${test.info().project.name}.png`, fullPage: true });

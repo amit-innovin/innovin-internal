@@ -7,7 +7,7 @@ import { ArrowLeft, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/m3";
 import { readError, send } from "@/lib/fetcher";
-import { useDays, useWifiReports } from "@/lib/queries";
+import { useDays } from "@/lib/queries";
 import { measureDownload } from "@/lib/speedtest";
 import { wifiVerdict } from "@/lib/wifi-rules";
 
@@ -59,7 +59,6 @@ export function WifiPage() {
   const params = useSearchParams();
   const router = useRouter();
   const days = useDays();
-  const reports = useWifiReports();
   const client = useQueryClient();
   const inOffice = days.data?.me?.mode === "office";
   const [state, setState] = useState<"idle" | "running" | "done" | "sent">("idle");
@@ -93,8 +92,6 @@ export function WifiPage() {
 
   const verdict = result ? wifiVerdict(result) : null;
   const canReport = inOffice && (verdict === "slow" || reportAnyway);
-  const today = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
-  const othersToday = Math.max(0, (reports.data ?? []).filter((r) => r.quality === "poor" && new Date(new Date(r.createdAt).getTime() + 5.5 * 3600_000).toISOString().slice(0, 10) === today).length - 1);
 
   const sendReport = async () => {
     if (!result) return;
@@ -166,7 +163,6 @@ export function WifiPage() {
       {state === "sent" && (
         <section className="m3-card m3-stack" style={{ gap: 8 }} role="status">
           <h2 className="m3-title">Sent to admins with your result</h2>
-          <span className="m3-small">{othersToday ? `${othersToday} other ${othersToday === 1 ? "person" : "people"} reported slow Wi-Fi today.` : "Nobody else has reported slow Wi-Fi today."}</span>
         </section>
       )}
       {(state === "done" || state === "sent") && <Button variant="outlined" style={{ alignSelf: "flex-start" }} onClick={run}>Run again</Button>}

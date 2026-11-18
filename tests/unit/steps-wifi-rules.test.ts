@@ -11,11 +11,12 @@ describe("sevenDays", () => {
 });
 
 describe("wifiVerdict", () => {
-  const ok = { down: 50, up: 20, delayMs: 40 };
-  it("is good when every number is fine", () => expect(wifiVerdict(ok)).toBe("good"));
-  it("is slow when any one of them isn't", () => {
+  // Delay and upload are measured to our server (far from the office), so the verdict rests on
+  // download and only an extreme delay; upload is shown but not judged.
+  const ok = { down: 50, up: 1, delayMs: 250 };
+  it("is good with a fair download even when the far server adds delay", () => expect(wifiVerdict(ok)).toBe("good"));
+  it("is slow on a poor download or an extreme delay", () => {
     expect(wifiVerdict({ ...ok, down: 9.9 })).toBe("slow");
-    expect(wifiVerdict({ ...ok, up: 4.9 })).toBe("slow");
-    expect(wifiVerdict({ ...ok, delayMs: 151 })).toBe("slow");
+    expect(wifiVerdict({ ...ok, delayMs: 601 })).toBe("slow");
   });
 });

@@ -93,8 +93,13 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
     const round = currentRound(new Date(opts.now), times);
     if (round?.open && (await inOfficeToday(email, today))) {
       const answered = (await store.listTeaAnswers(today)).some((a) => a.round === round.id && a.email === email);
-      if (!answered) items.push({ id: `tea-${today}-${round.id}`, kind: "tea", title: `Tea round closes at ${clock(round.closesAt)}`, body: `Answer by ${clock(round.closesAt)} for the ${clock(round.at)} round`, // Dated from when this round became the current one, so it's unread once, not on every check.
-        at: new Date(`${today}T${round.id === "am" ? "00:00" : times.amAt}:00+05:30`).toISOString(), href: "/snacks" });
+      if (!answered) {
+        // Dated from when it became relevant to you: the later of the round starting and your
+        // check-in. That makes it unread once (not on every check), even if you looked earlier.
+        const roundStart = new Date(`${today}T${round.id === "am" ? "00:00" : times.amAt}:00+05:30`).toISOString();
+        const checkIn = (await store.getAttendance(email, today))?.checkInAt ?? roundStart;
+        items.push({ id: `tea-${today}-${round.id}`, kind: "tea", title: `Tea round closes at ${clock(round.closesAt)}`, body: `Answer by ${clock(round.closesAt)} for the ${clock(round.at)} round`, at: checkIn > roundStart ? checkIn : roundStart, href: "/snacks" });
+      }
     }
   }
 

@@ -107,6 +107,15 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.listNudgesFrom("2026-11-18", "c@innovinlabs.com")).toEqual([]);
     });
 
+    it("adds steps to today's total in one step, capped, and decides the 10K", async () => {
+      expect(await store.addSteps("a@innovinlabs.com", "2026-11-18", 6000)).toBe(6000);
+      const [x, y] = await Promise.all([store.addSteps("a@innovinlabs.com", "2026-11-18", 3000), store.addSteps("a@innovinlabs.com", "2026-11-18", 4000)]);
+      expect(Math.max(x, y)).toBe(13000);
+      const row = (await store.listSteps()).find((r) => r.email === "a@innovinlabs.com" && r.date === "2026-11-18");
+      expect(row).toMatchObject({ steps: 13000, hit: true });
+      expect(await store.addSteps("a@innovinlabs.com", "2026-11-18", 199_999)).toBe(200_000);
+    });
+
     it("keeps where a Wi-Fi report came from", async () => {
       await store.addWifi({ id: uid(), quality: "poor", note: "", downMbps: 3, upMbps: 1, createdAt: iso(), area: "Pantry" });
       expect((await store.listWifi(5))[0]).toMatchObject({ quality: "poor", area: "Pantry" });

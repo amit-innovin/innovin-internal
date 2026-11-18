@@ -22,7 +22,8 @@ export async function workspaceData(user: Actor) {
   return {
     today, user, notices, canModerate: user.role === "admin", profile: byEmail.get(user.email) ?? null,
     mode: people.find((p) => p.email === user.email)?.mode ?? null,
-    people, steps, rankings: arenaRankings(people.map((p) => ({ ...p, stepsOffset: employees.find((e) => e.email === p.email)?.stepsOffset ?? 0 })), logs, today),
+    // Step rankings only ever include people in the opt-in league.
+    people, steps, rankings: arenaRankings(people.filter((p) => employees.find((e) => e.email === p.email)?.stepsLeague).map((p) => ({ ...p, stepsOffset: employees.find((e) => e.email === p.email)?.stepsOffset ?? 0 })), logs.filter((l) => employees.find((e) => e.email === l.email)?.stepsLeague), today),
     events: events.map(({ createdBy: _, ...e }) => ({ ...e, going: counts[e.id] ?? 0 })),
     announcements, wifi: wifi[0] ? { quality: wifi[0].quality, downMbps: wifi[0].downMbps, createdAt: wifi[0].createdAt } : null,
     prize: process.env.STEPS_PRIZE_DESCRIPTION?.trim() || null,

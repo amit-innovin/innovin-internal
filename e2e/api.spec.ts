@@ -982,6 +982,44 @@ test.describe("Steps, Wi-Fi and notifications (Stage 5)", () => {
     expect((await ctx.post("/api/wifi/upload", { data: "x".repeat(10_000), headers: { "Content-Type": "application/octet-stream" } })).status()).toBe(204);
   });
 
+  test("steps of people outside the league reach nobody, through any endpoint", async () => {
+    const member = await signedIn(email()), outsider = await signedIn(email()), viewer = await signedIn(email());
+    const eo = await whoAmI(outsider);
+    await outsider.post("/api/steps", { data: { add: 7000 } });
+    await member.post("/api/steps", { data: { add: 5000 } });
+    await member.post("/api/steps/league", { data: { on: true } });
+    const ws = await (await viewer.get("/api/workspace")).json();
+    expect(JSON.stringify(ws.rankings ?? {})).not.toContain(eo);
+    // Someone who hasn't joined sees no league at all, not even its members.
+    const notJoined = await (await viewer.get("/api/steps")).json();
+    expect(notJoined.inLeague).toBe(false);
+    expect(notJoined.league).toBeNull();
+    expect(notJoined.board).toEqual([]);
+  });
+
+  test("the tea reminder raises the badge even if you looked before checking in", async () => {
+    const adm = await admin();
+    const times = (t: object) => adm.patch("/api/admin/snack-times", { data: { amAt: "11:00", amClose: "10:45", pmAt: "16:00", pmClose: "15:30", orderAt: "12:00", ...t } });
+    try {
+      expect((await times({ amAt: "23:58", amClose: "23:57", pmAt: "23:59", pmClose: "23:58" })).status()).toBe(200);
+      const ctx = await signedIn(email());
+      expect((await ctx.post("/api/notifications")).status()).toBe(200);
+      expect((await ctx.post("/api/days", { data: { mode: "office", lat: 12.9352, lng: 77.6241, accuracyM: 20 } })).status()).toBe(200);
+      const feed = await (await ctx.get("/api/notifications")).json();
+      expect(feed.items.some((i: { kind: string }) => i.kind === "tea")).toBe(true);
+      expect(feed.unread).toBeGreaterThan(0);
+    } finally {
+      await times({});
+    }
+  });
+
+  test("Wi-Fi checks from one office address don't share one limit", async () => {
+    const shared = ip();
+    const a = await signedInFrom(email(), shared), b = await signedInFrom(email(), shared);
+    for (let i = 0; i < 155; i++) await a.post("/api/wifi/upload", { data: "x", headers: { "Content-Type": "application/octet-stream" } });
+    expect((await b.post("/api/wifi/upload", { data: "x", headers: { "Content-Type": "application/octet-stream" } })).status()).toBe(204);
+  });
+
   test("notifications tell you about kudos you got, not kudos between others", async () => {
     const me = await signedIn(email()), giver = await signedIn(email()), other = await signedIn(email());
     const mine = await whoAmI(me);

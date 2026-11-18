@@ -58,5 +58,6 @@ export async function stepsBoard(session: SessionLite | null) {
 
   const inLeague = !!session && league.some((e) => e.email === session.email);
   const nudged = session && inLeague ? await store.listNudgesFrom(today, session.email) : [];
-  return { goal: STEP_GOAL, today, signedIn: !!session, board, me, inLeague, nudged, league: session ? stepLeague(employees, rows, today, session.email) : null };
+  // Only people in the league see it (and its members' steps); everyone else gets their own numbers.
+  return { goal: STEP_GOAL, today, signedIn: !!session, board: inLeague ? board : [], me: me && !inLeague ? { ...me, rank: null } : me, inLeague, nudged, league: inLeague && session ? stepLeague(employees, rows, today, session.email) : null };
 }

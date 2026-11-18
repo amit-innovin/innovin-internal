@@ -862,6 +862,15 @@ class PgStore implements Store {
     );
     return steps(res.rows[0]);
   }
+  async addSteps(email: string, date: string, add: number) {
+    const res = await this.q(
+      `INSERT INTO steps (id, email, date, hit, steps, created_at) VALUES ($1,$2,$3,$4 >= 10000,LEAST($4, 200000),now())
+       ON CONFLICT (email, date) DO UPDATE SET steps = LEAST(COALESCE(steps.steps, 0) + $4, 200000), hit = LEAST(COALESCE(steps.steps, 0) + $4, 200000) >= 10000
+       RETURNING steps`,
+      [crypto.randomUUID(), email, date, add],
+    );
+    return Number(res.rows[0].steps);
+  }
   async listSteps() {
     const res = await this.q(`SELECT * FROM steps ORDER BY date DESC`);
     return res.rows.map(steps);

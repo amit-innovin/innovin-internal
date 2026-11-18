@@ -438,6 +438,14 @@ export const jsonStore: Store = {
       db.steps.unshift(row);
       return { result: row, changed: true };
     }),
+  addSteps: (email, date, add) =>
+    mutate((db) => {
+      const existing = db.steps.find((s) => s.email === email && s.date === date);
+      const total = Math.min(200_000, (existing?.steps ?? 0) + add);
+      if (existing) { existing.steps = total; existing.hit = total >= 10_000; }
+      else db.steps.unshift({ id: crypto.randomUUID(), email, date, hit: total >= 10_000, steps: total, createdAt: new Date().toISOString() });
+      return { result: total, changed: true };
+    }),
   listSteps: () =>
     query((db) => db.steps.slice().sort((a, b) => b.date.localeCompare(a.date))),
   listStepsByEmail: (email, limit) =>

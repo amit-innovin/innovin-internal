@@ -299,6 +299,9 @@ export interface Store {
   listAttendance(date: string): Promise<AttendanceRow[]>;
   // 10K challenge: one row per person per day — today is the only writable day.
   setSteps(row: StepsRow): Promise<StepsRow>;
+  // Adds to the day's total in one statement (two phones adding at once both count), capped at
+  // 200,000; returns the new total. 10,000 or more is a hit.
+  addSteps(email: string, date: string, add: number): Promise<number>;
   listSteps(): Promise<StepsRow[]>;
   listStepsByEmail(email: string, limit: number): Promise<StepsRow[]>;
   addGrievance(row: GrievanceRow): Promise<GrievanceRow>;

@@ -80,7 +80,7 @@ export function PeoplePage() {
                     <button type="button" className="m3a-li" aria-current={on ? "true" : undefined} onClick={() => setParam("person", on ? null : p.email)} style={{ minHeight: 64, background: on ? "#E8F1FA" : undefined }}>
                       <Avatar name={p.name} size={36} />
                       <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontWeight: 600 }}>{p.name}{p.role === "admin" && <span className="m3a-tag" style={{ background: "#D3E5F5", color: "#0C1D29" }}>Admin</span>}</span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontWeight: 600 }}>{p.name}{p.role === "admin" && <span className="m3a-tag" style={{ background: "#D3E5F5", color: "#0C1D29" }}>Admin</span>}{p.left && <span className="m3a-tag" style={{ background: "#E5E8EE", color: "#41474D" }}>Left</span>}</span>
                         <span className="m3-small">{usual(p)}</span>
                       </span>
                       {p.target !== null && <span style={{ flex: "none", minWidth: 36, textAlign: "right", fontWeight: 600 }}><span aria-hidden="true">{p.done}/{p.target}</span><span className="vh">{p.done} of {p.target} office days this month</span></span>}
@@ -180,6 +180,11 @@ function PersonPanel({ person, month, onClose }: { person: PersonRow; month: str
         <div className="m3a-srow">
           <div style={{ flex: 1, minWidth: 0 }}><span id="ad-l" style={{ display: "block", fontWeight: 600 }}>Admin</span>{isSelf && <span className="m3-small">You can&apos;t remove yourself. Ask another admin.</span>}</div>
           <Switch labelledBy="ad-l" on={person.role === "admin"} disabled={isSelf || setPerson.isPending} onToggle={() => act({ email: person.email, role: person.role === "admin" ? "member" : "admin" }, person.role === "admin" ? "Admin removed" : "Made an admin")} />
+        </div>
+        <div style={{ height: 1, background: "#DFE3E8", margin: "0 20px" }} />
+        <div className="m3a-srow">
+          <div style={{ flex: 1, minWidth: 0 }}><span id="lf-l" style={{ display: "block", fontWeight: 600 }}>Left the company</span>{person.left && <span className="m3-small">No calendar invites</span>}</div>
+          <Switch labelledBy="lf-l" on={person.left} disabled={isSelf || setPerson.isPending} onToggle={() => act({ email: person.email, left: !person.left }, person.left ? "Marked as back" : "Marked as left")} />
         </div>
       </section>
 

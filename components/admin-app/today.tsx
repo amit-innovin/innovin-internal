@@ -2,7 +2,7 @@
 // Admin › Today: "Needs you" first, then one compact card for the day in the office.
 import Link from "next/link";
 import { useState } from "react";
-import { ChevronRight, Cookie, Flag, Megaphone, ShieldCheck, Users, Wifi, type LucideIcon } from "lucide-react";
+import { CalendarX, ChevronRight, Cookie, Flag, Megaphone, ShieldCheck, Users, Wifi, type LucideIcon } from "lucide-react";
 import { useAdminOverview, useSnacks, useTea, type AdminData } from "@/lib/queries";
 import { Loading, PageHead, dayLabel, fmtTime, hm, plural, todayIST } from "./ui";
 
@@ -12,6 +12,7 @@ const KIND: Record<AdminData["needsYou"][number]["kind"], [LucideIcon, [string, 
   reported: [Flag, ["#FFDAD6", "#410002"]],
   announcement: [Megaphone, ["#FFDDB0", "#4A2800"]],
   wifi: [Wifi, ["#E5E8EE", "#41474D"]],
+  invite: [CalendarX, ["#FFDAD6", "#410002"]],
 };
 
 export function TodayPage() {

@@ -85,14 +85,20 @@ test.describe("Admin app", () => {
     await expect(page.getByRole("region", { name: "Published" })).toContainText(/Seen by 0 of \d+/);
 
     const someone = await member(browser, "admin-reader");
-    for (let i = 0; i < 20; i++) {
-      const next = (await (await someone.page.request.get("/api/announcements/important")).json()).announcement;
-      if (!next || next.title === title) break;
-      await someone.page.request.post("/api/announcements/ack", { data: { id: next.id } });
+    try {
+      for (let i = 0; i < 20; i++) {
+        const next = (await (await someone.page.request.get("/api/announcements/important")).json()).announcement;
+        if (!next || next.title === title) break;
+        await someone.page.request.post("/api/announcements/ack", { data: { id: next.id } });
+      }
+      await someone.page.goto("/days");
+      await expect(someone.page.getByRole("dialog", { name: "Important announcement" })).toContainText(title);
+    } finally {
+      // Every announcement shows to everyone as a dialog: leaving it up would cover later tests' pages.
+      const mine = (await (await page.request.get("/api/announcements")).json()).find((a: { title: string }) => a.title === title);
+      if (mine) await page.request.post("/api/announcements", { form: { _action: "delete", id: mine.id }, maxRedirects: 0 });
+      await someone.close();
     }
-    await someone.page.goto("/days");
-    await expect(someone.page.getByRole("dialog", { name: "Important announcement" })).toContainText(title);
-    await someone.close();
   });
 
   test("Office: mark today's snack order ordered, and add a closed day", async ({ page }) => {
@@ -101,6 +107,9 @@ test.describe("Admin app", () => {
     const order = page.getByRole("region", { name: "Today's order" });
     await order.getByRole("button", { name: "Mark ordered" }).click();
     await expect(order).toContainText(/Ordered at \d{1,2}:\d{2}/);
+    // A mis-tap would close picks for everyone until tomorrow: Undo reopens them.
+    await order.getByRole("button", { name: "Undo" }).click();
+    await expect(order).toContainText(/Goes in at/);
     await page.getByRole("tab", { name: "Closed days" }).click();
     const date = new Date(Date.now() + 5.5 * 3600_000 + 40 * 86_400_000).toISOString().slice(0, 10);
     await page.getByLabel("Date").fill(date);

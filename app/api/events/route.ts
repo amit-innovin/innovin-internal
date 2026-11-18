@@ -6,6 +6,7 @@ import { fmtShortDate } from "@/lib/format";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { sendPush } from "@/lib/push";
+import { calendarConfigured, removeInvite, sendInvite, updateInvite } from "@/lib/calendar";
 import { id, store } from "@/lib/store";
 import { accountRef, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 import type { EventCategory, EventRow } from "@/lib/types";
@@ -33,8 +34,10 @@ export async function GET(req: NextRequest) {
   const [counts, mine] = await Promise.all([store.rsvpCounts(rows.map((r) => r.id)), store.myRsvpEventIds(ref, user?.email)]);
   const myIds = new Set(mine);
   const admin=await isAdmin();
+  // Admins also see whether each event's Google invite went out.
+  const invites = admin ? new Map((await store.listEventInvites()).map((i) => [i.eventId, i.state])) : null;
   return NextResponse.json(
-    rows.map(({ createdBy, ...e }) => ({ ...e, canManage: !e.cancelledAt && Date.parse(e.startsAt)>Date.now() && (admin || !!user && createdBy===user.email), going: counts[e.id] ?? 0, mine: myIds.has(e.id) })),
+    rows.map(({ createdBy, ...e }) => ({ ...e, canManage: !e.cancelledAt && Date.parse(e.startsAt)>Date.now() && (admin || !!user && createdBy===user.email), going: counts[e.id] ?? 0, mine: myIds.has(e.id), ...(invites ? { invite: invites.get(e.id) ?? null } : {}) })),
   );
 }
 
@@ -54,6 +57,7 @@ export async function POST(req: Request) {
     if (body.action === "delete") {
       const eid = str(body.id).slice(0, 100);
       if (!eid) return badRequest("Which event?");
+      await removeInvite(eid, false).catch(() => {});
       await store.deleteEvent(eid);
       return NextResponse.json({ ok: true });
     }
@@ -64,13 +68,16 @@ export async function POST(req: Request) {
     if (Date.parse(startsAt) < Date.now() - 60000) return badRequest("Choose a future event time");
     const event = await store.addEvent({ id: id(), title, startsAt, category, body: str(body.body).trim().slice(0, 500), location: str(body.location).trim().slice(0, 80), createdBy: session.email, createdAt: new Date().toISOString() });
     await sendPush({title:"New team event",body:"Open the app for details.",href:eventHref(event.id),tag:`event-${event.id}`}).catch(()=>{});
-    return NextResponse.json({ ok: true, event: { id: event.id } }, { status: 201 });
+    // Google Calendar invites from this admin's calendar. Best-effort: the event is published either way.
+    const invite = body.invite === true && calendarConfigured() ? (await sendInvite(event, session.email).catch(() => null))?.state ?? "failed" : null;
+    return NextResponse.json({ ok: true, event: { id: event.id }, invite }, { status: 201 });
   }
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const form = await req.formData();
   const text = (key: string, max: number) => String(form.get(key) ?? "").trim().slice(0, max);
 
   if (form.get("_action") === "delete") {
+    await removeInvite(text("id", 100), false).catch(() => {});
     await store.deleteEvent(text("id", 100));
     return flash("event-deleted");
   }
@@ -147,6 +154,7 @@ async function manageEvent(req: NextRequest, body: Record<string,unknown>, cance
   const patch={title,category,startsAt,body:cancel?row.body:str(body.body).trim().slice(0,500),location:cancel?row.location:str(body.location).trim().slice(0,80),...(cancel?{cancelledAt:updatedAt}:{})};
   const changed=await store.updateEvent(row.id,expected,patch,updatedAt);
   if(!changed)return NextResponse.json({error:"This event changed in another tab. Reload before editing."},{status:409});
+  await (cancel ? removeInvite(row.id, true) : updateInvite(changed)).catch(() => {});
   const attendees=await store.listRsvps(row.id);
   await Promise.all([...new Set(attendees.flatMap(r=>r.email?[r.email]:[]))].map(email=>sendPush({title:cancel?"An event was cancelled":"An event was updated",body:"Open the app for the latest details.",href:eventHref(row.id),tag:`event-${row.id}`},email).catch(()=>{})));
   return NextResponse.json({ok:true,event:changed});

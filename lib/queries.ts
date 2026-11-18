@@ -307,7 +307,7 @@ function useAdminWrite<T>(url: string, method: "POST" | "PATCH" | "DELETE", keys
 }
 export const useSetGrievance = () => useAdminWrite<{ id: string; status?: Grievance["status"]; reply?: string | null }>("/api/grievances", "PATCH", [["admin", "grievances"]]);
 // One person: exempt from the 8 days, admin or member, or their birthday ("MM-DD" or null).
-export const useSetPerson = () => useAdminWrite<{ email: string; officeExempt?: boolean; role?: "admin" | "member"; birthday?: string | null; showBirthday?: boolean }>("/api/people", "PATCH", [["admin"]]);
+export const useSetPerson = () => useAdminWrite<{ email: string; left?: boolean; officeExempt?: boolean; role?: "admin" | "member"; birthday?: string | null; showBirthday?: boolean }>("/api/people", "PATCH", [["admin"]]);
 export const useFixDay = () => useAdminWrite<{ email: string; date: string; mode: "office" | "none" }>("/api/admin/days", "POST", [["admin"], queryKeys.days()]);
 
 export type ReportedPost = { id: string; kind: string; title: string; body: string; authorName: string | null; createdAt: string; reports: number };
@@ -320,8 +320,13 @@ export const useAnnouncements = () => useQuery({ queryKey: ["admin", "announceme
 export const usePublishAnnouncement = () => useAdminWrite<{ title: string; body: string; pinnedUntil?: string }>("/api/announcements", "POST", [["admin", "announcements"], ["feed"]]);
 export const useDeleteAnnouncement = () => useAdminWrite<{ action: "delete"; id: string }>("/api/announcements", "POST", [["admin", "announcements"], ["feed"]]);
 
-export type AdminEvent = FeedEvent & { updatedAt?: string; createdAt: string };
+export type AdminEvent = FeedEvent & { updatedAt?: string; createdAt: string; invite?: "sent" | "failed" | "orphaned" | null };
 export const useEvents = () => useQuery({ queryKey: ["events"], queryFn: () => fetchJSON<AdminEvent[]>("/api/events") });
-export const usePostEvent = () => useAdminWrite<{ title: string; category: string; startsAt: string; body: string; location: string }>("/api/events", "POST", [["events"], ["feed"]]);
+export const usePostEvent = () => useAdminWrite<{ title: string; category: string; startsAt: string; body: string; location: string; invite?: boolean }>("/api/events", "POST", [["events"], ["feed"]]);
+// The signed-in admin's Google Calendar connection, and what disconnecting would do to their invites.
+export type CalendarStatus = { configured: boolean; me: string; connected: { email: string; since: string } | null; upcoming?: number; successor?: string | null; successorName?: string | null };
+export const useCalendar = () => useQuery({ queryKey: ["admin", "calendar"], queryFn: () => fetchJSON<CalendarStatus>("/api/admin/calendar") });
+export const useDisconnectCalendar = () => useAdminWrite<Record<string, never>>("/api/admin/calendar", "POST", [["admin", "calendar"], ["events"]]);
+export const useResendInvite = () => useAdminWrite<{ id: string }>("/api/admin/calendar/invite", "POST", [["events"]]);
 export const useCancelEvent = () => useAdminWrite<{ id: string; expectedUpdatedAt: string }>("/api/events", "DELETE", [["events"], ["feed"]]);
 export const useDeleteEvent = () => useAdminWrite<{ action: "delete"; id: string }>("/api/events", "POST", [["events"], ["feed"]]);

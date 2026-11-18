@@ -4,16 +4,17 @@
 import { store } from "./store";
 import { todayIST } from "./time";
 
-export type NeedsYou = { id: string; kind: "speak" | "reported" | "announcement" | "wifi"; title: string; sub: string; href: string; urgent: boolean };
+export type NeedsYou = { id: string; kind: "speak" | "reported" | "announcement" | "wifi" | "invite"; title: string; sub: string; href: string; urgent: boolean };
 
 const istDay = (iso: string) => new Date(Date.parse(iso) + 5.5 * 3600_000).toISOString().slice(0, 10);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export async function needsYou(): Promise<NeedsYou[]> {
   const today = todayIST();
-  const [grievances, wifi, reports, employees, announcements] = await Promise.all([
-    store.listGrievances(), store.listWifi(100), store.countNoticeReports(), store.listEmployees(), store.listAnnouncements(10),
+  const [grievances, wifi, reports, everyone, announcements, invites] = await Promise.all([
+    store.listGrievances(), store.listWifi(100), store.countNoticeReports(), store.listEmployees(), store.listAnnouncements(10), store.listEventInvites(),
   ]);
+  const employees = everyone.filter((e) => !e.leftOn);
   const items: NeedsYou[] = [];
   const open = grievances.filter((g) => g.status === "open");
   if (open.length) items.push({ id: "speak", kind: "speak", urgent: open.some((g) => g.urgent), href: "/admin/speak-up", title: plural(open.length, "new Speak up message", "new Speak up messages"), sub: "" });
@@ -26,6 +27,13 @@ export async function needsYou(): Promise<NeedsYou[]> {
   for (const a of recent) {
     const n = seen[a.id] ?? 0;
     if (n < employees.length) items.push({ id: `ann-${a.id}`, kind: "announcement", urgent: false, href: "/admin/publish", title: `${a.title} · seen by ${n} of ${employees.length}`, sub: "" });
+  }
+  // Google invites that didn't go out, or can't be changed because their organizer has gone.
+  for (const invite of invites.filter((i) => i.state !== "sent")) {
+    const event = await store.getEvent(invite.eventId);
+    if (!event || event.cancelledAt || Date.parse(event.startsAt) <= Date.now()) continue;
+    const what = invite.state === "failed" ? "Google invite didn't go out" : "Google invite can't be changed";
+    items.push({ id: `invite-${event.id}`, kind: "invite", urgent: false, href: "/admin/publish?tab=events", title: `${what} · ${event.title}`, sub: "" });
   }
   const poor = wifi.filter((w) => w.quality === "poor" && istDay(w.createdAt) === today);
   if (poor.length) items.push({ id: "wifi", kind: "wifi", urgent: false, href: "/admin/wifi", title: `${plural(poor.length, "slow Wi-Fi report", "slow Wi-Fi reports")} today`, sub: "" });

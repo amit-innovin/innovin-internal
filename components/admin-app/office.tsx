@@ -132,7 +132,7 @@ type ShelfAction = { id: string; action: "add" | "dismiss" | "remove" };
 function Shelf() {
   const snacks = useSnacks();
   const act = useSnackWrite<ShelfAction>("PATCH");
-  const order = useSnackWrite<{ action: "order-placed" }>("PATCH");
+  const order = useSnackWrite<{ action: "order-placed" | "order-undo" }>("PATCH");
   const stock = useSnackWrite<{ name: string; shelf: true }>("POST");
   const snack = useSnack();
   const [tab, setTab] = useState<"ideas" | "shelf">("ideas");
@@ -155,7 +155,10 @@ function Shelf() {
         </div>
         {picks.length > 0 && <ul className="m3a-list">{picks.map((p) => <li key={p.name} style={{ padding: "10px 0", fontSize: 16 }}>{p.name} · {p.n}</li>)}</ul>}
         {/* Stays available once ordered: a second order that day moves the time on. */}
-        <div><button type="button" className="m3-btn m3-btn-filled" disabled={order.isPending} onClick={() => order.mutate({ action: "order-placed" }, { onError: (e) => snack(e.message) })}>Mark ordered</button></div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" className="m3-btn m3-btn-filled" disabled={order.isPending} onClick={() => order.mutate({ action: "order-placed" }, { onError: (e) => snack(e.message) })}>Mark ordered</button>
+          {ordered && <button type="button" className="m3-btn m3-btn-text" disabled={order.isPending} onClick={() => order.mutate({ action: "order-undo" }, { onSuccess: () => snack("Picks are open again"), onError: (e) => snack(e.message) })}>Undo</button>}
+        </div>
       </section>
       <section aria-label="Suggestions and shelf" className="m3a-card m3a-flush">
         <Tabs label="Suggestions and shelf" value={tab} onPick={setTab} style={{ padding: "0 8px" }} options={[["ideas", `Suggestions · ${data.suggestions.length}`], ["shelf", `Shelf · ${data.shelf.length}`]]} />

@@ -26,6 +26,10 @@ const serverEnv = (name: string) => ({
   GOOGLE_AUTH_URL: `${MOCK_URL}/auth`,
   GOOGLE_TOKEN_URL: `${MOCK_URL}/token`,
   GOOGLE_TOKENINFO_URL: `${MOCK_URL}/tokeninfo`,
+  GOOGLE_REVOKE_URL: `${MOCK_URL}/revoke`,
+  GOOGLE_CALENDAR_URL: `${MOCK_URL}/calendar/v3`,
+  // A fixed test key (32 bytes, hex). Real deployments set their own secret.
+  CALENDAR_TOKEN_KEY: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
   SESSION_SECRET: "e2e-session-secret",
   // The suite signs in far more than 30 times per run (desktop + mobile share one server),
   // so the per-IP auth ceiling needs headroom it wouldn't need in production.

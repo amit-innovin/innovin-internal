@@ -2,9 +2,9 @@
 // Admin › Publish: announcements (each shows once to everyone as a dialog; optional pin to the
 // top of the Feed) and events. Seen counts are counts, never names.
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  useAdminOverview, useAnnouncements, useCancelEvent, useDeleteAnnouncement, useDeleteEvent, useEvents, usePostEvent, usePublishAnnouncement,
+  useAdminOverview, useAnnouncements, useCalendar, useCancelEvent, useDeleteAnnouncement, useDeleteEvent, useDisconnectCalendar, useEvents, usePostEvent, usePublishAnnouncement, useResendInvite,
   type AdminAnnouncement, type AdminEvent,
 } from "@/lib/queries";
 import { Loading, PageHead, Switch, Tabs, dayLabel, fmtTime, istDay, todayIST, useSnack } from "./ui";
@@ -93,25 +93,89 @@ function Announcements() {
   );
 }
 
+const CONNECT_RESULT: Record<string, string> = {
+  "no-scope": "Calendar access wasn't allowed. Try again and tick the calendar box.",
+  failed: "Couldn't connect Google Calendar. Try again.",
+  unavailable: "Google Calendar isn't set up on this server yet.",
+};
+
+// Where invites come from: this admin's own Google Calendar, connected once.
+function CalendarCard() {
+  const status = useCalendar();
+  const disconnect = useDisconnectCalendar();
+  const snack = useSnack();
+  const params = useSearchParams();
+  const router = useRouter();
+  const [confirm, setConfirm] = useState(false);
+  const [problem, setProblem] = useState("");
+  const shown = useRef(false);
+  const s = status.data;
+  useEffect(() => {
+    const result = params.get("calendar");
+    if (!result || shown.current || !s) return;
+    shown.current = true;
+    if (result === "connected") snack("Google Calendar connected");
+    else setProblem(result === "wrong-account" ? `Connect with your own work account (${s.me})` : CONNECT_RESULT[result] ?? CONNECT_RESULT.failed);
+    router.replace("/admin/publish?tab=events", { scroll: false });
+  }, [params, router, snack, s]);
+  if (!s?.configured) return null;
+  const n = s.upcoming ?? 0;
+  const what = n === 0 ? "Invites stop going out from your calendar."
+    : s.successor ? `${n === 1 ? "1 upcoming invite moves" : `${n} upcoming invites move`} to ${s.successorName}.`
+    : `${n === 1 ? "1 upcoming invite stays" : `${n} upcoming invites stay`} in people's calendars, but can't be changed or cancelled from here.`;
+  return (
+    <section aria-labelledby="gc-h" className="m3a-card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <h2 id="gc-h" className="m3-title">Google Calendar</h2>
+      {problem && <p role="alert" className="m3a-alert">{problem}</p>}
+      {s.connected ? (
+        <>
+          <span className="m3-small">Invites go out from {s.connected.email}</span>
+          {!confirm ? <div><button type="button" className="m3-btn m3-btn-outlined" onClick={() => setConfirm(true)}>Disconnect</button></div> : (
+            <div role="group" aria-label="Confirm disconnect" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", background: "#FFDAD6", color: "#410002", borderRadius: 16, padding: "10px 12px" }}>
+              <span style={{ flex: 1, minWidth: 160, fontSize: 14 }}>{what}</span>
+              <button type="button" className="m3-btn m3-btn-text" style={{ color: "#410002" }} onClick={() => setConfirm(false)}>Keep</button>
+              <button type="button" className="m3-btn m3a-btn-danger" disabled={disconnect.isPending} onClick={() => disconnect.mutate({}, {
+                onSuccess: (r) => { setConfirm(false); setProblem(""); snack((r as { revoked?: boolean } | null)?.revoked === false ? "Disconnected here. Also remove access at myaccount.google.com/permissions" : "Disconnected"); },
+                onError: (e) => snack(e.message),
+              })}>Disconnect</button>
+            </div>
+          )}
+        </>
+      ) : <div><a className="m3-btn m3-btn-filled" href="/api/admin/calendar/connect">Connect Google Calendar</a></div>}
+    </section>
+  );
+}
+
 function Events() {
   const list = useEvents();
   const post = usePostEvent();
   const cancel = useCancelEvent();
   const del = useDeleteEvent();
+  const resend = useResendInvite();
+  const calendar = useCalendar();
   const snack = useSnack();
   const today = todayIST();
+  const connected = !!calendar.data?.connected;
+  const [invite, setInvite] = useState(true);
   const [f, setF] = useState({ title: "", date: "", time: "", place: "", cat: "social" });
   const [confirm, setConfirm] = useState("");
   const dateBad = !!f.date && f.date < today;
   const cant = !f.title.trim() || !f.date || dateBad || !f.time || !f.place.trim() || post.isPending;
-  const submit = () => post.mutate({ title: f.title.trim(), category: f.cat, startsAt: `${f.date}T${f.time}`, body: "", location: f.place.trim() }, {
-    onSuccess: () => { setF({ title: "", date: "", time: "", place: "", cat: "social" }); snack("Posted"); },
+  const submit = () => post.mutate({ title: f.title.trim(), category: f.cat, startsAt: `${f.date}T${f.time}`, body: "", location: f.place.trim(), invite: connected && invite }, {
+    onSuccess: (r) => {
+      setF({ title: "", date: "", time: "", place: "", cat: "social" });
+      const sent = (r as { invite?: string | null } | null)?.invite;
+      snack(sent === "sent" ? "Posted. Invites sent" : sent ? "Posted. Google invite didn't go out" : "Posted");
+      calendar.refetch();
+    },
     onError: (e) => snack(e.message),
   });
   const events = [...(list.data ?? [])].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   return (
     <div className="m3a-cols">
-      <section aria-labelledby="ev-h" className="m3a-half m3a-card">
+      <div className="m3a-half" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <CalendarCard />
+      <section aria-labelledby="ev-h" className="m3a-card">
         <h2 id="ev-h" className="m3-title">New event</h2>
         <div className="m3a-fcol"><label htmlFor="ev-t" className="m3a-lbl">Title</label><input id="ev-t" className="m3a-field" maxLength={120} placeholder="Diwali potluck" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -125,13 +189,15 @@ function Events() {
             <select id="ev-c" className="m3a-field" value={f.cat} onChange={(e) => setF({ ...f, cat: e.target.value })}>{CATS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
           </div>
         </div>
-        {/* Google Calendar invites come in Stage 8b; the switch is drawn and stays off until then. */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span id="ev-g" style={{ flex: 1, minWidth: 0, fontWeight: 600 }}>Invite everyone in Google Calendar</span>
-          <Switch labelledBy="ev-g" on={false} disabled onToggle={() => {}} />
-        </div>
+        {connected && (
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <span id="ev-g" style={{ flex: 1, minWidth: 0, fontWeight: 600 }}>Invite everyone in Google Calendar</span>
+            <Switch labelledBy="ev-g" on={invite} onToggle={() => setInvite(!invite)} />
+          </div>
+        )}
         <div><button type="button" className="m3-btn m3-btn-filled" disabled={cant} onClick={submit}>Post event</button></div>
       </section>
+      </div>
       <section aria-labelledby="el-h" className="m3a-half m3a-card m3a-flush" style={{ gap: 0 }}>
         <h2 id="el-h" className="m3-title" style={{ padding: "16px 20px 8px" }}>Upcoming events</h2>
         {!list.data ? <div style={{ padding: "4px 20px 20px" }}><Loading what="events" error={list.error} onRetry={() => list.refetch()} /></div> : events.length === 0
@@ -151,10 +217,14 @@ function Events() {
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><span style={{ fontWeight: 600 }}>{e.title}</span><span className="m3a-tag" style={{ background: bg, color: fg }}>{catLabel}</span></div>
                     <span className="m3-small">{dayLabel(date)} · {fmtTime(time)}{e.location ? ` · ${e.location}` : ""}</span>
                     <span className="m3-small" style={{ fontWeight: 600, color: "var(--m3-on-surface)", paddingTop: 2 }}>{e.cancelledAt ? "Cancelled" : `${e.going} going`}</span>
+                    {!e.cancelledAt && e.invite === "failed" && <span className="m3-small" style={{ color: "var(--m3-error)", fontWeight: 600 }}>Google invite didn&apos;t go out</span>}
+                    {!e.cancelledAt && e.invite === "orphaned" && <span className="m3-small">Google invite can&apos;t be changed from here</span>}
                   </div>
                 </div>
                 {confirm !== e.id ? (
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                    {!e.cancelledAt && e.invite === "failed" && connected && <button type="button" className="m3-btn m3-btn-tonal" aria-label={`Send invite for ${e.title} again`} disabled={resend.isPending}
+                      onClick={() => resend.mutate({ id: e.id }, { onSuccess: () => snack("Invites sent"), onError: (err) => snack(err.message) })}>Send again</button>}
                     {!e.cancelledAt && e.canManage && <button type="button" className="m3-btn m3-btn-outlined" aria-label={`Cancel ${e.title}`} disabled={cancel.isPending}
                       onClick={() => cancel.mutate({ id: e.id, expectedUpdatedAt: e.updatedAt ?? e.createdAt }, { onSuccess: () => snack(`${e.title} cancelled`), onError: (err) => snack(err.message) })}>Cancel event</button>}
                     <button type="button" className="m3-btn m3-btn-text" aria-label={`Delete ${e.title}`} onClick={() => setConfirm(e.id)}>Delete</button>

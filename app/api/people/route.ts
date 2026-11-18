@@ -8,6 +8,7 @@ import { enforce } from "@/lib/guard";
 import { firstName } from "@/lib/format";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { store } from "@/lib/store";
+import { refreshGuests, retireCalendar } from "@/lib/calendar";
 import { todayIST } from "@/lib/time";
 import type { Role } from "@/lib/types";
 
@@ -64,6 +65,18 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Marked as left (or back): no more invites, taken off upcoming ones, and an admin's Google
+  // Calendar connection is handed over and revoked.
+  if (body?.left !== undefined) {
+    if (typeof body.left !== "boolean") return badRequest("Say whether they've left");
+    if (body.left && adminEmails().includes(email)) return NextResponse.json({ error: "Set in ADMIN_EMAILS — change it there" }, { status: 403 });
+    if (email === (await currentActor())?.email.toLowerCase()) return NextResponse.json({ error: "You can't mark yourself as left" }, { status: 403 });
+    await store.setLeftOn(email, body.left ? todayIST() : null);
+    if (body.left) await retireCalendar(email).catch(() => {});
+    await refreshGuests().catch(() => {});
+    return NextResponse.json({ ok: true });
+  }
+
   // Days hit in the pre-app spreadsheet — an admin copies the Total Days column over.
   if (body?.stepsOffset !== undefined) {
     const days = Number(body.stepsOffset);
@@ -93,5 +106,7 @@ export async function PATCH(req: NextRequest) {
   if (email === (await currentActor())?.email.toLowerCase()) return NextResponse.json({ error: "You can't change your own role" }, { status: 403 });
 
   await store.setRole(email, role);
+  // No longer an admin: their invites move to another admin and their Google grant is revoked.
+  if (role === "member") await retireCalendar(email).catch(() => {});
   return NextResponse.json({ ok: true });
 }

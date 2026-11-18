@@ -106,6 +106,14 @@ export async function PATCH(req: NextRequest) {
     await store.setSetting(ORDER_KEY, { date: today, at: now });
     return NextResponse.json(await view(session.email));
   }
+  // { action: "order-undo" }: a mis-tap. Today's order marks come off and picks reopen.
+  if (action === "order-undo") {
+    if (!(await isAdmin())) return NextResponse.json({ error: "Only admins can manage the snack shelf" }, { status: 403 });
+    const today = todayIST();
+    for (const i of await store.listSnacks()) if (i.status === "shelf" && i.orderedAt && istDay(i.orderedAt) === today) await store.setSnackStatus(i.id, "shelf", null);
+    await store.setSetting(ORDER_KEY, null);
+    return NextResponse.json(await view(session.email));
+  }
   if (!itemId) return badRequest();
   const item = await store.getSnack(itemId);
   if (!item || item.status === "dismissed") return NextResponse.json({ error: "That snack is no longer listed" }, { status: 404 });

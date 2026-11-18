@@ -134,23 +134,23 @@ test.describe("Admin", () => {
 test.describe("Admin: closed days and today's counts", () => {
   test("close the office on a date with a reason, see it listed, and reopen it", async ({ page }) => {
     const date = futureWorkday(5);
-    await signInEmployee(page, ADMIN_EMAIL, "/admin/today");
-    const closed = page.getByRole("region", { name: "Closed days" });
-    await expect(closed).toContainText("They're greyed out on everyone's Days calendar");
-    await expect(closed.getByRole("button", { name: "Mark closed" })).toBeDisabled();
-    await closed.getByLabel("Date").fill(date);
-    await closed.getByLabel("Reason").fill("Building maintenance");
-    await closed.getByRole("button", { name: "Mark closed" }).click();
+    await signInEmployee(page, ADMIN_EMAIL, "/admin/office");
+    await expect(page.getByRole("button", { name: "Mark closed" })).toBeDisabled();
+    await page.getByLabel("Date").fill(date);
+    await page.getByLabel("Reason").fill("Building maintenance");
+    await page.getByRole("button", { name: "Mark closed" }).click();
+    const closed = page.getByRole("region", { name: "Upcoming closed days" });
     await expect(closed).toContainText("Building maintenance");
     await closed.getByRole("button", { name: new RegExp(`^Remove .*${Number(date.slice(8))}`) }).click();
     await expect(closed).not.toContainText("Building maintenance");
   });
 
   test("today's counts have no remote: in office, not in office, on leave", async ({ page }) => {
-    await signInEmployee(page, ADMIN_EMAIL, "/admin/today");
-    // Scoped to the filters: other tests create people whose names can be anything, "Remote" included.
-    const show = page.getByRole("group", { name: "Show" });
-    await expect(show.getByRole("button", { name: "Not in office" })).toBeVisible();
-    await expect(show.getByRole("button", { name: /remote/i })).toHaveCount(0);
+    await signInEmployee(page, ADMIN_EMAIL, "/admin");
+    const today = page.getByRole("region", { name: "Today in the office" });
+    await expect(today).toContainText("In office");
+    await expect(today).toContainText("Not in office");
+    await expect(today).toContainText("On leave");
+    await expect(today).not.toContainText(/remote/i);
   });
 });

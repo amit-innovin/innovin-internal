@@ -117,9 +117,6 @@
 .m3-navitem { display: flex; align-items: center; justify-content: center; gap: 12px; height: 48px; border-radius: 24px; color: var(--m3-on-surface-variant);
   text-decoration: none; font-size: 15px; font-weight: 500; transition: background-color .25s ease; }
 .m3-navitem[aria-current="page"], .m3-navitem[data-open] { background: var(--m3-secondary-container); color: var(--m3-on-secondary-container); font-weight: 700; }
-.m3-subnav { display: none; }
-.m3-subitem { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 16px 0 50px; border-radius: 20px; color: var(--m3-on-surface-variant); text-decoration: none; font-size: 14px; }
-.m3-subitem[aria-current="page"] { background: var(--m3-secondary-container); color: var(--m3-on-secondary-container); font-weight: 600; }
 .m3-subbadge { min-width: 20px; height: 20px; border-radius: 10px; background: var(--m3-error); color: #FFFFFF; font-size: 11px; font-weight: 700; display: grid; place-items: center; padding: 0 6px; }
 .m3-acct { margin-top: auto; position: relative; }
 .m3-acct-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px; border: 0; border-radius: 28px; background: transparent; cursor: pointer; color: inherit; font: inherit; text-align: left; }
@@ -143,16 +140,19 @@
 
 /* Page headers with illustrations */
 .m3 .m3-hero { position: relative; overflow: hidden; margin: -18px -18px 0; padding: 20px 18px 18px; min-height: 196px; border-radius: 0 0 28px 28px;
-  display: flex; flex-direction: column; justify-content: space-between; gap: 12px; color: var(--m3-on-surface); }
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; color: var(--m3-on-surface); padding-top: 72px; }
 .m3 .m3-hero[data-dark] { color: #FFFFFF; }
 .m3 .m3-hero-art { position: absolute; right: 0; bottom: 0; width: 200px; height: 140px; }
-.m3 .m3-hero-actions { position: relative; display: flex; justify-content: flex-end; align-items: center; gap: 4px; }
+/* Buttons sit on their own row at the top, above the art, so every page's title lands in the same place. */
+.m3 .m3-hero-actions { position: absolute; top: 16px; left: 18px; right: 18px; z-index: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.m3 .m3-hero-actions .m3-btn { box-shadow: 0 1px 3px rgba(0,0,0,.18); }
 .m3 .m3-hero-text { position: relative; max-width: 62%; display: flex; flex-direction: column; gap: 4px; }
 .m3 .m3-hero-sub { font-size: 14px; line-height: 20px; color: var(--m3-on-surface-variant); }
 .m3 .m3-hero[data-dark] .m3-hero-sub { color: #D6DDF5; }
 .m3 .m3-hero-btn { width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center; background: rgba(255,255,255,.72); color: var(--m3-on-surface); text-decoration: none; position: relative; }
 @media (min-width: 768px) {
-  .m3 .m3-hero { margin: 0; border-radius: 28px; padding: 24px 28px; min-height: 200px; }
+  .m3 .m3-hero { margin: 0; border-radius: 28px; padding: 76px 28px 24px; min-height: 200px; }
+  .m3 .m3-hero-actions { top: 20px; left: 28px; right: 28px; }
   .m3 .m3-hero-art { right: 24px; width: 300px; height: 205px; }
   .m3 .m3-hero-text { max-width: 55%; }
   .m3 .m3-hero .m3-h1 { font-size: 34px; line-height: 42px; }

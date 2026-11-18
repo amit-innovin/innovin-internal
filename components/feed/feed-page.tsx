@@ -129,7 +129,7 @@ export function FeedPage() {
     <div className="m3 m3-page m3-stack">
       <PageHero page="feed" title="Feed"
         subtitle={inStack ? `${index + 1} of ${stack.length} new since yesterday` : wide && stack.length ? "New posts first, then everything else" : "Nothing new since yesterday"}
-        actions={<Button variant="tonal" onClick={() => setCompose({})}><Plus size={18} aria-hidden="true" />Post</Button>} />
+        actions={<Button onClick={() => setCompose({})}><Plus size={18} aria-hidden="true" />Post</Button>} />
       {inStack && <CatchUp items={stack} index={index} onIndex={setIndex} seenAt={data.seenAt} onWish={wish} />}
       {wide && stack.length > 0 && (
         <section aria-label="New posts" className="m3-stack">

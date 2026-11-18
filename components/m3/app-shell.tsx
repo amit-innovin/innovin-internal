@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Avatar, Fab } from "@/components/m3";
 import { SpeakUpIcon } from "@/components/m3/icons";
 import { readError, send } from "@/lib/fetcher";
-import { ACCOUNT_MENU, ADMIN_NAV, activeAdmin, activeNav, navFor, showsSpeakFab, type NavIcon } from "@/lib/nav";
+import { ACCOUNT_MENU, activeNav, navFor, showsSpeakFab, type NavIcon } from "@/lib/nav";
 
 const NAV_ICON: Record<NavIcon, LucideIcon> = { home: House, feed: Newspaper, days: CalendarDays, snacks: Cookie, steps: Footprints, account: UserRound };
 const MENU_ICON = { settings: Settings, help: CircleHelp };
@@ -44,7 +44,6 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
   const badge = (id: string) => (id === "feed" && fresh > 0 ? fresh : 0);
   const sideActive = activeNav(pathname, "side");
   const barActive = activeNav(pathname, "bar");
-  const adminActive = activeAdmin(pathname);
   const onSpeak = pathname === "/grievances" || pathname.startsWith("/grievances/");
 
   return (
@@ -65,21 +64,13 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
           <SpeakUpIcon size={22} />
           <span className="m3-navlabel">Speak up</span>
         </Link>
+        {/* Admin is its own app now: one link that opens it, nothing else of it in here. */}
         {isAdmin && (
-          <>
-            <Link href="/admin" className="m3-navitem" aria-label="Admin" data-open={adminActive ? "true" : undefined}>
-              <ShieldCheck size={22} strokeWidth={1.9} aria-hidden="true" />
-              <span className="m3-navlabel">Admin</span>
-            </Link>
-            <div className="m3-subnav" aria-label="Admin pages" role="group">
-              {ADMIN_NAV.map((item) => (
-                <Link key={item.id} href={item.href} className="m3-subitem" aria-current={adminActive === item.id ? "page" : undefined}>
-                  {item.label}
-                  {item.id === "speak" && openReports > 0 && <span className="m3-subbadge" aria-label={`${openReports} open`}>{openReports}</span>}
-                </Link>
-              ))}
-            </div>
-          </>
+          <Link href="/admin" className="m3-navitem" aria-label={openReports > 0 ? `Admin app, ${openReports} open` : "Admin app"}>
+            <ShieldCheck size={22} strokeWidth={1.9} aria-hidden="true" />
+            <span className="m3-navlabel">Admin app</span>
+            {openReports > 0 && <span className="m3-subbadge" aria-hidden="true" style={{ marginLeft: "auto" }}>{openReports}</span>}
+          </Link>
         )}
         <div className="m3-acct" ref={account}>
           {menuOpen && (

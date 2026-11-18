@@ -40,15 +40,6 @@ const LEGACY_ROUTES = ["/admin/tools"];
 export const isDuoRoute = (pathname: string) => DUO_ROUTES.some((r) => matches(pathname, r)) && !LEGACY_ROUTES.some((r) => matches(pathname, r));
 
 // Laptop sidebar for admins: "Admin" with its sub-pages (D-AdminDesktop and D-AdminDesk-*).
-export const ADMIN_NAV = [
-  { id: "overview", label: "Overview", href: "/admin" },
-  { id: "people", label: "People & office days", href: "/admin/people" },
-  { id: "speak", label: "Speak up inbox", href: "/admin/speak-up" },
-  { id: "shelf", label: "Snack shelf", href: "/admin/snacks" },
-  { id: "wifi", label: "Wi-Fi reports", href: "/admin/wifi" },
-] as const;
-export const activeAdmin = (pathname: string) =>
-  pathname === "/admin" || pathname === "/admin/today" ? "overview" : ADMIN_NAV.find((n) => n.href !== "/admin" && matches(pathname, n.href))?.id ?? null;
 
 export function navFor(surface: Surface) {
   return ITEMS.filter((i) => i.on.includes(surface) && i.href !== null).map((i) => ({ id: i.id, label: i.label[surface], icon: i.icon, href: i.href as string }));

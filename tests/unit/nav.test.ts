@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACCOUNT_MENU, activeAdmin, activeNav, isDuoRoute, navFor, showsSpeakFab } from "@/lib/nav";
+import { ACCOUNT_MENU, activeNav, isDuoRoute, navFor, showsSpeakFab } from "@/lib/nav";
 
 describe("new shell navigation", () => {
   it("knows which routes are already in the new design", () => {
@@ -46,14 +46,10 @@ describe("new shell navigation", () => {
     for (const r of ["/feed", "/feed/events/x", "/grievances", "/wifi", "/notifications", "/steps", "/admin", "/admin/people", "/days/x"]) expect(showsSpeakFab(r)).toBe(false);
   });
 
-  it("admin pages: the old tools screen stays legacy, sub-pages light the right item", () => {
+  it("admin pages: the old tools screen stays legacy, the member app has no admin sub-menu", () => {
     expect(isDuoRoute("/admin")).toBe(true);
     expect(isDuoRoute("/admin/people")).toBe(true);
     expect(isDuoRoute("/admin/tools")).toBe(false);
-    expect(activeAdmin("/admin")).toBe("overview");
-    expect(activeAdmin("/admin/today")).toBe("overview");
-    expect(activeAdmin("/admin/speak-up")).toBe("speak");
-    expect(activeAdmin("/admin/tools")).toBeNull();
     expect(activeNav("/admin/people", "bar")).toBe("account");
   });
 });

@@ -52,26 +52,24 @@ Then deploy (`npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"`, token in 
 smoke-test production, and delete any test rows created by the smoke test.
 
 ## Design: the canvas is the source of truth
-- Every screen is built from the Material 3 prototype canvas, not from spec prose: https://claude.ai/artifact/DFhALZi4uN4Sxm7ng8CGN6
-  (phone `Prototype.dc.html`, desktop `DesktopPrototype.dc.html`). A snapshot and the route map are in `docs/design/m3/`;
-  the reasons behind each design choice are at https://claude.ai/artifact/BDMRzx3hjYJtsmx6DucccG.
-  Read the prototype (and refresh the snapshot if the canvas changed) before planning or building a screen. If a state is not
-  drawn, add it to the prototype first; don't invent it in code.
-- The Duo Pop design (old canvas https://claude.ai/artifact/DEsTmRtTRB5vP2G5ugddyE, `docs/design/canvas/`) stays on the
-  `phase2-shell` branch so the owner can switch back. The Material 3 work lives on its own branch and is not merged to `main`.
-- Rebuilt screens live in `app/(member)/(duo)/` and render inside the shell `components/m3/app-shell.tsx`; `lib/nav.ts` lists the routes.
-  New UI uses the primitives in `components/m3` and the tokens and classes in `app/m3.css` (scoped under `.m3`). Screens not
-  rebuilt yet keep their Duo styling (`components/duo`, `app/duo.css`) inside the new shell until their stage. A rebuilt
-  page opts in by wrapping its content in `className="m3 m3-page"` (font, colours, grey ground, column width).
+- Every screen is built from the Material 3 canvas, not from spec prose: https://claude.ai/artifact/NRpZBjTSvvoWB2yJNuTy7e
+  (pages "Member app" and "Admin app"). The board files live in `docs/design/m3/` and are published from there, with the
+  route map in its README. Read the board before planning or building a screen. If a state is not drawn, draw it on the
+  canvas first; don't invent it in code. Change a board by editing its file and republishing it to the canvas.
+- Member screens live in `app/(member)/(m3)/` and render inside `components/m3/app-shell.tsx`; the admin app lives in
+  `app/(admin)/admin/(m3)/` with `components/admin-app/shell.tsx`. UI uses the primitives in `components/m3` (and
+  `components/admin-app/ui.tsx`) and the tokens and classes in `app/m3.css`. A page wraps its content in
+  `className="m3 m3-page"` (font, colours, grey ground, column width).
 - Tappable means a filled, tonal or outlined button, or a row with a chevron; flat means information. Lappy appears only where
-  the prototype draws it (Home header, celebrations, empty states), never on attendance, leave or reminders.
+  the canvas draws it (Home header, Sign in, celebrations, empty states), never on attendance, leave or reminders.
+- No vanity numbers or explainer copy: show a number only when it drives an action; headcounts are admin-only.
 
 ## Conventions
-- Legacy UI (screens not rebuilt yet): shadcn/ui primitives in `components/ui`, beUI motion components in `components/motion`, shared blocks in `components/kit.tsx`, transitions.dev CSS in `app/transitions.css`. Brand tokens (innovinlabs.com) live in `app/globals.css`.
+- `components/ui` keeps only the toast and tooltip primitives; `app/globals.css` holds Tailwind and their tokens.
 - Client network calls go through `lib/fetcher.ts` — never raw `fetch` + `res.json().error`.
   Rebuilt screens read server data with TanStack Query: hooks and query keys live in `lib/queries.ts`, use `fetchJSON` as the
   query function and `send` + `readError` in mutations, and update or invalidate the query cache after a write. No Zustand or
-  other client store; filters and tabs belong in the URL. Legacy screens keep `getJSON`/`send` until they are rebuilt.
+  other client store; filters and tabs belong in the URL.
 - API routes parse bodies with `readJSON` (400 on bad input) and apply limits via `enforce` (`lib/guard.ts`).
 - Any Store change must be implemented in both `lib/jsonstore.ts` and `lib/pgstore.ts` and covered in `tests/store/contract.ts`.
 - Leave rules live in `lib/leave.ts` (pure, unit-tested against the company policy and the 2026

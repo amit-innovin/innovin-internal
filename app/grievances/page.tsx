@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AppShell } from "@/components/shell/app-shell";
+import { AppShell } from "@/components/m3/app-shell";
 import { SpeakUpPage } from "@/components/speak-up/speak-up-page";
 import { currentActor } from "@/lib/admin";
 import { shellProps } from "@/lib/admin-queue";

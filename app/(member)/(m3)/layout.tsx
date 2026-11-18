@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { AppShell } from "@/components/shell/app-shell";
+import { AppShell } from "@/components/m3/app-shell";
 import { requireUser } from "@/lib/admin";
 import { shellProps } from "@/lib/admin-queue";
 
-// Screens rebuilt in the new design live in this group and share the new shell.
-export default async function DuoLayout({ children }: { children: ReactNode }) {
+// Member screens live in this group and share the Material 3 shell.
+export default async function MemberShellLayout({ children }: { children: ReactNode }) {
   return <AppShell {...await shellProps(await requireUser())}>{children}</AppShell>;
 }

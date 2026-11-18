@@ -8,8 +8,10 @@ export const DEFAULT_SNACK_TIMES: SnackTimes = { amAt: "11:00", amClose: "10:45"
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+// Each round's answers close before it, and the morning round is served before the afternoon
+// round's answers close, so both rounds can actually be answered.
 export const validTimes = (t: Partial<SnackTimes>): t is SnackTimes =>
-  [t.amAt, t.amClose, t.pmAt, t.pmClose, t.orderAt].every((v) => typeof v === "string" && HHMM.test(v)) && t.amClose! < t.amAt! && t.pmClose! < t.pmAt!;
+  [t.amAt, t.amClose, t.pmAt, t.pmClose, t.orderAt].every((v) => typeof v === "string" && HHMM.test(v)) && t.amClose! < t.amAt! && t.pmClose! < t.pmAt! && t.amAt! <= t.pmClose!;
 
 export const istClock = (now: Date) => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
 
@@ -28,3 +30,6 @@ export const pickOpen = (now: Date, t: SnackTimes, orderedToday: boolean) => !or
 export function pickCounts(picks: { itemId: string; voterRef?: string }[], itemIds: string[]): Record<string, number> {
   return Object.fromEntries(itemIds.map((id) => [id, picks.filter((p) => p.itemId === id).length]));
 }
+
+// Home's tea row: only while a round is still on today, and only for people in the office.
+export const teaToShow = (tea: { round: unknown } | null | undefined, inOffice: boolean) => inOffice && !!tea?.round;

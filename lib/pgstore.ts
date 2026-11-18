@@ -28,7 +28,7 @@ import type {
 } from "./types";
 
 // Postgres persistence — used when DATABASE_URL is set (Neon, Supabase, Vercel Postgres).
-const SCHEMA = `
+export const SCHEMA = `
 
 CREATE TABLE IF NOT EXISTS notices (
   id text PRIMARY KEY,
@@ -253,10 +253,6 @@ CREATE TABLE IF NOT EXISTS tea_answers (
   created_at timestamptz NOT NULL,
   PRIMARY KEY (date, round, email)
 );
--- One-time copy of the single-round tea list: those were all afternoon "yes" answers.
-INSERT INTO tea_answers (date, round, email, going, created_at)
-  SELECT date, 'pm', email, true, created_at FROM tea_rounds WHERE NOT EXISTS (SELECT 1 FROM tea_answers)
-  ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS snack_picks (
   date text NOT NULL,
   voter_ref text NOT NULL,
@@ -533,6 +529,14 @@ class PgStore implements Store {
         await client.query("BEGIN");
         await client.query("SELECT pg_advisory_xact_lock($1)", [SCHEMA_LOCK]);
         await client.query(SCHEMA);
+        // One-time copy of the single-round tea list into per-round answers (they were all
+        // afternoon "yes"). Runs after the whole schema, so both tables exist even on an empty
+        // database, and a marker row makes it happen once, not on every start.
+        const copied = await client.query(`SELECT 1 FROM settings WHERE key = 'migrated:tea_answers'`);
+        if (!copied.rowCount) {
+          await client.query(`INSERT INTO tea_answers (date, round, email, going, created_at) SELECT date, 'pm', email, true, created_at FROM tea_rounds ON CONFLICT DO NOTHING`);
+          await client.query(`INSERT INTO settings (key, value) VALUES ('migrated:tea_answers', 'true'::jsonb) ON CONFLICT DO NOTHING`);
+        }
         await client.query("COMMIT");
       } catch (err) {
         await client.query("ROLLBACK").catch(() => undefined);

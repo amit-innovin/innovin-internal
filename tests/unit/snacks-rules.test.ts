@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentRound, DEFAULT_SNACK_TIMES as T, istClock, pickCounts, pickOpen, validTimes } from "@/lib/snacks-rules";
+import { currentRound, DEFAULT_SNACK_TIMES as T, istClock, pickCounts, pickOpen, teaToShow, validTimes } from "@/lib/snacks-rules";
 
 // IST is UTC+5:30, so 10:44 IST is 05:14 UTC.
 const at = (hhmm: string) => {
@@ -35,5 +35,21 @@ describe("validTimes", () => {
     expect(validTimes(T)).toBe(true);
     expect(validTimes({ ...T, amClose: "11:00" })).toBe(false);
     expect(validTimes({ ...T, orderAt: "9am" })).toBe(false);
+  });
+  it("keeps the morning round before the afternoon round's answers close", () => {
+    // Swapped rounds would leave the afternoon round unreachable all day.
+    expect(validTimes({ ...T, amAt: "16:00", amClose: "15:45", pmAt: "11:00", pmClose: "10:30" })).toBe(false);
+    // An afternoon round whose answers close before the morning round ends could never be answered.
+    expect(validTimes({ ...T, amAt: "11:00", amClose: "10:45", pmAt: "11:30", pmClose: "10:00" })).toBe(false);
+    expect(validTimes({ ...T, amAt: "11:00", amClose: "10:45", pmAt: "11:30", pmClose: "11:00" })).toBe(true);
+  });
+});
+
+describe("teaToShow", () => {
+  it("shows tea on Home only while there's a round today and you're in the office", () => {
+    expect(teaToShow({ round: { id: "am" } }, true)).toBe(true);
+    expect(teaToShow({ round: null }, true)).toBe(false);
+    expect(teaToShow({ round: { id: "pm" } }, false)).toBe(false);
+    expect(teaToShow(undefined, true)).toBe(false);
   });
 });

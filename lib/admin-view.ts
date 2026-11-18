@@ -3,6 +3,8 @@
 import { closedMap, dayMode } from "./days";
 import { type Closed, isWorkingDay } from "./leave";
 import { countOfficeDays, monthBounds, officeDaysSummary, officeDayTarget, scheduleLabel, type OfficeDayStatus } from "./office-days";
+import { snackTimes } from "./snack-times";
+import { currentRound } from "./snacks-rules";
 import { store } from "./store";
 import { todayIST } from "./time";
 import type { AttendanceRow, AwayRow, EmployeeRow } from "./types";
@@ -38,7 +40,11 @@ export async function adminOverview() {
   const month = today.slice(0, 7);
   const { first, last } = monthBounds(month);
   const closed = await closedMap(first, last);
-  const [employees, todayRows, away, tea] = await Promise.all([store.listEmployees(), store.listAttendance(today), store.listAway(500), store.listTea(today)]);
+  const [employees, todayRows, away, tea] = await Promise.all([store.listEmployees(), store.listAttendance(today), store.listAway(500), store.listTeaAnswers(today)]);
+  // Tea for the round that's on now (or the afternoon one once the day's rounds are done).
+  const times = await snackTimes();
+  const round = currentRound(new Date(), times) ?? { id: "pm" as const, at: times.pmAt, closesAt: times.pmClose, open: false, next: null };
+  const teaGoing = tea.filter((t) => t.round === round.id && t.going);
   const monthRows = await Promise.all(employees.map((e) => store.listAttendanceRange(e.email, first, last)));
   const people = employees
     .map((e, i) => personRow(e, monthRows[i], todayRows.find((r) => r.email === e.email), away, month, today, closed))
@@ -52,7 +58,7 @@ export async function adminOverview() {
     today, month, total: people.length, admins: people.filter((p) => p.role === "admin").length, workingLeft,
     counts: { office: count("office"), leave: count("leave"), notIn: count(null) },
     status: { behind: people.filter((p) => p.status === "behind").length, onTrack: people.filter((p) => p.status === "on-track").length, done: people.filter((p) => p.status === "done").length, exempt: people.filter((p) => p.status === "exempt").length },
-    tea: { count: tea.length, names: tea.map((t) => names.get(t.email) ?? t.email.split("@")[0]) },
+    tea: { round: round.id, at: round.at, closesAt: round.closesAt, count: teaGoing.length, names: teaGoing.map((t) => names.get(t.email) ?? t.email.split("@")[0]) },
     people,
   };
 }

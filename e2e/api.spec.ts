@@ -904,6 +904,20 @@ test.describe("Tea & snacks", () => {
     }
   });
 
+  test("the admin overview counts the round that's on now", async () => {
+    const adm = await admin();
+    try {
+      expect((await setTimes(adm, { amAt: "23:58", amClose: "23:57", pmAt: "23:59", pmClose: "23:58" })).status()).toBe(200);
+      const ctx = await inOffice();
+      expect((await ctx.post("/api/tea", { data: { round: "am", going: true } })).status()).toBe(200);
+      const overview = await (await adm.get("/api/admin/overview")).json();
+      expect(overview.tea).toMatchObject({ round: "am", at: "23:58", closesAt: "23:57" });
+      expect(overview.tea.count).toBeGreaterThan(0);
+    } finally {
+      await setTimes(adm, {});
+    }
+  });
+
   test("admins set the times; answers must close before their round", async () => {
     const adm = await admin();
     const member = await signedIn(email());

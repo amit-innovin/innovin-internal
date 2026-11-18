@@ -2,7 +2,7 @@
 import { toast } from "sonner";
 import { Button } from "@/components/m3";
 import { TeaLappy } from "@/components/m3/art";
-import { useAnswerTea, type Tea } from "@/lib/queries";
+import { TeaError, useAnswerTea, type Tea } from "@/lib/queries";
 
 // "11:00", "3:30", "4 PM": the prototype's way of saying office times.
 export function clock(hhmm: string) {
@@ -29,7 +29,8 @@ export function TeaActions({ tea, compact }: { tea: Tea; compact?: boolean }) {
   const answer = useAnswerTea();
   const copy = teaCopy(tea);
   if (!copy) return null;
-  const send = (going: boolean | null) => answer.mutate({ round: copy.round.id, going }, { onError: (e) => toast.error(e.message) });
+  // A round that closed (or moved on) while the page was open isn't an error: the refetch shows it.
+  const send = (going: boolean | null) => answer.mutate({ round: copy.round.id, going }, { onError: (e) => { if (!(e instanceof TeaError && (e.code === "closed" || e.code === "wrong-round"))) toast.error(e.message); } });
   const h = compact ? 36 : 44;
   if (copy.canAnswer) return (
     <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

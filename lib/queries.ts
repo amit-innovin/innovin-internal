@@ -209,13 +209,20 @@ export type Tea = {
   counts?: { am: number; pm: number };
   names?: { am: string[]; pm: string[] };
 };
-export const useTea = () => useQuery({ queryKey: ["tea"], queryFn: () => fetchJSON<Tea>("/api/tea") });
+// Refreshed every minute, so a round's cut-off shows on screen without a tap.
+export const useTea = () => useQuery({ queryKey: ["tea"], queryFn: () => fetchJSON<Tea>("/api/tea"), refetchInterval: 60_000 });
+export class TeaError extends Error {
+  constructor(message: string, public code?: string) { super(message); }
+}
 export function useAnswerTea() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (input: { round: "am" | "pm"; going: boolean | null }) => {
       const res = await send("/api/tea", { method: "POST", json: input });
-      if (!res.ok) throw new Error(await readError(res));
+      if (!res.ok) {
+        const body = await res.clone().json().catch(() => null);
+        throw new TeaError(await readError(res), body?.code);
+      }
       return (await res.json()) as Tea;
     },
     onSuccess: (tea) => client.setQueryData(["tea"], tea),

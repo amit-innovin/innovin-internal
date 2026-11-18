@@ -78,4 +78,25 @@ test.describe("Tea & snacks", () => {
       await admin.close();
     }
   });
+
+  test("answering just after the cut-off shows the closed round, not an error", async ({ page, browser }) => {
+    const admin = await asAdmin(browser);
+    try {
+      expect((await admin.times({ amAt: "23:58", amClose: "23:57", pmAt: "23:59", pmClose: "23:58" })).status()).toBe(200);
+      await signInOffice(page, uniqueEmail("snacks-cutoff"));
+      await page.goto("/snacks");
+      await expect(page.getByRole("button", { name: "Yes, I'll have tea" })).toBeVisible();
+      // The cut-off passes while the page is open.
+      expect((await admin.times({ amAt: "23:58", amClose: "00:01", pmAt: "23:59", pmClose: "23:58" })).status()).toBe(200);
+      const answer = page.waitForResponse((r) => r.url().endsWith("/api/tea") && r.request().method() === "POST");
+      await page.getByRole("button", { name: "Yes, I'll have tea" }).click();
+      expect((await answer).status()).toBe(409);
+      await expect(page.getByText(/round is closed\./)).toBeVisible();
+      // Checked at once: toHaveCount would wait for a toast to fade and pass anyway.
+      expect(await page.locator("[data-sonner-toast]").count()).toBe(0);
+    } finally {
+      await admin.times({});
+      await admin.close();
+    }
+  });
 });

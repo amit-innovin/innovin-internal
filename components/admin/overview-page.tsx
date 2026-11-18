@@ -1,4 +1,5 @@
 "use client";
+import { clock } from "@/components/snacks/tea";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -46,10 +47,10 @@ function ChaiRound({ tea }: { tea: AdminData["tea"] }) {
     <Card style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10, background: "var(--duo-gold-soft)", borderColor: "var(--duo-gold-edge)", color: "var(--duo-gold-text)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <Coffee size={20} aria-hidden="true" />
-        <span style={{ flexGrow: 1, fontFamily: "var(--duo-display)", fontSize: 17, fontWeight: 600 }}>Chai round · {tea.count} cup{tea.count === 1 ? "" : "s"}</span>
+        <span style={{ flexGrow: 1, fontFamily: "var(--duo-display)", fontSize: 17, fontWeight: 600 }}>Tea round at {clock(tea.at)} · {tea.count} cup{tea.count === 1 ? "" : "s"}</span>
         {tea.count > 0 && <Button variant="ghost" style={{ minHeight: 40, fontSize: 14 }} onClick={copy}><Copy size={16} aria-hidden="true" />Copy list</Button>}
       </div>
-      <span style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.5 }}>{tea.count ? tea.names.join(" · ") : "Nobody's in yet. The round closes at 3:30."}</span>
+      <span style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.5 }}>{tea.count ? tea.names.join(" · ") : `Nobody's in yet. Answers close at ${clock(tea.closesAt)}.`}</span>
     </Card>
   );
 }
@@ -98,7 +99,7 @@ function Hub({ data, openReports, toOrder }: { data: AdminData; openReports: num
       <NeedsYou items={data.needsYou} />
       <h2 className="duo-h2">Manage</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-        <ManageTile href="/admin/today" Icon={CalendarCheck} title="Today" sub={`${data.counts.office} in · ${data.tea.count} chai`} />
+        <ManageTile href="/admin/today" Icon={CalendarCheck} title="Today" sub={`${data.counts.office} in · ${data.tea.count} tea`} />
         <ManageTile href="/admin/people" Icon={Users} title="Office days" sub={`${data.status.behind} behind target`} />
         <ManageTile href="/admin/people?show=all" Icon={Users} title="People" sub={`${data.total} · ${data.admins} admin${data.admins === 1 ? "" : "s"}`} />
         <ManageTile href="/admin/speak-up" Icon={MessageSquare} title="Speak up inbox" sub={`${openReports} open`} badge={openReports} />
@@ -146,7 +147,7 @@ function Dashboard({ data, snacks }: { data: AdminData; snacks?: Snacks }) {
         <StatTile label="In office" value={data.counts.office} sub={`${pct(data.counts.office, data.total)}% of ${data.total}`} tone="green" />
         <StatTile label="On leave" value={data.counts.leave} sub="today" tone="gold" />
         <StatTile label="Not in office" value={data.counts.notIn} sub={`as of ${asOf}`} tone="soft" />
-        <StatTile label="Chai cups" value={data.tea.count} sub="round at 4 PM" tone="grape" />
+        <StatTile label="Chai cups" value={data.tea.count} sub={`round at ${clock(data.tea.at)}`} tone="grape" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 16, alignItems: "start" }}>
         <Card style={{ padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>

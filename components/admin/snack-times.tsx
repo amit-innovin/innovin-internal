@@ -20,7 +20,7 @@ export function SnackTimesCard() {
   useEffect(() => { if (saved.data && !draft) setDraft(saved.data); }, [saved.data, draft]);
   if (!draft || !saved.data) return null;
   const changed = FIELDS.some(([k]) => draft[k] !== saved.data[k]);
-  const amBad = draft.amClose >= draft.amAt, pmBad = draft.pmClose >= draft.pmAt;
+  const amBad = draft.amClose >= draft.amAt, pmBad = draft.pmClose >= draft.pmAt, orderBad = draft.amAt > draft.pmClose;
   const filled = FIELDS.every(([k]) => /^\d{2}:\d{2}$/.test(draft[k]));
   return (
     <Card role="region" aria-labelledby="times-h" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -33,8 +33,9 @@ export function SnackTimesCard() {
           </label>
         ))}
       </div>
+      {orderBad && !amBad && !pmBad && <span role="alert" className="duo-sub" style={{ color: "var(--duo-pink-text, #8C1D40)" }}>The morning round must come before the afternoon round&apos;s answers close.</span>}
       {(amBad || pmBad) && <span role="alert" className="duo-sub" style={{ color: "var(--duo-pink-text, #8C1D40)" }}>Answers must close before the round.</span>}
-      <Button style={{ alignSelf: "flex-start" }} disabled={!changed || amBad || pmBad || !filled || save.isPending}
+      <Button style={{ alignSelf: "flex-start" }} disabled={!changed || amBad || pmBad || orderBad || !filled || save.isPending}
         onClick={() => save.mutate(draft, { onSuccess: () => toast.success("Times saved"), onError: (e) => toast.error(e.message) })}>Save times</Button>
     </Card>
   );

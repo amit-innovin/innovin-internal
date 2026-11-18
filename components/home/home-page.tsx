@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Avatar, Button, Card, IconCircle, QueryState, StatusChip } from "@/components/m3";
 import { TeaLappy } from "@/components/m3/art";
 import { TeaActions, teaCopy } from "@/components/snacks/tea";
+import { teaToShow } from "@/lib/snacks-rules";
 import { PageHero } from "@/components/m3/hero";
 import { CheckIn, timeIST } from "@/components/home/check-in";
 import type { DaysView } from "@/lib/days";
@@ -79,12 +80,12 @@ function UpNext({ days }: { days: DaysView }) {
     .filter((p): p is Extract<FeedPost, { type: "event" }> => p.type === "event" && !p.cancelled && Date.parse(p.startsAt) > now)
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
   const poll = feed?.posts.find((p): p is Extract<FeedPost, { type: "poll" }> => p.type === "poll" && !p.closed && !p.options.some((o) => o.mine));
-  const showTea = days.me?.mode === "office" && !!tea;
+  const showTea = teaToShow(tea, days.me?.mode === "office");
   if (!showTea && !event && !poll) return null;
   return (
     <section aria-label="Up next" className="m3-card" style={{ padding: "6px 0" }}>
       <h2 className="m3-title" style={{ padding: "12px 16px 4px" }}>Up next</h2>
-      {showTea && <TeaRow tea={tea} />}
+      {showTea && tea && <TeaRow tea={tea} />}
       {event && (
         <div className="m3-row">
           <TimeCell top={at(event.startsAt, { weekday: "short" })} bottom={at(event.startsAt, { hour: "numeric", minute: "2-digit" })} />

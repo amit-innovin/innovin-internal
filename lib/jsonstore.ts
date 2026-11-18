@@ -383,6 +383,7 @@ export const jsonStore: Store = {
       db.nudges.push({ date, from, to });
       return { result: true, changed: true };
     }),
+  listNudgesFrom: (date, from) => query((db) => db.nudges.filter((n) => n.date === date && n.from === from).map((n) => n.to)),
   setFeedSeenAt: (email, at) =>
     mutate((db) => {
       const row = db.employees.find((e) => e.email === email);

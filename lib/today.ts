@@ -36,7 +36,9 @@ export async function attendanceStatus(email: string | null, ip: string | null) 
 export async function stepsBoard(session: SessionLite | null) {
   const today = todayIST();
   const [employees, rows] = await Promise.all([store.listEmployees(), store.listSteps()]);
-  const board = stepBoard(employees, rows, today);
+  // Steps are only ever shown to others inside the opt-in league.
+  const league = employees.filter((e) => e.stepsLeague);
+  const board = stepBoard(league, rows.filter((r) => league.some((e) => e.email === r.email)), today);
 
   let me = null;
   if (session) {
@@ -54,5 +56,7 @@ export async function stepsBoard(session: SessionLite | null) {
     };
   }
 
-  return { goal: STEP_GOAL, today, signedIn: !!session, board, me, league: session ? stepLeague(employees, rows, today, session.email) : null };
+  const inLeague = !!session && league.some((e) => e.email === session.email);
+  const nudged = session && inLeague ? await store.listNudgesFrom(today, session.email) : [];
+  return { goal: STEP_GOAL, today, signedIn: !!session, board, me, inLeague, nudged, league: session ? stepLeague(employees, rows, today, session.email) : null };
 }

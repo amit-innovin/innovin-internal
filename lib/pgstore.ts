@@ -821,6 +821,10 @@ class PgStore implements Store {
     const res = await this.q(`INSERT INTO nudges (date, from_email, to_email) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`, [date, from, to]);
     return (res.rowCount ?? 0) > 0;
   }
+  async listNudgesFrom(date: string, from: string) {
+    const res = await this.q(`SELECT to_email FROM nudges WHERE date = $1 AND from_email = $2`, [date, from]);
+    return res.rows.map((r: any) => r.to_email as string);
+  }
   async setFeedSeenAt(email: string, at: string) {
     await this.q(`UPDATE employees SET feed_seen_at = $2 WHERE email = $1 AND (feed_seen_at IS NULL OR feed_seen_at < $2)`, [email, at]);
   }

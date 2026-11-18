@@ -15,6 +15,8 @@ const KIND: Record<Notification["kind"], { label: string; icon: LucideIcon; tone
   event: { label: "Event", icon: CalendarDays, tone: "grape" },
   away: { label: "Leave", icon: CalendarCheck, tone: "green" },
   grievance: { label: "Speak up · only on this device", icon: MessageSquare, tone: "sky" },
+  kudos: { label: "Kudos", icon: Megaphone, tone: "pink" },
+  tea: { label: "Tea", icon: CalendarCheck, tone: "grape" },
 };
 
 function PushRow() {

@@ -217,12 +217,12 @@ test.describe("API: office days", () => {
 });
 
 test.describe("API: notifications", () => {
-  test("signed-in notifications only carry the four remaining kinds", async () => {
+  test("signed-in notifications only carry the known kinds", async () => {
     const ctx = await signedIn(email());
     const res = await ctx.get("/api/notifications");
     expect(res.status()).toBe(200);
     const body = await res.json();
-    for (const item of body.items) expect(["announcement", "event", "away", "grievance"]).toContain(item.kind);
+    for (const item of body.items) expect(["announcement", "event", "away", "grievance", "kudos", "tea"]).toContain(item.kind);
   });
 });
 
@@ -911,5 +911,73 @@ test.describe("Tea & snacks", () => {
     expect((await setTimes(adm, { amClose: "11:00" })).status()).toBe(400);
     expect((await setTimes(adm, { orderAt: "noon" })).status()).toBe(400);
     expect(await (await adm.get("/api/admin/snack-times")).json()).toEqual(DEFAULTS);
+  });
+});
+
+test.describe("Steps, Wi-Fi and notifications (Stage 5)", () => {
+  const inOffice = async () => {
+    const ctx = await signedIn(email());
+    expect((await ctx.post("/api/days", { data: { mode: "office", lat: 12.9352, lng: 77.6241, accuracyM: 20 } })).status()).toBe(200);
+    return ctx;
+  };
+  const whoAmI = async (ctx: APIRequestContext) => (await (await ctx.get("/api/account")).json()).email as string;
+
+  test("steps add up through the day, within a limit per add", async () => {
+    const ctx = await signedIn(email());
+    expect((await ctx.post("/api/steps", { data: { add: 2500 } })).status()).toBe(200);
+    const res = await (await ctx.post("/api/steps", { data: { add: 2500 } })).json();
+    expect(res.steps).toBe(5000);
+    expect((await ctx.post("/api/steps", { data: { add: 60_000 } })).status()).toBe(400);
+    expect((await ctx.post("/api/steps", { data: { add: 0 } })).status()).toBe(400);
+  });
+
+  test("the step league only lists people who joined, and nudges stay inside it", async () => {
+    const a = await signedIn(email()), b = await signedIn(email()), outsider = await signedIn(email());
+    const [ea, eb, eo] = [await whoAmI(a), await whoAmI(b), await whoAmI(outsider)];
+    for (const ctx of [a, b, outsider]) await ctx.post("/api/steps", { data: { add: 3000 } });
+    expect((await a.post("/api/steps/league", { data: { on: true } })).status()).toBe(200);
+    expect((await a.post("/api/steps/nudge", { data: { email: eb } })).status()).toBe(403);
+    await b.post("/api/steps/league", { data: { on: true } });
+    expect((await a.post("/api/steps/nudge", { data: { email: ea } })).status()).toBe(400);
+    expect((await a.post("/api/steps/nudge", { data: { email: eb } })).status()).toBe(200);
+    expect((await a.post("/api/steps/nudge", { data: { email: eb } })).status()).toBe(409);
+    const view = await (await a.get("/api/steps")).json();
+    expect(view.inLeague).toBe(true);
+    expect(view.nudged).toContain(eb);
+    const listed = JSON.stringify([view.league, view.board]);
+    expect(listed).toContain(eb);
+    expect(listed).not.toContain(eo);
+    await a.post("/api/steps/league", { data: { on: false } });
+    expect((await b.post("/api/steps/nudge", { data: { email: ea } })).status()).toBe(403);
+    expect(JSON.stringify((await (await b.get("/api/steps")).json()).league)).not.toContain(ea);
+  });
+
+  test("a Wi-Fi report needs an office check-in and keeps no identity", async () => {
+    const remote = await signedIn(email());
+    const res = await remote.post("/api/wifi", { data: { quality: "poor", downMbps: 3, upMbps: 1, area: "Pantry" } });
+    expect(res.status()).toBe(403);
+    expect(await res.json()).toMatchObject({ code: "not-in-office" });
+    const ctx = await inOffice();
+    expect((await ctx.post("/api/wifi", { data: { quality: "poor", downMbps: 3, upMbps: 1, area: "Somewhere" } })).status()).toBe(400);
+    const note = `Calls drop ${Date.now()}`;
+    expect((await ctx.post("/api/wifi", { data: { quality: "poor", downMbps: 3, upMbps: 1, area: "Pantry", note } })).status()).toBe(200);
+    const row = (await (await ctx.get("/api/wifi")).json()).find((r: { note: string }) => r.note === note);
+    expect(row).toMatchObject({ quality: "poor", area: "Pantry" });
+    expect(JSON.stringify(row)).not.toMatch(/@innovinlabs\.com|submitterRef/);
+    expect((await ctx.get("/api/wifi/ping")).status()).toBe(204);
+    expect((await ctx.post("/api/wifi/upload", { data: "x".repeat(10_000), headers: { "Content-Type": "application/octet-stream" } })).status()).toBe(204);
+  });
+
+  test("notifications tell you about kudos you got, not kudos between others", async () => {
+    const me = await signedIn(email()), giver = await signedIn(email()), other = await signedIn(email());
+    const mine = await whoAmI(me);
+    const otherEmail = await whoAmI(other);
+    expect((await giver.post("/api/notices", { data: { kind: "kudos", toEmail: mine, body: "Thanks for the help" } })).status()).toBe(201);
+    expect((await giver.post("/api/notices", { data: { kind: "kudos", toEmail: otherEmail, body: "Not for you" } })).status()).toBe(201);
+    const items = (await (await me.get("/api/notifications")).json()).items as { title: string; href: string }[];
+    const kudos = items.filter((i) => /kudos/i.test(i.title));
+    expect(kudos.length).toBe(1);
+    expect(kudos[0]).toMatchObject({ href: "/feed" });
+    expect(kudos[0].title).toMatch(/gave you kudos$/);
   });
 });

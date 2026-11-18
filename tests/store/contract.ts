@@ -103,6 +103,8 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.addNudge("2026-11-18", "a@innovinlabs.com", "b@innovinlabs.com")).toBe(false);
       expect(await store.addNudge("2026-11-18", "b@innovinlabs.com", "a@innovinlabs.com")).toBe(true);
       expect(await store.addNudge("2026-11-19", "a@innovinlabs.com", "b@innovinlabs.com")).toBe(true);
+      expect(await store.listNudgesFrom("2026-11-18", "a@innovinlabs.com")).toEqual(["b@innovinlabs.com"]);
+      expect(await store.listNudgesFrom("2026-11-18", "c@innovinlabs.com")).toEqual([]);
     });
 
     it("keeps where a Wi-Fi report came from", async () => {

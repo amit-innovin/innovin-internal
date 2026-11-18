@@ -1,7 +1,13 @@
 import { boardHref,attendanceHref,eventHref } from "./journey";
 import { fmtShortDate } from "./format";
 import { LEAVE_LABELS, needsApproval } from "./leave";
+import { inOfficeToday, snackTimes } from "./snack-times";
+import { currentRound } from "./snacks-rules";
 import { store } from "./store";
+import { todayIST } from "./time";
+
+// "11:00", "3:30", "4 PM", as the app says times elsewhere.
+const clock = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); const h12 = h % 12 || 12; return m === 0 && h >= 12 ? `${h12} PM` : `${h12}:${String(m).padStart(2, "0")}`; };
 import type { GrievanceRow } from "./types";
 
 // The notification feed is derived, not stored: there is no notifications table, just a read of
@@ -14,7 +20,7 @@ import type { GrievanceRow } from "./types";
 
 export type Notification = {
   id: string;
-  kind: "announcement" | "event" | "away" | "grievance";
+  kind: "announcement" | "event" | "away" | "grievance" | "kudos" | "tea";
   title: string;
   body: string;
   at: string;
@@ -71,6 +77,25 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
       at: r.decidedAt,
       href: attendanceHref("leave",undefined,r.id),
     });
+  }
+
+  // Only things that involve you: kudos you received (never kudos between other people), and the
+  // tea round while it's open, you're in the office, and you haven't answered.
+  if (opts.email) {
+    const email = opts.email;
+    const notices = await store.listNotices(100);
+    for (const n of notices) {
+      if (n.kind !== "kudos" || n.toEmail !== email || n.createdAt < since) continue;
+      items.push({ id: `kudos-${n.id}`, kind: "kudos", title: `${(n.authorName || "Someone").split(/\s+/)[0]} gave you kudos`, body: n.body.slice(0, 80), at: n.createdAt, href: "/feed" });
+    }
+    const today = todayIST();
+    const times = await snackTimes();
+    const round = currentRound(new Date(opts.now), times);
+    if (round?.open && (await inOfficeToday(email, today))) {
+      const answered = (await store.listTeaAnswers(today)).some((a) => a.round === round.id && a.email === email);
+      if (!answered) items.push({ id: `tea-${today}-${round.id}`, kind: "tea", title: `Tea round closes at ${clock(round.closesAt)}`, body: `Answer by ${clock(round.closesAt)} for the ${clock(round.at)} round`, // Dated from when this round became the current one, so it's unread once, not on every check.
+        at: new Date(`${today}T${round.id === "am" ? "00:00" : times.amAt}:00+05:30`).toISOString(), href: "/snacks" });
+    }
   }
 
   // Device-scoped: these rows came from ids the browser presented, never from a stored link.

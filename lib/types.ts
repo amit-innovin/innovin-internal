@@ -319,6 +319,7 @@ export interface Store {
   setStepsLeague(email: string, on: boolean): Promise<boolean>;
   // One nudge per sender, recipient and day; false when it was already sent.
   addNudge(date: string, from: string, to: string): Promise<boolean>;
+  listNudgesFrom(date: string, from: string): Promise<string[]>;
   addAway(row: AwayRow): Promise<AwayRow>;
   setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string, expected: AwayStatus): Promise<boolean>;
   getAway(id: string): Promise<AwayRow | null>;

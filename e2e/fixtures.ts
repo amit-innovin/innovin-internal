@@ -29,12 +29,6 @@ export const uniqueText = (label: string) => `${label} ${Date.now().toString(36)
 
 export const isMobile = (page: Page) => (page.viewportSize()?.width ?? 1280) < 768;
 
-export async function checkIn(page: Page, email: string) {
-  await signInEmployee(page, email, "/attendance");
-  await page.getByRole("button", { name: "Check In" }).click();
-  await expect(page.getByRole("heading", { name: "You're checked in" })).toBeVisible();
-}
-
 export async function signInEmployee(page: Page, email?: string, next = "/attendance") {
   if (email) await page.request.get(`${MOCK_URL}/as?email=${encodeURIComponent(email)}&name=${encodeURIComponent(email.split("@")[0].split(".")[0].replace(/^./, c => c.toUpperCase()))}`);
   try {
@@ -54,26 +48,6 @@ export async function signInOffice(page: Page, email?: string) {
   expect(res.status(), "office check-in").toBe(200);
 }
 
-export type AdminTab = "today" | "approvals" | "people" | "publish";
-
-// The dashboard groups its sections into URL-driven tabs and only queries the open one, so
-// tests have to say which tab they need. Defaults to Today, same as the dashboard.
 // Admin access is a Google identity with the admin role: admin@innovinlabs.com is listed in
-// ADMIN_EMAILS (playwright.config), so signing in as it lands on the dashboard.
+// ADMIN_EMAILS (playwright.config), so signing in as it opens the admin app.
 export const ADMIN_EMAIL = "admin@innovinlabs.com";
-
-export async function adminLogin(page: Page, tab: AdminTab = "today") {
-  await signInEmployee(page, ADMIN_EMAIL, "/admin");
-  await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
-  if (tab !== "today") await adminTab(page, tab);
-}
-
-export async function adminTab(page: Page, tab: AdminTab) {
-  const label = { today: "Today", approvals: "Approvals", people: "People", publish: "Publish" }[tab];
-  // Scoped to the dashboard's own nav — "People" also exists in the app sidebar.
-  await page
-    .getByRole("navigation", { name: "Dashboard sections" })
-    .getByRole("link", { name: new RegExp(`^${label}`) })
-    .click();
-  await expect(page).toHaveURL(new RegExp(`tab=${tab}`));
-}

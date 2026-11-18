@@ -42,7 +42,7 @@ function OfficeDays({ team, people, selected, onPick, month, onMonth }: { team: 
         <button type="button" className="m3-btn m3-btn-text" aria-label="Next month" style={{ width: 44, padding: 0 }} disabled={month >= thisMonth} onClick={() => onMonth(shiftMonth(month, 1))}><ChevronRight size={20} aria-hidden="true" /></button>
       </div>
       {!team ? <div style={{ padding: "4px 16px 16px" }}><span className="m3-small">Loading the month…</span></div> : (
-        <div style={{ overflowX: "auto" }}>
+        <div style={{ overflowX: "auto", position: "relative" /* keeps the cells' hidden labels inside: the table never widens the page */ }}>
           <table style={{ borderCollapse: "collapse", width: "max-content", minWidth: "100%" }}>
             <thead>
               <tr>

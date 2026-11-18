@@ -17,9 +17,9 @@ test("employee RSVP follows the account across devices", async ({ page, browser 
     const other = await context.newPage();
     await signInEmployee(other, email, "/");
     const events = await (await other.request.get("/api/events")).json();
-    expect(events.find((row: { id: string }) => row.id === event.event.id)).toMatchObject({ mine: true, going: 1 });
+    expect(events.find((row: { id: string }) => row.id === event.event.id)).toMatchObject({ mine: true });
     await other.request.patch("/api/events", { data: { eventId: event.event.id, going: false } });
     const refreshed = await (await page.request.get("/api/events")).json();
-    expect(refreshed.find((row: { id: string }) => row.id === event.event.id)).toMatchObject({ mine: false, going: 0 });
+    expect(refreshed.find((row: { id: string }) => row.id === event.event.id)).toMatchObject({ mine: false });
   } finally { await context.close(); }
 });

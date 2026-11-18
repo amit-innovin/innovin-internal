@@ -497,6 +497,20 @@ test.describe("API: behaviour", () => {
     expect((await mk({ type: "leave", startDate: "2026-09-07", endDate: "2026-09-07" })).status()).toBe(400);
   });
 
+  test("an approved leave can be cancelled only by its owner, and the days come back", async () => {
+    const who = `cancel.${Date.now().toString(36)}@innovinlabs.com`;
+    const ctx = await signedIn(who, "Cancel Person");
+    const req = await (await ctx.post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE } })).json();
+    const cl = async () => (await (await ctx.get("/api/leave")).json()).ledger.find((l: { type: string }) => l.type === "cl");
+    const adm = await admin();
+    expect((await adm.patch("/api/away", { data: { id: req.id, status: "approved" } })).status()).toBe(200);
+    expect((await cl()).remaining).toBe(3);
+    const stranger = await signedIn(`stranger.${Date.now().toString(36)}@innovinlabs.com`, "Stranger");
+    expect((await stranger.patch("/api/away", { data: { id: req.id, status: "cancelled" } })).status()).toBe(403);
+    expect((await ctx.patch("/api/away", { data: { id: req.id, status: "cancelled" } })).status()).toBe(200);
+    expect((await cl()).remaining).toBe(4);
+  });
+
   test("leave balances are per identity and per type, and need a signed-in user", async () => {
     // Without a verified identity there's no entitlement to apply.
     const anon = await (await (await device()).get("/api/leave")).json();

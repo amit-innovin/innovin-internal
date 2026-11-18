@@ -64,6 +64,9 @@ test.describe("Admin app", () => {
     await expect(row.getByText(`${today}: In office`)).toHaveCount(1);
     await expect(page.getByText(/\b\d+\/\d+\b|\bBehind\b|On track|of 8 office days/)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Everyone", exact: true })).toBeVisible();
+    // The grid scrolls inside its card; the page itself never gets wider than the screen.
+    // (Compared with the screen: on phones an overflowing page also widens the window itself.)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= screen.width)).toBe(true);
     await grid.getByRole("button", { name }).click();
     await expect(page.getByRole("region", { name })).toBeVisible();
 

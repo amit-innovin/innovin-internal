@@ -58,14 +58,10 @@ export default defineConfig({
     launchOptions,
   },
   projects: [
-    { name: "desktop", testIgnore: /(?:api|ios)\.spec/, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, launchOptions } },
-    { name: "mobile", testIgnore: /(?:api|ios)\.spec/, use: { ...devices["Pixel 7"], launchOptions } },
-    ...(process.env.E2E_IOS ? [
-      { name: "ios-journeys", testMatch: /journey-repairs\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
-      { name: "ios-small", testMatch: /(?:ios|mobile-shell)\.spec/, use: { ...devices["iPhone SE (3rd gen)"], browserName: "webkit" as const } },
-      { name: "ios", testMatch: /(?:ios|mobile-shell)\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
-      { name: "ios-large", testMatch: /(?:ios|mobile-shell)\.spec/, use: { ...devices["iPhone 16 Pro Max"], browserName: "webkit" as const } },
-    ] : []),
+    { name: "desktop", testIgnore: /api\.spec/, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, launchOptions } },
+    { name: "mobile", testIgnore: /api\.spec/, use: { ...devices["Pixel 7"], launchOptions } },
+    // Opt-in (E2E_IOS=1): the same UI specs in iPhone Safari.
+    ...(process.env.E2E_IOS ? [{ name: "ios", testIgnore: /api\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } }] : []),
     // API tests run last: they deliberately trip rate limits.
     { name: "api", testMatch: /api\.spec/, dependencies: ["desktop", "mobile"] },
   ],

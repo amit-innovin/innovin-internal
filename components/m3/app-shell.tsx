@@ -47,7 +47,7 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
   const onSpeak = pathname === "/grievances" || pathname.startsWith("/grievances/");
 
   return (
-    <div className="duo m3-app">
+    <div className="m3-app">
       <nav className="m3 m3-side" aria-label="Main">
         <Link href="/" className="m3-wordmark" aria-label="Innovin home">i<span className="m3-navlabel">nnovin</span></Link>
         {navFor("side").map((item) => {
@@ -93,7 +93,7 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
         </div>
       </nav>
 
-      <main className="duo-main m3-main">{children}</main>
+      <main className="m3-main">{children}</main>
       <ImportantSheet />
 
       {showsSpeakFab(pathname) && <Fab href="/grievances" label="Speak up anonymously" icon={<SpeakUpIcon size={26} />} />}

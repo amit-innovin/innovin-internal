@@ -10,6 +10,6 @@ export const metadata: Metadata = { title: "Speak up · Innovin" };
 // Signed-in people get it inside the app shell; everyone else gets the page on its own.
 export default async function Page() {
   const actor = await currentActor();
-  if (!actor) return <div className="duo"><main className="duo-main" style={{ paddingBottom: 32 }}><SpeakUpPage name={null} /></main></div>;
+  if (!actor) return <div className="m3-app"><main className="m3-main" style={{ paddingBottom: 32 }}><SpeakUpPage name={null} /></main></div>;
   return <AppShell {...await shellProps(actor)}><SpeakUpPage name={actor.name || actor.email} /></AppShell>;
 }

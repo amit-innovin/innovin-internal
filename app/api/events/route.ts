@@ -35,10 +35,18 @@ export async function GET(req: NextRequest) {
   const myIds = new Set(mine);
   const admin=await isAdmin();
   // Admins also see whether each event's Google invite went out.
-  // "stale": it may be in calendars but an edit or cancel didn't reach Google.
-  const invites = admin ? new Map((await store.listEventInvites()).map((i) => [i.eventId, i.state === "failed" && mayExist(i) ? "stale" : i.state])) : null;
+  const inviteRows = new Map((await store.listEventInvites()).map((i) => [i.eventId, i]));
+  // Headcounts are for admins only (as in the Feed). Everyone learns whether the event went out as a
+  // Google Calendar invite; admins also see its state ("stale": an edit or cancel didn't reach Google).
   return NextResponse.json(
-    rows.map(({ createdBy, ...e }) => ({ ...e, canManage: !e.cancelledAt && Date.parse(e.startsAt)>Date.now() && (admin || !!user && createdBy===user.email), going: counts[e.id] ?? 0, mine: myIds.has(e.id), ...(invites ? { invite: invites.get(e.id) ?? null } : {}) })),
+    rows.map(({ createdBy, ...e }) => {
+      const invite = inviteRows.get(e.id);
+      return {
+        ...e, canManage: !e.cancelledAt && Date.parse(e.startsAt)>Date.now() && (admin || !!user && createdBy===user.email), mine: myIds.has(e.id),
+        inCalendar: !!invite && mayExist(invite),
+        ...(admin ? { going: counts[e.id] ?? 0, invite: invite ? (invite.state === "failed" && mayExist(invite) ? "stale" : invite.state) : null } : {}),
+      };
+    }),
   );
 }
 
@@ -133,8 +141,8 @@ export async function PATCH(req: NextRequest) {
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
   const savedRsvp=await store.setRsvp(eventId, session ? accountRef(`rsvp:${session.email}`) : identity.ref, session?.email ?? null, going);
   if(!savedRsvp)return NextResponse.json({error:"The event was cancelled or removed. Refresh the event list."},{status:409});
-  const counts = await store.rsvpCounts([eventId]);
-  const res = NextResponse.json({ going, count: counts[eventId] ?? 0 });
+  // The headcount goes to admins only.
+  const res = NextResponse.json((await isAdmin()) ? { going, count: (await store.rsvpCounts([eventId]))[eventId] ?? 0 } : { going });
   setSubmitterCookie(res, identity.deviceId);
   return res;
 }

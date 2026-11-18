@@ -1,17 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ACCOUNT_MENU, activeNav, isDuoRoute, navFor, showsSpeakFab } from "@/lib/nav";
+import { ACCOUNT_MENU, activeNav, navFor, showsSpeakFab } from "@/lib/nav";
 
 describe("new shell navigation", () => {
-  it("knows which routes are already in the new design", () => {
-    expect(isDuoRoute("/notifications")).toBe(true);
-    expect(isDuoRoute("/notifications/anything")).toBe(true);
-    expect(isDuoRoute("/notificationsx")).toBe(false);
-    expect(isDuoRoute("/")).toBe(true);
-    expect(isDuoRoute("/attendance")).toBe(false);
-    expect(isDuoRoute("/help")).toBe(false);
-    for (const r of ["/days", "/feed", "/feed/events/x", "/snacks", "/steps", "/reading", "/account", "/grievances", "/wifi"]) expect(isDuoRoute(r)).toBe(true);
-  });
-
   it("phone bar: Home stays lit for the screens it owns", () => {
     expect(activeNav("/", "bar")).toBe("home");
     expect(activeNav("/notifications", "bar")).toBe("home");
@@ -46,10 +36,7 @@ describe("new shell navigation", () => {
     for (const r of ["/feed", "/feed/events/x", "/grievances", "/wifi", "/notifications", "/steps", "/admin", "/admin/people", "/days/x"]) expect(showsSpeakFab(r)).toBe(false);
   });
 
-  it("admin pages: the old tools screen stays legacy, the member app has no admin sub-menu", () => {
-    expect(isDuoRoute("/admin")).toBe(true);
-    expect(isDuoRoute("/admin/people")).toBe(true);
-    expect(isDuoRoute("/admin/tools")).toBe(false);
+  it("admin pages light Account on the phone bar", () => {
     expect(activeNav("/admin/people", "bar")).toBe("account");
   });
 });

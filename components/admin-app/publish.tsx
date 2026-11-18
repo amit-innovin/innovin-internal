@@ -4,9 +4,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  useAdminOverview, useAnnouncements, useCalendar, useCancelEvent, useDeleteAnnouncement, useDeleteEvent, useDisconnectCalendar, useEvents, usePostEvent, usePublishAnnouncement, useResendInvite,
+  useAdminOverview, useAnnouncements, useCalendar, useCancelEvent, useDeleteAnnouncement, useDeleteEvent, useDisconnectCalendar, useEditEvent, useEvents, usePostEvent, usePublishAnnouncement, useResendInvite,
   type AdminAnnouncement, type AdminEvent,
 } from "@/lib/queries";
+import { Sheet } from "@/components/m3/sheet";
 import { Loading, PageHead, Switch, Tabs, dayLabel, fmtTime, istDay, todayIST, useSnack } from "./ui";
 
 type Tab = "announcements" | "events";
@@ -158,13 +159,14 @@ function Events() {
   const today = todayIST();
   const connected = !!calendar.data?.connected;
   const [invite, setInvite] = useState(true);
-  const [f, setF] = useState({ title: "", date: "", time: "", place: "", cat: "social" });
+  const [f, setF] = useState({ title: "", date: "", time: "", place: "", cat: "social", body: "" });
+  const [editing, setEditing] = useState<AdminEvent | null>(null);
   const [confirm, setConfirm] = useState("");
   const dateBad = !!f.date && f.date < today;
   const cant = !f.title.trim() || !f.date || dateBad || !f.time || !f.place.trim() || post.isPending;
-  const submit = () => post.mutate({ title: f.title.trim(), category: f.cat, startsAt: `${f.date}T${f.time}`, body: "", location: f.place.trim(), invite: connected && invite }, {
+  const submit = () => post.mutate({ title: f.title.trim(), category: f.cat, startsAt: `${f.date}T${f.time}`, body: f.body.trim(), location: f.place.trim(), invite: connected && invite }, {
     onSuccess: (r) => {
-      setF({ title: "", date: "", time: "", place: "", cat: "social" });
+      setF({ title: "", date: "", time: "", place: "", cat: "social", body: "" });
       const sent = (r as { invite?: string | null } | null)?.invite;
       snack(sent === "sent" ? "Posted. Invites sent" : sent ? "Posted. Google invite didn't go out" : "Posted");
       calendar.refetch();
@@ -190,6 +192,7 @@ function Events() {
             <select id="ev-c" className="m3a-field" value={f.cat} onChange={(e) => setF({ ...f, cat: e.target.value })}>{CATS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
           </div>
         </div>
+        <div className="m3a-fcol"><label htmlFor="ev-b" className="m3a-lbl">Details (optional)</label><textarea id="ev-b" className="m3a-field" maxLength={500} placeholder="What to bring, who it's for" style={{ height: 96, padding: "12px 14px", lineHeight: "22px", resize: "vertical" }} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} /></div>
         {connected && (
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <span id="ev-g" style={{ flex: 1, minWidth: 0, fontWeight: 600 }}>Invite everyone in Google Calendar</span>
@@ -229,6 +232,7 @@ function Events() {
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
                     {(e.invite === "stale" || (!e.cancelledAt && e.invite === "failed" && connected)) && <button type="button" className="m3-btn m3-btn-tonal" aria-label={`Send invite for ${e.title} again`} disabled={resend.isPending}
                       onClick={() => resend.mutate({ id: e.id }, { onSuccess: () => snack("Invites sent"), onError: (err) => snack(err.message) })}>Send again</button>}
+                    {!e.cancelledAt && e.canManage && <button type="button" className="m3-btn m3-btn-outlined" aria-label={`Edit ${e.title}`} onClick={() => setEditing(e)}>Edit</button>}
                     {!e.cancelledAt && e.canManage && <button type="button" className="m3-btn m3-btn-outlined" aria-label={`Cancel ${e.title}`} disabled={cancel.isPending}
                       onClick={() => cancel.mutate({ id: e.id, expectedUpdatedAt: e.updatedAt ?? e.createdAt }, { onSuccess: () => snack(`${e.title} cancelled`), onError: (err) => snack(err.message) })}>Cancel event</button>}
                     <button type="button" className="m3-btn m3-btn-text" aria-label={`Delete ${e.title}`} onClick={() => setConfirm(e.id)}>Delete</button>
@@ -240,6 +244,40 @@ function Events() {
           })}
       </section>
     </div>
+    {editing && <EditEvent event={editing} onClose={() => setEditing(null)} />}
     </div>
+  );
+}
+
+const IST_TIME = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false });
+
+// Edit an event (canvas: Publish › Edit event). People going, and the Google invite, get the update.
+function EditEvent({ event, onClose }: { event: AdminEvent; onClose: () => void }) {
+  const save = useEditEvent();
+  const snack = useSnack();
+  const today = todayIST();
+  const [f, setF] = useState({ title: event.title, date: istDay(event.startsAt), time: IST_TIME.format(new Date(event.startsAt)), place: event.location, body: event.body });
+  const bad = !!f.date && f.date < today;
+  const cant = !f.title.trim() || !f.date || bad || !f.time || !f.place.trim() || save.isPending;
+  const submit = () => save.mutate({ action: "update", id: event.id, expectedUpdatedAt: event.updatedAt ?? event.createdAt, title: f.title.trim(), category: event.category, startsAt: `${f.date}T${f.time}`, body: f.body.trim(), location: f.place.trim() }, {
+    onSuccess: () => { snack("Saved. People going were told."); onClose(); },
+    onError: (e) => snack(e.message),
+  });
+  return (
+    <Sheet open onClose={onClose} label="Edit event">
+      <h2 className="m3-title" style={{ fontSize: 22, lineHeight: "28px" }}>Edit event</h2>
+      <div className="m3a-fcol"><label htmlFor="ed-t" className="m3a-lbl">Title</label><input id="ed-t" className="m3a-field" maxLength={120} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <div className="m3a-fcol" style={{ flex: "1 1 160px" }}><label htmlFor="ed-d" className="m3a-lbl">Date</label><input id="ed-d" type="date" className="m3a-field" min={today} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></div>
+        <div className="m3a-fcol" style={{ flex: "1 1 120px" }}><label htmlFor="ed-tm" className="m3a-lbl">Time (IST)</label><input id="ed-tm" type="time" className="m3a-field" value={f.time} onChange={(e) => setF({ ...f, time: e.target.value })} /></div>
+      </div>
+      <div className="m3a-fcol"><label htmlFor="ed-p" className="m3a-lbl">Place</label><input id="ed-p" className="m3a-field" maxLength={80} value={f.place} onChange={(e) => setF({ ...f, place: e.target.value })} /></div>
+      <div className="m3a-fcol"><label htmlFor="ed-b" className="m3a-lbl">Details (optional)</label><textarea id="ed-b" className="m3a-field" maxLength={500} style={{ height: 96, padding: "12px 14px", lineHeight: "22px", resize: "vertical" }} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} /></div>
+      {bad && <p role="alert" className="m3a-alert">Pick today or a later date.</p>}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+        <button type="button" className="m3-btn m3-btn-text" onClick={onClose}>Cancel</button>
+        <button type="button" className="m3-btn m3-btn-filled" disabled={cant} onClick={submit}>Save</button>
+      </div>
+    </Sheet>
   );
 }

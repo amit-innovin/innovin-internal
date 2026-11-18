@@ -280,7 +280,7 @@ export const useSteps = () => useQuery({ queryKey: ["steps"], queryFn: () => fet
 export type WifiReport = { id: string; quality: "good" | "poor"; note: string; downMbps: number | null; upMbps?: number | null; createdAt: string; area?: string | null };
 export const useWifiReports = () => useQuery({ queryKey: ["wifi"], queryFn: () => fetchJSON<WifiReport[]>("/api/wifi") });
 
-export type FeedEvent = { id: string; title: string; body: string; category: string; startsAt: string; location: string; cancelledAt?: string; going: number; mine: boolean; canManage: boolean };
+export type FeedEvent = { id: string; title: string; body: string; category: string; startsAt: string; location: string; cancelledAt?: string; going?: number; mine: boolean; canManage: boolean; inCalendar?: boolean };
 export const useEvent = (id: string) => useQuery({ queryKey: ["event", id], queryFn: () => fetchJSON<FeedEvent[]>(`/api/events?event=${encodeURIComponent(id)}`) });
 
 // ---- admin ----
@@ -328,5 +328,7 @@ export type CalendarStatus = { configured: boolean; me: string; connected: { ema
 export const useCalendar = () => useQuery({ queryKey: ["admin", "calendar"], queryFn: () => fetchJSON<CalendarStatus>("/api/admin/calendar") });
 export const useDisconnectCalendar = () => useAdminWrite<Record<string, never>>("/api/admin/calendar", "POST", [["admin", "calendar"], ["events"]]);
 export const useResendInvite = () => useAdminWrite<{ id: string }>("/api/admin/calendar/invite", "POST", [["events"]]);
+// Edit an event's details (admins). Guests who said they're going, and the Google invite, follow.
+export const useEditEvent = () => useAdminWrite<{ action: "update"; id: string; expectedUpdatedAt: string; title: string; category: string; startsAt: string; body: string; location: string }>("/api/events", "PATCH", [["events"], ["feed"]]);
 export const useCancelEvent = () => useAdminWrite<{ id: string; expectedUpdatedAt: string }>("/api/events", "DELETE", [["events"], ["feed"]]);
 export const useDeleteEvent = () => useAdminWrite<{ action: "delete"; id: string }>("/api/events", "POST", [["events"], ["feed"]]);

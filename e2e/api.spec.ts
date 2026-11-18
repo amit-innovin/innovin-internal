@@ -604,7 +604,8 @@ test.describe("API: behaviour", () => {
 
     const list = await (await ctx.get("/api/events")).json();
     const ev = list.find((e: { title: string }) => e.title === title);
-    expect(ev).toMatchObject({ title, category: "sports", location: "Common area", going: 0, mine: false });
+    expect(ev).toMatchObject({ title, category: "sports", location: "Common area", mine: false });
+    expect(ev.going).toBeUndefined(); // headcounts are for admins only
     expect(ev.startsAt).toBe("2026-12-25T11:30:00.000Z"); // 17:00 IST
     noRef(ev);
     expect(JSON.stringify(ev)).not.toContain("createdBy");
@@ -615,18 +616,19 @@ test.describe("API: behaviour", () => {
     expect((await ctx.patch("/api/events", { data: { eventId: "missing", going: true } })).status()).toBe(404);
 
     const on = await (await ctx.patch("/api/events", { data: { eventId: ev.id, going: true } })).json();
-    expect(on).toEqual({ going: true, count: 1 });
+    expect(on).toEqual({ going: true });
     const other = await device();
     const otherOn = await (await other.patch("/api/events", { data: { eventId: ev.id, going: true } })).json();
-    expect(otherOn).toEqual({ going: true, count: 2 });
+    expect(otherOn).toEqual({ going: true });
+    expect((await (await adm.get("/api/events")).json()).find((e: { id: string }) => e.id === ev.id).going).toBe(2);
 
     const mine = (await (await ctx.get("/api/events")).json()).find((e: { id: string }) => e.id === ev.id);
-    expect(mine).toMatchObject({ going: 2, mine: true });
+    expect(mine).toMatchObject({ mine: true });
     const theirs = await (await (await device()).get("/api/events")).json();
     expect(theirs.find((e: { id: string }) => e.id === ev.id).mine).toBe(false);
 
     const off = await (await ctx.patch("/api/events", { data: { eventId: ev.id, going: false } })).json();
-    expect(off).toEqual({ going: false, count: 1 });
+    expect(off).toEqual({ going: false });
 
     const del = await adm.post("/api/events", { form: { _action: "delete", id: ev.id }, maxRedirects: 0 });
     expect(del.headers().location).toBe("/admin?tab=publish&done=event-deleted#events");

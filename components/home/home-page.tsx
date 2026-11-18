@@ -90,7 +90,7 @@ function UpNext({ days }: { days: DaysView }) {
       {event && (
         <div className="m3-row">
           <TimeCell top={at(event.startsAt, { weekday: "short" })} bottom={at(event.startsAt, { hour: "numeric", minute: "2-digit" })} />
-          <span style={{ flex: 1, minWidth: 0 }}><span style={{ display: "block", fontWeight: 600 }}>{event.title}</span><span className="m3-small">{event.going} going{event.location ? ` · ${event.location}` : ""}</span></span>
+          <span style={{ flex: 1, minWidth: 0 }}><span style={{ display: "block", fontWeight: 600 }}>{event.title}</span>{event.location && <span className="m3-small">{event.location}</span>}</span>
           <Button variant={event.mine ? "tonal" : "outlined"} aria-pressed={event.mine} style={{ height: 36, padding: "0 14px", flex: "none" }} disabled={rsvp.isPending}
             onClick={() => rsvp.mutate({ eventId: event.id, going: !event.mine }, { onError: (e) => toast.error(e.message) })}>{event.mine ? "Going" : "I'm in"}</Button>
         </div>

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { WorkspaceOnboarding } from "@/components/workspace/onboarding";
+import { SignInCard } from "@/components/auth/sign-in-card";
 import { currentActor } from "@/lib/admin";
 import { sanitizeNext } from "@/lib/auth";
 import { googleConfigured } from "@/lib/google";
@@ -7,9 +7,8 @@ import { googleConfigured } from "@/lib/google";
 export const dynamic = "force-dynamic";
 
 const AUTH_ERRORS: Record<string, string> = {
-  failed: "Sign-in didn't complete. Use your Innovin Google account.",
-  unavailable: "Sign-in isn't configured on this deployment.",
-  busy: "Too many sign-in attempts — try again shortly.",
+  failed: "That didn’t work. Use your @innovinlabs.com Google account.",
+  busy: "Too many tries. Wait a minute and try again.",
 };
 
 // The one page a signed-out visitor sees (besides anonymous Speak Up). The proxy sends every
@@ -19,5 +18,6 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
   const requested = sanitizeNext(params.next ?? "/");
   const next = requested.startsWith("/sign-in") ? "/" : requested;
   if (await currentActor()) redirect(next);
-  return <WorkspaceOnboarding googleEnabled={googleConfigured()} next={next} error={params.auth ? AUTH_ERRORS[params.auth] : undefined} />;
+  // "unavailable" needs no error: without Google configured the card says sign-in isn't set up.
+  return <SignInCard googleEnabled={googleConfigured()} next={next} error={params.auth ? AUTH_ERRORS[params.auth] : undefined} />;
 }

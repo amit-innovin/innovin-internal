@@ -59,8 +59,13 @@ const nextConfig: NextConfig = {
       { source: "/events", has: [{ type: "query", key: "event", value: "(?<event>[^&]+)" }], destination: "/feed/events/:event", permanent: false },
       { source: "/events", destination: "/feed?filter=event", permanent: false },
       { source: "/settings", destination: "/account", permanent: false },
-      { source: "/leave", destination: "/attendance?tab=leave", permanent: false },
-      { source: "/away", destination: "/attendance?tab=leave", permanent: false },
+      { source: "/leave", destination: "/days", permanent: false },
+      { source: "/away", destination: "/days", permanent: false },
+      // Retired in the Material 3 rebuild: attendance and leave live on Days, the reading list is
+      // out of the design, and the old admin tools moved into the admin app.
+      { source: "/attendance", destination: "/days", permanent: false },
+      { source: "/reading", destination: "/", permanent: false },
+      { source: "/admin/tools", destination: "/admin", permanent: false },
       ...["/pantry", "/planner", "/people", "/admin/pantry"].map((source) => ({ source, destination: "/", permanent: false })),
     ];
   },

@@ -33,11 +33,6 @@ const ITEMS: Item[] = [
 
 const matches = (pathname: string, owned: string) => (owned === "/" ? pathname === "/" : pathname === owned || pathname.startsWith(`${owned}/`));
 
-// Routes that already render in the new shell. Everything else still gets the legacy nav.
-const DUO_ROUTES = ["/", "/days", "/notifications", "/feed", "/snacks", "/steps", "/reading", "/account", "/grievances", "/wifi", "/admin"];
-// The old admin screen keeps the tools the canvas hasn't drawn a new home for yet.
-const LEGACY_ROUTES = ["/admin/tools"];
-export const isDuoRoute = (pathname: string) => DUO_ROUTES.some((r) => matches(pathname, r)) && !LEGACY_ROUTES.some((r) => matches(pathname, r));
 
 // Laptop sidebar for admins: "Admin" with its sub-pages (D-AdminDesktop and D-AdminDesk-*).
 

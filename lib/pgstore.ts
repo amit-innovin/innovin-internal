@@ -20,6 +20,7 @@ import type {
   WorkspaceProfile,
   AttendanceChangeRow,
   ClosedDayRow,
+  HiRow,
   TeaRound,
   PlanOverrideRow,
   SnackItem,
@@ -229,6 +230,19 @@ CREATE TABLE IF NOT EXISTS plan_overrides (
 CREATE INDEX IF NOT EXISTS plan_overrides_date_idx ON plan_overrides (date);
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS feed_seen_at timestamptz;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS steps_league boolean NOT NULL DEFAULT false;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS say_hi boolean NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS hi_messages (
+  id text PRIMARY KEY,
+  date text NOT NULL,
+  from_email text NOT NULL,
+  to_email text NOT NULL,
+  kind text NOT NULL,
+  at_time text,
+  reply text,
+  created_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS hi_messages_to_idx ON hi_messages (to_email, date);
+CREATE INDEX IF NOT EXISTS hi_messages_from_idx ON hi_messages (from_email, date);
 ALTER TABLE wifi ADD COLUMN IF NOT EXISTS area text;
 CREATE TABLE IF NOT EXISTS nudges (
   date text NOT NULL,
@@ -350,6 +364,7 @@ const snack = (r: any): SnackItem => ({
   orderedAt: r.ordered_at ? r.ordered_at.toISOString?.() ?? r.ordered_at : null,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
 });
+const hiRow = (r: any): HiRow => ({ id: r.id, date: r.date, from: r.from_email, to: r.to_email, kind: r.kind, atTime: r.at_time ?? null, reply: r.reply ?? null, createdAt: r.created_at?.toISOString?.() ?? r.created_at });
 const planOverride = (r: any): PlanOverrideRow => ({ email: r.email, date: r.date, planned: r.planned });
 const closedDay = (r: any): ClosedDayRow => ({ date: r.date, reason: r.reason, createdBy: r.created_by, createdAt: r.created_at?.toISOString?.() ?? r.created_at });
 const attendanceChange = (r: any): AttendanceChangeRow => ({
@@ -411,6 +426,7 @@ const employee = (r: any): EmployeeRow => ({
   lastSeenAt: r.last_seen_at?.toISOString?.() ?? r.last_seen_at,
   feedSeenAt: r.feed_seen_at ? r.feed_seen_at.toISOString?.() ?? r.feed_seen_at : null,
   stepsLeague: r.steps_league ?? false,
+  sayHi: r.say_hi ?? false,
 });
 const pushSubscription = (r: any): PushSubscriptionRow => ({
   sessionRef: r.session_ref ?? null,
@@ -838,6 +854,26 @@ class PgStore implements Store {
   async countAnnouncementAcks(ids: string[]) {
     const res = await this.q(`SELECT announcement_id, count(*)::int AS n FROM announcement_acks WHERE announcement_id = ANY($1) GROUP BY announcement_id`, [ids]);
     return Object.fromEntries(ids.map((id) => [id, res.rows.find((r: any) => r.announcement_id === id)?.n ?? 0]));
+  }
+  async setSayHi(email: string, on: boolean) {
+    const res = await this.q(`UPDATE employees SET say_hi = $2 WHERE email = $1`, [email, on]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async addHi(row: HiRow) {
+    await this.q(`INSERT INTO hi_messages (id, date, from_email, to_email, kind, at_time, reply, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [row.id, row.date, row.from, row.to, row.kind, row.atTime, row.reply, row.createdAt]);
+    return row;
+  }
+  async listHiFrom(date: string, from: string) {
+    const res = await this.q(`SELECT * FROM hi_messages WHERE date = $1 AND from_email = $2 ORDER BY created_at`, [date, from]);
+    return res.rows.map(hiRow);
+  }
+  async listHiTo(date: string, to: string) {
+    const res = await this.q(`SELECT * FROM hi_messages WHERE date = $1 AND to_email = $2 ORDER BY created_at`, [date, to]);
+    return res.rows.map(hiRow);
+  }
+  async setHiReply(id: string, to: string, reply: "yes" | "no") {
+    const res = await this.q(`UPDATE hi_messages SET reply = $3 WHERE id = $1 AND to_email = $2 AND reply IS NULL AND kind IN ('chai','lunch','walk')`, [id, to, reply]);
+    return (res.rowCount ?? 0) > 0;
   }
   async setStepsLeague(email: string, on: boolean) {
     const res = await this.q(`UPDATE employees SET steps_league = $2 WHERE email = $1`, [email, on]);

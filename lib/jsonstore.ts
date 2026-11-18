@@ -16,7 +16,7 @@ import type {
   Store,
   WifiRow,
   WorkspaceProfile,
- AttendanceChangeRow, PollVote, TeaRow, SnackItem, SnackVote, BookRow, ReadingRow, PlanOverrideRow, ClosedDayRow } from "./types";
+ AttendanceChangeRow, PollVote, TeaRow, SnackItem, SnackVote, BookRow, ReadingRow, PlanOverrideRow, ClosedDayRow, HiRow } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -51,12 +51,13 @@ type DB = {
   settings: Record<string, unknown>;
   nudges: { date: string; from: string; to: string }[];
   noticeReports: { noticeId: string; reporterRef: string; at: string }[];
+  hi: HiRow[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
-const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, feedSeenAt: e.feedSeenAt ?? null, stepsLeague: e.stepsLeague ?? false });
+const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, feedSeenAt: e.feedSeenAt ?? null, stepsLeague: e.stepsLeague ?? false, sayHi: e.sayHi ?? false });
 const readAnnouncement = (a: AnnouncementRow): AnnouncementRow => ({ ...a, important: a.important ?? false, authorName: a.authorName ?? null, pinnedUntil: a.pinnedUntil ?? null });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [], snackPicks: [], settings: {}, nudges: [], noticeReports: [] });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [], snackPicks: [], settings: {}, nudges: [], noticeReports: [], hi: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -385,6 +386,21 @@ export const jsonStore: Store = {
     }),
   listAckedAnnouncementIds: (email) => query((db) => db.announcementAcks.filter((a) => a.email === email).map((a) => a.announcementId)),
   countAnnouncementAcks: (ids) => query((db) => Object.fromEntries(ids.map((id) => [id, db.announcementAcks.filter((a) => a.announcementId === id).length]))),
+  setSayHi: (email, on) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.sayHi = on;
+      return { result: !!row, changed: !!row };
+    }),
+  addHi: (row) => mutate((db) => { db.hi.push(row); return { result: row, changed: true }; }),
+  listHiFrom: (date, from) => query((db) => db.hi.filter((h) => h.date === date && h.from === from).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  listHiTo: (date, to) => query((db) => db.hi.filter((h) => h.date === date && h.to === to).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  setHiReply: (id, to, reply) =>
+    mutate((db) => {
+      const row = db.hi.find((h) => h.id === id && h.to === to && ["chai", "lunch", "walk"].includes(h.kind) && h.reply === null);
+      if (row) row.reply = reply;
+      return { result: !!row, changed: !!row };
+    }),
   setStepsLeague: (email, on) =>
     mutate((db) => {
       const row = db.employees.find((e) => e.email === email);

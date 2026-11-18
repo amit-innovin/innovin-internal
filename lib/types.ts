@@ -29,6 +29,8 @@ export type EmployeeRow = {
   feedSeenAt?: string | null;
   // Opted into the step league: listed for others who joined, and can nudge and be nudged.
   stepsLeague?: boolean;
+  // Opted into Say hi: can send and get waves and invites from people in the office.
+  sayHi?: boolean;
 };
 
 // How a day got its mark. wifi / location: verified at the office. self: declared remote.
@@ -37,6 +39,10 @@ export type AttendanceSource = "wifi" | "location" | "self" | "late" | "admin";
 export type DayMode = "office" | "remote";
 
 // One entry per day changed after the fact, by the person or by an admin.
+export type HiKind = "wave" | "five" | "thanks" | "chai" | "lunch" | "walk";
+// One wave or invite, today. atTime: "now", "30" (minutes) or "HH:MM" for invites; reply only for invites.
+export type HiRow = { id: string; date: string; from: string; to: string; kind: HiKind; atTime: string | null; reply: "yes" | "no" | null; createdAt: string };
+
 export type PlanOverrideRow = { email: string; date: string; planned: boolean };
 export type ClosedDayRow = { date: string; reason: string; createdBy: string; createdAt: string };
 
@@ -330,6 +336,12 @@ export interface Store {
   setStepsLeague(email: string, on: boolean): Promise<boolean>;
   // One nudge per sender, recipient and day; false when it was already sent.
   addNudge(date: string, from: string, to: string): Promise<boolean>;
+  setSayHi(email: string, on: boolean): Promise<boolean>;
+  addHi(row: HiRow): Promise<HiRow>;
+  listHiFrom(date: string, from: string): Promise<HiRow[]>;
+  listHiTo(date: string, to: string): Promise<HiRow[]>;
+  // Only the recipient, only an unanswered invite; false otherwise.
+  setHiReply(id: string, to: string, reply: "yes" | "no"): Promise<boolean>;
   listNudgesFrom(date: string, from: string): Promise<string[]>;
   addAway(row: AwayRow): Promise<AwayRow>;
   setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string, expected: AwayStatus): Promise<boolean>;

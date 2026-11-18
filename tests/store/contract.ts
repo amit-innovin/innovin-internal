@@ -137,6 +137,24 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.countNoticeReports()).toEqual({ n1: 2, n2: 1 });
     });
 
+    it("keeps Say hi opt-in and today's waves, invites and replies", async () => {
+      await store.upsertEmployee(employee({ email: "a@innovinlabs.com" }));
+      expect((await store.getEmployee("a@innovinlabs.com"))?.sayHi).toBe(false);
+      expect(await store.setSayHi("a@innovinlabs.com", true)).toBe(true);
+      expect((await store.getEmployee("a@innovinlabs.com"))?.sayHi).toBe(true);
+      const at = iso();
+      await store.addHi({ id: "h1", date: "2026-11-18", from: "a@innovinlabs.com", to: "b@innovinlabs.com", kind: "wave", atTime: null, reply: null, createdAt: at });
+      await store.addHi({ id: "h2", date: "2026-11-18", from: "a@innovinlabs.com", to: "c@innovinlabs.com", kind: "chai", atTime: "now", reply: null, createdAt: iso(1000) });
+      await store.addHi({ id: "h3", date: "2026-11-17", from: "a@innovinlabs.com", to: "b@innovinlabs.com", kind: "wave", atTime: null, reply: null, createdAt: iso(-86_400_000) });
+      expect((await store.listHiFrom("2026-11-18", "a@innovinlabs.com")).map((h) => h.id).sort()).toEqual(["h1", "h2"]);
+      expect((await store.listHiTo("2026-11-18", "c@innovinlabs.com")).map((h) => h.id)).toEqual(["h2"]);
+      expect(await store.setHiReply("h2", "b@innovinlabs.com", "yes")).toBe(false); // not the recipient
+      expect(await store.setHiReply("h1", "b@innovinlabs.com", "yes")).toBe(false); // a wave isn't an invite
+      expect(await store.setHiReply("h2", "c@innovinlabs.com", "yes")).toBe(true);
+      expect(await store.setHiReply("h2", "c@innovinlabs.com", "no")).toBe(false); // one reply
+      expect((await store.listHiFrom("2026-11-18", "a@innovinlabs.com")).find((h) => h.id === "h2")?.reply).toBe("yes");
+    });
+
     it("keeps one plan override per person and date, and lists a date's overrides for everyone", async () => {
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", true);
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", false);

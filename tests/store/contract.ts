@@ -135,6 +135,8 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.addNoticeReport("n1", "ref-b")).toBe(true);
       expect(await store.addNoticeReport("n2", "ref-a")).toBe(true);
       expect(await store.countNoticeReports()).toEqual({ n1: 2, n2: 1 });
+      await store.clearNoticeReports("n1");
+      expect(await store.countNoticeReports()).toEqual({ n2: 1 });
     });
 
     it("keeps Say hi opt-in and today's waves, invites and replies", async () => {

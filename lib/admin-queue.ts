@@ -27,6 +27,14 @@ export async function needsYou(): Promise<NeedsYou[]> {
   }
   const poor = wifi.filter((w) => w.quality === "poor" && istDay(w.createdAt) === today);
   if (poor.length) items.push({ id: "wifi", kind: "wifi", urgent: false, href: "/admin/wifi", title: `${poor.length} poor Wi-Fi report${poor.length === 1 ? "" : "s"} today`, sub: poor[0].note || "No location given" });
+  // Reported Feed posts waiting for a look.
+  const reported = Object.keys(await store.countNoticeReports()).length;
+  if (reported) items.push({ id: "reported", kind: "speak", urgent: false, href: "/admin/speak-up", title: `${reported} reported Feed post${reported === 1 ? "" : "s"}`, sub: "Keep or remove" });
+  // Announcements not yet seen by everyone (still showing as a dialog).
+  const employees = await store.listEmployees();
+  const recent = (await store.listAnnouncements(10)).filter((a) => a.important && (a.pinnedUntil ? a.pinnedUntil >= today : Date.now() - Date.parse(a.createdAt) < 14 * 86_400_000));
+  const seen = await store.countAnnouncementAcks(recent.map((a) => a.id));
+  for (const a of recent) if ((seen[a.id] ?? 0) < employees.length) items.push({ id: `ann-${a.id}`, kind: "speak", urgent: false, href: "/admin/publish", title: a.title, sub: `Seen by ${seen[a.id] ?? 0} of ${employees.length}` });
   return items;
 }
 

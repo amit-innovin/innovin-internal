@@ -97,7 +97,7 @@ export function PostCard({ item, onWish, style, footer }: { item: CardItem; onWi
       author = `${item.authorName ?? "Admin"} · Admin`; title = item.title; body = item.body; meta = "For everyone"; avatar = <Avatar name={item.authorName ?? "Admin"} />;
       break;
     case "event":
-      author = when(item.startsAt); title = item.title; body = [item.body, item.location].filter(Boolean).join(" · "); meta = item.cancelled ? "Cancelled" : `${item.going} going`; action = <EventAction post={item} />;
+      author = when(item.startsAt); title = item.title; body = [item.body, item.location].filter(Boolean).join(" · "); meta = item.cancelled ? "Cancelled" : "going" in item && typeof item.going === "number" ? `${item.going} going` : ""; action = <EventAction post={item} />;
       break;
     case "poll":
       author = item.authorName ?? "Someone"; title = item.question; action = <PollOptions post={item} />; avatar = <Avatar name={item.authorName ?? "?"} />;

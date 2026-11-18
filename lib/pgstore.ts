@@ -802,6 +802,9 @@ class PgStore implements Store {
     const res = await this.q(`INSERT INTO notice_reports (notice_id, reporter_ref, at) VALUES ($1,$2,now()) ON CONFLICT DO NOTHING`, [noticeId, reporterRef]);
     return (res.rowCount ?? 0) > 0;
   }
+  async clearNoticeReports(noticeId: string) {
+    await this.q(`DELETE FROM notice_reports WHERE notice_id = $1`, [noticeId]);
+  }
   async countNoticeReports() {
     const res = await this.q(`SELECT notice_id, count(*)::int AS n FROM notice_reports GROUP BY notice_id`);
     return Object.fromEntries(res.rows.map((r: any) => [r.notice_id, r.n as number]));

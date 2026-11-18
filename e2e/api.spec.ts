@@ -780,9 +780,9 @@ test.describe("Feed catch-up", () => {
     expect((await adm.post("/api/events", { data: { title: `Admin event ${Date.now()}`, category: "social", startsAt, body: "", location: "" } })).status()).toBe(201);
   });
 
-  test("an important announcement needs a pin date that hasn't passed", async () => {
+  test("an announcement's pin date can't be in the past", async () => {
     const adm = await admin();
-    for (const pinnedUntil of ["", plusDays(-1)]) {
+    for (const pinnedUntil of [plusDays(-1)]) {
       const title = `Bad pin ${Date.now()} ${pinnedUntil}`;
       const res = await adm.post("/api/announcements", { form: { title, body: "", important: "on", pinnedUntil }, maxRedirects: 0 });
       expect(res.status()).toBe(303);
@@ -862,13 +862,14 @@ test.describe("Tea & snacks", () => {
       const ctx = await inOffice();
       const shelf = (await (await ctx.get("/api/snacks")).json()).shelf as { id: string; name: string }[];
       const idA = shelf.find((s) => s.name === a)!.id, idB = shelf.find((s) => s.name === b)!.id;
-      const count = (view: { today: { picks: { itemId: string; count: number }[] } }, id: string) => view.today.picks.find((p) => p.itemId === id)?.count ?? 0;
+      // Counts go to admins only now; the member sees just which one is theirs.
+      const count = async (id: string) => ((await (await adm.get("/api/snacks")).json()).today.picks as { itemId: string; count: number }[]).find((p) => p.itemId === id)?.count ?? 0;
       let view = await (await ctx.patch("/api/snacks", { data: { id: idA, action: "pick" } })).json();
       expect(view.today).toMatchObject({ open: true, mine: idA });
-      expect(count(view, idA)).toBe(1);
+      expect(await count(idA)).toBe(1);
       view = await (await ctx.patch("/api/snacks", { data: { id: idB, action: "pick" } })).json();
       expect(view.today.mine).toBe(idB);
-      expect([count(view, idA), count(view, idB)]).toEqual([0, 1]);
+      expect([await count(idA), await count(idB)]).toEqual([0, 1]);
       expect(JSON.stringify(view)).not.toContain("voterRef");
       view = await (await ctx.patch("/api/snacks", { data: { id: idB, action: "unpick" } })).json();
       expect(view.today.mine).toBeNull();
@@ -1152,5 +1153,56 @@ test.describe("Say hi (Stage 7)", () => {
     await b.ctx.post("/api/hi/setting", { data: { on: false } });
     expect((await listed()).sayHi).toBe(false);
     expect((await hi(a.ctx, b.email, "wave")).status()).toBe(403);
+  });
+});
+
+test.describe("Admin app (Stage 8a)", () => {
+  test("Keep clears a post's reports but keeps the post; members can't", async () => {
+    const author = await signedIn(email()), reader = await signedIn(email());
+    const body = `Keep me ${Date.now()}`;
+    await author.post("/api/notices", { data: { kind: "quote", body, title: "", attribution: "", color: "purple", anonymous: false } });
+    const post = (await (await reader.get("/api/feed")).json()).posts.find((p: { body?: string }) => p.body === body);
+    await reader.post("/api/notices/report", { data: { id: post.id } });
+    expect((await reader.delete("/api/admin/reported", { data: { id: post.id } })).status()).toBe(401);
+    const adm = await admin();
+    expect((await adm.delete("/api/admin/reported", { data: { id: post.id } })).status()).toBe(200);
+    expect((await (await adm.get("/api/admin/reported")).json()).some((r: { id: string }) => r.id === post.id)).toBe(false);
+    expect((await (await reader.get("/api/feed")).json()).posts.some((p: { id: string }) => p.id === post.id)).toBe(true);
+  });
+
+  test("admins enter birthdays (day and month only)", async () => {
+    const person = await signedIn(email());
+    const who = (await (await person.get("/api/account")).json()).email;
+    const adm = await admin();
+    expect((await adm.patch("/api/people", { data: { email: who, birthday: "02-30", showBirthday: true } })).status()).toBe(400);
+    expect((await adm.patch("/api/people", { data: { email: who, birthday: "11-18", showBirthday: true } })).status()).toBe(200);
+    expect(await (await person.get("/api/account")).json()).toMatchObject({ birthday: "11-18", showBirthday: true });
+  });
+
+  test("every announcement reaches people once as a dialog, pinned or not", async () => {
+    const adm = await admin();
+    const title = `Plain notice ${Date.now()}`;
+    expect((await adm.post("/api/announcements", { form: { title, body: "Water off at 3" }, maxRedirects: 0 })).status()).toBe(303);
+    const member = await signedIn(email());
+    let next = (await (await member.get("/api/announcements/important")).json()).announcement;
+    // Older unacknowledged ones (from other tests) come first; acknowledge until ours shows.
+    for (let i = 0; i < 20 && next && next.title !== title; i++) {
+      await member.post("/api/announcements/ack", { data: { id: next.id } });
+      next = (await (await member.get("/api/announcements/important")).json()).announcement;
+    }
+    expect(next?.title).toBe(title);
+    await member.post("/api/announcements/ack", { data: { id: next.id } });
+    const list = await (await adm.get("/api/announcements")).json();
+    expect(list.find((a: { title: string }) => a.title === title)).toMatchObject({ seen: 1 });
+    await adm.post("/api/announcements", { form: { _action: "delete", id: next.id }, maxRedirects: 0 });
+  });
+
+  test("members don't get vanity numbers: no going counts on events, no pick counts on snacks", async () => {
+    const member = await signedIn(email());
+    const feed = await (await member.get("/api/feed")).json();
+    for (const p of feed.posts.filter((p: { type: string }) => p.type === "event")) expect(p.going).toBeUndefined();
+    const snacks = await (await member.get("/api/snacks")).json();
+    expect(snacks.today.picks).toBeUndefined();
+    expect(snacks.shelf.every((s: { votes?: number }) => s.votes === undefined)).toBe(true);
   });
 });

@@ -35,10 +35,10 @@ export async function POST(req: Request) {
   const title = text("title", 120);
   if (!title) return back("missing-title");
   const body = text("body", 500);
-  const important = form.get("important") === "on" || form.get("important") === "true";
   const pinnedUntil = text("pinnedUntil", 10);
-  // An important announcement is shown until its pin date, so the date must be today or later.
-  if (important && (!validDate(pinnedUntil) || pinnedUntil < todayIST())) return back("bad-pin");
+  // Every announcement is shown once as a dialog (owner ruling). An optional pin keeps it at the
+  // top of the Feed until that day, so a pin date must be today or later.
+  if (pinnedUntil && (!validDate(pinnedUntil) || pinnedUntil < todayIST())) return back("bad-pin");
   const actor = await currentActor();
   const announcement = await store.addAnnouncement({
     id: id(),
@@ -46,9 +46,9 @@ export async function POST(req: Request) {
     body,
     tag: text("tag", 30) || "Office",
     createdAt: new Date().toISOString(),
-    important,
+    important: true,
     authorName: actor?.name || null,
-    pinnedUntil: important ? pinnedUntil : null,
+    pinnedUntil: pinnedUntil || null,
   });
   // Best-effort: a push that fails must not fail the post.
   await sendPush({ title, body: body.slice(0, 120), href: boardHref(announcement.id), tag: "announcement" }).catch(() => {});

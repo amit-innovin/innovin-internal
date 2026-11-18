@@ -320,6 +320,8 @@ export interface Store {
   // A person flagging a Feed post for admins, by anonymous ref; false when they already did.
   addNoticeReport(noticeId: string, reporterRef: string): Promise<boolean>;
   countNoticeReports(): Promise<Record<string, number>>;
+  // An admin looked and kept the post: its reports are cleared.
+  clearNoticeReports(noticeId: string): Promise<void>;
   listGrievances(): Promise<GrievanceRow[]>;
   // "My submissions" lookup — ids come from the device's own cookie, never a stored ref.
   listGrievancesByIds(ids: string[], limit: number): Promise<GrievanceRow[]>;

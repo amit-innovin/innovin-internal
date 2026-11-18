@@ -47,7 +47,7 @@ export function TodayCard() {
   const [names, setNames] = useState(false);
   if (!tea.data || !snacks.data) return null;
   const counts = tea.data.counts ?? { am: 0, pm: 0 };
-  const picks = snacks.data.shelf.map((s) => ({ name: s.name, n: snacks.data.today.picks.find((p) => p.itemId === s.id)?.count ?? 0 })).filter((p) => p.n > 0).sort((a, b) => b.n - a.n);
+  const picks = snacks.data.shelf.map((s) => ({ name: s.name, n: snacks.data.today.picks?.find((p) => p.itemId === s.id)?.count ?? 0 })).filter((p) => p.n > 0).sort((a, b) => b.n - a.n);
   return (
     <Card role="region" aria-labelledby="today-admin-h" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <h2 id="today-admin-h" className="duo-h2">Today</h2>

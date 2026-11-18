@@ -346,6 +346,7 @@ export const jsonStore: Store = {
       db.noticeReports.push({ noticeId, reporterRef, at: new Date().toISOString() });
       return { result: true, changed: true };
     }),
+  clearNoticeReports: (noticeId) => mutate((db) => { db.noticeReports = db.noticeReports.filter((r) => r.noticeId !== noticeId); return { result: undefined, changed: true }; }),
   countNoticeReports: () => query((db) => db.noticeReports.reduce<Record<string, number>>((m, r) => ({ ...m, [r.noticeId]: (m[r.noticeId] ?? 0) + 1 }), {})),
   listGrievances: () =>
     // Urgent floats above everything else, then newest first.

@@ -13,7 +13,8 @@ export async function GET(req: NextRequest) {
   const [rows, acked] = await Promise.all([store.listAnnouncements(50), store.listAckedAnnouncementIds(session.email)]);
   const seen = new Set(acked);
   const next = rows
-    .filter((a) => a.important && a.pinnedUntil && a.pinnedUntil >= today && !seen.has(a.id))
+    // Unacknowledged, and either pinned until today or later, or posted in the last 14 days.
+    .filter((a) => a.important && !seen.has(a.id) && (a.pinnedUntil ? a.pinnedUntil >= today : Date.now() - Date.parse(a.createdAt) < 14 * 86_400_000))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
   return NextResponse.json(
     { announcement: next ? { id: next.id, title: next.title, body: next.body, authorName: next.authorName ?? null } : null },

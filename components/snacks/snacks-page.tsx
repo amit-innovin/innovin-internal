@@ -24,8 +24,6 @@ function Gate() {
 function TodaysSnacks({ snacks }: { snacks: Snacks }) {
   const pick = useSnackWrite<{ id: string; action: "pick" | "unpick" }>("PATCH");
   const { today } = snacks;
-  const count = (id: string) => today.picks.find((p) => p.itemId === id)?.count ?? 0;
-  const top = Math.max(1, ...snacks.shelf.map((s) => count(s.id)));
   const choose = (id: string, mine: boolean) => pick.mutate({ id, action: mine ? "unpick" : "pick" }, { onError: (e) => toast.error(e.message) });
   return (
     <section aria-labelledby="today-h" className="m3-card m3-stack" style={{ gap: 14 }}>
@@ -37,14 +35,10 @@ function TodaysSnacks({ snacks }: { snacks: Snacks }) {
       {snacks.shelf.length === 0 && <p className="m3-small" style={{ margin: 0 }}>Nothing on today&apos;s list yet.</p>}
       {snacks.shelf.map((s) => {
         const mine = today.mine === s.id;
-        const n = count(s.id);
         return (
           <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span aria-hidden="true" style={{ flex: "none", width: 40, height: 40, borderRadius: 20, background: "#FFF1C2", color: "#3D2E00", display: "grid", placeItems: "center" }}><Cookie size={20} /></span>
-            <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span>{s.name}</span><span className="m3-small">{n} pick{n === 1 ? "" : "s"}</span></span>
-              <span aria-hidden="true" style={{ height: 6, borderRadius: 3, background: "#EEF0F3" }}><span style={{ display: "block", height: 6, borderRadius: 3, width: `${(100 * n) / top}%`, background: mine ? "var(--m3-primary)" : "#9CCAE8", transition: "width .45s cubic-bezier(.2,.8,.2,1)" }} /></span>
-            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>{s.name}</span>
             {today.open ? (
               <button type="button" aria-pressed={mine} disabled={pick.isPending} onClick={() => choose(s.id, mine)}
                 style={{ flex: "none", height: 36, padding: "0 14px", borderRadius: 18, fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", border: mine ? 0 : "1px solid var(--m3-outline)", background: mine ? "var(--m3-secondary-container)" : "transparent", color: mine ? "var(--m3-on-secondary-container)" : "var(--m3-primary)" }}>

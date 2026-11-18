@@ -31,15 +31,18 @@ async function view(email: string) {
   const counts = pickCounts(picks, shelfIds);
   const row = (i: (typeof items)[number]) => ({ id: i.id, name: i.name, note: i.note, orderedAt: i.orderedAt, votes: votes.filter((v) => v.itemId === i.id).length, mine: votes.some((v) => v.itemId === i.id && v.voterRef === me) });
   const byVotes = (a: { votes: number; name: string }, b: { votes: number; name: string }) => b.votes - a.votes || a.name.localeCompare(b.name);
+  // Members see the shelf by name (no counts: they change nothing for them); suggestions keep their
+  // +N because the +1 is how people push one onto the shelf. Admins get the quantities to order.
+  const shelfRows = items.filter((i) => i.status === "shelf").map(row).sort((a, b) => a.name.localeCompare(b.name));
   return {
-    shelf: items.filter((i) => i.status === "shelf").map(row).sort(byVotes),
+    shelf: admin ? shelfRows : shelfRows.map(({ votes: _v, ...rest }) => rest),
     suggestions: items.filter((i) => i.status === "suggested").map(row).sort(byVotes),
     // Today's single pick: counts per item and which one is yours. Voter refs stay on the server.
     today: {
       open: pickOpen(new Date(), times, ordered),
       orderAt: times.orderAt,
       ordered,
-      picks: shelfIds.map((itemId) => ({ itemId, count: counts[itemId] ?? 0 })),
+      ...(admin ? { picks: shelfIds.map((itemId) => ({ itemId, count: counts[itemId] ?? 0 })) } : {}),
       mine: picks.find((p) => p.voterRef === pickRef(email))?.itemId ?? null,
     },
     canManage: admin,

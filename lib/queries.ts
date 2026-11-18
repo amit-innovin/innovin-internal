@@ -235,7 +235,8 @@ export type Snacks = {
   shelf: SnackRow[];
   suggestions: SnackRow[];
   canManage: boolean;
-  today: { open: boolean; orderAt: string; ordered: boolean; picks: { itemId: string; count: number }[]; mine: string | null };
+  // picks (counts per item) only come to admins.
+  today: { open: boolean; orderAt: string; ordered: boolean; picks?: { itemId: string; count: number }[]; mine: string | null };
 };
 export function useSnackWrite<T>(method: "POST" | "PATCH") {
   const client = useQueryClient();

@@ -55,6 +55,15 @@ export async function PATCH(req: NextRequest) {
   const target = await store.getEmployee(email);
   if (!target) return NextResponse.json({ error: "Person not found" }, { status: 404 });
 
+  // Birthdays are entered by admins: day and month only, and whether to show it in the Feed.
+  if (body?.birthday !== undefined) {
+    const birthday = body.birthday === null ? null : str(body.birthday);
+    const valid = birthday === null || (/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(birthday) && new Date(`2024-${birthday}T00:00:00Z`).toISOString().slice(5, 10) === birthday);
+    if (!valid || typeof body.showBirthday !== "boolean") return badRequest("Give the birthday as day and month");
+    await store.setBirthday(email, birthday, body.showBirthday);
+    return NextResponse.json({ ok: true });
+  }
+
   // Days hit in the pre-app spreadsheet — an admin copies the Total Days column over.
   if (body?.stepsOffset !== undefined) {
     const days = Number(body.stepsOffset);

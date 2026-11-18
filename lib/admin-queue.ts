@@ -1,6 +1,7 @@
 // "Needs you" for admins: the first thing on the admin app's Today (prototype: docs/design/m3/M3AdminApp.dc.html).
 // Leave approvals are deliberately absent — Zoho People decides leave. People behind on their
 // office days and the snack order are added by the page from data it already has.
+import { mayExist } from "./calendar";
 import { store } from "./store";
 import { todayIST } from "./time";
 
@@ -11,8 +12,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
 export async function needsYou(): Promise<NeedsYou[]> {
   const today = todayIST();
-  const [grievances, wifi, reports, everyone, announcements, invites] = await Promise.all([
-    store.listGrievances(), store.listWifi(100), store.countNoticeReports(), store.listEmployees(), store.listAnnouncements(10), store.listEventInvites(),
+  const [grievances, wifi, reports, everyone, announcements, invites, tokens] = await Promise.all([
+    store.listGrievances(), store.listWifi(100), store.countNoticeReports(), store.listEmployees(), store.listAnnouncements(10), store.listEventInvites(), store.listCalendarTokens(),
   ]);
   const employees = everyone.filter((e) => !e.leftOn);
   const items: NeedsYou[] = [];
@@ -28,12 +29,27 @@ export async function needsYou(): Promise<NeedsYou[]> {
     const n = seen[a.id] ?? 0;
     if (n < employees.length) items.push({ id: `ann-${a.id}`, kind: "announcement", urgent: false, href: "/admin/publish", title: `${a.title} · seen by ${n} of ${employees.length}`, sub: "" });
   }
-  // Google invites that didn't go out, or can't be changed because their organizer has gone.
-  for (const invite of invites.filter((i) => i.state !== "sent")) {
+  // Google invites that need a hand: didn't go out, aren't up to date, a cancel that didn't reach
+  // Google (guests still have it), or an organizer who has gone.
+  const connected = new Set(tokens.map((t) => t.email));
+  const stranded = new Map<string, number>();
+  for (const invite of invites) {
     const event = await store.getEvent(invite.eventId);
-    if (!event || event.cancelledAt || Date.parse(event.startsAt) <= Date.now()) continue;
-    const what = invite.state === "failed" ? "Google invite didn't go out" : "Google invite can't be changed";
-    items.push({ id: `invite-${event.id}`, kind: "invite", urgent: false, href: "/admin/publish?tab=events", title: `${what} · ${event.title}`, sub: "" });
+    if (!event || Date.parse(event.startsAt) <= Date.now()) continue;
+    const href = "/admin/publish?tab=events";
+    if (invite.state === "sent") {
+      if (!event.cancelledAt && !connected.has(invite.owner)) stranded.set(invite.owner, (stranded.get(invite.owner) ?? 0) + 1);
+      continue;
+    }
+    const what = event.cancelledAt ? (mayExist(invite) ? "Cancel didn't reach Google" : null)
+      : invite.state === "orphaned" ? "Google invite can't be changed"
+      : mayExist(invite) ? "Google invite isn't up to date" : "Google invite didn't go out";
+    if (what) items.push({ id: `invite-${event.id}`, kind: "invite", urgent: false, href, title: `${what} · ${event.title}`, sub: "" });
+  }
+  // A connection Google ended (password change, revoked): that admin's invites can't follow edits.
+  for (const owner of stranded.keys()) {
+    const name = everyone.find((e) => e.email === owner)?.name || owner;
+    items.push({ id: `reconnect-${owner}`, kind: "invite", urgent: false, href: "/admin/publish?tab=events", title: `Reconnect Google Calendar · ${name}'s invites can't be updated`, sub: "" });
   }
   const poor = wifi.filter((w) => w.quality === "poor" && istDay(w.createdAt) === today);
   if (poor.length) items.push({ id: "wifi", kind: "wifi", urgent: false, href: "/admin/wifi", title: `${plural(poor.length, "slow Wi-Fi report", "slow Wi-Fi reports")} today`, sub: "" });

@@ -55,14 +55,16 @@ export async function adminOverview() {
     .map((e, i) => personRow(e, monthRows[i], todayRows.find((r) => r.email === e.email), away, month, today, closed))
     .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.done - b.done || a.name.localeCompare(b.name));
 
-  const count = (s: TodayState) => people.filter((p) => p.today === s).length;
+  // People marked as left stay listed (tagged) but count nowhere.
+  const here = people.filter((p) => !p.left);
+  const count = (s: TodayState) => here.filter((p) => p.today === s).length;
   const names = new Map(employees.map((e) => [e.email, (e.name || e.email).split(" ")[0]]));
   let workingLeft = 0;
   for (let d = Number(today.slice(8)); d <= Number(last.slice(8)); d += 1) if (isWorkingDay(`${month}-${String(d).padStart(2, "0")}`, closed)) workingLeft += 1;
   return {
-    today, month, total: people.length, admins: people.filter((p) => p.role === "admin").length, workingLeft,
+    today, month, total: here.length, admins: here.filter((p) => p.role === "admin").length, workingLeft,
     counts: { office: count("office"), leave: count("leave"), notIn: count(null) },
-    status: { behind: people.filter((p) => p.status === "behind").length, onTrack: people.filter((p) => p.status === "on-track").length, done: people.filter((p) => p.status === "done").length, exempt: people.filter((p) => p.status === "exempt").length },
+    status: { behind: here.filter((p) => p.status === "behind").length, onTrack: here.filter((p) => p.status === "on-track").length, done: here.filter((p) => p.status === "done").length, exempt: here.filter((p) => p.status === "exempt").length },
     tea: { round: round.id, at: round.at, closesAt: round.closesAt, count: teaGoing.length, names: teaGoing.map((t) => names.get(t.email) ?? t.email.split("@")[0]) },
     people,
   };

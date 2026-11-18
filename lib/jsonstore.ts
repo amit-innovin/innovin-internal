@@ -388,7 +388,11 @@ export const jsonStore: Store = {
       return { result: undefined, changed: true };
     }),
   listAckedAnnouncementIds: (email) => query((db) => db.announcementAcks.filter((a) => a.email === email).map((a) => a.announcementId)),
-  countAnnouncementAcks: (ids) => query((db) => Object.fromEntries(ids.map((id) => [id, db.announcementAcks.filter((a) => a.announcementId === id).length]))),
+  // People marked as left don't count as readers.
+  countAnnouncementAcks: (ids) => query((db) => {
+    const left = new Set(db.employees.filter((e) => e.leftOn).map((e) => e.email));
+    return Object.fromEntries(ids.map((id) => [id, db.announcementAcks.filter((a) => a.announcementId === id && !left.has(a.email)).length]));
+  }),
   setSayHi: (email, on) =>
     mutate((db) => {
       const row = db.employees.find((e) => e.email === email);

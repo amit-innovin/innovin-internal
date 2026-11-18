@@ -59,10 +59,11 @@ test.describe("Navigation & studio shell", () => {
     }
   });
 
-  test("an admin reaches the dashboard from Account, and Help from the legacy More menu", async ({ page }) => {
+  test("an admin reaches the admin app from Account, and Help from the legacy More menu", async ({ page }) => {
     await signInEmployee(page, ADMIN_EMAIL, "/account");
     await page.getByRole("link", { name: /^Admin/ }).filter({ visible: true }).first().click();
-    await expect(page.getByRole("heading", { level: 1, name: "Admin" })).toBeVisible();
+    // The admin app opens on Today, with Needs you first.
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
     await page.goto("/help");
     await page.locator(".reference-more summary").click();
     await page.getByRole("navigation", { name: "More workspace tools" }).getByRole("link", { name: "Help", exact: true }).click();

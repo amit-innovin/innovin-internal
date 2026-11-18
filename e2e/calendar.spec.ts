@@ -66,12 +66,12 @@ test.describe("Google Calendar invites", () => {
     expect(inserts[0].attendees).not.toContain(ADMIN_EMAIL);
     expect(new Set(inserts[0].attendees).size).toBe(inserts[0].attendees!.length);
 
-    // Sending again (double submit, retry) updates the same Google event.
+    // Sending again (double submit, a stale tab) is refused for an invite that already went out:
+    // no second invite, and nobody gets re-emailed.
     const event = (await (await page.request.get("/api/events")).json()).find((e: { title: string }) => e.title === title);
-    expect((await page.request.post("/api/admin/calendar/invite", { data: { id: event.id } })).ok()).toBe(true);
-    const after = await callsFor(page, title);
-    expect(after.filter((c) => c.op === "insert")).toHaveLength(1);
-    expect(after.every((c) => c.id === inserts[0].id)).toBe(true);
+    const before = (await callsFor(page, title)).length;
+    expect((await page.request.post("/api/admin/calendar/invite", { data: { id: event.id } })).status()).toBe(409);
+    expect(await callsFor(page, title)).toHaveLength(before);
   });
 
   test("the token is stored sealed, never in the clear", async ({ page }) => {
@@ -193,6 +193,8 @@ test.describe("Google Calendar invites", () => {
     await page.waitForURL(/\/admin\/publish/);
     await expect(page.getByText(`Connect with your own work account (${me})`)).toBeVisible();
     await expect(card.getByRole("link", { name: "Connect Google Calendar" })).toBeVisible();
+    // The grant it refused is handed back to Google, not left live.
+    expect((await calendarLog(page)).revoked.some((t) => t.startsWith("rt:someone.else@innovinlabs.com:"))).toBe(true);
 
     await mock(page, "/calendar-noscope?on=1");
     await card.getByRole("link", { name: "Connect Google Calendar" }).click();
@@ -200,5 +202,17 @@ test.describe("Google Calendar invites", () => {
     await mock(page, "/calendar-noscope?on=0");
     await expect(page.getByText("Calendar access wasn't allowed. Try again and tick the calendar box.")).toBeVisible();
     await expect(card.getByRole("link", { name: "Connect Google Calendar" })).toBeVisible();
+    expect((await calendarLog(page)).revoked.some((t) => t.startsWith(`rt:${me}:`))).toBe(true);
+
+    // Someone marked as left (still an admin) can't connect.
+    const adminCtx = await browser.newContext();
+    const adminPage = await adminCtx.newPage();
+    await signInEmployee(adminPage, ADMIN_EMAIL, "/admin");
+    expect((await adminPage.request.patch("/api/people", { data: { email: me, left: true } })).ok()).toBe(true);
+    await adminCtx.close();
+    await page.goto("/admin/publish?tab=events");
+    await card.getByRole("link", { name: "Connect Google Calendar" }).click();
+    await page.waitForURL(/\/admin\/publish/);
+    await expect(page.getByText("People marked as left can't connect Google Calendar.")).toBeVisible();
   });
 });

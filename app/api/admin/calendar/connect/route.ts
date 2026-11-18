@@ -3,6 +3,7 @@ import { currentActor } from "@/lib/admin";
 import { createOauthState } from "@/lib/auth";
 import { CAL_PKCE_COOKIE, CAL_STATE_COOKIE, calendarAuthUrl, calendarConfigured, pkcePair } from "@/lib/calendar";
 import { secureAuthCookie } from "@/lib/cookies";
+import { store } from "@/lib/store";
 
 const back = (req: NextRequest, result: string) => NextResponse.redirect(new URL(`/admin/publish?tab=events&calendar=${result}`, req.nextUrl.origin));
 
@@ -12,6 +13,7 @@ export async function GET(req: NextRequest) {
   const actor = await currentActor();
   if (!actor || actor.role !== "admin") return NextResponse.redirect(new URL("/", req.nextUrl.origin));
   if (!calendarConfigured()) return back(req, "unavailable");
+  if ((await store.getEmployee(actor.email))?.leftOn) return back(req, "left");
   const { cookie, state } = createOauthState("/admin/publish?tab=events");
   const { verifier, challenge } = pkcePair();
   const redirectUri = new URL("/api/admin/calendar/callback", req.nextUrl.origin).toString();

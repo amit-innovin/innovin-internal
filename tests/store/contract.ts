@@ -56,6 +56,10 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.listAckedAnnouncementIds("a@innovinlabs.com")).toEqual(["imp"]);
       expect(await store.listAckedAnnouncementIds("c@innovinlabs.com")).toEqual([]);
       expect(await store.countAnnouncementAcks(["imp", "plain"])).toEqual({ imp: 2, plain: 0 });
+      // Someone marked as left no longer counts as a reader.
+      await store.upsertEmployee(employee({ email: "b@innovinlabs.com" }));
+      await store.setLeftOn("b@innovinlabs.com", "2026-11-18");
+      expect(await store.countAnnouncementAcks(["imp"])).toEqual({ imp: 1 });
     });
 
     it("keeps one tea answer per person, round and day, including a skip", async () => {

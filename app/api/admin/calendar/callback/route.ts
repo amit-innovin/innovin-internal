@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentActor } from "@/lib/admin";
 import { verifyOauthState } from "@/lib/auth";
-import { CAL_PKCE_COOKIE, CAL_STATE_COOKIE, CALENDAR_SCOPE, calendarConfigured, exchangeCalendarCode, saveConnection } from "@/lib/calendar";
+import { CAL_PKCE_COOKIE, CAL_STATE_COOKIE, CALENDAR_SCOPE, calendarConfigured, exchangeCalendarCode, revokeGrant, saveConnection } from "@/lib/calendar";
+import { store } from "@/lib/store";
 import { enforce } from "@/lib/guard";
 import { verifyIdToken } from "@/lib/google";
 import { clientIp } from "@/lib/http";
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
   if (!calendarConfigured()) return done("unavailable");
   const actor = await currentActor();
   if (!actor || actor.role !== "admin") return NextResponse.redirect(new URL("/", req.nextUrl.origin));
+  if ((await store.getEmployee(actor.email))?.leftOn) return done("left");
   const ok = verifyOauthState(req.cookies.get(CAL_STATE_COOKIE)?.value, req.nextUrl.searchParams.get("state"));
   const code = req.nextUrl.searchParams.get("code");
   const verifier = req.nextUrl.searchParams.get("error") ? null : req.cookies.get(CAL_PKCE_COOKIE)?.value;
@@ -29,7 +31,8 @@ export async function GET(req: NextRequest) {
   const grant = await exchangeCalendarCode(code, redirectUri, verifier);
   if (!grant) return done("failed");
   const identity = await verifyIdToken(grant.idToken).catch(() => null);
-  if (!identity || identity.email !== actor.email.toLowerCase()) return done("wrong-account");
-  if (!grant.scope.split(/\s+/).includes(CALENDAR_SCOPE)) return done("no-scope");
+  // A grant we won't keep is handed straight back to Google, never left live.
+  if (!identity || identity.email !== actor.email.toLowerCase()) { await revokeGrant(grant.refreshToken); return done("wrong-account"); }
+  if (!grant.scope.split(/\s+/).includes(CALENDAR_SCOPE)) { await revokeGrant(grant.refreshToken); return done("no-scope"); }
   return done((await saveConnection(actor.email, grant.refreshToken, grant.scope)) ? "connected" : "unavailable");
 }

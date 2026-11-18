@@ -320,7 +320,7 @@ export const useAnnouncements = () => useQuery({ queryKey: ["admin", "announceme
 export const usePublishAnnouncement = () => useAdminWrite<{ title: string; body: string; pinnedUntil?: string }>("/api/announcements", "POST", [["admin", "announcements"], ["feed"]]);
 export const useDeleteAnnouncement = () => useAdminWrite<{ action: "delete"; id: string }>("/api/announcements", "POST", [["admin", "announcements"], ["feed"]]);
 
-export type AdminEvent = FeedEvent & { updatedAt?: string; createdAt: string; invite?: "sent" | "failed" | "orphaned" | null };
+export type AdminEvent = FeedEvent & { updatedAt?: string; createdAt: string; invite?: "sent" | "failed" | "stale" | "orphaned" | null };
 export const useEvents = () => useQuery({ queryKey: ["events"], queryFn: () => fetchJSON<AdminEvent[]>("/api/events") });
 export const usePostEvent = () => useAdminWrite<{ title: string; category: string; startsAt: string; body: string; location: string; invite?: boolean }>("/api/events", "POST", [["events"], ["feed"]]);
 // The signed-in admin's Google Calendar connection, and what disconnecting would do to their invites.

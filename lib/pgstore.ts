@@ -882,7 +882,8 @@ class PgStore implements Store {
     return res.rows.map((r: any) => r.announcement_id as string);
   }
   async countAnnouncementAcks(ids: string[]) {
-    const res = await this.q(`SELECT announcement_id, count(*)::int AS n FROM announcement_acks WHERE announcement_id = ANY($1) GROUP BY announcement_id`, [ids]);
+    const res = await this.q(`SELECT a.announcement_id, count(*)::int AS n FROM announcement_acks a LEFT JOIN employees e ON e.email = a.email
+       WHERE a.announcement_id = ANY($1) AND e.left_on IS NULL GROUP BY a.announcement_id`, [ids]);
     return Object.fromEntries(ids.map((id) => [id, res.rows.find((r: any) => r.announcement_id === id)?.n ?? 0]));
   }
   async setSayHi(email: string, on: boolean) {

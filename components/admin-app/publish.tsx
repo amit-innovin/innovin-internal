@@ -97,6 +97,7 @@ const CONNECT_RESULT: Record<string, string> = {
   "no-scope": "Calendar access wasn't allowed. Try again and tick the calendar box.",
   failed: "Couldn't connect Google Calendar. Try again.",
   unavailable: "Google Calendar isn't set up on this server yet.",
+  left: "People marked as left can't connect Google Calendar.",
 };
 
 // Where invites come from: this admin's own Google Calendar, connected once.
@@ -172,10 +173,10 @@ function Events() {
   });
   const events = [...(list.data ?? [])].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <CalendarCard />
     <div className="m3a-cols">
-      <div className="m3a-half" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <CalendarCard />
-      <section aria-labelledby="ev-h" className="m3a-card">
+      <section aria-labelledby="ev-h" className="m3a-half m3a-card">
         <h2 id="ev-h" className="m3-title">New event</h2>
         <div className="m3a-fcol"><label htmlFor="ev-t" className="m3a-lbl">Title</label><input id="ev-t" className="m3a-field" maxLength={120} placeholder="Diwali potluck" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -197,7 +198,6 @@ function Events() {
         )}
         <div><button type="button" className="m3-btn m3-btn-filled" disabled={cant} onClick={submit}>Post event</button></div>
       </section>
-      </div>
       <section aria-labelledby="el-h" className="m3a-half m3a-card m3a-flush" style={{ gap: 0 }}>
         <h2 id="el-h" className="m3-title" style={{ padding: "16px 20px 8px" }}>Upcoming events</h2>
         {!list.data ? <div style={{ padding: "4px 20px 20px" }}><Loading what="events" error={list.error} onRetry={() => list.refetch()} /></div> : events.length === 0
@@ -216,14 +216,18 @@ function Events() {
                   <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><span style={{ fontWeight: 600 }}>{e.title}</span><span className="m3a-tag" style={{ background: bg, color: fg }}>{catLabel}</span></div>
                     <span className="m3-small">{dayLabel(date)} · {fmtTime(time)}{e.location ? ` · ${e.location}` : ""}</span>
-                    <span className="m3-small" style={{ fontWeight: 600, color: "var(--m3-on-surface)", paddingTop: 2 }}>{e.cancelledAt ? "Cancelled" : `${e.going} going`}</span>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", paddingTop: 2 }}>
+                      <span className="m3-small" style={{ fontWeight: 600, color: "var(--m3-on-surface)" }}>{e.cancelledAt ? "Cancelled" : `${e.going} going`}</span>
+                      {!e.cancelledAt && e.invite === "sent" && <span className="m3a-tag" style={{ background: "#D3E5F5", color: "#0C1D29" }}>In Google Calendar</span>}
+                    </div>
                     {!e.cancelledAt && e.invite === "failed" && <span className="m3-small" style={{ color: "var(--m3-error)", fontWeight: 600 }}>Google invite didn&apos;t go out</span>}
+                    {e.invite === "stale" && <span className="m3-small" style={{ color: "var(--m3-error)", fontWeight: 600 }}>{e.cancelledAt ? "Cancel didn't reach Google" : "Google invite isn't up to date"}</span>}
                     {!e.cancelledAt && e.invite === "orphaned" && <span className="m3-small">Google invite can&apos;t be changed from here</span>}
                   </div>
                 </div>
                 {confirm !== e.id ? (
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                    {!e.cancelledAt && e.invite === "failed" && connected && <button type="button" className="m3-btn m3-btn-tonal" aria-label={`Send invite for ${e.title} again`} disabled={resend.isPending}
+                    {(e.invite === "stale" || (!e.cancelledAt && e.invite === "failed" && connected)) && <button type="button" className="m3-btn m3-btn-tonal" aria-label={`Send invite for ${e.title} again`} disabled={resend.isPending}
                       onClick={() => resend.mutate({ id: e.id }, { onSuccess: () => snack("Invites sent"), onError: (err) => snack(err.message) })}>Send again</button>}
                     {!e.cancelledAt && e.canManage && <button type="button" className="m3-btn m3-btn-outlined" aria-label={`Cancel ${e.title}`} disabled={cancel.isPending}
                       onClick={() => cancel.mutate({ id: e.id, expectedUpdatedAt: e.updatedAt ?? e.createdAt }, { onSuccess: () => snack(`${e.title} cancelled`), onError: (err) => snack(err.message) })}>Cancel event</button>}
@@ -235,6 +239,7 @@ function Events() {
             );
           })}
       </section>
+    </div>
     </div>
   );
 }

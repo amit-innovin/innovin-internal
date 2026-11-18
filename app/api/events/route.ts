@@ -6,7 +6,7 @@ import { fmtShortDate } from "@/lib/format";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { sendPush } from "@/lib/push";
-import { calendarConfigured, removeInvite, sendInvite, updateInvite } from "@/lib/calendar";
+import { calendarConfigured, mayExist, removeInvite, sendInvite, updateInvite } from "@/lib/calendar";
 import { id, store } from "@/lib/store";
 import { accountRef, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 import type { EventCategory, EventRow } from "@/lib/types";
@@ -35,7 +35,8 @@ export async function GET(req: NextRequest) {
   const myIds = new Set(mine);
   const admin=await isAdmin();
   // Admins also see whether each event's Google invite went out.
-  const invites = admin ? new Map((await store.listEventInvites()).map((i) => [i.eventId, i.state])) : null;
+  // "stale": it may be in calendars but an edit or cancel didn't reach Google.
+  const invites = admin ? new Map((await store.listEventInvites()).map((i) => [i.eventId, i.state === "failed" && mayExist(i) ? "stale" : i.state])) : null;
   return NextResponse.json(
     rows.map(({ createdBy, ...e }) => ({ ...e, canManage: !e.cancelledAt && Date.parse(e.startsAt)>Date.now() && (admin || !!user && createdBy===user.email), going: counts[e.id] ?? 0, mine: myIds.has(e.id), ...(invites ? { invite: invites.get(e.id) ?? null } : {}) })),
   );
@@ -57,7 +58,8 @@ export async function POST(req: Request) {
     if (body.action === "delete") {
       const eid = str(body.id).slice(0, 100);
       if (!eid) return badRequest("Which event?");
-      await removeInvite(eid, false).catch(() => {});
+      // An invite still in people's calendars must come out first, or nobody could ever remove it.
+      if (!(await removeInvite(eid, false).catch(() => false))) return NextResponse.json({ error: "Couldn't remove the Google invite. Try again, or cancel the event instead." }, { status: 502 });
       await store.deleteEvent(eid);
       return NextResponse.json({ ok: true });
     }
@@ -77,7 +79,7 @@ export async function POST(req: Request) {
   const text = (key: string, max: number) => String(form.get(key) ?? "").trim().slice(0, max);
 
   if (form.get("_action") === "delete") {
-    await removeInvite(text("id", 100), false).catch(() => {});
+    if (!(await removeInvite(text("id", 100), false).catch(() => false))) return flash("invalid-event");
     await store.deleteEvent(text("id", 100));
     return flash("event-deleted");
   }

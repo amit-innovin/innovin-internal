@@ -136,7 +136,7 @@ input,select,textarea{font-family:inherit}
 <section aria-label="People" class="card" style="padding: 0; overflow: hidden">
 <div style="display: flex; justify-content: space-between; gap: 8px; padding: 14px 16px 8px"><span class="sm">{{ pp.countLine }}</span><span class="sm">This month</span></div>
 <ul style="list-style: none; margin: 0; padding: 0; border-top: 1px solid #DFE3E8">
-<sc-for list="{{ pp.rows }}" as="r" hint-placeholder-count="6"><li style="border-top: {{ r.line }}"><button class="li" aria-current="{{ r.cur }}" onClick="{{ r.pick }}" style="background: {{ r.bg }}; min-height: 64px"><span aria-hidden="true" class="av" style="background: {{ r.avBg }}">{{ r.ini }}</span><span style="flex: 1; min-width: 0"><span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600">{{ r.name }}<sc-if value="{{ r.admin }}" hint-placeholder-val="{{ false }}"><span class="tag" style="background: #D3E5F5; color: #0C1D29">Admin</span></sc-if></span><span class="sm">{{ r.usual }}</span></span><span style="flex: none; min-width: 36px; text-align: right; font-weight: 600"><span aria-hidden="true">{{ r.count }}</span><span class="vh">{{ r.countSr }}</span></span><span class="tag" style="flex: none; min-width: 64px; justify-content: center; background: {{ r.chipBg }}; color: {{ r.chipFg }}">{{ r.status }}</span></button></li></sc-for>
+<sc-for list="{{ pp.rows }}" as="r" hint-placeholder-count="6"><li style="border-top: {{ r.line }}"><button class="li" aria-current="{{ r.cur }}" onClick="{{ r.pick }}" style="background: {{ r.bg }}; min-height: 64px"><span aria-hidden="true" class="av" style="background: {{ r.avBg }}">{{ r.ini }}</span><span style="flex: 1; min-width: 0"><span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600">{{ r.name }}<sc-if value="{{ r.admin }}" hint-placeholder-val="{{ false }}"><span class="tag" style="background: #D3E5F5; color: #0C1D29">Admin</span></sc-if><sc-if value="{{ r.left }}" hint-placeholder-val="{{ false }}"><span class="tag" style="background: #E5E8EE; color: #41474D">Left</span></sc-if></span><span class="sm">{{ r.usual }}</span></span><span style="flex: none; min-width: 36px; text-align: right; font-weight: 600"><span aria-hidden="true">{{ r.count }}</span><span class="vh">{{ r.countSr }}</span></span><span class="tag" style="flex: none; min-width: 64px; justify-content: center; background: {{ r.chipBg }}; color: {{ r.chipFg }}">{{ r.status }}</span></button></li></sc-for>
 </ul>
 <sc-if value="{{ pp.empty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 16px">No one matches. Try another name or filter.</p></sc-if>
 </section>
@@ -176,6 +176,8 @@ input,select,textarea{font-family:inherit}
 <div class="srow" style="padding: 8px 20px"><div style="flex: 1; min-width: 0"><span id="ex-l" style="display: block; font-weight: 600">Exempt from the 8 days</span></div><button class="swb" role="switch" aria-checked="{{ panel.exSw.aria }}" aria-labelledby="ex-l" onClick="{{ panel.toggleEx }}" style="border: {{ panel.exSw.border }}; background: {{ panel.exSw.track }}"><span class="swt" style="left: {{ panel.exSw.left }}; width: {{ panel.exSw.size }}; height: {{ panel.exSw.size }}; background: {{ panel.exSw.thumb }}"></span></button></div>
 <div class="div" style="margin: 0 20px"></div>
 <div class="srow" style="padding: 8px 20px"><div style="flex: 1; min-width: 0"><span id="ad-l" style="display: block; font-weight: 600">Admin</span><sc-if value="{{ panel.hasAdNote }}" hint-placeholder-val="{{ false }}"><span id="ad-d" class="sm">{{ panel.adNote }}</span></sc-if></div><button class="swb" role="switch" aria-checked="{{ panel.adSw.aria }}" aria-labelledby="ad-l" disabled="{{ panel.adDisabled }}" onClick="{{ panel.toggleAd }}" style="border: {{ panel.adSw.border }}; background: {{ panel.adSw.track }}; opacity: {{ panel.adSw.op }}"><span class="swt" style="left: {{ panel.adSw.left }}; width: {{ panel.adSw.size }}; height: {{ panel.adSw.size }}; background: {{ panel.adSw.thumb }}"></span></button></div>
+<div class="div" style="margin: 0 20px"></div>
+<div class="srow" style="padding: 8px 20px"><div style="flex: 1; min-width: 0"><span id="lf-l" style="display: block; font-weight: 600">Left the company</span><sc-if value="{{ panel.isLeft }}" hint-placeholder-val="{{ false }}"><span class="sm">No calendar invites</span></sc-if></div><button class="swb" role="switch" aria-checked="{{ panel.lfSw.aria }}" aria-labelledby="lf-l" disabled="{{ panel.adDisabled }}" onClick="{{ panel.toggleLf }}" style="border: {{ panel.lfSw.border }}; background: {{ panel.lfSw.track }}; opacity: {{ panel.lfSw.op }}"><span class="swt" style="left: {{ panel.lfSw.left }}; width: {{ panel.lfSw.size }}; height: {{ panel.lfSw.size }}; background: {{ panel.lfSw.thumb }}"></span></button></div>
 </section>
 
 <section aria-labelledby="bd-h" style="display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #DFE3E8; padding-top: 18px">
@@ -246,6 +248,14 @@ input,select,textarea{font-family:inherit}
 </sc-if>
 
 <sc-if value="{{ pub.ev }}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="gc-h" class="card" style="gap: 10px; margin-bottom: 16px">
+<h2 id="gc-h" class="tm">Google Calendar</h2>
+<sc-if value="{{ pub.g.on }}" hint-placeholder-val="{{ true }}"><span class="sm">Invites go out from anita@innovinlabs.com</span>
+<sc-if value="{{ pub.g.idle }}" hint-placeholder-val="{{ true }}"><div><button class="bo" onClick="{{ pub.g.ask }}">Disconnect</button></div></sc-if>
+<sc-if value="{{ pub.g.confirm }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="Confirm disconnect" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #FFDAD6; color: #410002; border-radius: 16px; padding: 10px 12px"><span style="flex: 1; min-width: 160px; font-size: 14px">{{ pub.g.what }}</span><button class="bx" style="color: #410002" onClick="{{ pub.g.keep }}">Keep</button><button class="bd" onClick="{{ pub.g.off }}">Disconnect</button></div></sc-if>
+</sc-if>
+<sc-if value="{{ pub.g.notOn }}" hint-placeholder-val="{{ false }}"><div><button class="bf" onClick="{{ pub.g.connect }}">Connect Google Calendar</button></div></sc-if>
+</section>
 <div class="cols">
 <section aria-labelledby="ev-h" class="half card" style="gap: 14px">
 <h2 id="ev-h" class="tm">New event</h2>
@@ -253,7 +263,7 @@ input,select,textarea{font-family:inherit}
 <div style="display: flex; gap: 12px; flex-wrap: wrap"><div class="fcol" style="flex: 1 1 160px"><label for="ev-d" class="lbl">Date</label><input id="ev-d" type="date" class="field" min="2026-11-18" value="{{ pub.e.date }}" onChange="{{ pub.e.onDate }}"></div><div class="fcol" style="flex: 1 1 120px"><label for="ev-tm" class="lbl">Time (IST)</label><input id="ev-tm" type="time" class="field" value="{{ pub.e.time }}" onChange="{{ pub.e.onTime }}"></div></div>
 <sc-if value="{{ pub.e.dateBad }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Pick today or a later date.</p></sc-if>
 <div style="display: flex; gap: 12px; flex-wrap: wrap"><div class="fcol" style="flex: 2 1 200px"><label for="ev-p" class="lbl">Place</label><input id="ev-p" class="field" placeholder="Big room" value="{{ pub.e.place }}" onChange="{{ pub.e.onPlace }}"></div><div class="fcol" style="flex: 1 1 140px"><label for="ev-c" class="lbl">Category</label><select id="ev-c" class="field" onChange="{{ pub.e.onCat }}"><sc-for list="{{ pub.e.catOpts }}" as="o" hint-placeholder-count="5"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for></select></div></div>
-<div style="display: flex; align-items: center; gap: 16px"><div style="flex: 1; min-width: 0"><span id="ev-g" style="display: block; font-weight: 600">Invite everyone in Google Calendar</span><span id="ev-gd" class="sm">Adds it to each person's Google Calendar as an invite.</span></div><button class="swb" role="switch" aria-checked="{{ pub.e.gSw.aria }}" aria-labelledby="ev-g" aria-describedby="ev-gd" onClick="{{ pub.e.toggleGcal }}" style="border: {{ pub.e.gSw.border }}; background: {{ pub.e.gSw.track }}"><span class="swt" style="left: {{ pub.e.gSw.left }}; width: {{ pub.e.gSw.size }}; height: {{ pub.e.gSw.size }}; background: {{ pub.e.gSw.thumb }}"></span></button></div>
+<sc-if value="{{ pub.g.on }}" hint-placeholder-val="{{ true }}"><div style="display: flex; align-items: center; gap: 16px"><div style="flex: 1; min-width: 0"><span id="ev-g" style="display: block; font-weight: 600">Invite everyone in Google Calendar</span></div><button class="swb" role="switch" aria-checked="{{ pub.e.gSw.aria }}" aria-labelledby="ev-g" onClick="{{ pub.e.toggleGcal }}" style="border: {{ pub.e.gSw.border }}; background: {{ pub.e.gSw.track }}"><span class="swt" style="left: {{ pub.e.gSw.left }}; width: {{ pub.e.gSw.size }}; height: {{ pub.e.gSw.size }}; background: {{ pub.e.gSw.thumb }}"></span></button></div></sc-if>
 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ pub.e.op }}" disabled="{{ pub.e.cant }}" onClick="{{ pub.e.add }}">Post event</button><sc-if value="{{ pub.e.hasMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ pub.e.msg }}</span></sc-if></div>
 </section>
 <section aria-labelledby="el-h" class="half card" style="padding: 0; overflow: hidden; gap: 0">
@@ -261,9 +271,9 @@ input,select,textarea{font-family:inherit}
 <sc-for list="{{ pub.evs }}" as="e" hint-placeholder-count="3"><div style="border-top: {{ e.line }}; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px">
 <div style="display: flex; gap: 14px; align-items: flex-start">
 <span aria-hidden="true" style="flex: none; width: 52px; border-radius: 14px; background: #EBEEF4; text-align: center; padding: 6px 0"><span style="display: block; font-size: 12px; font-weight: 600; color: #41474D; line-height: 16px">{{ e.mon }}</span><span style="display: block; font-size: 20px; font-weight: 700; line-height: 24px">{{ e.day }}</span></span>
-<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span style="font-weight: 600">{{ e.title }}</span><span class="tag" style="background: {{ e.catBg }}; color: {{ e.catFg }}">{{ e.cat }}</span></div><span class="sm">{{ e.whenPlace }}</span><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 2px"><span class="sm" style="font-weight: 600; color: #181C20">{{ e.going }}</span><sc-if value="{{ e.gcal }}" hint-placeholder-val="{{ true }}"><span class="tag" style="background: #D3E5F5; color: #0C1D29">In Google Calendar</span></sc-if></div></div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span style="font-weight: 600">{{ e.title }}</span><span class="tag" style="background: {{ e.catBg }}; color: {{ e.catFg }}">{{ e.cat }}</span></div><span class="sm">{{ e.whenPlace }}</span><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 2px"><span class="sm" style="font-weight: 600; color: #181C20">{{ e.going }}</span><sc-if value="{{ e.gcal }}" hint-placeholder-val="{{ true }}"><span class="tag" style="background: #D3E5F5; color: #0C1D29">In Google Calendar</span></sc-if></div><sc-if value="{{ e.gFail }}" hint-placeholder-val="{{ false }}"><span class="sm" style="color: #BA1A1A; font-weight: 600">Google invite didn’t go out</span></sc-if><sc-if value="{{ e.gOrphan }}" hint-placeholder-val="{{ false }}"><span class="sm">Google invite can’t be changed from here</span></sc-if></div>
 </div>
-<sc-if value="{{ e.idle }}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap"><sc-if value="{{ e.live }}" hint-placeholder-val="{{ true }}"><button class="bo" aria-label="Cancel {{ e.title }}" onClick="{{ e.cancel }}">Cancel event</button></sc-if><button class="bx" aria-label="Delete {{ e.title }}" onClick="{{ e.askDel }}">Delete</button></div></sc-if>
+<sc-if value="{{ e.idle }}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap"><sc-if value="{{ e.canResend }}" hint-placeholder-val="{{ false }}"><button class="bt" aria-label="Send invite for {{ e.title }} again" onClick="{{ e.resend }}">Send again</button></sc-if><sc-if value="{{ e.live }}" hint-placeholder-val="{{ true }}"><button class="bo" aria-label="Cancel {{ e.title }}" onClick="{{ e.cancel }}">Cancel event</button></sc-if><button class="bx" aria-label="Delete {{ e.title }}" onClick="{{ e.askDel }}">Delete</button></div></sc-if>
 <sc-if value="{{ e.confirm }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="Confirm delete" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #FFDAD6; color: #410002; border-radius: 16px; padding: 10px 12px"><span style="flex: 1; min-width: 160px; font-size: 14px">Delete it? It disappears without a notification. Cancel tells people.</span><button class="bx" style="color: #410002" onClick="{{ e.keep }}">Keep</button><button class="bd" onClick="{{ e.del }}">Delete</button></div></sc-if>
 </div></sc-for>
 <sc-if value="{{ pub.evEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 4px 20px 20px">No events coming up.</p></sc-if>
@@ -429,11 +439,11 @@ class Component extends DCLogic {
         { id: 'a2', title: 'Today’s snack options are up', body: 'Makhana, dark chocolate or banana chips. Pick yours before 12:00.', until: '', posted: 'Today', seen: 23 },
         { id: 'a3', title: 'New guest Wi-Fi name', body: 'Guests now join “innovin-guest”. Ask at the front desk for the password.', until: '', posted: 'Thu 12 Nov', seen: 44 }
       ],
-      eTitle: '', eDate: '', eTime: '', ePlace: '', eCat: 'Celebration', eGcal: true, eMsg: '',
+      eTitle: '', eDate: '', eTime: '', ePlace: '', eCat: 'Celebration', eGcal: true, eMsg: '', gConn: true, gConfirm: false,
       evs: [
-        { id: 'e1', title: 'Diwali potluck', date: '2026-11-19', time: '16:30', place: 'Big room', cat: 'Celebration', going: 14, gcal: true, cancelled: false },
-        { id: 'e2', title: 'Book club: Deep Work', date: '2026-11-24', time: '17:30', place: 'Library corner', cat: 'Learning', going: 6, gcal: true, cancelled: false },
-        { id: 'e3', title: 'Badminton evening', date: '2026-12-04', time: '18:00', place: 'Court near the office', cat: 'Sports', going: 9, gcal: false, cancelled: false }
+        { id: 'e1', title: 'Diwali potluck', date: '2026-11-19', time: '16:30', place: 'Big room', cat: 'Celebration', going: 14, gcal: 'sent', cancelled: false },
+        { id: 'e2', title: 'Book club: Deep Work', date: '2026-11-24', time: '17:30', place: 'Library corner', cat: 'Learning', going: 6, gcal: 'sent', cancelled: false },
+        { id: 'e3', title: 'Badminton evening', date: '2026-12-04', time: '18:00', place: 'Court near the office', cat: 'Sports', going: 9, gcal: 'failed', cancelled: false }
       ],
       // office
       offTab: 'closed',
@@ -563,6 +573,8 @@ class Component extends DCLogic {
         log: plog, hasLog: plog.length > 0,
         exSw: sw(selP.exempt, false),
         toggleEx: () => set({ people: upd(selP.id, (x) => { x.exempt = !x.exempt; return x; }), log: addLog((selP.exempt ? 'Exemption removed' : 'Marked exempt from the 8 days') + ' · by Anita · today') }),
+        lfSw: sw(!!selP.left, isSelf), isLeft: !!selP.left,
+        toggleLf: () => { if (isSelf) return; set({ people: upd(selP.id, (x) => { x.left = !x.left; return x; }), log: addLog((selP.left ? 'Marked as back' : 'Marked as left') + ' · by Anita · today') }); },
         adSw: sw(selP.admin, isSelf), adDisabled: isSelf, adNote: isSelf ? 'You can’t remove yourself. Ask another admin.' : '', hasAdNote: isSelf,
         toggleAd: () => { if (isSelf) return; set({ people: upd(selP.id, (x) => { x.admin = !x.admin; return x; }), log: addLog((selP.admin ? 'Admin removed' : 'Made an admin') + ' · by Anita · today') }); },
         dayOpts: dayOpts, monOpts: monOpts, bdNoD: !s.bdD, bdNoM: !s.bdM,
@@ -585,7 +597,7 @@ class Component extends DCLogic {
       q: s.q, onQ: (e) => set({ q: e.target.value }),
       chips: pfDefs.map((c) => Object.assign(chip(s.pf === c[0]), { label: c[1] + ' ' + c[2], pick: () => set({ pf: c[0] }) })),
       countLine: plural(filtered.length, 'person', 'people'),
-      rows: filtered.map((p, i) => { const on = p.id === s.sel; return { name: p.name, ini: p.ini, avBg: p.bg, admin: p.admin, usual: 'Usually ' + p.usual.join(', '), count: p.done + '/8', countSr: p.done + ' of 8 office days this month', status: p.status, chipBg: chipC[p.status][0], chipFg: chipC[p.status][1], cur: on ? 'true' : 'false', bg: on ? '#E8F1FA' : 'transparent', line: i === 0 ? '0' : '1px solid #DFE3E8', pick: pickPerson(p) }; }),
+      rows: filtered.map((p, i) => { const on = p.id === s.sel; return { name: p.name, ini: p.ini, avBg: p.bg, admin: p.admin, left: !!p.left, usual: 'Usually ' + p.usual.join(', '), count: p.done + '/8', countSr: p.done + ' of 8 office days this month', status: p.status, chipBg: chipC[p.status][0], chipFg: chipC[p.status][1], cur: on ? 'true' : 'false', bg: on ? '#E8F1FA' : 'transparent', line: i === 0 ? '0' : '1px solid #DFE3E8', pick: pickPerson(p) }; }),
       empty: filtered.length === 0,
       has: !!selP, none: !selP
     };
@@ -648,18 +660,32 @@ class Component extends DCLogic {
         onTitle: (e) => set({ eTitle: e.target.value, eMsg: '' }), onDate: (e) => set({ eDate: e.target.value, eMsg: '' }), onTime: (e) => set({ eTime: e.target.value, eMsg: '' }), onPlace: (e) => set({ ePlace: e.target.value, eMsg: '' }), onCat: (e) => set({ eCat: e.target.value, eMsg: '' }),
         catOpts: cats.map((c) => ({ v: c, label: c, sel: s.eCat === c })),
         dateBad: eDateBad, cant: eCant, op: eCant ? 0.4 : 1,
-        add: () => { if (eCant) return; const ev = { id: 'e' + Date.now(), title: eTitle, date: s.eDate, time: s.eTime, place: ePlace, cat: s.eCat, going: 0, gcal: s.eGcal, cancelled: false }; set({ evs: self.state.evs.concat([ev]), eTitle: '', eDate: '', eTime: '', ePlace: '', eGcal: true, eMsg: 'Posted.' }); },
+        add: () => { if (eCant) return; const ev = { id: 'e' + Date.now(), title: eTitle, date: s.eDate, time: s.eTime, place: ePlace, cat: s.eCat, going: 0, gcal: s.gConn && s.eGcal ? 'sent' : false, cancelled: false }; set({ evs: self.state.evs.concat([ev]), eTitle: '', eDate: '', eTime: '', ePlace: '', eGcal: true, eMsg: 'Posted.' }); },
         hasMsg: !!s.eMsg, msg: s.eMsg
       },
       evs: s.evs.slice().sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1)).map((e, i) => ({
         title: e.title, when: label(e.date) + ' · ' + fmtT(e.time), place: e.place, whenPlace: label(e.date) + ' · ' + fmtT(e.time) + ' · ' + e.place, cat: e.cat, catBg: catC[e.cat][0], catFg: catC[e.cat][1],
-        going: e.cancelled ? 'Cancelled' : e.going + ' going', gcal: !!e.gcal && !e.cancelled,
+        going: e.cancelled ? 'Cancelled' : e.going + ' going', gcal: e.gcal === 'sent' && !e.cancelled, gFail: e.gcal === 'failed' && !e.cancelled, gOrphan: e.gcal === 'orphaned' && !e.cancelled, canResend: e.gcal === 'failed' && !e.cancelled && s.gConn,
+        resend: () => set({ evs: self.state.evs.map((x) => (x.id === e.id ? Object.assign({}, x, { gcal: 'sent' }) : x)), toast: 'Invites sent.' }),
         cancelled: e.cancelled, live: !e.cancelled, line: i === 0 ? '0' : '1px solid #DFE3E8', mon: mn[Number(e.date.slice(5, 7)) - 1], day: String(Number(e.date.slice(8))),
         confirm: s.delId === e.id, idle: s.delId !== e.id, askDel: () => set({ delId: e.id }), keep: () => set({ delId: '' }),
         cancel: () => set({ evs: self.state.evs.map((x) => (x.id === e.id ? Object.assign({}, x, { cancelled: true }) : x)), toast: e.title + ' cancelled.' }),
         del: () => set({ evs: self.state.evs.filter((x) => x.id !== e.id), delId: '', toast: e.title + ' deleted.' })
       })),
-      evEmpty: s.evs.length === 0
+      evEmpty: s.evs.length === 0,
+      g: (() => {
+        const owned = s.evs.filter((x) => x.gcal === 'sent' && !x.cancelled).length;
+        const next = s.people.filter((p) => p.admin && !p.left && p.id !== 'anita')[0];
+        const what = owned === 0 ? 'Invites stop going out from your calendar.'
+          : next ? (owned === 1 ? '1 upcoming invite moves' : owned + ' upcoming invites move') + ' to ' + next.name + '.'
+          : (owned === 1 ? '1 upcoming invite stays' : owned + ' upcoming invites stay') + ' in people’s calendars, but can’t be changed or cancelled from here.';
+        return {
+          on: s.gConn, notOn: !s.gConn, idle: !s.gConfirm, confirm: s.gConfirm, what: what,
+          ask: () => set({ gConfirm: true }), keep: () => set({ gConfirm: false }),
+          off: () => set({ gConn: false, gConfirm: false, toast: 'Disconnected.', evs: next ? self.state.evs : self.state.evs.map((x) => (x.gcal === 'sent' && !x.cancelled ? Object.assign({}, x, { gcal: 'orphaned' }) : x)) }),
+          connect: () => set({ gConn: true, toast: 'Google Calendar connected.' })
+        };
+      })()
     };
 
     // ---------- office: times ----------

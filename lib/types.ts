@@ -343,6 +343,7 @@ export interface Store {
   listAnnouncements(limit: number): Promise<AnnouncementRow[]>;
   ackAnnouncement(id: string, email: string): Promise<void>;
   listAckedAnnouncementIds(email: string): Promise<string[]>;
+  // Acknowledgements per announcement, leaving out people marked as left.
   countAnnouncementAcks(ids: string[]): Promise<Record<string, number>>;
   setFeedSeenAt(email: string, at: string): Promise<void>;
   setStepsLeague(email: string, on: boolean): Promise<boolean>;

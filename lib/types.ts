@@ -31,7 +31,17 @@ export type EmployeeRow = {
   stepsLeague?: boolean;
   // Opted into Say hi: can send and get waves and invites from people in the office.
   sayHi?: boolean;
+  // Marked as left by an admin (YYYY-MM-DD): no Google Calendar invites, not counted as a reader.
+  leftOn?: string | null;
 };
+
+// An admin's Google refresh token, sealed with AES-256-GCM (lib/calendar-crypto.ts). Never sent to a browser.
+export type CalendarTokenRow = { email: string; ciphertext: string; iv: string; tag: string; kid: string; scope: string; createdAt: string };
+
+// The Google Calendar invite behind an app event. `generation` changes only on a hand-over, and the
+// Google event id is derived from (eventId, generation), so retries can never send a second invite.
+export type InviteState = "sent" | "failed" | "orphaned";
+export type EventInviteRow = { eventId: string; owner: string; googleId: string; generation: number; state: InviteState; error: string | null; updatedAt: string };
 
 // How a day got its mark. wifi / location: verified at the office. self: declared remote.
 // late: added afterwards by the person (no location check). admin: fixed by an admin.
@@ -371,6 +381,16 @@ export interface Store {
   getEmployee(email: string): Promise<EmployeeRow | null>;
   listEmployees(): Promise<EmployeeRow[]>;
   setRole(email: string, role: Role): Promise<boolean>;
+  setLeftOn(email: string, leftOn: string | null): Promise<boolean>;
+  getCalendarToken(email: string): Promise<CalendarTokenRow | null>;
+  saveCalendarToken(row: CalendarTokenRow): Promise<void>;
+  deleteCalendarToken(email: string): Promise<boolean>;
+  // Oldest connection first: the first one is who takes over invites from an admin who goes.
+  listCalendarTokens(): Promise<CalendarTokenRow[]>;
+  getEventInvite(eventId: string): Promise<EventInviteRow | null>;
+  setEventInvite(row: EventInviteRow): Promise<void>;
+  deleteEventInvite(eventId: string): Promise<boolean>;
+  listEventInvites(): Promise<EventInviteRow[]>;
   setJoinedOn(email: string, joinedOn: string | null): Promise<boolean>;
   // Days hit before the app took over tracking — admin-entered from the old sheet.
   setStepsOffset(email: string, days: number): Promise<boolean>;

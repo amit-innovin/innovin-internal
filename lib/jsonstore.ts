@@ -16,7 +16,7 @@ import type {
   Store,
   WifiRow,
   WorkspaceProfile,
- AttendanceChangeRow, PollVote, TeaRow, SnackItem, SnackVote, BookRow, ReadingRow, PlanOverrideRow, ClosedDayRow, HiRow } from "./types";
+ AttendanceChangeRow, PollVote, TeaRow, SnackItem, SnackVote, BookRow, ReadingRow, PlanOverrideRow, ClosedDayRow, HiRow, CalendarTokenRow, EventInviteRow } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -52,12 +52,14 @@ type DB = {
   nudges: { date: string; from: string; to: string }[];
   noticeReports: { noticeId: string; reporterRef: string; at: string }[];
   hi: HiRow[];
+  calendarTokens: CalendarTokenRow[];
+  eventInvites: EventInviteRow[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
-const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, feedSeenAt: e.feedSeenAt ?? null, stepsLeague: e.stepsLeague ?? false, sayHi: e.sayHi ?? false });
+const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, feedSeenAt: e.feedSeenAt ?? null, stepsLeague: e.stepsLeague ?? false, sayHi: e.sayHi ?? false, leftOn: e.leftOn ?? null });
 const readAnnouncement = (a: AnnouncementRow): AnnouncementRow => ({ ...a, important: a.important ?? false, authorName: a.authorName ?? null, pinnedUntil: a.pinnedUntil ?? null });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [], snackPicks: [], settings: {}, nudges: [], noticeReports: [], hi: [] });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [], snackPicks: [], settings: {}, nudges: [], noticeReports: [], hi: [], calendarTokens: [], eventInvites: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -452,6 +454,38 @@ export const jsonStore: Store = {
       if (row) row.role = role;
       return { result: !!row, changed: !!row };
     }),
+  setLeftOn: (email, leftOn) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.leftOn = leftOn;
+      return { result: !!row, changed: !!row };
+    }),
+  getCalendarToken: (email) => query((db) => db.calendarTokens.find((t) => t.email === email) ?? null),
+  saveCalendarToken: (row) =>
+    mutate((db) => {
+      db.calendarTokens = [...db.calendarTokens.filter((t) => t.email !== row.email), row];
+      return { result: undefined, changed: true };
+    }),
+  deleteCalendarToken: (email) =>
+    mutate((db) => {
+      const before = db.calendarTokens.length;
+      db.calendarTokens = db.calendarTokens.filter((t) => t.email !== email);
+      return { result: db.calendarTokens.length < before, changed: db.calendarTokens.length < before };
+    }),
+  listCalendarTokens: () => query((db) => [...db.calendarTokens].sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  getEventInvite: (eventId) => query((db) => db.eventInvites.find((r) => r.eventId === eventId) ?? null),
+  setEventInvite: (row) =>
+    mutate((db) => {
+      db.eventInvites = [...db.eventInvites.filter((r) => r.eventId !== row.eventId), row];
+      return { result: undefined, changed: true };
+    }),
+  deleteEventInvite: (eventId) =>
+    mutate((db) => {
+      const before = db.eventInvites.length;
+      db.eventInvites = db.eventInvites.filter((r) => r.eventId !== eventId);
+      return { result: db.eventInvites.length < before, changed: db.eventInvites.length < before };
+    }),
+  listEventInvites: () => query((db) => [...db.eventInvites]),
   setJoinedOn: (email, joinedOn) =>
     mutate((db) => {
       const row = db.employees.find((e) => e.email === email);

@@ -20,6 +20,8 @@ import type {
   WorkspaceProfile,
   AttendanceChangeRow,
   ClosedDayRow,
+  CalendarTokenRow,
+  EventInviteRow,
   HiRow,
   TeaRound,
   PlanOverrideRow,
@@ -231,6 +233,26 @@ CREATE INDEX IF NOT EXISTS plan_overrides_date_idx ON plan_overrides (date);
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS feed_seen_at timestamptz;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS steps_league boolean NOT NULL DEFAULT false;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS say_hi boolean NOT NULL DEFAULT false;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS left_on text;
+-- Google Calendar: each admin's sealed refresh token, and the invite behind each app event.
+CREATE TABLE IF NOT EXISTS calendar_tokens (
+  email text PRIMARY KEY,
+  ciphertext text NOT NULL,
+  iv text NOT NULL,
+  tag text NOT NULL,
+  kid text NOT NULL,
+  scope text NOT NULL,
+  created_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS event_invites (
+  event_id text PRIMARY KEY,
+  owner text NOT NULL,
+  google_id text NOT NULL,
+  generation integer NOT NULL,
+  state text NOT NULL,
+  error text,
+  updated_at timestamptz NOT NULL
+);
 CREATE TABLE IF NOT EXISTS hi_messages (
   id text PRIMARY KEY,
   date text NOT NULL,
@@ -412,6 +434,9 @@ const announcement = (r: any): AnnouncementRow => ({
 });
 // "owner" is the retired top role; such rows are admins now.
 const roleOf = (role: unknown): Role => (role === "admin" || role === "owner" ? "admin" : "member");
+const iso = (v: any) => v?.toISOString?.() ?? v;
+const calendarToken = (r: any): CalendarTokenRow => ({ email: r.email, ciphertext: r.ciphertext, iv: r.iv, tag: r.tag, kid: r.kid, scope: r.scope, createdAt: iso(r.created_at) });
+const eventInvite = (r: any): EventInviteRow => ({ eventId: r.event_id, owner: r.owner, googleId: r.google_id, generation: r.generation, state: r.state, error: r.error ?? null, updatedAt: iso(r.updated_at) });
 const employee = (r: any): EmployeeRow => ({
   email: r.email,
   name: r.name,
@@ -428,6 +453,7 @@ const employee = (r: any): EmployeeRow => ({
   feedSeenAt: r.feed_seen_at ? r.feed_seen_at.toISOString?.() ?? r.feed_seen_at : null,
   stepsLeague: r.steps_league ?? false,
   sayHi: r.say_hi ?? false,
+  leftOn: r.left_on ?? null,
 });
 const pushSubscription = (r: any): PushSubscriptionRow => ({
   sessionRef: r.session_ref ?? null,
@@ -914,6 +940,48 @@ class PgStore implements Store {
       [row.email, row.name, row.picture, row.role, row.joinedOn, row.createdAt, row.lastSeenAt],
     );
     return employee(res.rows[0]);
+  }
+  async setLeftOn(email: string, leftOn: string | null) {
+    const res = await this.q(`UPDATE employees SET left_on = $2 WHERE email = $1`, [email, leftOn]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async getCalendarToken(email: string) {
+    const res = await this.q(`SELECT * FROM calendar_tokens WHERE email = $1`, [email]);
+    return res.rows[0] ? calendarToken(res.rows[0]) : null;
+  }
+  async saveCalendarToken(row: CalendarTokenRow) {
+    await this.q(
+      `INSERT INTO calendar_tokens (email, ciphertext, iv, tag, kid, scope, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (email) DO UPDATE SET ciphertext = $2, iv = $3, tag = $4, kid = $5, scope = $6, created_at = $7`,
+      [row.email, row.ciphertext, row.iv, row.tag, row.kid, row.scope, row.createdAt],
+    );
+  }
+  async deleteCalendarToken(email: string) {
+    const res = await this.q(`DELETE FROM calendar_tokens WHERE email = $1`, [email]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async listCalendarTokens() {
+    const res = await this.q(`SELECT * FROM calendar_tokens ORDER BY created_at, email`);
+    return res.rows.map(calendarToken);
+  }
+  async getEventInvite(eventId: string) {
+    const res = await this.q(`SELECT * FROM event_invites WHERE event_id = $1`, [eventId]);
+    return res.rows[0] ? eventInvite(res.rows[0]) : null;
+  }
+  async setEventInvite(row: EventInviteRow) {
+    await this.q(
+      `INSERT INTO event_invites (event_id, owner, google_id, generation, state, error, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (event_id) DO UPDATE SET owner = $2, google_id = $3, generation = $4, state = $5, error = $6, updated_at = $7`,
+      [row.eventId, row.owner, row.googleId, row.generation, row.state, row.error, row.updatedAt],
+    );
+  }
+  async deleteEventInvite(eventId: string) {
+    const res = await this.q(`DELETE FROM event_invites WHERE event_id = $1`, [eventId]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async listEventInvites() {
+    const res = await this.q(`SELECT * FROM event_invites`);
+    return res.rows.map(eventInvite);
   }
   async setRole(email: string, role: Role) {
     const res = await this.q(`UPDATE employees SET role = $2 WHERE email = $1`, [email, role]);

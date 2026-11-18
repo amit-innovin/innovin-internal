@@ -184,6 +184,40 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.listPlanOverridesOn("2026-11-18")).toEqual([{ email: "b@innovinlabs.com", date: "2026-11-18", planned: true }]);
     });
 
+    it("keeps one sealed calendar token per admin and deletes it", async () => {
+      const row = { email: "a@innovinlabs.com", ciphertext: "c1", iv: "i1", tag: "t1", kid: "k1", scope: "s", createdAt: iso() };
+      expect(await store.getCalendarToken(row.email)).toBeNull();
+      await store.saveCalendarToken(row);
+      await store.saveCalendarToken({ ...row, ciphertext: "c2", createdAt: iso(1000) });
+      expect(await store.getCalendarToken(row.email)).toEqual({ ...row, ciphertext: "c2", createdAt: iso(1000) });
+      await store.saveCalendarToken({ ...row, email: "b@innovinlabs.com", createdAt: iso(500) });
+      expect((await store.listCalendarTokens()).map((t) => t.email)).toEqual(["b@innovinlabs.com", "a@innovinlabs.com"]);
+      expect(await store.deleteCalendarToken(row.email)).toBe(true);
+      expect(await store.deleteCalendarToken(row.email)).toBe(false);
+      expect(await store.getCalendarToken(row.email)).toBeNull();
+    });
+
+    it("keeps one Google invite record per event", async () => {
+      const row = { eventId: "e1", owner: "a@innovinlabs.com", googleId: "abc123", generation: 0, state: "sent" as const, error: null, updatedAt: iso() };
+      await store.setEventInvite(row);
+      await store.setEventInvite({ ...row, state: "orphaned", updatedAt: iso(1) });
+      expect(await store.getEventInvite("e1")).toEqual({ ...row, state: "orphaned", updatedAt: iso(1) });
+      await store.setEventInvite({ ...row, eventId: "e2", state: "failed", error: "not-connected" });
+      expect((await store.listEventInvites()).map((r) => r.eventId).sort()).toEqual(["e1", "e2"]);
+      expect(await store.deleteEventInvite("e1")).toBe(true);
+      expect(await store.getEventInvite("e1")).toBeNull();
+    });
+
+    it("marks a person as left and back", async () => {
+      await store.upsertEmployee(employee({ email: "a@innovinlabs.com" }));
+      expect((await store.getEmployee("a@innovinlabs.com"))?.leftOn).toBeNull();
+      expect(await store.setLeftOn("a@innovinlabs.com", "2026-11-18")).toBe(true);
+      expect((await store.getEmployee("a@innovinlabs.com"))?.leftOn).toBe("2026-11-18");
+      expect(await store.setLeftOn("a@innovinlabs.com", null)).toBe(true);
+      expect((await store.listEmployees())[0].leftOn).toBeNull();
+      expect(await store.setLeftOn("nobody@innovinlabs.com", "2026-11-18")).toBe(false);
+    });
+
     it("keeps one closed day per date and reports removals", async () => {
       const row = { date: "2026-11-27", reason: "Building maintenance", createdBy: "admin@innovinlabs.com", createdAt: iso() };
       expect(await store.addClosedDay(row)).toBe(true);

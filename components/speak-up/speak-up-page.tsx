@@ -12,7 +12,7 @@ type Mine = { id: string; body: string; status: GrievanceStatus; topic?: string 
 const TOPICS = ["Workplace", "People", "Facilities", "Process", "Something else"];
 const ref = (id: string) => `SU-${id.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase()}`;
 const day = (iso: string) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).format(new Date(iso));
-const statusLine = (g: Mine) => (g.status === "resolved" ? "Resolved" : g.status === "in_progress" ? "In progress" : `Sent ${day(g.createdAt)} · no reply yet`);
+const statusLine = (g: Mine) => (g.status === "resolved" ? "Resolved" : g.status === "in_progress" ? "In progress" : g.reply ? "Replied" : `Sent ${day(g.createdAt)} · no reply yet`);
 
 // Speak up from the Material 3 prototype: a private, anonymous message to admins. Admins see the
 // topic, the message and the day; never a name, email, device or time. It works signed out too.

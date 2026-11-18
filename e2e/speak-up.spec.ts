@@ -31,6 +31,8 @@ test.describe("Speak up", () => {
     expect((await admin.request.patch("/api/grievances", { data: { id: row.id, reply: "Facilities will fix it today" } })).status()).toBe(200);
     await page.reload();
     await expect(page.getByRole("region", { name: "My reports" })).toContainText("Reply from admins: Facilities will fix it today");
+    // A reply alone (no status change) still reads as answered.
+    await expect(page.getByRole("region", { name: "My reports" })).not.toContainText("no reply yet");
     await admin.goto("/grievances");
     await expect(admin.getByText("Facilities will fix it today")).toHaveCount(0);
     await adminContext.close();

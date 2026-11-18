@@ -3,7 +3,7 @@ import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { store } from "@/lib/store";
-import { accountRef } from "@/lib/submitter";
+import { keyedRef } from "@/lib/submitter";
 
 // "Report this post": tells admins a Feed post may be inappropriate. Kept against a keyed hash of
 // the reporter, so admins only ever see how many people reported it, never who.
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   if (!id) return badRequest("Which post?");
   const notice = (await store.listNotices(200)).find((n) => n.id === id);
   if (!notice) return NextResponse.json({ error: "That post is gone" }, { status: 404 });
-  if (notice.authorEmail === session.email) return badRequest("That's your own post");
-  if (!(await store.addNoticeReport(id, accountRef(`report:${session.email}`)))) return NextResponse.json({ error: "You already reported this post", code: "already" }, { status: 409 });
+  if (notice.authorEmail?.toLowerCase() === session.email.toLowerCase()) return badRequest("That's your own post");
+  if (!(await store.addNoticeReport(id, keyedRef("report", session.email)))) return NextResponse.json({ error: "You already reported this post", code: "already" }, { status: 409 });
   return NextResponse.json({ ok: true });
 }

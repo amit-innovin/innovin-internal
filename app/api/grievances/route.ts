@@ -3,7 +3,6 @@ import { isAdmin } from "@/lib/admin";
 import { DEVICE_COOKIE, GRIEVANCE_IDS_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
-import { sendPush } from "@/lib/push";
 import { id, store } from "@/lib/store";
 import { grievanceIdsFromCookie, grievancesFromIds, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
 import { todayIST } from "@/lib/time";
@@ -61,16 +60,8 @@ export async function POST(req: NextRequest) {
     reply: null,
   });
 
-  // Urgent goes straight to admins' devices — that's the whole point of the flag. The push
-  // carries no id or link to the submitter, so this doesn't touch anonymity.
-  if (urgent) {
-    const admins = (await store.listEmployees()).filter((e) => e.role === "admin");
-    await Promise.all(
-      admins.map((a) =>
-        sendPush({ title: "Urgent report just came in", body: "Someone marked a report urgent — worth a look.", href: "/admin?tab=approvals", tag: "urgent-report" }, a.email).catch(() => {}),
-      ),
-    );
-  }
+  // No push on submit (not even for old clients' "urgent"): an alert at the exact moment would let an
+  // admin match the message to who was around then, undoing the day-only date.
   const res = NextResponse.json(row);
   setSubmitterCookie(res, identity.deviceId);
   // Remember this submission's id on the device itself — that's the only record of "mine".

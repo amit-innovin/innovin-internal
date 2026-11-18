@@ -6,7 +6,7 @@ import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
 import { inOfficeToday, snackTimes } from "@/lib/snack-times";
 import { pickCounts, pickOpen } from "@/lib/snacks-rules";
-import { accountRef } from "@/lib/submitter";
+import { accountRef, keyedRef } from "@/lib/submitter";
 import { todayIST } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,8 @@ const signIn = () => NextResponse.json({ error: "Sign in with your Innovin Googl
 // Votes are kept against a keyed hash of the voter, never the email: one vote each, and nobody,
 // admins included, can see who wants what. Suggestions store no author at all.
 const voterRef = (email: string) => accountRef(`snack:${email}`);
+// Today's pick uses a keyed ref (server secret), so picks can't be matched to people by hashing emails.
+const pickRef = (email: string) => keyedRef("snackpick", email);
 
 // Ordered today: an admin marked a shelf item bought on today's date (office time).
 const orderedToday = (items: { orderedAt: string | null }[], today: string) =>
@@ -38,7 +40,7 @@ async function view(email: string) {
       orderAt: times.orderAt,
       ordered,
       picks: shelfIds.map((itemId) => ({ itemId, count: counts[itemId] ?? 0 })),
-      mine: picks.find((p) => p.voterRef === me)?.itemId ?? null,
+      mine: picks.find((p) => p.voterRef === pickRef(email))?.itemId ?? null,
     },
     canManage: admin,
   };
@@ -91,7 +93,7 @@ export async function PATCH(req: NextRequest) {
     const items = await store.listSnacks();
     if (!pickOpen(new Date(), await snackTimes(), orderedToday(items.filter((i) => i.status === "shelf"), today))) return NextResponse.json({ error: "Today's order is in. Picks open again tomorrow.", code: "closed" }, { status: 409 });
     if (action === "pick" && item.status !== "shelf") return NextResponse.json({ error: "That snack isn't on today's list" }, { status: 409 });
-    await store.setSnackPick(today, voterRef(session.email), action === "pick" ? itemId : null);
+    await store.setSnackPick(today, pickRef(session.email), action === "pick" ? itemId : null);
     return NextResponse.json(await view(session.email));
   }
   if (action === "vote") {

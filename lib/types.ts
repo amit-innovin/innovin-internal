@@ -164,6 +164,10 @@ export type GrievanceRow = {
   status: GrievanceStatus;
   updatedAt?: string;
   createdAt: string;
+  // Workplace, People, Facilities, Process, Something else; and an admin's reply, which only the
+  // device that sent the message ever sees.
+  topic?: string | null;
+  reply?: string | null;
 };
 
 export type WifiRow = {
@@ -306,6 +310,10 @@ export interface Store {
   listStepsByEmail(email: string, limit: number): Promise<StepsRow[]>;
   addGrievance(row: GrievanceRow): Promise<GrievanceRow>;
   setGrievanceStatus(id: string, status: GrievanceStatus): Promise<boolean>;
+  setGrievanceReply(id: string, reply: string | null): Promise<boolean>;
+  // A person flagging a Feed post for admins, by anonymous ref; false when they already did.
+  addNoticeReport(noticeId: string, reporterRef: string): Promise<boolean>;
+  countNoticeReports(): Promise<Record<string, number>>;
   listGrievances(): Promise<GrievanceRow[]>;
   // "My submissions" lookup — ids come from the device's own cookie, never a stored ref.
   listGrievancesByIds(ids: string[], limit: number): Promise<GrievanceRow[]>;

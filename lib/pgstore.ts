@@ -263,6 +263,14 @@ CREATE TABLE IF NOT EXISTS settings (
   key text PRIMARY KEY,
   value jsonb NOT NULL
 );
+ALTER TABLE grievances ADD COLUMN IF NOT EXISTS topic text;
+ALTER TABLE grievances ADD COLUMN IF NOT EXISTS reply text;
+CREATE TABLE IF NOT EXISTS notice_reports (
+  notice_id text NOT NULL,
+  reporter_ref text NOT NULL,
+  at timestamptz NOT NULL,
+  PRIMARY KEY (notice_id, reporter_ref)
+);
 CREATE TABLE IF NOT EXISTS closed_days (
   date text PRIMARY KEY,
   reason text NOT NULL,
@@ -364,6 +372,8 @@ const grievance = (r: any): GrievanceRow => ({
   status: r.status,
   updatedAt: r.updated_at?.toISOString?.() ?? r.updated_at ?? r.created_at?.toISOString?.() ?? r.created_at,
   createdAt: r.created_at?.toISOString?.() ?? r.created_at,
+  topic: r.topic ?? null,
+  reply: r.reply ?? null,
 });
 const wifi = (r: any): WifiRow => ({
   id: r.id,
@@ -756,16 +766,28 @@ class PgStore implements Store {
   }
   async addGrievance(row: GrievanceRow) {
     const res = await this.q(
-      `INSERT INTO grievances (id, body, display_name, image, urgent, submitter_ref, status, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      `INSERT INTO grievances (id, body, display_name, image, urgent, submitter_ref, status, created_at, topic)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
       // Never persist a device-linked ref — "anonymous" must survive a DB leak.
-      [row.id, row.body, row.displayName, row.image, row.urgent, "anon", row.status, row.createdAt],
+      [row.id, row.body, row.displayName, row.image, row.urgent, "anon", row.status, row.createdAt, row.topic ?? null],
     );
     return grievance(res.rows[0]);
   }
   async setGrievanceStatus(id: string, status: GrievanceStatus) {
     const res = await this.q(`UPDATE grievances SET status = $2, updated_at = NOW() WHERE id = $1`, [id, status]);
     return (res.rowCount ?? 0) > 0;
+  }
+  async setGrievanceReply(id: string, reply: string | null) {
+    const res = await this.q(`UPDATE grievances SET reply = $2, updated_at = NOW() WHERE id = $1`, [id, reply]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async addNoticeReport(noticeId: string, reporterRef: string) {
+    const res = await this.q(`INSERT INTO notice_reports (notice_id, reporter_ref, at) VALUES ($1,$2,now()) ON CONFLICT DO NOTHING`, [noticeId, reporterRef]);
+    return (res.rowCount ?? 0) > 0;
+  }
+  async countNoticeReports() {
+    const res = await this.q(`SELECT notice_id, count(*)::int AS n FROM notice_reports GROUP BY notice_id`);
+    return Object.fromEntries(res.rows.map((r: any) => [r.notice_id, r.n as number]));
   }
   async listGrievances() {
     const res = await this.q(`SELECT * FROM grievances ORDER BY urgent DESC, created_at DESC`);

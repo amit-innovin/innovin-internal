@@ -50,12 +50,13 @@ type DB = {
   snackPicks: { date: string; voterRef: string; itemId: string }[];
   settings: Record<string, unknown>;
   nudges: { date: string; from: string; to: string }[];
+  noticeReports: { noticeId: string; reporterRef: string; at: string }[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
 const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, feedSeenAt: e.feedSeenAt ?? null, stepsLeague: e.stepsLeague ?? false });
 const readAnnouncement = (a: AnnouncementRow): AnnouncementRow => ({ ...a, important: a.important ?? false, authorName: a.authorName ?? null, pinnedUntil: a.pinnedUntil ?? null });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [], snackPicks: [], settings: {}, nudges: [] });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [], snackPicks: [], settings: {}, nudges: [], noticeReports: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -322,7 +323,7 @@ export const jsonStore: Store = {
   addGrievance: (row) =>
     mutate((db) => {
       // Never persist a device-linked ref — "anonymous" must survive a DB leak.
-      const safe = { ...row, submitterRef: "anon" };
+      const safe = { ...row, submitterRef: "anon", topic: row.topic ?? null, reply: row.reply ?? null };
       db.grievances.unshift(safe);
       return { result: safe, changed: true };
     }),
@@ -332,6 +333,19 @@ export const jsonStore: Store = {
       if (row) { row.status = status; row.updatedAt = new Date().toISOString(); }
       return { result: !!row, changed: !!row };
     }),
+  setGrievanceReply: (id, reply) =>
+    mutate((db) => {
+      const row = db.grievances.find((r) => r.id === id);
+      if (row) { row.reply = reply; row.updatedAt = new Date().toISOString(); }
+      return { result: !!row, changed: !!row };
+    }),
+  addNoticeReport: (noticeId, reporterRef) =>
+    mutate((db) => {
+      if (db.noticeReports.some((r) => r.noticeId === noticeId && r.reporterRef === reporterRef)) return { result: false, changed: false };
+      db.noticeReports.push({ noticeId, reporterRef, at: new Date().toISOString() });
+      return { result: true, changed: true };
+    }),
+  countNoticeReports: () => query((db) => db.noticeReports.reduce<Record<string, number>>((m, r) => ({ ...m, [r.noticeId]: (m[r.noticeId] ?? 0) + 1 }), {})),
   listGrievances: () =>
     // Urgent floats above everything else, then newest first.
     query((db) => db.grievances.sort((a, b) => Number(b.urgent) - Number(a.urgent) || newestFirst(a, b))),

@@ -121,6 +121,22 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect((await store.listWifi(5))[0]).toMatchObject({ quality: "poor", area: "Pantry" });
     });
 
+    it("keeps a Speak up message's topic and an admin's reply", async () => {
+      const g = await store.addGrievance({ id: uid(), body: "The pantry tap leaks", displayName: null, image: null, urgent: false, submitterRef: "x", status: "open", createdAt: iso(), topic: "Facilities", reply: null });
+      expect(g).toMatchObject({ topic: "Facilities", reply: null });
+      expect(await store.setGrievanceReply(g.id, "Plumber booked for Friday")).toBe(true);
+      expect(await store.setGrievanceReply("missing", "x")).toBe(false);
+      expect((await store.listGrievancesByIds([g.id], 5))[0]).toMatchObject({ topic: "Facilities", reply: "Plumber booked for Friday" });
+    });
+
+    it("counts each person's report of a post once", async () => {
+      expect(await store.addNoticeReport("n1", "ref-a")).toBe(true);
+      expect(await store.addNoticeReport("n1", "ref-a")).toBe(false);
+      expect(await store.addNoticeReport("n1", "ref-b")).toBe(true);
+      expect(await store.addNoticeReport("n2", "ref-a")).toBe(true);
+      expect(await store.countNoticeReports()).toEqual({ n1: 2, n2: 1 });
+    });
+
     it("keeps one plan override per person and date, and lists a date's overrides for everyone", async () => {
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", true);
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", false);

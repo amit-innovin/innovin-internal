@@ -236,7 +236,7 @@ export type Snacks = {
   suggestions: SnackRow[];
   canManage: boolean;
   // picks (counts per item) only come to admins.
-  today: { open: boolean; orderAt: string; ordered: boolean; picks?: { itemId: string; count: number }[]; mine: string | null };
+  today: { open: boolean; orderAt: string; ordered: boolean; orderedAt?: string | null; picks?: { itemId: string; count: number }[]; mine: string | null };
 };
 export function useSnackWrite<T>(method: "POST" | "PATCH") {
   const client = useQueryClient();
@@ -277,7 +277,7 @@ export const useAccount = () => useQuery({ queryKey: ["account"], queryFn: () =>
 export type Steps = Awaited<ReturnType<typeof import("@/lib/today").stepsBoard>>;
 export const useSteps = () => useQuery({ queryKey: ["steps"], queryFn: () => fetchJSON<Steps>("/api/steps") });
 
-export type WifiReport = { id: string; quality: "good" | "poor"; note: string; downMbps: number | null; upMbps?: number | null; createdAt: string };
+export type WifiReport = { id: string; quality: "good" | "poor"; note: string; downMbps: number | null; upMbps?: number | null; createdAt: string; area?: string | null };
 export const useWifiReports = () => useQuery({ queryKey: ["wifi"], queryFn: () => fetchJSON<WifiReport[]>("/api/wifi") });
 
 export type FeedEvent = { id: string; title: string; body: string; category: string; startsAt: string; location: string; cancelledAt?: string; going: number; mine: boolean; canManage: boolean };
@@ -289,5 +289,39 @@ export type AdminData = import("@/lib/admin-view").AdminOverview & { needsYou: i
 export const useAdminOverview = () => useQuery({ queryKey: ["admin", "overview"], queryFn: () => fetchJSON<AdminData>("/api/admin/overview") });
 export const useAdminPerson = (email: string | null, month: string) =>
   useQuery({ queryKey: ["admin", "person", email, month], enabled: !!email, queryFn: () => fetchJSON<import("@/lib/admin-view").PersonMonth>(`/api/admin/person?email=${encodeURIComponent(email ?? "")}&month=${month}`) });
-export type Grievance = { id: string; body: string; displayName: string | null; image: string | null; urgent: boolean; status: "open" | "in_progress" | "resolved"; createdAt: string };
+export type Grievance = { id: string; body: string; displayName: string | null; image: string | null; urgent: boolean; status: "open" | "in_progress" | "resolved"; createdAt: string; topic?: string | null; reply?: string | null };
 export const useAllGrievances = () => useQuery({ queryKey: ["admin", "grievances"], queryFn: () => fetchJSON<Grievance[]>("/api/grievances") });
+
+// Admin app writes (components/admin-app). Each refreshes what it changed, plus the admin
+// overview, whose "Needs you" list depends on most of them.
+function useAdminWrite<T>(url: string, method: "POST" | "PATCH" | "DELETE", keys: (readonly unknown[])[]) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: T) => {
+      const res = await send(url, { method, json: input });
+      if (!res.ok) throw new Error(await readError(res));
+      return (await res.json().catch(() => null)) as unknown;
+    },
+    onSuccess: () => Promise.all([...keys, ["admin", "overview"]].map((queryKey) => client.invalidateQueries({ queryKey }))),
+  });
+}
+export const useSetGrievance = () => useAdminWrite<{ id: string; status?: Grievance["status"]; reply?: string | null }>("/api/grievances", "PATCH", [["admin", "grievances"]]);
+// One person: exempt from the 8 days, admin or member, or their birthday ("MM-DD" or null).
+export const useSetPerson = () => useAdminWrite<{ email: string; officeExempt?: boolean; role?: "admin" | "member"; birthday?: string | null; showBirthday?: boolean }>("/api/people", "PATCH", [["admin"]]);
+export const useFixDay = () => useAdminWrite<{ email: string; date: string; mode: "office" | "none" }>("/api/admin/days", "POST", [["admin"], queryKeys.days()]);
+
+export type ReportedPost = { id: string; kind: string; title: string; body: string; authorName: string | null; createdAt: string; reports: number };
+export const useReported = () => useQuery({ queryKey: ["admin", "reported"], queryFn: () => fetchJSON<ReportedPost[]>("/api/admin/reported") });
+export const useKeepPost = () => useAdminWrite<{ id: string }>("/api/admin/reported", "DELETE", [["admin", "reported"]]);
+export const useRemovePost = () => useAdminWrite<{ id: string }>("/api/notices", "DELETE", [["admin", "reported"], ["feed"]]);
+
+export type AdminAnnouncement = { id: string; title: string; body: string; createdAt: string; pinnedUntil?: string | null; seen?: number };
+export const useAnnouncements = () => useQuery({ queryKey: ["admin", "announcements"], queryFn: () => fetchJSON<AdminAnnouncement[]>("/api/announcements") });
+export const usePublishAnnouncement = () => useAdminWrite<{ title: string; body: string; pinnedUntil?: string }>("/api/announcements", "POST", [["admin", "announcements"], ["feed"]]);
+export const useDeleteAnnouncement = () => useAdminWrite<{ action: "delete"; id: string }>("/api/announcements", "POST", [["admin", "announcements"], ["feed"]]);
+
+export type AdminEvent = FeedEvent & { updatedAt?: string; createdAt: string };
+export const useEvents = () => useQuery({ queryKey: ["events"], queryFn: () => fetchJSON<AdminEvent[]>("/api/events") });
+export const usePostEvent = () => useAdminWrite<{ title: string; category: string; startsAt: string; body: string; location: string }>("/api/events", "POST", [["events"], ["feed"]]);
+export const useCancelEvent = () => useAdminWrite<{ id: string; expectedUpdatedAt: string }>("/api/events", "DELETE", [["events"], ["feed"]]);
+export const useDeleteEvent = () => useAdminWrite<{ action: "delete"; id: string }>("/api/events", "POST", [["events"], ["feed"]]);

@@ -18,16 +18,23 @@ const voterRef = (email: string) => accountRef(`snack:${email}`);
 // Today's pick uses a keyed ref (server secret), so picks can't be matched to people by hashing emails.
 const pickRef = (email: string) => keyedRef("snackpick", email);
 
-// Ordered today: an admin marked a shelf item bought on today's date (office time).
-const orderedToday = (items: { orderedAt: string | null }[], today: string) =>
-  items.some((i) => i.orderedAt && new Date(new Date(i.orderedAt).getTime() + 5.5 * 3600_000).toISOString().slice(0, 10) === today);
+const istDay = (iso: string) => new Date(new Date(iso).getTime() + 5.5 * 3600_000).toISOString().slice(0, 10);
+// When today's order went in: an admin pressed "Mark ordered" (kept as a setting, so it works
+// with nothing picked), or marked a shelf item bought on today's date (office time). Null if not yet.
+const ORDER_KEY = "snackOrder";
+async function orderedAtToday(items: { orderedAt: string | null }[], today: string) {
+  const placed = await store.getSetting<{ date: string; at: string }>(ORDER_KEY);
+  const times = [placed?.date === today ? placed.at : null, ...items.map((i) => i.orderedAt)].filter((t): t is string => !!t && istDay(t) === today);
+  return times.sort().at(-1) ?? null;
+}
 
 async function view(email: string) {
   const today = todayIST();
   const [items, votes, admin, picks, times] = await Promise.all([store.listSnacks(), store.listSnackVotes(), isAdmin(), store.listSnackPicks(today), snackTimes()]);
   const me = voterRef(email);
   const shelfIds = items.filter((i) => i.status === "shelf").map((i) => i.id);
-  const ordered = orderedToday(items.filter((i) => i.status === "shelf"), today);
+  const orderedAt = await orderedAtToday(items.filter((i) => i.status === "shelf"), today);
+  const ordered = !!orderedAt;
   const counts = pickCounts(picks, shelfIds);
   const row = (i: (typeof items)[number]) => ({ id: i.id, name: i.name, note: i.note, orderedAt: i.orderedAt, votes: votes.filter((v) => v.itemId === i.id).length, mine: votes.some((v) => v.itemId === i.id && v.voterRef === me) });
   const byVotes = (a: { votes: number; name: string }, b: { votes: number; name: string }) => b.votes - a.votes || a.name.localeCompare(b.name);
@@ -42,6 +49,7 @@ async function view(email: string) {
       open: pickOpen(new Date(), times, ordered),
       orderAt: times.orderAt,
       ordered,
+      ...(admin ? { orderedAt } : {}),
       ...(admin ? { picks: shelfIds.map((itemId) => ({ itemId, count: counts[itemId] ?? 0 })) } : {}),
       mine: picks.find((p) => p.voterRef === pickRef(email))?.itemId ?? null,
     },
@@ -87,6 +95,17 @@ export async function PATCH(req: NextRequest) {
   if (limited) return limited;
   const body = await readJSON(req);
   const itemId = str(body?.id), action = str(body?.action);
+  // { action: "order-placed" }: today's order went in. Every shelf item someone picked today is
+  // marked bought, and members see "Order placed" (picks close).
+  if (action === "order-placed") {
+    if (!(await isAdmin())) return NextResponse.json({ error: "Only admins can manage the snack shelf" }, { status: 403 });
+    const today = todayIST(), now = new Date().toISOString();
+    const [items, picks] = await Promise.all([store.listSnacks(), store.listSnackPicks(today)]);
+    const picked = new Set(picks.map((p) => p.itemId));
+    for (const i of items) if (i.status === "shelf" && picked.has(i.id)) await store.setSnackStatus(i.id, "shelf", now);
+    await store.setSetting(ORDER_KEY, { date: today, at: now });
+    return NextResponse.json(await view(session.email));
+  }
   if (!itemId) return badRequest();
   const item = await store.getSnack(itemId);
   if (!item || item.status === "dismissed") return NextResponse.json({ error: "That snack is no longer listed" }, { status: 404 });
@@ -94,7 +113,7 @@ export async function PATCH(req: NextRequest) {
     const today = todayIST();
     if (!(await inOfficeToday(session.email, today))) return NextResponse.json({ error: "Snacks are for people in the office today. Check in on Home first.", code: "not-in-office" }, { status: 403 });
     const items = await store.listSnacks();
-    if (!pickOpen(new Date(), await snackTimes(), orderedToday(items.filter((i) => i.status === "shelf"), today))) return NextResponse.json({ error: "Today's order is in. Picks open again tomorrow.", code: "closed" }, { status: 409 });
+    if (!pickOpen(new Date(), await snackTimes(), !!(await orderedAtToday(items.filter((i) => i.status === "shelf"), today)))) return NextResponse.json({ error: "Today's order is in. Picks open again tomorrow.", code: "closed" }, { status: 409 });
     if (action === "pick" && item.status !== "shelf") return NextResponse.json({ error: "That snack isn't on today's list" }, { status: 409 });
     await store.setSnackPick(today, pickRef(session.email), action === "pick" ? itemId : null);
     return NextResponse.json(await view(session.email));

@@ -15,6 +15,8 @@ export type PersonRow = {
   email: string; name: string; role: "admin" | "member"; schedule: string; exempt: boolean;
   today: TodayState; markedAt: string | null; leaveType: string | null;
   done: number; target: number | null; status: OfficeDayStatus;
+  // "MM-DD", entered by admins.
+  birthday: string | null; showBirthday: boolean;
 };
 
 const onLeave = (away: AwayRow[], email: string, date: string) =>
@@ -32,6 +34,7 @@ function personRow(e: EmployeeRow, monthRows: AttendanceRow[], todayRow: Attenda
     schedule: e.officeExempt ? "Fully remote" : scheduleLabel(e.officeDays ?? []),
     today: mode ?? (leave ? "leave" : null), markedAt: mode ? todayRow?.checkInAt ?? null : null, leaveType: leave?.leaveType ?? null,
     done, target, status: officeDaysSummary({ done, target, month, today, closed }).status,
+    birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false,
   };
 }
 

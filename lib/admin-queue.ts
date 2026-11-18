@@ -1,44 +1,38 @@
-// "Needs you" for admins: the short list on the Account admin card and the admin Overview.
-// Leave approvals are deliberately absent — Zoho People decides leave.
+// "Needs you" for admins: the first thing on the admin app's Today (prototype: docs/design/m3/M3AdminApp.dc.html).
+// Leave approvals are deliberately absent — Zoho People decides leave. People behind on their
+// office days and the snack order are added by the page from data it already has.
 import { store } from "./store";
 import { todayIST } from "./time";
 
-export type NeedsYou = { id: string; kind: "speak" | "snack" | "wifi"; title: string; sub: string; href: string; urgent: boolean };
-
-// A suggestion this popular is worth an admin's look.
-export const POPULAR_SNACK = 3;
+export type NeedsYou = { id: string; kind: "speak" | "reported" | "announcement" | "wifi"; title: string; sub: string; href: string; urgent: boolean };
 
 const istDay = (iso: string) => new Date(Date.parse(iso) + 5.5 * 3600_000).toISOString().slice(0, 10);
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export async function needsYou(): Promise<NeedsYou[]> {
   const today = todayIST();
-  const [grievances, snacks, votes, wifi] = await Promise.all([store.listGrievances(), store.listSnacks(), store.listSnackVotes(), store.listWifi(100)]);
+  const [grievances, wifi, reports, employees, announcements] = await Promise.all([
+    store.listGrievances(), store.listWifi(100), store.countNoticeReports(), store.listEmployees(), store.listAnnouncements(10),
+  ]);
   const items: NeedsYou[] = [];
   const open = grievances.filter((g) => g.status === "open");
-  const urgent = open.filter((g) => g.urgent);
-  if (open.length) {
-    items.push({ id: "speak", kind: "speak", urgent: urgent.length > 0, href: "/admin/speak-up",
-      title: urgent.length ? `${urgent.length} urgent speak-up report${urgent.length === 1 ? "" : "s"}` : `${open.length} new speak-up report${open.length === 1 ? "" : "s"}`,
-      sub: urgent.length && open.length > urgent.length ? `${open.length} open in all` : "Not picked up yet" });
-  }
-  for (const s of snacks.filter((s) => s.status === "suggested")) {
-    const n = votes.filter((v) => v.itemId === s.id).length;
-    if (n >= POPULAR_SNACK) items.push({ id: `snack-${s.id}`, kind: "snack", urgent: false, href: "/admin/snacks", title: `${s.name} is popular`, sub: `${n} people want it on the shelf` });
+  if (open.length) items.push({ id: "speak", kind: "speak", urgent: open.some((g) => g.urgent), href: "/admin/speak-up", title: plural(open.length, "new Speak up message", "new Speak up messages"), sub: "" });
+  // Reported Feed posts waiting for a look.
+  const reported = Object.keys(reports).length;
+  if (reported) items.push({ id: "reported", kind: "reported", urgent: false, href: "/admin/speak-up", title: plural(reported, "reported Feed post", "reported Feed posts"), sub: "" });
+  // Announcements not yet seen by everyone (still showing as a dialog).
+  const recent = announcements.filter((a) => (a.pinnedUntil ? a.pinnedUntil >= today : Date.now() - Date.parse(a.createdAt) < 14 * 86_400_000));
+  const seen = await store.countAnnouncementAcks(recent.map((a) => a.id));
+  for (const a of recent) {
+    const n = seen[a.id] ?? 0;
+    if (n < employees.length) items.push({ id: `ann-${a.id}`, kind: "announcement", urgent: false, href: "/admin/publish", title: `${a.title} · seen by ${n} of ${employees.length}`, sub: "" });
   }
   const poor = wifi.filter((w) => w.quality === "poor" && istDay(w.createdAt) === today);
-  if (poor.length) items.push({ id: "wifi", kind: "wifi", urgent: false, href: "/admin/wifi", title: `${poor.length} poor Wi-Fi report${poor.length === 1 ? "" : "s"} today`, sub: poor[0].note || "No location given" });
-  // Reported Feed posts waiting for a look.
-  const reported = Object.keys(await store.countNoticeReports()).length;
-  if (reported) items.push({ id: "reported", kind: "speak", urgent: false, href: "/admin/speak-up", title: `${reported} reported Feed post${reported === 1 ? "" : "s"}`, sub: "Keep or remove" });
-  // Announcements not yet seen by everyone (still showing as a dialog).
-  const employees = await store.listEmployees();
-  const recent = (await store.listAnnouncements(10)).filter((a) => a.important && (a.pinnedUntil ? a.pinnedUntil >= today : Date.now() - Date.parse(a.createdAt) < 14 * 86_400_000));
-  const seen = await store.countAnnouncementAcks(recent.map((a) => a.id));
-  for (const a of recent) if ((seen[a.id] ?? 0) < employees.length) items.push({ id: `ann-${a.id}`, kind: "speak", urgent: false, href: "/admin/publish", title: a.title, sub: `Seen by ${seen[a.id] ?? 0} of ${employees.length}` });
+  if (poor.length) items.push({ id: "wifi", kind: "wifi", urgent: false, href: "/admin/wifi", title: `${plural(poor.length, "slow Wi-Fi report", "slow Wi-Fi reports")} today`, sub: "" });
   return items;
 }
 
-// The badge on "Speak up inbox" in the admin sidebar.
+// The badge on "Speak up" in the member app's admin sub-navigation.
 export async function openReports() {
   return (await store.listGrievances()).filter((g) => g.status === "open").length;
 }

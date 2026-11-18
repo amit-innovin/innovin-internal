@@ -50,6 +50,13 @@ export async function POST(req: Request) {
     if (limited) return limited;
     const body = await readJSON(req);
     if (!body) return badRequest();
+    // { action: "delete", id }: removed without a notification (Cancel tells people).
+    if (body.action === "delete") {
+      const eid = str(body.id).slice(0, 100);
+      if (!eid) return badRequest("Which event?");
+      await store.deleteEvent(eid);
+      return NextResponse.json({ ok: true });
+    }
     const title = str(body.title).trim();
     const startsAt = istToIso(str(body.startsAt));
     const category = str(body.category) as EventCategory;

@@ -3,7 +3,7 @@ import { validDate } from "@/lib/time";
 import { NextRequest, NextResponse } from "next/server";
 import { currentActor, isAdmin } from "@/lib/admin";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
-import { allowedEmailDomains } from "@/lib/config";
+import { isAllowedEmail } from "@/lib/config";
 import { enforce } from "@/lib/guard";
 import { fmtShortDate } from "@/lib/format";
 import { closedMap } from "@/lib/days";
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   const leaveType = isLeaveType(body.leaveType) ? body.leaveType : null;
 
   if (!EMAIL.test(email)) return badRequest("Enter a valid email");
-  if (!allowedEmailDomains().includes(email.split("@")[1])) {
+  if (!isAllowedEmail(email)) {
     return NextResponse.json({ error: "Use your Innovin email" }, { status: 403 });
   }
   if (type === "wfh") return badRequest("WFH requests are gone — just tap Remote on Home");

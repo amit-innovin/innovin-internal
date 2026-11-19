@@ -7,7 +7,7 @@ export function ComingUp({ view }: { view: DaysView }) {
   const days = comingUp(view);
   return (
     <section aria-labelledby="days-coming" className="m3-stack" style={{ gap: 8 }}>
-      <h2 id="days-coming" className="m3-title" style={{ padding: "0 4px" }}>Coming up</h2>
+      <div className="td-sech"><h2 id="days-coming">Coming up</h2></div>
       {days.length === 0 ? (
         <p className="m3-small" style={{ margin: "0 4px" }}>Nothing planned yet. Tap a date on the calendar to plan a day in.</p>
       ) : (

@@ -1,6 +1,6 @@
 "use client";
 // The admin app's own frame (prototype: docs/design/m3/M3AdminApp.dc.html, M3AdminAppPhone.dc.html):
-// a sidebar on laptops; on phones a top bar with a way back to the member app and a bottom bar
+// a top bar with tabs on laptops (no sidebar, as in the member app); on phones a top bar with a way back to the member app and a bottom bar
 // whose More holds Office, Wi-Fi reports and the member app. No member navigation in here.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -41,24 +41,21 @@ export function AdminShell({ name, email, children }: { name: string; email: str
     <MeContext.Provider value={email}>
       <div className="m3 m3a">
     <SnackProvider>
-        <nav className="m3a-side" aria-label="Admin">
-          <Link href="/admin" className="m3a-brand" style={{ padding: "4px 16px 20px" }} aria-label="innovin admin, Today"><b>innovin</b><span>admin</span></Link>
-          {ADMIN_PAGES.map((p) => (
-            <Link key={p.id} href={p.href} className="m3a-item" aria-current={active === p.id ? "page" : undefined}>
-              <p.icon size={22} strokeWidth={1.8} aria-hidden="true" />
-              <span className="m3a-item-label">{p.label}{badge(p.id) > 0 && <span className="vh">, {badge(p.id)} new</span>}</span>
-              {badge(p.id) > 0 && <span className="m3a-badge" aria-hidden="true">{badge(p.id)}</span>}
-            </Link>
-          ))}
-          <div style={{ flex: 1, minHeight: 24 }} />
-          <a href="/" className="m3a-item" style={{ color: "var(--m3-primary)", fontWeight: 600 }}>
-            <ExternalLink size={22} strokeWidth={1.8} aria-hidden="true" /><span className="m3a-item-label">Open the member app</span>
-          </a>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 16px" }}>
-            <Avatar name={name} size={36} />
-            <span><span style={{ display: "block", fontWeight: 600 }}>{name.split(" ")[0]}</span><span className="m3-small">Admin</span></span>
+        <header className="m3a-topbar">
+          <Link href="/admin" className="m3a-brand" aria-label="innovin admin, Today"><b>innovin</b><span>admin</span></Link>
+          <nav className="m3-toptabs" aria-label="Admin">
+            {ADMIN_PAGES.map((p) => (
+              <Link key={p.id} href={p.href} className="m3-toptab" aria-current={active === p.id ? "page" : undefined}>
+                <p.icon size={18} strokeWidth={1.9} aria-hidden="true" />{p.label}{badge(p.id) > 0 && <span className="vh">, {badge(p.id)} new</span>}
+                {badge(p.id) > 0 && <span className="m3-subbadge" aria-hidden="true">{badge(p.id)}</span>}
+              </Link>
+            ))}
+          </nav>
+          <div style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 10 }}>
+            <a href="/" className="m3-btn m3-btn-text" style={{ height: 40 }}><ExternalLink size={18} strokeWidth={1.9} aria-hidden="true" />Member app</a>
+            <span title={`${name} · Admin`}><Avatar name={name} size={40} /></span>
           </div>
-        </nav>
+        </header>
 
         <div className="m3a-col">
           <header className="m3a-top">

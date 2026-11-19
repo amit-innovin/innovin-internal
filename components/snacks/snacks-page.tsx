@@ -90,15 +90,19 @@ export function SnacksPage() {
   const inOffice = days.data?.me?.mode === "office";
   const ready = days.data && snacks.data;
   return (
-    <div className="m3 m3-page m3-stack">
-      <PageHero page="snacks" title="Tea & snacks" subtitle="Everything here is anonymous except tea" />
+    <div className="m3 m3-page pg-wide m3-stack">
+      <PageHero page="snacks" title="Tea & snacks" subtitle={inOffice ? "Answer the tea round and pick today's snack" : "For people in the office today. Everything here is anonymous except tea."} />
       {!ready ? <QueryState error={days.error ?? snacks.error} onRetry={() => { days.refetch(); snacks.refetch(); }} what="tea & snacks" /> : (
-        <>
-          {!inOffice && <Gate />}
-          {inOffice && tea.data && <TeaCard tea={tea.data} />}
-          {inOffice && <TodaysSnacks snacks={snacks.data} />}
-          <Suggestions list={snacks.data.suggestions} />
-        </>
+        <div className="pg-cols">
+          <div className="pg-main">
+            {!inOffice && <Gate />}
+            {inOffice && tea.data && <TeaCard tea={tea.data} />}
+            {inOffice && <TodaysSnacks snacks={snacks.data} />}
+          </div>
+          <aside className="pg-rail">
+            <Suggestions list={snacks.data.suggestions} />
+          </aside>
+        </div>
       )}
     </div>
   );

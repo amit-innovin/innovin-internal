@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Bell, CircleHelp, Footprints, LayoutDashboard, Megaphone, Settings, ShieldCheck, Store, Users, Wifi } from "lucide-react";
 import { ListRow } from "@/components/m3";
+import { PageHero } from "@/components/m3/hero";
 import { SpeakUpIcon } from "@/components/m3/icons";
 
 // Browse (design "Today"): everything that doesn't have a tab of its own, in one list, like
@@ -14,7 +15,7 @@ function Group({ title, items }: { title: string; items: Item[] }) {
   return (
     <section aria-label={title} className="td-sec">
       <div className="td-sech"><h2>{title}</h2></div>
-      <div className="m3-card" style={{ padding: "4px 0" }}>
+      <div className="pg-card pg-flush">
         {items.map((i) => (
           <ListRow key={i.href} href={i.href} chevron leading={<Icon tone={i.tone}>{i.icon}</Icon>} title={i.title} subtitle={i.subtitle}
             trailing={i.badge ? <span className="m3-subbadge" aria-label={`${i.badge} open`}>{i.badge}</span> : undefined} />
@@ -28,10 +29,7 @@ export function BrowsePage({ isAdmin, openReports }: { isAdmin: boolean; openRep
   const size = 20;
   return (
     <div className="m3 m3-page m3-stack" style={{ gap: 24 }}>
-      <header className="td-title-text">
-        <span className="td-eyebrow">Everything in innovin</span>
-        <h1 className="td-h1">Browse</h1>
-      </header>
+      <PageHero page="browse" title="Browse" />
       <Group title="Around the office" items={[
         { href: "/steps", title: "10K steps", subtitle: "Your steps, your week and the league", icon: <Footprints size={size} aria-hidden="true" />, tone: "success" },
         { href: "/wifi", title: "Office Wi-Fi", subtitle: "Run a speed check or report slow Wi-Fi", icon: <Wifi size={size} aria-hidden="true" />, tone: "primary" },

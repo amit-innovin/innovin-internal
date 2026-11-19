@@ -34,7 +34,7 @@ export function StepsPage() {
   const [value, setValue] = useState("");
   const [period, setPeriod] = useState<"week" | "today">("week");
   const data = steps.data;
-  if (!data?.me) return <div className="m3 m3-page m3-stack"><PageHero page="steps" title="10K steps" /><QueryState error={steps.error} onRetry={() => steps.refetch()} what="your steps" /></div>;
+  if (!data?.me) return <div className="m3 m3-page pg-wide m3-stack"><PageHero page="steps" title="10K steps" /><QueryState error={steps.error} onRetry={() => steps.refetch()} what="your steps" /></div>;
 
   const today = data.me.today?.steps ?? 0;
   const days = sevenDays(data.me.recent.map((r) => ({ date: r.date, steps: r.steps ?? (r.hit ? GOAL : 0) })), data.today);
@@ -51,20 +51,29 @@ export function StepsPage() {
   };
 
   return (
-    <div className="m3 m3-page m3-stack">
+    <div className="m3 m3-page pg-wide m3-stack">
       <PageHero page="steps" title="10K steps" subtitle="Walk a little more, at your own pace" back="/" />
 
-      <section aria-labelledby="steps-today" className="m3-card m3-stack" style={{ gap: 12 }}>
-        <h2 id="steps-today" className="m3-title" style={{ fontSize: 28, lineHeight: "34px", fontVariantNumeric: "tabular-nums" }}>{fmt(today)} <span className="m3-small" style={{ fontSize: 16 }}>/ 10,000</span></h2>
-        <span aria-hidden="true" style={{ height: 8, borderRadius: 4, background: "#EEF0F3" }}><span style={{ display: "block", height: 8, borderRadius: 4, width: `${Math.min(100, (100 * today) / GOAL)}%`, background: "var(--m3-primary)" }} /></span>
-        <form style={{ display: "flex", gap: 8, alignItems: "flex-end" }} onSubmit={(e) => { e.preventDefault(); submit(); }}>
-          <label style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-            <span className="m3-small">Add steps from your phone&apos;s step counter</span>
-            <input inputMode="numeric" placeholder="e.g. 2500" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d]/g, ""))}
-              style={{ height: 44, borderRadius: 12, border: "1px solid var(--m3-outline)", padding: "0 12px", fontFamily: "inherit", fontSize: 15, background: "var(--m3-surface)" }} />
-          </label>
-          <Button type="submit" disabled={!value || add.isPending} style={{ height: 44 }}>Add</Button>
-        </form>
+      <div className="pg-cols">
+      <div className="pg-main">
+      <section aria-labelledby="steps-today" className="pg-card st-hero">
+        <svg aria-hidden="true" className="st-ring" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#DDF1E4" strokeWidth="16" />
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--m3-success)" strokeWidth="16" strokeLinecap="round" opacity={today > 0 ? 1 : 0} strokeDasharray={`${(Math.min(1, today / GOAL) * 314.2).toFixed(1)} 314.2`} transform="rotate(-90 60 60)" style={{ transition: "stroke-dasharray .6s var(--m3-ease)" }} />
+        </svg>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
+          <span className="pg-eyebrow" style={{ color: "var(--m3-success)" }}>Today</span>
+          <h2 id="steps-today" style={{ margin: 0, fontSize: 44, lineHeight: "48px", fontWeight: 700, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{fmt(today)} <span className="m3-small" style={{ fontSize: 18, fontWeight: 600 }}>/ 10,000</span></h2>
+          <span className="m3-body" style={{ color: "var(--m3-on-surface-variant)" }}>{today >= GOAL ? "Goal reached. Anything more is a bonus." : `${fmt(GOAL - today)} to go today.`}</span>
+          <form style={{ display: "flex", gap: 8, alignItems: "flex-end", maxWidth: 420 }} onSubmit={(e) => { e.preventDefault(); submit(); }}>
+            <label style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+              <span className="m3-small">Add steps from your phone&apos;s step counter</span>
+              <input inputMode="numeric" placeholder="e.g. 2500" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d]/g, ""))}
+                style={{ height: 44, borderRadius: 12, border: "1px solid var(--m3-outline)", padding: "0 12px", fontFamily: "inherit", fontSize: 15, background: "var(--m3-surface)" }} />
+            </label>
+            <Button type="submit" disabled={!value || add.isPending} style={{ height: 44, background: "var(--m3-success)" }}>Add</Button>
+          </form>
+        </div>
       </section>
 
       {today >= GOAL && (
@@ -74,19 +83,21 @@ export function StepsPage() {
         </section>
       )}
 
-      <section aria-labelledby="steps-week" className="m3-card m3-stack" style={{ gap: 10 }}>
+      <section aria-labelledby="steps-week" className="pg-card" style={{ gap: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><h2 id="steps-week" className="m3-title">Last 7 days</h2><span className="m3-small">Goal line: 10,000</span></div>
         <div role="img" aria-label={days.map((d) => `${weekday(d.date)} ${fmt(d.steps)}`).join(", ")} style={{ position: "relative", height: 110, display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, alignItems: "end" }}>
           <span aria-hidden="true" style={{ position: "absolute", left: 0, right: 0, bottom: `${(100 * GOAL) / top}%`, borderTop: "1px dashed #9AA0A6" }} />
-          {days.map((d, i) => <span key={d.date} style={{ height: `${Math.max(3, (100 * d.steps) / top)}%`, borderRadius: 6, background: d.steps >= GOAL ? "var(--m3-primary)" : i === 6 ? "#4F9BCB" : "#B8D8EE" }} />)}
+          {days.map((d, i) => <span key={d.date} style={{ height: `${Math.max(3, (100 * d.steps) / top)}%`, borderRadius: 6, background: d.steps >= GOAL ? "var(--m3-success)" : i === 6 ? "#5DAA74" : "#B9DDC4" }} />)}
         </div>
         <div aria-hidden="true" style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, textAlign: "center", fontSize: 12 }}>
           {days.map((d, i) => <span key={d.date} style={{ fontWeight: i === 6 ? 700 : 500 }}>{i === 6 ? "Today" : weekday(d.date)}</span>)}
         </div>
       </section>
 
+      </div>
+      <aside className="pg-rail">
       {data.inLeague ? (
-        <section aria-labelledby="steps-league" className="m3-card m3-stack" style={{ gap: 12 }}>
+        <section aria-labelledby="steps-league" className="pg-card" style={{ gap: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <h2 id="steps-league" className="m3-title">Step league</h2>
             <div role="group" aria-label="Period" style={{ display: "flex", gap: 6 }}>
@@ -102,7 +113,7 @@ export function StepsPage() {
                 <Avatar name={r.name} size={32} />
                 <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={{ fontWeight: r.me ? 700 : 500 }}>{r.me ? `${r.name} (you)` : r.name}</span><span className="m3-small">{fmt(r.steps)}</span></span>
-                  <span aria-hidden="true" style={{ height: 6, borderRadius: 3, background: "#EEF0F3" }}><span style={{ display: "block", height: 6, borderRadius: 3, width: `${(100 * r.steps) / leaderSteps}%`, background: r.me ? "var(--m3-primary)" : "#9CCAE8" }} /></span>
+                  <span aria-hidden="true" style={{ height: 6, borderRadius: 3, background: "#EEF0F3" }}><span style={{ display: "block", height: 6, borderRadius: 3, width: `${(100 * r.steps) / leaderSteps}%`, background: r.me ? "var(--m3-success)" : "#9FD0AE" }} /></span>
                 </span>
                 {!r.me && (
                   <button type="button" aria-pressed={nudged} aria-label={nudged ? `Nudged ${r.name}` : `Nudge ${r.name}`} disabled={nudged || nudge.isPending}
@@ -116,12 +127,14 @@ export function StepsPage() {
           <Button variant="text" style={{ alignSelf: "flex-start" }} disabled={league.isPending} onClick={() => league.mutate({ on: false }, { onError: (e) => toast.error(e.message) })}>Leave the league</Button>
         </section>
       ) : (
-        <section aria-labelledby="steps-join" className="m3-card m3-stack" style={{ gap: 10 }}>
+        <section aria-labelledby="steps-join" className="pg-card" style={{ gap: 10 }}>
           <h2 id="steps-join" className="m3-title">Step league</h2>
           <p className="m3-body" style={{ margin: 0 }}>See how your week compares with others who joined, and send a friendly nudge. Only people who join are listed, and you can leave any time.</p>
           <Button variant="tonal" style={{ alignSelf: "flex-start" }} disabled={league.isPending} onClick={() => league.mutate({ on: true }, { onError: (e) => toast.error(e.message) })}>Join the league</Button>
         </section>
       )}
+      </aside>
+      </div>
     </div>
   );
 }

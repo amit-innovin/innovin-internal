@@ -56,9 +56,9 @@ test.describe("Navigation", () => {
       await expect(page.getByRole("link", { name: "Back to home" })).toHaveCount(0);
       await expect(page.getByRole("navigation", { name: "Main" }).filter({ visible: true })).toBeVisible();
     }
-    // Help is a detail page under Account: a back arrow on phones.
+    // Help is a detail page under Browse: a back arrow on phones.
     await page.goto("/help");
-    await expect(page.getByRole("link", { name: "Back to account" }).filter({ visible: true })).toHaveCount(isMobile ? 1 : 0);
+    await expect(page.getByRole("link", { name: "Back to Browse" }).filter({ visible: true })).toHaveCount(isMobile ? 1 : 0);
     // Opened from the bell / the Home tile, these show a back arrow where there's no sidebar.
     for (const path of ["/notifications", "/steps"]) {
       await page.goto(path);

@@ -1,10 +1,11 @@
 "use client";
+import { PageHero } from "@/components/m3/hero";
 import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
 import { useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { readError, send } from "@/lib/fetcher";
-import { ArrowLeft, CalendarCheck, CalendarDays, Coffee, Hand, Heart, Megaphone, MessageSquare, type LucideIcon } from "lucide-react";
+import { CalendarCheck, CalendarDays, Coffee, Hand, Heart, Megaphone, MessageSquare, type LucideIcon } from "lucide-react";
 import { QueryState } from "@/components/m3";
 import { relativeTime } from "@/lib/format";
 import type { Notification } from "@/lib/notifications";
@@ -63,14 +64,11 @@ export function NotificationsPage() {
 
   return (
     <div className="m3 m3-page m3-stack">
-      <header style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0" }}>
-        <Link href="/" className="m3-btn m3-btn-text m3-back" aria-label="Back to home" style={{ width: 44, padding: 0 }}><ArrowLeft size={22} aria-hidden="true" /></Link>
-        <h1 className="m3-h1" style={{ fontSize: 28, lineHeight: "36px" }}>Notifications</h1>
-      </header>
+      <PageHero page="notifications" title="Notifications" subtitle="Only things that involve you" back="/" />
       {!feed.data ? <QueryState error={feed.error} onRetry={() => feed.refetch()} what="notifications" /> : feed.data.items.length === 0 ? (
         <p className="m3-body" style={{ margin: "0 4px" }}>Nothing new. You&apos;re all caught up.</p>
       ) : (
-        <div className="m3-card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="pg-card pg-flush">
           {feed.data.items.map((n) => {
             const k = KIND[n.kind];
             const Icon = k.icon;

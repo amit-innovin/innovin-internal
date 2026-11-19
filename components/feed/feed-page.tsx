@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Plus } from "lucide-react";
+import { Award, BarChart3, Check, MessageSquareQuote, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, Button, Card, QueryState } from "@/components/m3";
 import { PageHero } from "@/components/m3/hero";
@@ -42,9 +42,9 @@ function useWide() {
 function StillOpen({ posts }: { posts: FeedPost[] }) {
   const rsvp = useRsvp();
   return (
-    <section aria-labelledby="feed-open" className="m3-stack" style={{ gap: 8 }}>
-      <h2 id="feed-open" className="m3-title" style={{ padding: "6px 4px 0" }}>Still open</h2>
-      <div className="m3-card" style={{ padding: 0, overflow: "hidden" }}>
+    <section aria-labelledby="feed-open" className="td-sec">
+      <div className="td-sech"><h2 id="feed-open">Still open</h2></div>
+      <div className="pg-card pg-flush">
         {posts.length === 0 ? <p className="m3-small" style={{ margin: 0, padding: 16 }}>Nothing waiting. Nice.</p> : posts.map((p) => (
           <div key={p.id} className="m3-row" style={{ flexWrap: "wrap" }}>
             <span style={{ flex: 1, minWidth: 160, display: "flex", flexDirection: "column" }}>
@@ -65,9 +65,9 @@ function Earlier({ posts, canModerate, onWish }: { posts: FeedPost[]; canModerat
   const remove = useRemoveNotice();
   const removable = open && open.type !== "announcement" && open.type !== "event" && (open.mine || canModerate);
   return (
-    <section aria-labelledby="feed-earlier" className="m3-stack" style={{ gap: 8 }}>
-      <h2 id="feed-earlier" className="m3-title" style={{ padding: "6px 4px 0" }}>Earlier</h2>
-      <div className="m3-card" style={{ padding: 0, overflow: "hidden" }}>
+    <section aria-labelledby="feed-earlier" className="td-sec">
+      <div className="td-sech"><h2 id="feed-earlier">Earlier</h2></div>
+      <div className="pg-card pg-flush">
         {posts.length === 0 ? <p className="m3-small" style={{ margin: 0, padding: 16 }}>Nothing older yet.</p> : posts.slice(0, 30).map((p) => {
           const { title, sub } = rowText(p);
           const who = p.type === "kudos" ? p.fromName : p.type === "announcement" ? p.authorName : p.type === "event" ? null : p.authorName;
@@ -115,7 +115,7 @@ export function FeedPage() {
     return [...posts, ...frozen.birthdays].sort((a, b) => a.at.localeCompare(b.at));
   }, [data, frozen]);
 
-  if (!data || !frozen) return <div className="m3 m3-page m3-stack"><PageHero page="feed" title="Feed" /><QueryState error={feed.error} onRetry={() => feed.refetch()} what="the feed" /></div>;
+  if (!data || !frozen) return <div className="m3 m3-page pg-wide m3-stack"><PageHero page="feed" title="Feed" /><QueryState error={feed.error} onRetry={() => feed.refetch()} what="the feed" /></div>;
 
   const stackIds = new Set(stack.map((s) => s.id));
   const open = data.open.map((id) => data.posts.find((p) => p.id === id)).filter((p): p is FeedPost => !!p);
@@ -124,30 +124,48 @@ export function FeedPage() {
   const inStack = !wide && index < stack.length;
   const waiting = open.length;
   const wish = (email: string) => setCompose({ kind: "kudos", to: email });
+  const share: [Kind, string, typeof Award][] = [["kudos", "Kudos", Award], ["poll", "Poll", BarChart3], ["quote", "Quote", MessageSquareQuote], ["feedback", "Feedback", Sparkles]];
 
   return (
-    <div className="m3 m3-page m3-stack">
+    <div className="m3 m3-page pg-wide m3-stack">
       <PageHero page="feed" title="Feed"
-        subtitle={inStack ? `${index + 1} of ${stack.length} new since yesterday` : wide && stack.length ? "New posts first, then everything else" : "Nothing new since yesterday"}
+        subtitle={inStack ? `${index + 1} of ${stack.length} new since yesterday` : wide && stack.length ? `${stack.length} new since yesterday, then everything else` : "Nothing new since yesterday"}
         actions={<Button onClick={() => setCompose({})}><Plus size={18} aria-hidden="true" />Post</Button>} />
-      {inStack && <CatchUp items={stack} index={index} onIndex={setIndex} seenAt={data.seenAt} onWish={wish} />}
-      {wide && stack.length > 0 && (
-        <section aria-label="New posts" className="m3-stack">
-          <span className="m3-small" style={{ fontWeight: 700, letterSpacing: ".06em" }}>NEW SINCE YESTERDAY · {stack.length}</span>
-          {stack.map((item) => <PostCard key={item.id} item={item} onWish={wish} />)}
-          <WideSeen at={stack[stack.length - 1].at} seenAt={data.seenAt} />
-        </section>
-      )}
-      {!inStack && (
-        <Card className="m3-stack" style={{ alignItems: "center", textAlign: "center", padding: "28px 24px", gap: 10 }}>
-          <span aria-hidden="true" style={{ width: 56, height: 56, borderRadius: 28, background: "var(--m3-success-container)", color: "var(--m3-on-success-container)", display: "grid", placeItems: "center" }}><Check size={28} /></span>
-          <h2 className="m3-title" style={{ fontSize: 22, lineHeight: "28px" }}>You&apos;re all caught up</h2>
-          <p className="m3-body" style={{ margin: 0 }}>{waiting ? `You've seen everything new. ${waiting === 1 ? "1 thing is" : `${waiting} things are`} still waiting for an answer.` : "You've seen and answered everything new. Older posts are below."}</p>
-          {!wide && stack.length > 0 && <Button variant="outlined" onClick={() => setIndex(0)}>Start over</Button>}
-        </Card>
-      )}
-      {!inStack && <StillOpen posts={open} />}
-      <Earlier posts={earlier} canModerate={data.canModerate} onWish={wish} />
+      <div className="pg-cols">
+        <div className="pg-main">
+          {inStack && <CatchUp items={stack} index={index} onIndex={setIndex} seenAt={data.seenAt} onWish={wish} />}
+          {wide && stack.length > 0 && (
+            <section aria-label="New posts" className="td-sec">
+              <div className="td-sech"><h2>New <span className="m3-chip" style={{ background: "var(--m3-primary-container)", color: "var(--m3-on-primary-container)" }}>{stack.length}</span></h2></div>
+              <div className="fd-grid">{stack.map((item) => <PostCard key={item.id} item={item} onWish={wish} style={{ boxShadow: "none" }} />)}</div>
+              <WideSeen at={stack[stack.length - 1].at} seenAt={data.seenAt} />
+            </section>
+          )}
+          {!inStack && (
+            <Card className="m3-stack" style={{ flexDirection: "row", alignItems: "center", textAlign: "left", padding: "18px 20px", gap: 16 }}>
+              <span aria-hidden="true" style={{ flex: "none", width: 52, height: 52, borderRadius: 26, background: "var(--m3-success-container)", color: "var(--m3-on-success-container)", display: "grid", placeItems: "center" }}><Check size={26} /></span>
+              <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                <h2 className="m3-title" style={{ fontSize: 20, lineHeight: "26px" }}>You&apos;re all caught up</h2>
+                <span className="m3-body" style={{ color: "var(--m3-on-surface-variant)" }}>{waiting ? `You've seen everything new. ${waiting === 1 ? "1 thing is" : `${waiting} things are`} still waiting for an answer.` : "You've seen and answered everything new. Older posts are below."}</span>
+              </span>
+              {!wide && stack.length > 0 && <Button variant="outlined" onClick={() => setIndex(0)}>Start over</Button>}
+            </Card>
+          )}
+          <Earlier posts={earlier} canModerate={data.canModerate} onWish={wish} />
+        </div>
+        <aside className="pg-rail">
+          <section aria-label="Share something" className="pg-card" style={{ gap: 14 }}>
+            <b style={{ fontSize: 17 }}>Share something with the team</b>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+              {share.map(([kind, label, Icon]) => (
+                <button key={kind} type="button" className="fd-share" onClick={() => setCompose({ kind })}><Icon size={20} aria-hidden="true" />{label}</button>
+              ))}
+            </div>
+            <span className="m3-small">Posts show with your name. For anything anonymous, use Speak up.</span>
+          </section>
+          {!inStack && <StillOpen posts={open} />}
+        </aside>
+      </div>
       {compose && <Composer people={data.people} start={compose.kind ? { kind: compose.kind, to: compose.to } : undefined} onClose={() => setCompose(null)} />}
     </div>
   );

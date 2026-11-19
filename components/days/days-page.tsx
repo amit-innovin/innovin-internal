@@ -22,16 +22,20 @@ export function DaysPage() {
   const close = () => setPicked(null);
 
   return (
-    <div className="m3 m3-page m3-stack">
+    <div className="m3 m3-page pg-wide m3-stack">
       <PageHero page="days" title="Days" subtitle="Tap a date to plan a day in, or to apply for leave" />
       {!days.data ? <QueryState error={days.error} onRetry={() => days.refetch()} what="your days" /> : (
-        <>
-          <Calendar view={days.data} onPick={(day, action) => setPicked({ day, action })} />
-          <ComingUp view={days.data} />
-          <UsualDays key={days.data.officeDays.join(",")} officeDays={days.data.officeDays} />
-          <LeaveRequests today={days.data.today} />
+        <div className="pg-cols">
+          <div className="pg-main">
+            <Calendar view={days.data} onPick={(day, action) => setPicked({ day, action })} />
+            <ComingUp view={days.data} />
+          </div>
+          <aside className="pg-rail">
+            <UsualDays key={days.data.officeDays.join(",")} officeDays={days.data.officeDays} />
+            <LeaveRequests today={days.data.today} />
+          </aside>
           {picked && <DaySheet key={picked.day.date} view={days.data} day={picked.day} leaveOnly={picked.action === "today"} onClose={close} />}
-        </>
+        </div>
       )}
     </div>
   );

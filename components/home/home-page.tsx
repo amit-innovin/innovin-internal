@@ -188,8 +188,8 @@ function PinHead({ href, color, icon, label, when }: { href: string; color: stri
 }
 
 const DOT: Record<WeekDay["state"], React.CSSProperties> = {
-  done: { background: "var(--m3-tertiary)", color: "#FFFFFF", border: 0 },
-  planned: { color: "var(--m3-tertiary)", border: "2px solid var(--m3-tertiary)" },
+  done: { background: "var(--m3-primary)", color: "#FFFFFF", border: 0 },
+  planned: { color: "var(--m3-primary)", border: "2px solid var(--m3-primary)" },
   leave: { background: "var(--m3-tertiary-container)", color: "var(--m3-on-tertiary-container)", border: 0 },
   off: { color: "var(--m3-outline)", border: "1px solid transparent" },
   empty: { color: "var(--m3-outline)", border: "1.5px dashed var(--m3-outline-variant)" },
@@ -263,7 +263,7 @@ function StepsPin() {
         </span>
         <svg role="img" aria-label={`${fmt(today)} of 10,000 steps`} width="60" height="60" viewBox="0 0 44 44" style={{ flex: "none" }}>
           <circle cx="22" cy="22" r="17" fill="none" stroke="#DDF1E4" strokeWidth="7" />
-          <circle cx="22" cy="22" r="17" fill="none" stroke="var(--m3-success)" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${(pct * 106.8).toFixed(1)} 106.8`} transform="rotate(-90 22 22)" />
+          <circle cx="22" cy="22" r="17" fill="none" stroke="var(--m3-success)" strokeWidth="7" strokeLinecap="round" opacity={today > 0 ? 1 : 0} strokeDasharray={`${(pct * 106.8).toFixed(1)} 106.8`} transform="rotate(-90 22 22)" />
         </svg>
       </div>
     </div>
@@ -441,6 +441,11 @@ export function HomePage({ firstName, name, isAdmin }: { firstName: string; name
     <div className="m3 m3-page m3-today m3-stack">
       <Title firstName={firstName} name={name} days={d} check={check} />
       <YourDay days={d} tea={tea} snacks={snacks} posts={posts} />
+      <Link href="/grievances" className="td-speak" aria-label="Speak up anonymously">
+        <span className="m3-icon" style={{ background: "#3A374A", color: "#FFFFFF", width: 48, height: 48, borderRadius: 24 }}><SpeakUpIcon size={22} /></span>
+        <span className="td-grow"><b style={{ fontSize: 17, lineHeight: "24px" }}>Something on your mind? Speak up anonymously</b><span style={{ fontSize: 13, color: "#C9C6D6" }}>Admins see your message and the day it was sent. Never your name, email or device.</span></span>
+        <span className="td-speak-cta">Write</span>
+      </Link>
       {isAdmin && <NeedsYou snacks={snacks} />}
       <Section title="Pinned" label="Pinned">
         <div className="td-pins">
@@ -455,18 +460,11 @@ export function HomePage({ firstName, name, isAdmin }: { firstName: string; name
         <InTheOffice days={d} snacks={snacks} />
       </div>
       <FromTheTeam posts={posts} newIds={feed?.newIds ?? []} />
-      <div className="td-foot">
-        <Link href="/grievances" className="td-speak">
-          <span className="m3-icon" style={{ background: "#3A374A", color: "#FFFFFF" }}><SpeakUpIcon size={20} /></span>
-          <span className="td-grow"><b style={{ fontSize: 16 }}>Speak up anonymously</b><span style={{ fontSize: 13, color: "#C9C6D6" }}>Admins see the day it was sent, never who sent it.</span></span>
-          <Chevron />
-        </Link>
-        <Link href="/help" className="td-card" style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <span className="m3-icon m3-tone-neutral"><CircleHelp size={20} aria-hidden="true" /></span>
-          <span className="td-grow"><b style={{ fontSize: 16 }}>How innovin works</b><span className="m3-small">Office days, leave, tea rounds and privacy</span></span>
-          <Chevron />
-        </Link>
-      </div>
+      <Link href="/help" className="td-card" style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+        <span className="m3-icon m3-tone-neutral"><CircleHelp size={20} aria-hidden="true" /></span>
+        <span className="td-grow"><b style={{ fontSize: 16 }}>How innovin works</b><span className="m3-small">Office days, leave, tea rounds and privacy</span></span>
+        <Chevron />
+      </Link>
       {!d.me && check.step !== "success" && check.step !== "closed" && (
         <Button className="td-fab" disabled={check.busy} onClick={check.checkIn}>
           {check.busy ? <LoaderCircle size={22} className="m3-spin" aria-hidden="true" /> : <MapPin size={22} aria-hidden="true" />}{check.problem ? "Try again" : "Check in"}

@@ -1,4 +1,4 @@
-import { allowedEmailDomains } from "./config";
+import { isAllowedEmail } from "./config";
 
 // Google OAuth (authorization-code flow). Endpoints are env-overridable so e2e can point them at
 // a mock — production uses the real Google endpoints.
@@ -43,7 +43,7 @@ export async function exchangeCode(code: string, redirectUri: string) {
 export type GoogleIdentity = { email: string; name: string; picture: string };
 
 // Validates the id_token via Google's tokeninfo endpoint (signature + expiry checked by Google),
-// then enforces our own checks: correct audience, verified email on an allowed domain.
+// then enforces our own checks: correct audience, verified email on an allowed domain (or listed in ALLOWED_EMAILS).
 export async function verifyIdToken(idToken: string): Promise<GoogleIdentity | null> {
   const res = await fetch(`${tokeninfoEndpoint()}?id_token=${encodeURIComponent(idToken)}`);
   if (!res.ok) return null;
@@ -53,7 +53,6 @@ export async function verifyIdToken(idToken: string): Promise<GoogleIdentity | n
   const exp = Number(t.exp);
   if (Number.isFinite(exp) && exp * 1000 < Date.now()) return null;
   const email = String(t.email ?? "").toLowerCase();
-  const domain = email.split("@")[1] ?? "";
-  if (!email || !allowedEmailDomains().includes(domain)) return null;
+  if (!email || !isAllowedEmail(email)) return null;
   return { email, name: String(t.name || email.split("@")[0]), picture: String(t.picture || "") };
 }

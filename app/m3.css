@@ -141,25 +141,49 @@
 .m3-menuitem { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--m3-on-surface); text-decoration: none; font: 500 15px var(--m3-font); cursor: pointer; }
 .m3-menuitem:hover { background: var(--m3-surface-container); }
 
-/* Page headers with illustrations */
-.m3 .m3-hero { position: relative; overflow: hidden; margin: -18px -18px 0; padding: 20px 18px 18px; min-height: 196px; border-radius: 0 0 28px 28px;
-  display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; color: var(--m3-on-surface); padding-top: 72px; }
-.m3 .m3-hero[data-dark] { color: #FFFFFF; }
-.m3 .m3-hero-art { position: absolute; right: 0; bottom: 0; width: 200px; height: 140px; }
-/* Buttons sit on their own row at the top, above the art, so every page's title lands in the same place. */
-.m3 .m3-hero-actions { position: absolute; top: 16px; left: 18px; right: 18px; z-index: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
-.m3 .m3-hero-actions .m3-btn { box-shadow: 0 1px 3px rgba(0,0,0,.18); }
-.m3 .m3-hero-text { position: relative; max-width: 62%; display: flex; flex-direction: column; gap: 4px; }
-.m3 .m3-hero-sub { font-size: 14px; line-height: 20px; color: var(--m3-on-surface-variant); }
-.m3 .m3-hero[data-dark] .m3-hero-sub { color: #D6DDF5; }
-.m3 .m3-hero-btn { width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center; background: rgba(255,255,255,.72); color: var(--m3-on-surface); text-decoration: none; position: relative; }
+/* Page header (design "Today"): a large title with the section's coloured label, no band. */
+.m3 .pg-head { display: flex; align-items: flex-start; gap: 12px; padding-top: 4px; }
+.m3 .pg-back { flex: none; margin-left: -10px; margin-top: 18px; }
+.m3 .pg-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.m3 .pg-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.m3 .pg-h1 { margin: 0; font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.m3 .pg-sub { font-size: 15px; line-height: 22px; color: var(--m3-on-surface-variant); }
+.m3 .pg-actions { flex: none; display: flex; align-items: center; gap: 8px; padding-top: 16px; }
 @media (min-width: 768px) {
-  .m3 .m3-hero { margin: 0; border-radius: 28px; padding: 76px 28px 24px; min-height: 200px; }
-  .m3 .m3-hero-actions { top: 20px; left: 28px; right: 28px; }
-  .m3 .m3-hero-art { right: 24px; width: 300px; height: 205px; }
-  .m3 .m3-hero-text { max-width: 55%; }
-  .m3 .m3-hero .m3-h1 { font-size: 34px; line-height: 42px; }
+  .m3 .pg-head { align-items: flex-end; gap: 24px; padding-top: 8px; }
+  .m3 .pg-h1 { font-size: 44px; line-height: 50px; letter-spacing: -0.025em; }
+  .m3 .pg-eyebrow { font-size: 13px; }
+  .m3 .pg-sub { font-size: 16px; }
+  .m3 .pg-actions { padding-top: 0; padding-bottom: 4px; }
 }
+
+/* Wide pages: the work on the left, a rail on the right from 1100px. */
+.m3-page.pg-wide { max-width: 1200px; gap: 22px; }
+@media (min-width: 768px) { .m3-page.pg-wide { max-width: 1200px; gap: 28px; } }
+.m3 .pg-cols { display: grid; gap: 22px; align-items: start; }
+.m3 .pg-main, .m3 .pg-rail { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+@media (min-width: 1100px) {
+  .m3 .pg-cols { grid-template-columns: minmax(0, 1fr) 400px; gap: 28px; }
+  .m3 .pg-rail { position: sticky; top: 100px; }
+}
+.m3 .pg-card { background: var(--m3-surface); border-radius: 24px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.m3 .pg-flush { padding: 4px 0; overflow: hidden; }
+.m3 .pg-flush > .m3-row { padding-left: 20px; padding-right: 20px; }
+.m3 .pg-stat { display: flex; flex-direction: column; }
+.m3 .pg-stat b { font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+/* Speak up: the one dark surface in the app, so it reads as private wherever it appears. */
+.m3-speak-pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 20px; background: var(--m3-speak); color: #FFFFFF !important; font: 700 14px var(--m3-font); white-space: nowrap; }
+.m3-speak-pill:hover { background: #33303F; }
+.m3-speak-fab { position: fixed; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 45; height: 56px; border-radius: 16px; padding: 0 18px; display: inline-flex; align-items: center; gap: 10px; background: var(--m3-speak); color: #FFFFFF !important; font: 700 15px var(--m3-font); box-shadow: 0 2px 4px rgba(0,0,0,.2), 0 6px 14px rgba(0,0,0,.2); }
+@media (min-width: 768px) { .m3-speak-fab { display: none !important; } }
+@media (max-width: 767px) { .m3-app:has(.m3-speak-fab) .m3-main { padding-bottom: calc(176px + env(safe-area-inset-bottom)); } }
+.m3 .su-hero { background: var(--m3-speak); color: #FFFFFF; border-radius: 28px; padding: 22px 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+.m3 .su-hero .pg-h1 { color: #FFFFFF; }
+.m3 .su-hero .pg-sub { color: #C9C6D6; }
+.m3 .su-promises { display: flex; flex-wrap: wrap; gap: 8px; }
+.m3 .su-promise { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 16px; background: #3A374A; color: #EDEAF6; font-size: 13px; font-weight: 600; }
+@media (min-width: 768px) { .m3 .su-hero { padding: 32px 36px 34px; } }
 
 /* Check-in confirmation (components/home/check-in.tsx) and header chip entrance */
 .m3 .m3-done-mark { width: 52px; height: 52px; border-radius: 26px; flex: none; display: grid; place-items: center; background: var(--m3-success); color: #FFFFFF; animation: m3-pop .35s ease-out; }
@@ -173,7 +197,7 @@
 
 /* Admin app (prototype: docs/design/m3/M3AdminApp.dc.html and M3AdminAppPhone.dc.html): its own
    shell. A sidebar from 761px; below that a top bar and a bottom bar with More. */
-.m3a { min-height: 100dvh; background: #F7F9FF; display: flex; align-items: stretch; font-size: 15px; line-height: 22px; }
+.m3a { min-height: 100dvh; background: var(--m3-ground); display: flex; flex-direction: column; align-items: stretch; font-size: 15px; line-height: 22px; }
 .m3a-side { flex: 0 0 256px; box-sizing: border-box; padding: 24px 12px; background: var(--m3-surface-container); display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100dvh; overflow-y: auto; }
 .m3a-brand { display: flex; align-items: center; gap: 8px; text-decoration: none; }
 .m3a-brand b { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--m3-primary); }
@@ -348,3 +372,32 @@
 .m3 .td-fab { position: fixed; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 45; height: 56px; border-radius: 16px; padding: 0 20px; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,.2), 0 6px 14px rgba(0,100,147,.25); }
 @media (min-width: 768px) { .m3 .td-fab { display: none; } }
 @media (max-width: 767px) { .m3 .td-pin:not(.td-wide) .td-pinwhen { display: none; } }
+/* Today's Check in button takes the thumb spot until you're checked in; Speak up waits. */
+.m3-app:has(.td-fab) .m3-speak-fab { display: none; }
+@media (min-width: 768px) and (max-width: 1099px) { .m3-speak-pill { width: 40px; padding: 0; justify-content: center; font-size: 0; gap: 0; } }
+.m3 .td-speak-cta { flex: none; height: 40px; padding: 0 18px; border-radius: 20px; background: #FFFFFF; color: var(--m3-speak); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; }
+@media (max-width: 599px) { .m3 .td-speak-cta { display: none; } }
+/* Feed */
+.m3 .fd-grid { display: grid; gap: 16px; }
+@media (min-width: 1100px) { .m3 .fd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+.m3 .fd-share { height: 56px; border-radius: 16px; border: 0; background: var(--m3-ground); color: var(--m3-on-surface); font: 600 14px var(--m3-font); display: flex; align-items: center; gap: 10px; padding: 0 14px; cursor: pointer; }
+.m3 .fd-share:hover { background: var(--m3-surface-container); }
+.m3 .fd-share svg { color: #A1401F; }
+/* Inside redesigned pages, card titles carry the same weight as Today's. */
+.m3 .pg-wide .m3-title { font-weight: 700; }
+.m3 .pg-wide .m3-card { border-radius: 24px; }
+/* 10K steps */
+.m3 .st-hero { flex-direction: row; align-items: center; gap: 28px; padding: 24px; flex-wrap: wrap; }
+.m3 .st-ring { width: 140px; height: 140px; flex: none; }
+@media (min-width: 768px) { .m3 .st-ring { width: 180px; height: 180px; } }
+/* Event details: a calendar-page date block */
+.m3 .ev-date { flex: none; width: 84px; height: 92px; border-radius: 20px; background: var(--m3-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.m3 .ev-date span { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #A1401F; }
+.m3 .ev-date b { font-size: 40px; line-height: 44px; font-weight: 700; letter-spacing: -0.02em; }
+/* Admin app: the same top-tab frame as the member app from 761px. */
+.m3a-topbar { position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; height: 76px; padding: 0 32px; background: var(--m3-ground); border-bottom: 1px solid #DDE2E9; }
+.m3a-topbar .m3-toptab { padding: 0 14px; }
+.m3a-col { width: 100%; }
+@media (max-width: 1240px) { .m3a-topbar .m3-toptab svg { display: none; } .m3a-topbar .m3-toptab { padding: 0 10px; font-size: 13px; } }
+@media (max-width: 760px) { .m3a-topbar { display: none; } }
+@media (min-width: 761px) { .m3 .m3a-h1 { font-size: 40px; line-height: 46px; font-weight: 700; letter-spacing: -0.025em; } }

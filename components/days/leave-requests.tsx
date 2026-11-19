@@ -30,7 +30,7 @@ export function LeaveRequests({ today }: { today: string }) {
   const rows = (requests.data ?? []).filter((r) => r.type === "leave").slice(0, 6);
   return (
     <section aria-labelledby="days-leave" className="m3-stack" style={{ gap: 8 }}>
-      <h2 id="days-leave" className="m3-title" style={{ padding: "0 4px" }}>Your leave requests</h2>
+      <div className="td-sech"><h2 id="days-leave">Your leave requests</h2></div>
       <div className="m3-card" style={{ padding: 0, overflow: "hidden" }}>
         {requests.isError ? <p role="alert" className="m3-small" style={{ margin: 0, padding: 16 }}>{requests.error.message}</p>
           : rows.length === 0 && approved.length === 0 ? <p className="m3-small" style={{ margin: 0, padding: 16 }}>{requests.isPending ? "Loading…" : "No leave to show here. Open Zoho People for all your requests."}</p>

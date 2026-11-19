@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Bell, CalendarDays, CircleHelp, Coffee, LayoutGrid, LogOut, Newspaper, Settings, Sun, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/m3";
+import { SpeakUpIcon } from "@/components/m3/icons";
 import { readError, send } from "@/lib/fetcher";
 import { ACCOUNT_MENU, activeNav, navFor, type NavIcon } from "@/lib/nav";
 
@@ -62,6 +63,9 @@ export function NotificationsBell({ className = "m3-icon-btn" }: { className?: s
   );
 }
 
+// Speak up is what the app was built for, so phones keep it one tap away on the main pages.
+const SPEAK_FAB = ["/", "/feed", "/days", "/snacks", "/browse", "/steps", "/wifi"];
+
 // The app frame (design: "Today", no sidebar). From 768px: a top bar with the wordmark, the five
 // destinations as a floating tab bar in the middle, and the bell and avatar on the right. Phones:
 // the Material bottom bar with the same five. Pure CSS switches between them (app/m3.css).
@@ -90,6 +94,7 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
           })}
         </nav>
         <div className="m3-top-end">
+          {pathname !== "/grievances" && <Link href="/grievances" className="m3-speak-pill"><SpeakUpIcon size={18} />Speak up</Link>}
           <NotificationsBell />
           <AccountButton name={name} />
         </div>
@@ -97,6 +102,7 @@ export function AppShell({ name, isAdmin, openReports = 0, children }: { name: s
 
       <main className="m3-main">{children}</main>
       <ImportantSheet />
+      {SPEAK_FAB.includes(pathname) && <Link href="/grievances" className="m3 m3-speak-fab" aria-label="Speak up anonymously"><SpeakUpIcon size={22} />Speak up</Link>}
 
       <nav className="m3 m3-bottom" aria-label="Main" style={{ gridTemplateColumns: `repeat(${navFor("bar").length}, minmax(0, 1fr))` }}>
         {navFor("bar").map((item) => {

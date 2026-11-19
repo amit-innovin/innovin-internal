@@ -1,7 +1,8 @@
 "use client";
+import { PageHero } from "@/components/m3/hero";
 import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
 import { useState } from "react";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 // Help (canvas: M3Help): today's answers, one open at a time.
 const FAQ: [string, string][] = [
@@ -21,11 +22,8 @@ export function HelpPage() {
   const [open, setOpen] = useState(0);
   return (
     <div className="m3 m3-page m3-stack">
-      <header style={{ display: "flex", alignItems: "center", gap: 4, paddingTop: 8 }}>
-        <Link href="/account" className="m3-btn m3-btn-text m3-back" aria-label="Back to account" style={{ width: 48, padding: 0, color: "var(--m3-on-surface)" }}><ArrowLeft size={24} aria-hidden="true" /></Link>
-        <h1 className="m3-h1">Help</h1>
-      </header>
-      <section aria-label="Questions" className="m3-card" style={{ padding: 0, overflow: "hidden" }}>
+      <PageHero page="help" title="Help" subtitle="Short answers about how innovin works" back="/browse" />
+      <section aria-label="Questions" className="pg-card" style={{ padding: 0, overflow: "hidden", gap: 0 }}>
         {FAQ.map(([q, a], i) => (
           <div key={q} style={{ borderTop: i ? "1px solid var(--m3-outline-variant, #DFE3E8)" : 0 }}>
             <h2 style={{ margin: 0 }}>

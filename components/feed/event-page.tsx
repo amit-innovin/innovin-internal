@@ -26,10 +26,9 @@ export function EventPage({ id }: { id: string }) {
   const [cat, catBg, catFg] = CATEGORY[event?.category ?? ""] ?? CATEGORY.company;
 
   return (
-    <div className="m3 m3-page m3-stack">
-      <header style={{ display: "flex", alignItems: "center", gap: 4, paddingTop: 8 }}>
-        <Link href="/feed" className="m3-btn m3-btn-text" aria-label="Back to feed" style={{ width: 48, padding: 0, color: "var(--m3-on-surface)" }}><ArrowLeft size={24} aria-hidden="true" /></Link>
-        <span className="m3-small" style={{ fontWeight: 600 }}>Event</span>
+    <div className="m3 m3-page pg-wide m3-stack">
+      <header style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <Link href="/feed" className="m3-btn m3-btn-text" aria-label="Back to feed" style={{ height: 40, padding: "0 12px 0 6px", color: "var(--m3-on-surface)" }}><ArrowLeft size={20} aria-hidden="true" />Feed</Link>
       </header>
 
       {!query.data ? <QueryState error={query.error} onRetry={() => query.refetch()} what="this event" /> : !event ? (
@@ -40,14 +39,18 @@ export function EventPage({ id }: { id: string }) {
         </section>
       ) : (
         <>
-          <div className="m3-stack" style={{ gap: 8, padding: "0 4px" }}>
-            <span style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 600, lineHeight: "16px", padding: "4px 10px", borderRadius: 8, background: catBg, color: catFg }}>{cat}</span>
-            <h1 className="m3-h1">{event.title}</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <span aria-hidden="true" className="ev-date"><span>{at(event.startsAt, { month: "short" })}</span><b>{at(event.startsAt, { day: "numeric" })}</b></span>
+            <div className="pg-head-text">
+              <span style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 700, lineHeight: "16px", padding: "4px 10px", borderRadius: 8, background: catBg, color: catFg }}>{cat}</span>
+              <h1 className="pg-h1">{event.title}</h1>
+            </div>
           </div>
 
           {event.cancelledAt && <div role="status" style={{ background: "var(--m3-error-container, #FFDAD6)", color: "#410002", borderRadius: 16, padding: "12px 16px", fontWeight: 600 }}>This event was cancelled</div>}
 
-          <section aria-label="When and where" className="m3-card m3-stack" style={{ gap: 16 }}>
+          <div className="pg-cols">
+          <section aria-label="When and where" className="pg-card" style={{ gap: 16 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
               <Circle><CalendarDays size={20} /></Circle>
               <span style={{ display: "flex", flexDirection: "column" }}>
@@ -59,8 +62,9 @@ export function EventPage({ id }: { id: string }) {
             {event.body && <p className="m3-body" style={{ margin: 0, whiteSpace: "pre-line" }}>{event.body}</p>}
           </section>
 
+          <aside className="pg-rail">
           {!event.cancelledAt && !past && (
-            <section aria-labelledby="ans-h" className="m3-card m3-stack" style={{ gap: 14 }}>
+            <section aria-labelledby="ans-h" className="pg-card" style={{ gap: 14 }}>
               <h2 id="ans-h" className="m3-title">Are you going?</h2>
               <div role="group" aria-labelledby="ans-h" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
                 <button type="button" aria-pressed={going} disabled={rsvp.isPending} onClick={() => answer(true)}
@@ -74,6 +78,8 @@ export function EventPage({ id }: { id: string }) {
             </section>
           )}
           {past && !event.cancelledAt && <p className="m3-body" style={{ margin: "0 4px", color: "var(--m3-on-surface-variant)" }}>This event has passed.</p>}
+          </aside>
+          </div>
         </>
       )}
     </div>

@@ -65,10 +65,10 @@ export function AccountPage() {
   if (!a) return <div className="m3 m3-page m3-stack"><PageHero page="account" title="Account" /><QueryState error={account.error} onRetry={() => account.refetch()} what="your account" /></div>;
   return (
     <div className="m3 m3-page m3-stack">
-      <PageHero page="account" title={a.name} actions={<Avatar name={a.name} size={48} />}>
-        {a.officeDays.length > 0 && <span className="m3-chip m3-chip-neutral" style={{ alignSelf: "flex-start" }}>Usually in {usually(a.officeDays)}</span>}
+      <PageHero page="account" title={a.name} subtitle={a.email} actions={<Avatar name={a.name} size={64} />}>
+        {a.officeDays.length > 0 && <span className="m3-chip m3-chip-neutral" style={{ alignSelf: "flex-start", marginTop: 6 }}>Usually in {usually(a.officeDays)}</span>}
       </PageHero>
-      <div className="m3-card" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="pg-card pg-flush">
         <ListRow onClick={() => setSettings(true)} title="Notification settings" subtitle="Tea round, events, kudos" chevron />
         <ListRow href="/help" title="Help" chevron />
         {a.role === "admin" && <ListRow href="/admin" title="Admin" subtitle="Opens the admin app" chevron />}

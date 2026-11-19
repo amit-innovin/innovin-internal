@@ -1,10 +1,10 @@
 "use client";
-import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
+import { PageHero } from "@/components/m3/hero";
 import { useSearchParams } from "next/navigation";
 import { useWorkspaceReplace } from "@/components/m3/workspace-link";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/m3";
 import { readError, send } from "@/lib/fetcher";
@@ -105,12 +105,12 @@ export function WifiPage() {
   };
 
   return (
-    <div className="m3 m3-page m3-stack">
-      <header style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0" }}>
-        <Link href="/" className="m3-btn m3-btn-text" aria-label="Back to home" style={{ width: 44, padding: 0 }}><ArrowLeft size={22} aria-hidden="true" /></Link>
-        <h1 className="m3-h1" style={{ fontSize: 28, lineHeight: "36px" }}>Wi-Fi check</h1>
-      </header>
-      <section className="m3-card m3-stack" style={{ gap: 12 }}>
+    <div className="m3 m3-page pg-wide m3-stack">
+      <PageHero page="wifi" title="Wi-Fi check" subtitle="Download, upload and delay on the connection you're using right now" back="/" />
+      <div className="pg-cols">
+      <div className="pg-main">
+      <section className="pg-card wf-check" style={{ gap: 14 }}>
+        <svg aria-hidden="true" width="72" height="56" viewBox="0 0 64 56"><rect x="2" y="40" width="10" height="14" rx="3" fill="var(--m3-primary)" /><rect x="18" y="30" width="10" height="24" rx="3" fill="var(--m3-primary)" opacity=".75" /><rect x="34" y="18" width="10" height="36" rx="3" fill="var(--m3-primary)" opacity=".5" /><rect x="50" y="4" width="10" height="50" rx="3" fill="var(--m3-primary)" opacity=".3" /></svg>
         <p className="m3-body" style={{ margin: 0 }}>Tests the connection you&apos;re on right now: download, upload and delay. It takes about 10 seconds.</p>
         {state === "idle" && (
           <>
@@ -127,12 +127,12 @@ export function WifiPage() {
       </section>
 
       {(state === "done" || state === "sent") && result && (
-        <section aria-labelledby="wifi-verdict" className="m3-card m3-stack" style={{ gap: 10, background: verdict === "slow" ? "var(--m3-warn-container)" : "var(--m3-success-container)" }}>
+        <section aria-labelledby="wifi-verdict" className="pg-card" style={{ gap: 10, background: verdict === "slow" ? "var(--m3-warn-container)" : "var(--m3-success-container)" }}>
           <h2 id="wifi-verdict" className="m3-title">{verdict === "slow" ? "The connection is slow right now" : "The connection looks good"}</h2>
           <span className="m3-small" style={{ color: "inherit" }}>You caught {caught} packet{caught === 1 ? "" : "s"} while you waited.</span>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
             {[[result.down, "Mbps down"], [result.up, "Mbps up"], [result.delayMs, "ms delay"]].map(([n, label]) => (
-              <span key={label as string} style={{ display: "flex", flexDirection: "column" }}><b style={{ fontSize: 24, fontVariantNumeric: "tabular-nums" }}>{n}</b><span className="m3-small" style={{ color: "inherit" }}>{label}</span></span>
+              <span key={label as string} style={{ display: "flex", flexDirection: "column" }}><b style={{ fontSize: 36, lineHeight: "40px", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{n}</b><span className="m3-small" style={{ color: "inherit" }}>{label}</span></span>
             ))}
           </div>
         </section>
@@ -144,7 +144,7 @@ export function WifiPage() {
       )}
 
       {state === "done" && canReport && (
-        <section aria-labelledby="wifi-report" className="m3-card m3-stack" style={{ gap: 12 }}>
+        <section aria-labelledby="wifi-report" className="pg-card" style={{ gap: 12 }}>
           <h2 id="wifi-report" className="m3-title">Report it to admins</h2>
           <span className="m3-small">Your result is attached. Where are you sitting?</span>
           <div role="radiogroup" aria-label="Where are you sitting?" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -167,6 +167,15 @@ export function WifiPage() {
         </section>
       )}
       {(state === "done" || state === "sent") && <Button variant="outlined" style={{ alignSelf: "flex-start" }} onClick={run}>Run again</Button>}
+      </div>
+      <aside className="pg-rail">
+        <section aria-label="How the check works" className="pg-card" style={{ gap: 10 }}>
+          <b>How it works</b>
+          <span className="m3-body">It measures how fast data comes in and goes out, and how long a reply takes. Run it where you&apos;re sitting.</span>
+          <span className="m3-small">Reports carry the result and the area, never your name. Admins use them to see where the office Wi-Fi is weak.</span>
+        </section>
+      </aside>
+      </div>
     </div>
   );
 }

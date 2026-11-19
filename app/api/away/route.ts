@@ -147,7 +147,7 @@ export async function PATCH(req: NextRequest) {
       // An admin approved this and now it's undone — tell the admins so nobody plans around it.
       if (row.status === "approved") {
         const who = session?.name ?? row.email;
-        const admins = (await store.listEmployees()).filter((e) => e.role === "admin");
+        const admins = (await store.listEmployees()).filter((e) => e.role === "admin" && !e.leftOn);
         await Promise.all(admins.map((a) => notify(row, `${who} cancelled their approved ${what.toLowerCase()}`, a.email)));
       }
     } else {

@@ -15,7 +15,9 @@ export const currentActor = cache(async (): Promise<Actor | null> => {
   const user = await currentUser();
   if (!user) return null;
   const row = await store.getEmployee(user.email);
-  return { email: user.email, name: user.name, role: row?.role ?? "member" };
+  // Someone marked as left keeps no admin powers, even while their session cookie is valid.
+  const role = row && !row.leftOn ? row.role : "member";
+  return { email: user.email, name: user.name, role };
 });
 
 export async function isAdmin() {

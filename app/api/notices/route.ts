@@ -40,7 +40,9 @@ export async function POST(req: NextRequest) {
     if (str(body.title).length > 120 || str(body.attribution).length > 120) return badRequest("Keep titles and attributions under 120 characters");
     const image = str(body.image);
     if (image && (!/^data:image\/(jpeg|png|webp);base64,/.test(image) || image.length > 700_000)) return badRequest("Photos must be a JPEG, PNG or WebP under about 500 KB");
-    await store.addNotice({ ...base, title: str(body.title).trim(), attribution: str(body.attribution).trim(), color: str(body.color) as NoticeRow["color"], anonymous: body.anonymous, image: image || null });
+    await store.addNotice({ ...base, title: str(body.title).trim(), attribution: str(body.attribution).trim(), color: str(body.color) as NoticeRow["color"], anonymous: body.anonymous, image: image || null,
+      // The store drops these too; clear them here so the author never leaves this handler.
+      ...(body.anonymous ? { authorEmail: null, authorName: null } : {}) });
     return NextResponse.json({ ok: true }, { status: 201 });
   }
 

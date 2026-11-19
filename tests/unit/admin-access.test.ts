@@ -84,6 +84,13 @@ describe("isAdmin", () => {
     expect(await isAdmin()).toBe(false);
   });
 
+  it("an admin marked as left loses admin powers while their session is still valid", async () => {
+    const { isAdmin } = await import("@/lib/admin");
+    signIn(admin);
+    getEmployee.mockResolvedValue({ ...row(admin.email, "admin"), leftOn: "2026-11-19" });
+    expect(await isAdmin()).toBe(false);
+  });
+
   it("grants nothing to the retired passcode cookie", async () => {
     const { isAdmin } = await import("@/lib/admin");
     const { createHmac } = await import("crypto");

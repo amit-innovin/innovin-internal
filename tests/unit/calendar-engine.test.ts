@@ -166,6 +166,20 @@ describe("Calendar invites when Google misbehaves", () => {
     expect(live()).toHaveLength(1);
   });
 
+  it("an invite taken back when its admin goes is sent fresh under a new id, not the old organizer's", async () => {
+    await connectAs(B, 2000);
+    const e = await event();
+    google.faults.push({ method: "POST", owner: A, fault: "timeout-landed" });
+    const first = await cal.sendInvite(e, A);
+    await cal.retireCalendar(A);
+    expect(await store.getEventInvite(e.id)).toMatchObject({ state: "failed", generation: first.generation + 1 });
+    expect(await cal.retryInvite(e, B)).toBe("done");
+    const sent = await store.getEventInvite(e.id);
+    expect(sent).toMatchObject({ state: "sent", owner: B });
+    expect(sent!.googleId).not.toBe(first.googleId);
+    expect(live()).toEqual([expect.objectContaining({ owner: B, id: sent!.googleId })]);
+  });
+
   it("Send again does nothing to an invite that already went out", async () => {
     const e = await event();
     await cal.sendInvite(e, A);

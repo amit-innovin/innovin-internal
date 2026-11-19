@@ -112,12 +112,19 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
     });
 
     it("adds steps to today's total in one step, capped, and decides the 10K", async () => {
-      expect(await store.addSteps("a@innovinlabs.com", "2026-11-18", 6000)).toBe(6000);
+      expect(await store.addSteps("a@innovinlabs.com", "2026-11-18", 6000)).toEqual({ steps: 6000, hit: false });
       const [x, y] = await Promise.all([store.addSteps("a@innovinlabs.com", "2026-11-18", 3000), store.addSteps("a@innovinlabs.com", "2026-11-18", 4000)]);
-      expect(Math.max(x, y)).toBe(13000);
+      expect(Math.max(x.steps, y.steps)).toBe(13000);
       const row = (await store.listSteps()).find((r) => r.email === "a@innovinlabs.com" && r.date === "2026-11-18");
       expect(row).toMatchObject({ steps: 13000, hit: true });
-      expect(await store.addSteps("a@innovinlabs.com", "2026-11-18", 199_999)).toBe(200_000);
+      expect(await store.addSteps("a@innovinlabs.com", "2026-11-18", 199_999)).toEqual({ steps: 200_000, hit: true });
+    });
+
+    it("keeps a 10K marked with the toggle when the step counter adds a few steps", async () => {
+      await store.setSteps({ id: uid(), email: "t@innovinlabs.com", date: "2026-11-18", hit: true, steps: null, createdAt: iso() });
+      expect(await store.addSteps("t@innovinlabs.com", "2026-11-18", 500)).toEqual({ steps: 500, hit: true });
+      const row = (await store.listSteps()).find((r) => r.email === "t@innovinlabs.com" && r.date === "2026-11-18");
+      expect(row).toMatchObject({ steps: 500, hit: true });
     });
 
     it("keeps where a Wi-Fi report came from", async () => {

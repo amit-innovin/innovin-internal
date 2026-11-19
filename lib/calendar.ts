@@ -314,10 +314,15 @@ export async function retireCalendar(owner: string) {
     }
   }
   // Invites that may have landed in this calendar: take them out quietly so another admin can send
-  // them fresh; if that can't be done, they're orphaned (never sent a second time).
+  // them fresh; if that can't be done, they're orphaned (never sent a second time). The fresh send
+  // gets the next generation's id: the old id may still sit in guests' calendars as a cancelled
+  // copy, and reusing it would 409 and patch that copy instead of creating the new admin's event.
   for (const { invite } of pending) {
     const res = from?.ok ? await google(from.token, "DELETE", `/${invite.googleId}`, "none") : null;
-    if (res && (ok2xx(res.status) || gone(res))) await store.deleteEventInvite(invite.eventId);
+    if (res && (ok2xx(res.status) || gone(res))) {
+      const generation = invite.generation + 1;
+      await record({ ...invite, googleId: googleEventId(invite.eventId, generation), generation, state: "failed", error: "unsent:organizer-gone" });
+    }
     else { orphaned++; await record({ ...invite, state: "orphaned", error: "organizer-gone" }); }
   }
   // Re-read: a dead grant may already have been forgotten above.

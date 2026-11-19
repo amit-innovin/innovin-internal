@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
   if (body.add !== undefined) {
     const add = Number(body.add);
     if (!Number.isInteger(add) || add < 1 || add > 50_000) return badRequest("Add between 1 and 50,000 steps");
-    const total = await store.addSteps(session.email, todayIST(), add);
-    return NextResponse.json({ ok: true, hit: total >= STEP_GOAL, steps: total });
+    const { steps, hit } = await store.addSteps(session.email, todayIST(), add);
+    return NextResponse.json({ ok: true, hit, steps });
   }
   const steps = body.steps === null || body.steps === undefined || body.steps === "" ? null : Number(body.steps);
   if (steps !== null && (!Number.isInteger(steps) || steps < 0 || steps > 200_000)) {

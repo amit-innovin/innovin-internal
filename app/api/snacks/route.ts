@@ -102,15 +102,25 @@ export async function PATCH(req: NextRequest) {
     const today = todayIST(), now = new Date().toISOString();
     const [items, picks] = await Promise.all([store.listSnacks(), store.listSnackPicks(today)]);
     const picked = new Set(picks.map((p) => p.itemId));
-    for (const i of items) if (i.status === "shelf" && picked.has(i.id)) await store.setSnackStatus(i.id, "shelf", now);
-    await store.setSetting(ORDER_KEY, { date: today, at: now });
+    // Each item's previous last-ordered time is kept, so Undo can put it back.
+    const previous: Record<string, string | null> = {};
+    for (const i of items) if (i.status === "shelf" && picked.has(i.id)) { previous[i.id] = i.orderedAt ?? null; await store.setSnackStatus(i.id, "shelf", now); }
+    await store.setSetting(ORDER_KEY, { date: today, at: now, previous });
     return NextResponse.json(await view(session.email));
   }
   // { action: "order-undo" }: a mis-tap. Today's order marks come off and picks reopen.
   if (action === "order-undo") {
     if (!(await isAdmin())) return NextResponse.json({ error: "Only admins can manage the snack shelf" }, { status: 403 });
-    const today = todayIST();
-    for (const i of await store.listSnacks()) if (i.status === "shelf" && i.orderedAt && istDay(i.orderedAt) === today) await store.setSnackStatus(i.id, "shelf", null);
+    // Only the items this order marked come off, back to when they were last ordered. Items an
+    // admin marked "ordered" one by one keep their mark.
+    const placed = await store.getSetting<{ date: string; at: string; previous?: Record<string, string | null> }>(ORDER_KEY);
+    if (placed?.date === todayIST()) {
+      for (const i of await store.listSnacks()) {
+        if (i.status !== "shelf" || i.orderedAt !== placed.at) continue;
+        if (placed.previous && !(i.id in placed.previous)) continue;
+        await store.setSnackStatus(i.id, "shelf", placed.previous?.[i.id] ?? null);
+      }
+    }
     await store.setSetting(ORDER_KEY, null);
     return NextResponse.json(await view(session.email));
   }

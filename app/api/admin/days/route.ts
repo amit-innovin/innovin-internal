@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentActor } from "@/lib/admin";
-import { dayMode } from "@/lib/days";
+import { closedMap, dayMode } from "@/lib/days";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
@@ -20,6 +20,8 @@ export async function POST(req: NextRequest) {
   if (!email || !validDate(date) || mode === undefined) return badRequest("Pick a person, a day and office or not in office");
   if (date > todayIST()) return NextResponse.json({ error: "You can't mark a day that hasn't happened yet" }, { status: 409 });
   if (!(await store.getEmployee(email))) return NextResponse.json({ error: "Person not found" }, { status: 404 });
+  // Same rule as members: nobody is in the office on a day it was closed.
+  if (mode === "office" && (await closedMap(date, date)).has(date)) return NextResponse.json({ error: "The office is closed that day", code: "closed" }, { status: 409 });
   const now = new Date().toISOString();
   const before = dayMode(await store.getAttendance(email, date));
   if (mode === null) await store.clearDay(email, date);

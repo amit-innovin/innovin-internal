@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { pgConfig } from "./pgconfig";
+import { STEP_GOAL } from "./steps";
 import type {
   NoticeRow,
   NoticeReaction,
@@ -1006,12 +1007,12 @@ class PgStore implements Store {
   }
   async addSteps(email: string, date: string, add: number) {
     const res = await this.q(
-      `INSERT INTO steps (id, email, date, hit, steps, created_at) VALUES ($1,$2,$3,$4 >= 10000,LEAST($4, 200000),now())
-       ON CONFLICT (email, date) DO UPDATE SET steps = LEAST(COALESCE(steps.steps, 0) + $4, 200000), hit = LEAST(COALESCE(steps.steps, 0) + $4, 200000) >= 10000
-       RETURNING steps`,
-      [crypto.randomUUID(), email, date, add],
+      `INSERT INTO steps (id, email, date, hit, steps, created_at) VALUES ($1,$2,$3,$4 >= $5,LEAST($4, 200000),now())
+       ON CONFLICT (email, date) DO UPDATE SET steps = LEAST(COALESCE(steps.steps, 0) + $4, 200000), hit = steps.hit OR LEAST(COALESCE(steps.steps, 0) + $4, 200000) >= $5
+       RETURNING steps, hit`,
+      [crypto.randomUUID(), email, date, add, STEP_GOAL],
     );
-    return Number(res.rows[0].steps);
+    return { steps: Number(res.rows[0].steps), hit: !!res.rows[0].hit };
   }
   async listSteps() {
     const res = await this.q(`SELECT * FROM steps ORDER BY date DESC`);

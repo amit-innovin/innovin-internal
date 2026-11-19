@@ -77,6 +77,13 @@ test.describe("Admin app", () => {
     await expect(page.getByRole("region", { name: "Needs you" })).not.toContainText("behind");
   });
 
+  test("People: a month that doesn't exist in the address shows this month, not an endless load", async ({ page }) => {
+    await admin(page, "/admin/people?month=2026-13");
+    const month = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", month: "long" }).format(new Date());
+    await expect(page.getByRole("heading", { name: `Office days · ${month}` })).toBeVisible();
+    await expect(page.getByRole("region", { name: /^Office days · / }).getByRole("table")).toBeVisible();
+  });
+
   test("Speak up: keep a reported post; reply to a message", async ({ page, browser }) => {
     const author = await member(browser, "admin-author");
     const body = uniqueText("Reported quote");

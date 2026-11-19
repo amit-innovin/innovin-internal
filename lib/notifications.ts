@@ -1,6 +1,6 @@
-import { boardHref,attendanceHref,eventHref } from "./journey";
+import { boardHref,eventHref,leaveHref } from "./journey";
 import { fmtShortDate } from "./format";
-import { LEAVE_LABELS, needsApproval } from "./leave";
+import { LEAVE_LABELS } from "./leave";
 import { inOfficeToday, snackTimes } from "./snack-times";
 import { hiReplyTitle, hiTitle, INVITES } from "./hi";
 import { currentRound } from "./snacks-rules";
@@ -63,10 +63,7 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
     });
   }
 
-  if(opts.email) {
-    const me=employees.find(e=>e.email===opts.email);
-    if(me?.role==="admin")for(const r of (await store.listPendingAway()).filter(needsApproval))items.push({id:`pending-away-${r.id}`,kind:"away",title:"Time-away request awaiting review",body:"Open Approvals to review it.",at:r.createdAt,href:"/admin/tools?tab=approvals#away"});
-  }
+  // No 'awaiting review' items for admins: leave is approved in Zoho People.
 
   // A decision on your own request — only ever for a verified identity.
   for (const r of away) {
@@ -78,7 +75,7 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
       title: `${what} ${r.status}`,
       body: `${fmtShortDate(`${r.startDate}T00:00:00`)}${r.decidedBy ? ` · by ${r.decidedBy}` : ""}`,
       at: r.decidedAt,
-      href: attendanceHref("leave",undefined,r.id),
+      href: leaveHref(),
     });
   }
 

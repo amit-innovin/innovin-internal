@@ -35,7 +35,7 @@ export function EventPage({ id }: { id: string }) {
       {!query.data ? <QueryState error={query.error} onRetry={() => query.refetch()} what="this event" /> : !event ? (
         <section className="m3-card m3-stack" style={{ gap: 12, alignItems: "flex-start", marginTop: 24 }}>
           <h1 className="m3-title" style={{ fontSize: 22, lineHeight: "28px" }}>This event isn&apos;t here any more</h1>
-          <p className="m3-body" style={{ margin: 0, color: "var(--m3-on-surface-variant)" }}>It was removed by an admin.</p>
+          <p className="m3-body" style={{ margin: 0, color: "var(--m3-on-surface-variant)" }}>It may have been removed, or the link is wrong.</p>
           <Link href="/feed" className="m3-btn m3-btn-filled">Back to Feed</Link>
         </section>
       ) : (

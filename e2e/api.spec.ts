@@ -671,6 +671,17 @@ test.describe("API: behaviour", () => {
 });
 
 test.describe("API: privacy & auth", () => {
+  test("the office-days grid is for admins only, and checks the month", async () => {
+    expect((await (await device()).get("/api/admin/team")).status()).toBe(401);
+    expect((await (await signedIn(email())).get("/api/admin/team")).status()).toBe(401);
+    const adm = await admin();
+    expect((await adm.get("/api/admin/team?month=2026-13")).status()).toBe(400);
+    expect((await adm.get("/api/admin/team?month=2999-01")).status()).toBe(400);
+    const team = await (await adm.get("/api/admin/team")).json();
+    expect(team.days.length).toBeGreaterThan(15);
+    expect(JSON.stringify(team)).not.toMatch(/"(done|target|status|count)"/);
+  });
+
   test("admin-only endpoints reject anonymous callers", async () => {
     const ctx = await device();
     expect((await ctx.get("/api/grievances")).status()).toBe(401);
@@ -997,6 +1008,15 @@ test.describe("Steps, Wi-Fi and notifications (Stage 5)", () => {
     expect(JSON.stringify(row)).not.toMatch(/@innovinlabs\.com|submitterRef/);
     expect((await ctx.get("/api/wifi/ping")).status()).toBe(204);
     expect((await ctx.post("/api/wifi/upload", { data: "x".repeat(10_000), headers: { "Content-Type": "application/octet-stream" } })).status()).toBe(204);
+  });
+
+  test("the workspace endpoint gives a member only their own data: no headcounts, no one else's day", async () => {
+    const viewer = await signedIn(email());
+    const ws = await (await viewer.get("/api/workspace")).json();
+    expect(ws.steps).toBeDefined();
+    expect(ws.people).toBeUndefined();
+    expect(ws.events).toBeUndefined();
+    expect(JSON.stringify(ws)).not.toMatch(/"going"|"mode":"(office|remote)"/);
   });
 
   test("steps of people outside the league reach nobody, through any endpoint", async () => {

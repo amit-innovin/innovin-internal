@@ -1,4 +1,4 @@
-import { attendanceHref } from "@/lib/journey";
+import { leaveHref } from "@/lib/journey";
 import { validDate } from "@/lib/time";
 import { NextRequest, NextResponse } from "next/server";
 import { currentActor, isAdmin } from "@/lib/admin";
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
 
 const notify = (row: { id: string; type: AwayType; startDate: string; email: string }, title: string, email?: string) =>
   sendPush(
-    { title, body: fmtShortDate(`${row.startDate}T00:00:00`), href: attendanceHref("leave",undefined,row.id), tag: `away-${row.id}` },
+    { title, body: fmtShortDate(`${row.startDate}T00:00:00`), href: leaveHref(), tag: `away-${row.id}` },
     email ?? row.email,
   ).catch(() => {});
 

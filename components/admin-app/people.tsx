@@ -97,7 +97,9 @@ export function PeoplePage() {
   const [q, setQ] = useState("");
   const filter = (["all", "exempt", "admin", "left"] as const).find((f) => f === params.get("show")) ?? "all";
   const thisMonth = todayIST().slice(0, 7);
-  const month = /^\d{4}-\d{2}$/.test(params.get("month") ?? "") && params.get("month")! <= thisMonth ? params.get("month")! : thisMonth;
+  // Same rule as the API: a real month, this one or earlier. Anything else shows this month.
+  const asked = params.get("month") ?? "";
+  const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(asked) && asked <= thisMonth ? asked : thisMonth;
   const team = useTeamMonth(month);
   const selectedEmail = params.get("person");
   const setParam = (key: string, value: string | null) => {
@@ -129,8 +131,8 @@ export function PeoplePage() {
             <Chips label="Filter people" value={filter} onPick={(f) => setParam("show", f === "all" ? null : f)}
               options={[["all", "Everyone"], ["exempt", "Exempt"], ["admin", "Admins"], ["left", "Left"]]} />
           </section>
-          <OfficeDays team={team.data} people={shown} selected={selectedEmail} month={month}
-            onPick={(email) => setParam("person", email === selectedEmail ? null : email)} onMonth={(m) => setParam("month", m === thisMonth ? null : m)} />
+          {team.error ? <section className="m3a-card"><Loading what="office days" error={team.error} onRetry={() => team.refetch()} /></section> : <OfficeDays team={team.data} people={shown} selected={selectedEmail} month={month}
+            onPick={(email) => setParam("person", email === selectedEmail ? null : email)} onMonth={(m) => setParam("month", m === thisMonth ? null : m)} />}
         </div>
         {selected && <PersonPanel key={`${selected.email}-${month}`} person={selected} month={month} onClose={() => setParam("person", null)} />}
       </div>

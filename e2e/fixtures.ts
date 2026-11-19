@@ -29,7 +29,7 @@ export const uniqueText = (label: string) => `${label} ${Date.now().toString(36)
 
 export const isMobile = (page: Page) => (page.viewportSize()?.width ?? 1280) < 768;
 
-export async function signInEmployee(page: Page, email?: string, next = "/attendance") {
+export async function signInEmployee(page: Page, email?: string, next = "/") {
   if (email) await page.request.get(`${MOCK_URL}/as?email=${encodeURIComponent(email)}&name=${encodeURIComponent(email.split("@")[0].split(".")[0].replace(/^./, c => c.toUpperCase()))}`);
   try {
     await page.goto(`/api/auth/google?next=${encodeURIComponent(next)}`);

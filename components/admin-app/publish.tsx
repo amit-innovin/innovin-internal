@@ -249,7 +249,7 @@ function Events() {
   );
 }
 
-const IST_TIME = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false });
+const IST_TIME = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 // Edit an event (canvas: Publish › Edit event). People going, and the Google invite, get the update.
 function EditEvent({ event, onClose }: { event: AdminEvent; onClose: () => void }) {
@@ -260,7 +260,7 @@ function EditEvent({ event, onClose }: { event: AdminEvent; onClose: () => void 
   const bad = !!f.date && f.date < today;
   const cant = !f.title.trim() || !f.date || bad || !f.time || !f.place.trim() || save.isPending;
   const submit = () => save.mutate({ action: "update", id: event.id, expectedUpdatedAt: event.updatedAt ?? event.createdAt, title: f.title.trim(), category: event.category, startsAt: `${f.date}T${f.time}`, body: f.body.trim(), location: f.place.trim() }, {
-    onSuccess: () => { snack("Saved. People going were told."); onClose(); },
+    onSuccess: (r) => { snack((r as { invite?: string | null } | null)?.invite === "stale" ? "Saved. The Google invite didn't update; use Send again." : "Saved. People going were told."); onClose(); },
     onError: (e) => snack(e.message),
   });
   return (

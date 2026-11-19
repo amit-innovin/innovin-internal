@@ -50,26 +50,21 @@ test.describe("Days", () => {
     await expect(cell(page, FUTURE)).toHaveAccessibleName(new RegExp(`^${longDay(FUTURE)}\\. Tap to plan`));
   });
 
-  test("apply for leave from a date, see it pending, and cancel it", async ({ page }) => {
+  test("applying for leave opens Zoho People, where the approver decides", async ({ page }) => {
     await signInEmployee(page, uniqueEmail("days-leave"), "/days");
     await expect(page.getByRole("group", { name: "Leave left" })).toContainText("Casual");
     await openMonthOf(page, FUTURE);
     await cell(page, FUTURE).click();
     const sheet = page.getByRole("dialog", { name: "Plan this day" });
     await sheet.getByRole("button", { name: "Apply for leave" }).click();
-    await expect(sheet).toContainText("Your request goes for approval. You'll see its status here.");
-    await expect(sheet.getByRole("button", { name: "Send request" })).toBeDisabled();
-    await sheet.getByRole("button", { name: /^Casual/ }).click();
-    await expect(sheet.getByRole("switch", { name: "Half day" })).toBeVisible();
-    await sheet.getByRole("button", { name: "Send request" }).click();
-    await expect(sheet).toHaveCount(0);
-    // Leave days aren't buttons; their state is read out from the cell's text.
-    await expect(calendar(page).getByText(`${longDay(FUTURE)}, leave requested`)).toHaveCount(1);
-    const requests = page.getByRole("region", { name: "Your leave requests" });
-    await expect(requests).toContainText("Pending");
-    await requests.getByRole("button", { name: /^Cancel / }).click();
-    await expect(requests).toContainText("Cancelled");
-    await expect(cell(page, FUTURE)).toHaveAccessibleName(new RegExp(`^${longDay(FUTURE)}\\. Tap to plan`));
+    await expect(sheet.getByRole("heading", { name: "Leave is applied in Zoho People" })).toBeVisible();
+    const zoho = sheet.getByRole("link", { name: "Apply in Zoho People" });
+    await expect(zoho).toHaveAttribute("href", /^https:\/\/people\.zoho\./);
+    await expect(zoho).toHaveAttribute("target", "_blank");
+    // No in-app request form any more: nothing can sit at Pending without an approver.
+    await expect(sheet.getByRole("group", { name: "Type of leave" })).toHaveCount(0);
+    await sheet.getByRole("button", { name: "Back" }).click();
+    await expect(sheet.getByRole("button", { name: "Plan to come in" })).toBeVisible();
   });
 
   test("past dates aren't tappable: a date is for planning a day in or applying for leave", async ({ page }) => {

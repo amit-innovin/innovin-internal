@@ -72,7 +72,7 @@ test.describe("Help", () => {
     const leave = page.getByRole("button", { name: "How do I apply for leave?" });
     await leave.click();
     await expect(leave).toHaveAttribute("aria-expanded", "true");
-    await expect(page.getByText(/goes to Zoho People, where your approver decides/)).toBeVisible();
+    await expect(page.getByText(/In Zoho People, where your approver decides/)).toBeVisible();
     const speak = page.getByRole("button", { name: "Is Speak up really anonymous?" });
     await speak.click();
     await expect(leave).toHaveAttribute("aria-expanded", "false");
@@ -108,6 +108,7 @@ test.describe("Publish › Events", () => {
     await page.getByRole("button", { name: "Post event" }).click();
     await expect(page.getByText(/^Posted/)).toBeVisible();
 
+    const before = (await (await page.request.get("/api/events")).json()).find((e: { title: string }) => e.title === title);
     await page.getByRole("button", { name: `Edit ${title}` }).click();
     const dialog = page.getByRole("dialog", { name: "Edit event" });
     await expect(dialog.getByLabel("Details (optional)")).toHaveValue("Chapter 1 to 3.");
@@ -116,7 +117,7 @@ test.describe("Publish › Events", () => {
     await expect(dialog).toHaveCount(0);
     await expect(page.getByText("Saved. People going were told.")).toBeVisible();
     const event = (await (await page.request.get("/api/events")).json()).find((e: { title: string }) => e.title === title);
-    expect(event).toMatchObject({ location: "Big room", body: "Chapter 1 to 3." });
+    expect(event).toMatchObject({ location: "Big room", body: "Chapter 1 to 3.", startsAt: before.startsAt }); // the IST time survives the round trip
   });
 });
 

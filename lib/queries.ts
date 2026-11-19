@@ -119,7 +119,7 @@ export function useWorkspace() {
 }
 
 // ---- leave (read-only here; requests are still made on the legacy leave form) ----
-export type LeaveBalances = { signedIn: boolean; ledger?: { type: "cl" | "sl" | "el" | "fl"; entitled: number; used: number; pending: number; remaining: number }[]; source?: "zoho-snapshot" | "app-only"; asOf?: string | null };
+export type LeaveBalances = { signedIn: boolean; applyUrl?: string; ledger?: { type: "cl" | "sl" | "el" | "fl"; entitled: number; used: number; pending: number; remaining: number }[]; source?: "zoho-snapshot" | "app-only"; asOf?: string | null };
 export type MyLeaveRequest = { id: string; type: "leave" | "wfh"; leaveType: string | null; halfDay: boolean; days: number; startDate: string; endDate: string; status: "pending" | "approved" | "rejected" | "cancelled" };
 
 export function useLeaveBalances() {
@@ -269,7 +269,6 @@ export type Reading = {
   shelf: { id: string; title: string; author: string; read: number; want: number; mine: "want" | "reading" | "done" | null }[];
   finishedThisYear: number;
 };
-export const useReading = () => useQuery({ queryKey: ["reading"], queryFn: () => fetchJSON<Reading>("/api/reading") });
 
 export type Account = { email: string; name: string; role: "admin" | "member"; birthday: string | null; showBirthday: boolean; officeDays: number[]; sayHi: boolean };
 export const useAccount = () => useQuery({ queryKey: ["account"], queryFn: () => fetchJSON<Account>("/api/account") });

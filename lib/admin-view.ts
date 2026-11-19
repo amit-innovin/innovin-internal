@@ -76,20 +76,24 @@ export type PersonMonth = Awaited<ReturnType<typeof personMonth>>;
 export async function teamMonth(month: string, today = todayIST()) {
   const { first, last } = monthBounds(month);
   const closed = await closedMap(first, last);
-  const [employees, away] = await Promise.all([store.listEmployees(), store.listAway(1000)]);
+  const employees = await store.listEmployees();
   const days: { date: string; closed: boolean; future: boolean }[] = [];
   for (let d = 1; d <= Number(last.slice(8)); d++) {
     const date = `${month}-${String(d).padStart(2, "0")}`;
     const isClosed = closed.has(date);
     if (isClosed || isWorkingDay(date)) days.push({ date, closed: isClosed, future: date > today });
   }
-  const rows = await Promise.all(employees.map((e) => store.listAttendanceRange(e.email, first, last)));
+  // Each person's own attendance and leave (all of it: a capped "newest N" list would drop old months).
+  const [rows, aways] = await Promise.all([
+    Promise.all(employees.map((e) => store.listAttendanceRange(e.email, first, last))),
+    Promise.all(employees.map((e) => store.listAwayByEmail(e.email, 2147483647))),
+  ]);
   const people = employees.map((e, i) => {
     const marks: Record<string, "office" | "leave"> = {};
     for (const { date, closed: shut, future } of days) {
       if (shut || future) continue;
       if (dayMode(rows[i].find((r) => r.date === date)) === "office") marks[date] = "office";
-      else if (onLeave(away, e.email, date)) marks[date] = "leave";
+      else if (onLeave(aways[i], e.email, date)) marks[date] = "leave";
     }
     return { email: e.email, name: e.name || e.email.split("@")[0], role: e.role, exempt: e.officeExempt ?? false, left: !!e.leftOn, marks };
   });

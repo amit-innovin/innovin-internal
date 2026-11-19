@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       const invite = inviteRows.get(e.id);
       return {
         ...e, canManage: !e.cancelledAt && Date.parse(e.startsAt)>Date.now() && (admin || !!user && createdBy===user.email), mine: myIds.has(e.id),
-        inCalendar: !!invite && mayExist(invite),
+        inCalendar: invite?.state === "sent",
         ...(admin ? { going: counts[e.id] ?? 0, invite: invite ? (invite.state === "failed" && mayExist(invite) ? "stale" : invite.state) : null } : {}),
       };
     }),
@@ -164,10 +164,12 @@ async function manageEvent(req: NextRequest, body: Record<string,unknown>, cance
   const patch={title,category,startsAt,body:cancel?row.body:str(body.body).trim().slice(0,500),location:cancel?row.location:str(body.location).trim().slice(0,80),...(cancel?{cancelledAt:updatedAt}:{})};
   const changed=await store.updateEvent(row.id,expected,patch,updatedAt);
   if(!changed)return NextResponse.json({error:"This event changed in another tab. Reload before editing."},{status:409});
-  await (cancel ? removeInvite(row.id, true) : updateInvite(changed)).catch(() => {});
+  // The Google invite follows; say so when it couldn't (Send again on Publish finishes it).
+  const invited = await store.getEventInvite(row.id);
+  const followed = !invited ? null : cancel ? await removeInvite(row.id, true).catch(() => false) : (await updateInvite(changed).catch(() => null))?.state === "sent";
   const attendees=await store.listRsvps(row.id);
   await Promise.all([...new Set(attendees.flatMap(r=>r.email?[r.email]:[]))].map(email=>sendPush({title:cancel?"An event was cancelled":"An event was updated",body:"Open the app for the latest details.",href:eventHref(row.id),tag:`event-${row.id}`},email).catch(()=>{})));
-  return NextResponse.json({ok:true,event:changed});
+  return NextResponse.json({ok:true,event:changed,invite:followed===null?null:followed?"sent":"stale"});
 }
 export async function DELETE(req: NextRequest) {
   const limited=enforce([["writeIp",clientIp(req)]]);if(limited)return limited;

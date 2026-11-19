@@ -229,7 +229,11 @@ The owner wants the app to help people stay fit at work, not just track attendan
 
 ## Amendments (owner, 2026-11-10)
 
-The design canvas prototype is the visual and interaction reference: https://claude.ai/artifact/DEsTmRtTRB5vP2G5ugddyE (board "Full app prototype"; Lappy poses on "Lappy mascot reference").
+**The design canvas is the source of truth for every screen:** https://claude.ai/artifact/DEsTmRtTRB5vP2G5ugddyE. A snapshot of its boards lives in `docs/design/canvas/` (snapshot taken 2026-11-10). Build each screen from its board. Don't build from the prose here. Where this spec and the canvas disagree, the canvas wins.
+- `D-Prototype.dc.html`: the full phone app, interactive. Internal screen ids: `home`, `board` (labelled **Feed**), `event`, `days`, `snacks`, `steps`, `read`, `wifi`, `speak`, `settings` (labelled **Account**).
+- `D-Desktop.dc.html` / `D-Tablet.dc.html`: responsive Home with the sidebar and right rail.
+- `D-AdminPhone.dc.html` / `D-AdminDesktop.dc.html`: the admin area.
+- `D-Buddy.dc.html`: Lappy's poses and their animations.
 
 **Design system: Duo Pop, built in Phase 2.**
 - Tokens: primary #1cb0f6 (edge #1288c4, text-on #06283d), brand text #0a7fbf, hero navy #235390, gold #ffc800, lime #89e219 (edge #5fa80f), grape #ce82ff / #f6e3ff, pink #ffe3ea / #9b1b45, sky #ddf4ff / #84d8ff, ink #1f2a37, muted #4b5563, line #e5e7eb, soft #f3f4f6, white background. One palette only.
@@ -238,15 +242,31 @@ The design canvas prototype is the visual and interaction reference: https://cla
 - Mascot **Lappy** (laptop), one character with poses: idle wave, office tick, tea cheer, fully charged, jogging, reading. Motion respects reduced-motion.
 
 **Navigation (replaces the "Navigation" section above).**
-- Bottom bar (mobile) and top bar (desktop): **Home · Days · Snacks · Speak up · Settings**. No "More" page, no Events tab.
-- Home links to: Wi-Fi check (header icon), notifications (bell), Notice board ("Open board ›"), 10K steps and Reading list (two tiles). Sub-pages have a back arrow.
-- Admin is reached from Settings (admins only).
+- **Phone bottom bar: Home · Feed · Days · Snacks · Account.** There is no "More" page and no Events tab. The notice board is called **Feed** and has its own screen. It is not merged into Home.
+- **Account** holds profile and settings, Speak up, Wi-Fi check, Help and Sign out. Admins also see a navy "Admin" card there.
+- **Desktop (≥1100px):** a sidebar with Home, Feed, Days, Tea & snacks, 10K steps and Reading list. An account menu at the bottom holds Settings, Speak up, Wi-Fi check, Help and Sign out, plus an "Admin" item with sub-pages for admins. Home's centre column has the check-in strip, office days, who's around and a "From the feed" peek. The right rail has chai, coming up, the step league and reading now.
+- **Tablet:** an icon-only sidebar. The right rail folds into the main column.
+- Home links to notifications (the bell), the Feed ("From the feed" peek), and 10K steps and Reading list (two tiles). Sub-pages have a back arrow. Every destination has exactly one entry point.
+- **Feed post types:** announcement, event (with an inline RSVP), poll, kudos, birthday, photo and note.
 
-**Home order:** greeting + Lappy line → "I'm in the office" (big) → "Working remote today" (slim) → tiles: 10K steps (rank this week, today's count) and Reading list (current book, %) → Notice board peek (pinned announcement, next event, today's birthday) → "Office days this month · N of 8" battery (8 bars) with "X more to hit your 8 by <last day>" → flat "Who's around" (in today, expected tomorrow). The word "battery" is not shown to users; "FULLY CHARGED!" is the 8/8 celebration.
+**Home order:** greeting + Lappy line → "I'm in the office" (big) → "Working remote today" (slim) → tiles: 10K steps (rank this week, today's count) and Reading list (current book, %) → "From the feed" peek → "Office days this month · N of 8" battery (8 bars) with "X more to hit your 8 by <last day>" → flat "Who's around" (in today, expected tomorrow). The word "battery" is never shown to users; "FULLY CHARGED!" is the 8/8 celebration.
+
+**Admin:** an admin is an employee first and uses the same app. Admin powers appear in two places:
+1. **In place on the Feed:** post an announcement, create or edit an event, remove a post.
+2. **One Admin area:** Overview, People & office days, Speak up inbox, Snack shelf and Wi-Fi reports.
+
+The desktop Overview is a real dashboard, built as in `D-AdminDesktop.dc.html`:
+- big-number tiles: in office, remote, on leave, not marked, chai cups
+- an office-days table: person, schedule, today, 8-bar progress, status, row actions
+- a stacked on-track / behind / done / exempt bar
+- search and Export CSV
+- a narrow right column: needs you, chai round, snacks to order
+
+There are **no leave approvals in the app.** Leave is approved in Zoho People by each person's approver.
 
 **Tea moves to the Snacks page**, renamed "Tea & snacks": a chai card on top (Lappy, today's count, "Count me in" / "You're in"), snack shelf below. The tea rules above are unchanged.
 
-**Events live on the Notice board** (an "Events" filter, inline "I'm in" RSVP, tap for details; back returns to the board). Event publishing/editing stays admin-only.
+**Events live on the Feed.** The Feed has an "Events" filter. Each event has an inline "I'm in" RSVP and opens its details on tap; back returns to the Feed. Only admins can publish or edit events.
 
 **10K steps becomes a league:** today's ring and logging on top; a "Step league" with Week/Today tabs, a top-3 podium (crown on 1st), a nudge ("Pass Ravi with N more steps"), and ranks 4+ as a list with the viewer highlighted. Steps stay manually logged in the PWA.
 
@@ -256,4 +276,4 @@ The design canvas prototype is the visual and interaction reference: https://cla
 - Team shelf: books with "N read it · M want to read", a "Want to read" toggle, and "Start" when between books.
 - "Recommend a book" adds to the shelf. Reading activity is visible to colleagues only as counts on the shelf, never as a per-person list.
 
-**Delivery plan (one PR each, stacked):** 1 Cut removed features · 2 Design system, shell and PWA · 3 Attendance core and Home · 4 Tea & snacks · 5 Notice board, events and celebrations · 6 Steps league, reading list, Wi-Fi, Speak up and Settings in the new design · 7 Wellness (water, breaks, team hydration, Friday recap; reminders triggered by a GitHub Actions schedule every 15 minutes).
+**Delivery plan (one PR each, stacked):** 1 Cut removed features · 2 Design system, shell and PWA · 3 Attendance core and Home · 4 Tea & snacks · 5 Feed (all post types, events, celebrations) and in-place admin powers · 6 Steps league, reading list, Wi-Fi, Speak up, Account and the Admin area (phone + desktop dashboard) in the new design · 7 Wellness (water, breaks, team hydration, Friday recap; reminders triggered by a GitHub Actions schedule every 15 minutes).

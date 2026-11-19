@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Help</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#006493}a:hover{color:#004B6F}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:3px solid #006493;outline-offset:-3px}
+.bm{font-size:15px;line-height:22px;color:#41474D}
+.q{width:100%;min-height:64px;border:0;background:transparent;display:flex;align-items:center;gap:12px;padding:12px 16px;box-sizing:border-box;text-align:left;color:#181C20;font-size:16px;font-weight:600;line-height:22px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; overflow-y: auto; box-sizing: border-box; background: #F7F9FF; color: #181C20; font-family: Figtree, system-ui, sans-serif; font-size: 15px; line-height: 22px; padding: 8px 18px 32px; display: flex; flex-direction: column; gap: 16px">
+<header style="display: flex; align-items: center; gap: 4px; padding: 8px 0 0">
+<a href="#" aria-label="Back to account" style="flex: none; width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; color: #181C20"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg></a>
+<h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.01em">Help</h1>
+</header>
+
+<section aria-label="Questions" style="background: #FFFFFF; border-radius: 24px; overflow: hidden">
+<sc-for list="{{ items }}" as="it" hint-placeholder-count="10"><div style="border-top: {{ it.line }}">
+<h2 style="margin: 0"><button class="q" aria-expanded="{{ it.expanded }}" aria-controls="{{ it.panel }}" onClick="{{ it.toggle }}"><span style="flex: 1">{{ it.q }}</span><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; transform: {{ it.turn }}; transition: transform .2s ease"><path d="m6 9 6 6 6-6"></path></svg></button></h2>
+<sc-if value="{{ it.open }}" hint-placeholder-val="{{ false }}"><p id="{{ it.panel }}" class="bm" style="margin: 0; padding: 0 16px 16px">{{ it.a }}</p></sc-if>
+</div></sc-for>
+</section>
+
+<p class="bm" style="margin: 0 4px">Something else? Ask an admin, or send it through Speak up.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { open: 0 };
+  }
+  renderVals() {
+    const faq = [
+      ['How do I check in?', 'Tap Check in on Home when you get to the office. Your phone checks you’re near the office; the app doesn’t keep a map of where you’ve been.'],
+      ['What are the 8 office days?', 'Each month everyone aims for 8 days in the office. Pick your usual days on Days, and tap a date to add or drop a single day. Leave and days the office is closed don’t count against you.'],
+      ['How do I apply for leave?', 'In Zoho People, where your approver decides. On Days, tap a date and choose Apply for leave to open it. Your balances show on Days.'],
+      ['Is Speak up really anonymous?', 'Yes. Admins see the topic and your message. They don’t see your name, email or device, and the date shows only the day. Replies show under My reports, on the device you sent it from.'],
+      ['Who sees what I post in the Feed?', 'Everyone at innovin, with your name. Posts show straight away. If something feels wrong, use Report on the post; for anything anonymous, use Speak up.'],
+      ['How do tea and snacks work?', 'Once you’ve checked in, answer the tea rounds and pick a snack before the order goes in. Admins set the times. Nobody sees who picked what.'],
+      ['What is Say hi?', 'It’s off until you turn it on in Account › Notification settings. Then you can wave at people in the office today, or ask them for chai, lunch or a walk. Up to 3 a day, and only between people who have it on.'],
+      ['How do events work?', 'Admins post events in the Feed. Tap I’m going so they can plan. Events can also arrive as Google Calendar invites.'],
+      ['What does the Wi-Fi check do?', 'It measures download, upload and delay where you are. If it’s slow while you’re checked in, you can report where you’re sitting. Reports don’t carry your name.'],
+      ['What do notifications show?', 'Turn them on in Account › Notification settings. Updates about you only say “Open the app to check your updates”, and Speak up never sends one.']
+    ];
+    const open = this.state.open;
+    return {
+      items: faq.map((f, i) => ({
+        q: f[0], a: f[1], open: open === i, expanded: open === i ? 'true' : 'false', panel: 'help-' + i,
+        turn: open === i ? 'rotate(180deg)' : 'none', line: i === 0 ? '0' : '1px solid #DFE3E8',
+        toggle: () => this.setState({ open: this.state.open === i ? -1 : i })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -8,15 +8,18 @@ import { enforce } from "@/lib/guard";
 import { firstName } from "@/lib/format";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { store } from "@/lib/store";
+import { refreshGuests, retireCalendar } from "@/lib/calendar";
 import { todayIST } from "@/lib/time";
 import type { Role } from "@/lib/types";
 
 // The office directory: everyone who's signed in, plus who's physically/virtually
 // in today. Presence shows names and broad tags, with work emails only for directory
 // employees. Raw coordinates are never returned.
+// Admins only: who's in, since when and where. Members see colleagues in the office on Home,
+// as first names (from /api/days).
 export async function GET(req: NextRequest) {
-  if (!verifyUserSession(req.cookies.get(USER_COOKIE)?.value)) {
-    return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
+  if (!verifyUserSession(req.cookies.get(USER_COOKIE)?.value) || !(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const [employees, dayRows] = await Promise.all([store.listEmployees(), store.listAttendance(todayIST())]);
   const byEmail = new Map(employees.map((e) => [e.email, e]));
@@ -55,11 +58,39 @@ export async function PATCH(req: NextRequest) {
   const target = await store.getEmployee(email);
   if (!target) return NextResponse.json({ error: "Person not found" }, { status: 404 });
 
+  // Birthdays are entered by admins: day and month only, and whether to show it in the Feed.
+  if (body?.birthday !== undefined) {
+    const birthday = body.birthday === null ? null : str(body.birthday);
+    const valid = birthday === null || (/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(birthday) && new Date(`2024-${birthday}T00:00:00Z`).toISOString().slice(5, 10) === birthday);
+    if (!valid || typeof body.showBirthday !== "boolean") return badRequest("Give the birthday as day and month");
+    await store.setBirthday(email, birthday, body.showBirthday);
+    return NextResponse.json({ ok: true });
+  }
+
+  // Marked as left (or back): no more invites, taken off upcoming ones, and an admin's Google
+  // Calendar connection is handed over and revoked.
+  if (body?.left !== undefined) {
+    if (typeof body.left !== "boolean") return badRequest("Say whether they've left");
+    if (body.left && adminEmails().includes(email)) return NextResponse.json({ error: "Set in ADMIN_EMAILS — change it there" }, { status: 403 });
+    if (email === (await currentActor())?.email.toLowerCase()) return NextResponse.json({ error: "You can't mark yourself as left" }, { status: 403 });
+    await store.setLeftOn(email, body.left ? todayIST() : null);
+    if (body.left) await retireCalendar(email).catch(() => {});
+    await refreshGuests().catch(() => {});
+    return NextResponse.json({ ok: true });
+  }
+
   // Days hit in the pre-app spreadsheet — an admin copies the Total Days column over.
   if (body?.stepsOffset !== undefined) {
     const days = Number(body.stepsOffset);
     if (!Number.isInteger(days) || days < 0 || days > 10_000) return badRequest("Enter whole days");
     await store.setStepsOffset(email, days);
+    return NextResponse.json({ ok: true });
+  }
+
+  // No 8-office-day target for this person (e.g. fully remote).
+  if (body?.officeExempt !== undefined) {
+    if (typeof body.officeExempt !== "boolean") return badRequest("Say whether they're exempt");
+    await store.setOfficeExempt(email, body.officeExempt);
     return NextResponse.json({ ok: true });
   }
 
@@ -77,5 +108,7 @@ export async function PATCH(req: NextRequest) {
   if (email === (await currentActor())?.email.toLowerCase()) return NextResponse.json({ error: "You can't change your own role" }, { status: 403 });
 
   await store.setRole(email, role);
+  // No longer an admin: their invites move to another admin and their Google grant is revoked.
+  if (role === "member") await retireCalendar(email).catch(() => {});
   return NextResponse.json({ ok: true });
 }

@@ -1,4 +1,4 @@
-import { attendanceHref } from "@/lib/journey";
+import { leaveHref } from "@/lib/journey";
 import { validDate } from "@/lib/time";
 import { NextRequest, NextResponse } from "next/server";
 import { currentActor, isAdmin } from "@/lib/admin";
@@ -6,6 +6,7 @@ import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { allowedEmailDomains } from "@/lib/config";
 import { enforce } from "@/lib/guard";
 import { fmtShortDate } from "@/lib/format";
+import { closedMap } from "@/lib/days";
 import { isLeaveType, leaveCost, needsApproval, nonWorkingReason } from "@/lib/leave";
 import { todayIST } from "@/lib/time";
 import { sendPush } from "@/lib/push";
@@ -72,9 +73,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Working days only: Sundays, 2nd/4th Saturdays and declared holidays cost nothing.
-  const days = leaveCost(startDate, endDate, halfDay);
+  const closed = await closedMap(startDate, endDate);
+  const days = leaveCost(startDate, endDate, halfDay, closed);
   if (days === 0) {
-    const reasonWhy = nonWorkingReason(startDate);
+    const reasonWhy = nonWorkingReason(startDate, closed);
     return badRequest(reasonWhy ? `${fmtShortDate(`${startDate}T00:00:00`)} is a non-working day (${reasonWhy})` : "That range has no working days");
   }
 
@@ -101,7 +103,7 @@ export async function POST(req: NextRequest) {
 
 const notify = (row: { id: string; type: AwayType; startDate: string; email: string }, title: string, email?: string) =>
   sendPush(
-    { title, body: fmtShortDate(`${row.startDate}T00:00:00`), href: attendanceHref("leave",undefined,row.id), tag: `away-${row.id}` },
+    { title, body: fmtShortDate(`${row.startDate}T00:00:00`), href: leaveHref(), tag: `away-${row.id}` },
     email ?? row.email,
   ).catch(() => {});
 
@@ -145,7 +147,7 @@ export async function PATCH(req: NextRequest) {
       // An admin approved this and now it's undone — tell the admins so nobody plans around it.
       if (row.status === "approved") {
         const who = session?.name ?? row.email;
-        const admins = (await store.listEmployees()).filter((e) => e.role === "admin");
+        const admins = (await store.listEmployees()).filter((e) => e.role === "admin" && !e.leftOn);
         await Promise.all(admins.map((a) => notify(row, `${who} cancelled their approved ${what.toLowerCase()}`, a.email)));
       }
     } else {

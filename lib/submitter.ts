@@ -9,6 +9,11 @@ const refFor = (deviceId: string) => crypto.createHash("sha256").update(deviceId
 // "pantry-account:" prefix is historical: changing it would orphan existing RSVPs.
 export const accountRef = (email: string) => refFor(`pantry-account:${email.toLowerCase()}`);
 
+// For anonymous flags (Feed reports, today's snack pick): an HMAC with the server's secret, so the
+// stored ref can't be matched to a person by hashing each of the office's emails.
+export const keyedRef = (scope: string, email: string) =>
+  crypto.createHmac("sha256", process.env.SESSION_SECRET || "dev-only-secret").update(`${scope}:${email.toLowerCase()}`).digest("hex").slice(0, 32);
+
 const strip = <T extends { submitterRef: string }>({ submitterRef: _r, ...rest }: T) => rest;
 
 export function submitterIdentity(req: NextRequest) {

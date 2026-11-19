@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin closed days</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F9FF}
+a{color:#006493}a:hover{color:#004B6F}
+button{font-family:inherit;cursor:pointer}
+button:disabled{cursor:default}
+input{font-family:inherit}
+.tm{font-size:16px;font-weight:600;line-height:24px;margin:0}
+.bm{font-size:14px;line-height:20px;color:#41474D}
+.sm{font-size:13px;line-height:18px;color:#41474D}
+.card{background:#FFFFFF;border-radius:20px;padding:20px;box-sizing:border-box}
+.bf{height:44px;padding:0 20px;border-radius:22px;border:0;background:#006493;color:#FFFFFF;font-size:14px;font-weight:600}
+.bo{height:36px;padding:0 16px;border-radius:18px;border:1px solid #71787E;background:transparent;color:#006493;font-size:14px;font-weight:600}
+.field{height:44px;border-radius:12px;border:1px solid #71787E;padding:0 14px;font-size:15px;background:#FFFFFF;color:#181C20;box-sizing:border-box;width:100%;min-width:0}
+.lbl{font-size:13px;font-weight:600;line-height:18px;color:#181C20}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F7F9FF; color: #181C20; font-family: Figtree, system-ui, sans-serif; font-size: 15px; line-height: 22px">
+<header style="background: #FFFFFF; border-bottom: 1px solid #DFE3E8">
+<div style="max-width: 1040px; margin: 0 auto; padding: 14px 16px; box-sizing: border-box; display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+<span style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: #006493">innovin</span>
+<nav aria-label="Breadcrumb"><ol style="list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; font-size: 14px; color: #41474D"><li>Admin</li><li aria-hidden="true">›</li><li aria-current="page" style="color: #181C20; font-weight: 600">Closed days</li></ol></nav>
+<span style="flex: 1"></span>
+<span class="sm">Signed in as Anita · Admin</span>
+</div>
+</header>
+<main style="max-width: 1040px; margin: 0 auto; padding: 28px 16px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 6px; max-width: 720px">
+<h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.01em">Closed days</h1>
+<p class="bm" style="margin: 0; font-size: 15px; line-height: 22px">Dates the office is closed. They're greyed out on everyone's Days calendar, can't be planned, and nobody is expected in. They don't change the monthly target.</p>
+</div>
+
+<section aria-labelledby="add-h" class="card" style="display: flex; flex-direction: column; gap: 14px">
+<h2 id="add-h" class="tm">Add a closed day</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end">
+<div style="flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px"><label for="cd-date" class="lbl">Date</label><input id="cd-date" class="field" type="date" min="2026-11-16" value="{{ dateVal }}" onChange="{{ onDate }}"></div>
+<div style="flex: 3 1 260px; display: flex; flex-direction: column; gap: 6px"><label for="cd-reason" class="lbl">Reason</label><input id="cd-reason" class="field" placeholder="Building maintenance" value="{{ reasonVal }}" onChange="{{ onReason }}"></div>
+<button class="bf" style="flex: none; opacity: {{ addOp }}" disabled="{{ cantAdd }}" onClick="{{ add }}">Mark closed</button>
+</div>
+<sc-if value="{{ isDup }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">That date is already marked closed.</p></sc-if>
+<sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><p role="status" class="bm" style="margin: 0; color: #0B3D1F">{{ msg }}</p></sc-if>
+</section>
+
+<section aria-labelledby="list-h" class="card" style="padding: 0; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 16px 20px 8px"><h2 id="list-h" class="tm">Upcoming closed days</h2><span class="sm">{{ countLine }}</span></div>
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="1"><li style="display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 20px; box-sizing: border-box; border-top: 1px solid #DFE3E8; flex-wrap: wrap"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #E5E8EE; border: 1px dashed #9AA0A6; box-sizing: border-box; display: grid; place-items: center; font-size: 14px; font-weight: 600; color: #41474D">{{ r.dayNum }}</span><div style="flex: 1; min-width: 180px"><div style="font-weight: 600">{{ r.dateLabel }} — {{ r.reason }}</div><div class="sm">added by {{ r.by }}</div></div><button class="bo" aria-label="Remove {{ r.dateLabel }}" onClick="{{ r.remove }}">Remove</button></li></sc-for>
+</ul>
+<sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 4px 20px 20px">No closed days coming up.</p></sc-if>
+</section>
+
+<p class="sm" style="margin: 0 4px">Public holidays come from the company calendar and aren't listed here.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { days: [{ iso: '2026-11-27', reason: 'Building maintenance', by: 'Anita' }], date: '', reason: '', msg: '' };
+  }
+  renderVals() {
+    const s = this.state;
+    const dn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const mn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const label = (iso) => { const p = iso.split('-').map(Number); const dt = new Date(p[0], p[1] - 1, p[2]); return dn[dt.getDay()] + ' ' + p[2] + ' ' + mn[p[1] - 1] + ' ' + p[0]; };
+    const days = s.days.slice().sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
+    const reason = (s.reason || '').trim();
+    const isDup = !!s.date && days.some((d) => d.iso === s.date);
+    const cantAdd = !s.date || !reason || isDup;
+    return {
+      dateVal: s.date, reasonVal: s.reason,
+      onDate: (e) => this.setState({ date: e.target.value, msg: '' }),
+      onReason: (e) => this.setState({ reason: e.target.value, msg: '' }),
+      isDup, cantAdd, addOp: cantAdd ? 0.4 : 1,
+      add: () => { if (cantAdd) return; this.setState({ days: s.days.concat([{ iso: s.date, reason, by: 'Anita' }]), date: '', reason: '', msg: label(s.date) + ' is now closed on everyone’s calendar.' }); },
+      hasMsg: !!s.msg, msg: s.msg,
+      countLine: days.length + (days.length === 1 ? ' day' : ' days'),
+      isEmpty: days.length === 0,
+      rows: days.map((d) => ({ dateLabel: label(d.iso), dayNum: String(Number(d.iso.split('-')[2])), reason: d.reason, by: d.by, remove: () => this.setState({ days: this.state.days.filter((x) => x.iso !== d.iso), msg: label(d.iso) + ' removed. It can be planned again.' }) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

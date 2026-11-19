@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>innovin admin — phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F9FF}
+a{color:#006493}a:hover{color:#004B6F}
+button{font-family:inherit;cursor:pointer}
+button:disabled{cursor:default}
+button{transition:transform .12s ease, background-color .2s ease, color .2s ease, border-color .2s ease}
+button:active:not(:disabled){transform:scale(.97)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #006493;outline-offset:2px}
+input,select,textarea{font-family:inherit}
+.tm{font-size:16px;font-weight:600;line-height:24px;margin:0}
+.bm{font-size:14px;line-height:20px;color:#41474D}
+.sm{font-size:13px;line-height:18px;color:#41474D}
+.h1{margin:0;font-size:28px;line-height:36px;font-weight:600;letter-spacing:-0.01em}
+.card{background:#FFFFFF;border-radius:24px;padding:20px;box-sizing:border-box}
+.av{flex:none;width:36px;height:36px;border-radius:18px;display:grid;place-items:center;font-size:12px;font-weight:600;color:#181C20}
+.li{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px;box-sizing:border-box;width:100%;border:0;background:transparent;text-align:left;color:#181C20;font-size:15px}
+.div{height:1px;background:#DFE3E8;margin:0 16px}
+.bf{height:40px;padding:0 20px;border-radius:20px;border:0;background:#006493;color:#FFFFFF;font-size:14px;font-weight:600}
+.bt{height:40px;padding:0 20px;border-radius:20px;border:0;background:#D3E5F5;color:#0C1D29;font-size:14px;font-weight:600}
+.bx{height:40px;padding:0 12px;border-radius:20px;border:0;background:transparent;color:#006493;font-size:14px;font-weight:600}
+.bo{height:40px;padding:0 18px;border-radius:20px;border:1px solid #71787E;background:transparent;color:#006493;font-size:14px;font-weight:600}
+.bd{height:40px;padding:0 18px;border-radius:20px;border:0;background:#BA1A1A;color:#FFFFFF;font-size:14px;font-weight:600}
+.side{display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;border-radius:24px;border:0;width:100%;text-align:left;font-size:15px}
+.field{height:44px;border-radius:12px;border:1px solid #71787E;padding:0 14px;font-size:15px;background:#FFFFFF;color:#181C20;box-sizing:border-box;width:100%;min-width:0}
+.lbl{font-size:13px;font-weight:600;line-height:18px;color:#181C20}
+.fcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.chip{height:32px;padding:0 12px;border-radius:8px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.tag{height:24px;padding:0 10px;border-radius:8px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap}
+.badge{min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:10px;background:#BA1A1A;color:#FFFFFF;font-size:12px;font-weight:700;line-height:20px;text-align:center}
+.swb{flex:none;width:52px;height:32px;border-radius:16px;padding:0;position:relative;box-sizing:border-box}
+.swt{position:absolute;top:50%;border-radius:12px;transform:translateY(-50%);transition:left .15s ease}
+.srow{display:flex;align-items:center;gap:16px;min-height:64px;padding:8px 16px;box-sizing:border-box}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cols{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.main{flex:999 1 480px;min-width:0;display:flex;flex-direction:column;gap:16px}
+.rail{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:16px}
+.half{flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:16px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid #DFE3E8;overflow-x:auto}
+.tab{flex:none;height:48px;padding:0 16px;border:0;background:transparent;font-size:14px;font-weight:600;border-radius:0}
+.app{min-height:100vh;background:#F7F9FF;color:#181C20;font-family:Figtree,system-ui,sans-serif;font-size:15px;line-height:22px;display:flex;align-items:stretch}
+.dnav{flex:0 0 256px;box-sizing:border-box;padding:24px 12px;background:#EBEEF4;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.col{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.content{box-sizing:border-box;padding:28px 32px 48px;width:100%;max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.mtop{display:none;position:sticky;top:0;z-index:10;align-items:center;gap:8px;height:64px;padding:0 8px 0 16px;background:#EBEEF4;box-sizing:border-box}
+.mnav{display:none;position:fixed;left:0;right:0;bottom:0;z-index:10;height:80px;background:#EBEEF4;padding:12px 4px 16px;box-sizing:border-box;gap:0}
+.snack{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:50;width:calc(100% - 32px);max-width:560px;box-sizing:border-box;background:#2D3135;color:#EFF1F5;border-radius:8px;padding:6px 8px 6px 16px;display:flex;align-items:center;gap:8px;font-size:14px;line-height:20px;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.ppanel{flex:0 1 460px;min-width:340px;box-sizing:border-box;background:#FFFFFF;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:20px;position:sticky;top:20px}
+.pphint{flex:0 1 460px;min-width:300px}
+.calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;text-align:center}
+.cell{width:40px;height:40px;border-radius:50%;box-sizing:border-box;display:grid;place-items:center;font-size:14px;font-weight:600;padding:0;outline-offset:2px}
+.wrow{display:grid;grid-template-columns:120px minmax(0,1.4fr) 130px minmax(0,1.6fr);gap:12px;align-items:center;padding:12px 20px;box-sizing:border-box}
+.whead{font-size:12px;font-weight:600;color:#41474D;padding-top:8px;padding-bottom:8px}
+@media (max-width: 760px){
+.dnav{display:none}.mtop{display:flex}.mnav{display:flex}
+.content{padding:16px 16px 112px;gap:16px}
+.h1{font-size:24px;line-height:32px}
+.snack{bottom:96px}
+.wrow{grid-template-columns:1fr auto;gap:2px 12px;padding:12px 16px}.whead{display:none}.wnote{grid-column:1 / -1}.warea{grid-column:1 / -1;order:-1;font-weight:600}
+}
+@media (max-width: 900px){
+.ppanel{position:fixed;inset:0;z-index:40;border-radius:0;min-width:0;max-width:none;overflow-y:auto;padding:16px 16px 32px}
+.pphint{display:none}
+}
+.phone .dnav{display:none}.phone .mtop{display:flex}.phone .mnav{display:flex}
+.phone .content{padding:16px 16px 112px;gap:16px}
+.phone .h1{font-size:24px;line-height:32px}
+.phone .snack{bottom:96px}
+.phone .wrow{grid-template-columns:1fr auto;gap:2px 12px;padding:12px 16px}.phone .whead{display:none}.phone .wnote{grid-column:1 / -1}.phone .warea{grid-column:1 / -1;order:-1;font-weight:600}
+.phone .ppanel{position:fixed;inset:0;z-index:40;border-radius:0;min-width:0;max-width:none;overflow-y:auto;padding:16px 16px 32px}
+.phone .pphint{display:none}
+@keyframes sheetUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:0s!important;transition:none!important}}
+</style>
+</helmet>
+<div class="app phone">
+
+<!-- Desktop sidebar: the admin app's own navigation -->
+<nav class="dnav" aria-label="Admin">
+<div style="padding: 4px 16px 20px; display: flex; align-items: center; gap: 8px"><span style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: #006493">innovin</span><span style="height: 24px; padding: 0 10px; border-radius: 12px; background: #006493; color: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center">admin</span></div>
+<sc-for list="{{ sideItems }}" as="it" hint-placeholder-count="6">
+<button class="side" onClick="{{ it.go }}" aria-current="{{ it.cur }}" style="background: {{ it.bg }}; color: {{ it.color }}; font-weight: {{ it.weight }}"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.icon }}"></path></svg><span style="flex: 1">{{ it.label }}<span class="vh">{{ it.badgeSr }}</span></span><sc-if value="{{ it.hasBadge }}" hint-placeholder-val="{{ false }}"><span class="badge" aria-hidden="true">{{ it.badge }}</span></sc-if></button>
+</sc-for>
+<div style="flex: 1; min-height: 24px"></div>
+<button class="side" onClick="{{ openMember }}" style="background: transparent; color: #006493; font-weight: 600"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg><span style="flex: 1">Open the member app</span></button>
+<div style="display: flex; align-items: center; gap: 12px; padding: 8px 16px"><span aria-hidden="true" class="av" style="background: #CAE6FF; color: #001E30">AR</span><span><span style="display: block; font-weight: 600">Anita</span><span class="sm">Admin</span></span></div>
+</nav>
+
+<div class="col">
+<!-- Phone top bar -->
+<header class="mtop">
+<span style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: #006493">innovin</span><span style="height: 24px; padding: 0 10px; border-radius: 12px; background: #006493; color: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center">admin</span>
+<span style="flex: 1"></span>
+<button class="bx" onClick="{{ openMember }}" style="display: inline-flex; align-items: center; gap: 6px; height: 48px"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>Member app</button>
+</header>
+
+<main class="content">
+<header style="display: flex; flex-direction: column; gap: 2px"><h1 class="h1">{{ head.title }}</h1><sc-if value="{{ head.hasSub }}" hint-placeholder-val="{{ true }}"><span class="bm">{{ head.sub }}</span></sc-if></header>
+
+<!-- ============ TODAY ============ -->
+<sc-if value="{{ v.today }}" hint-placeholder-val="{{ true }}">
+<section aria-labelledby="need-h" class="card" style="padding: 6px 0; max-width: 760px; width: 100%">
+<h2 id="need-h" class="tm" style="padding: 12px 16px 4px">Needs you</h2>
+<sc-if value="{{ ov.hasNeeds }}" hint-placeholder-val="{{ true }}"><ul style="list-style: none; margin: 0; padding: 0"><sc-for list="{{ ov.needs }}" as="n" hint-placeholder-count="5"><li style="border-top: {{ n.line }}"><button class="li" onClick="{{ n.go }}" style="min-height: 60px"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: {{ n.bg }}; color: {{ n.fg }}; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg></span><span style="flex: 1; min-width: 0; font-weight: 600">{{ n.title }}</span><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M9 6l6 6-6 6"></path></svg></button></li></sc-for></ul></sc-if>
+<sc-if value="{{ ov.noNeeds }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 8px 16px 14px">Nothing needs you right now.</p></sc-if>
+</section>
+<section aria-label="Today in the office" class="card" style="max-width: 760px; width: 100%; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 10px"><sc-for list="{{ ov.who }}" as="w" hint-placeholder-count="2"><div style="display: flex; gap: 6px 12px; align-items: baseline; flex-wrap: wrap"><span class="sm" style="flex: none; width: 96px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #181C20"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 5px; background: {{ w.dot }}"></span>{{ w.label }}</span><span style="flex: 1; min-width: 180px">{{ w.names }}</span></div></sc-for></div>
+<div style="border-top: 1px solid #DFE3E8; padding-top: 12px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap"><span style="flex: 1; min-width: 180px; font-weight: 600">{{ ov.tea.line }}</span><button class="bx" aria-expanded="{{ ov.tea.expanded }}" aria-controls="tea-names" onClick="{{ ov.tea.toggle }}">{{ ov.tea.btn }}</button></div>
+<sc-if value="{{ ov.tea.open }}" hint-placeholder-val="{{ false }}"><p id="tea-names" class="bm" style="margin: 0; color: #181C20">{{ ov.tea.names }}</p></sc-if>
+<span class="sm">{{ ov.tea.next }}</span>
+</div>
+</section>
+</sc-if>
+
+<!-- ============ PEOPLE ============ -->
+<sc-if value="{{ v.people }}" hint-placeholder-val="{{ false }}">
+<div class="cols">
+<div class="main">
+<section aria-label="Find people" class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="position: relative"><label for="p-q" class="vh">Search people</label><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 14px; top: 12px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><input id="p-q" type="search" class="field" style="padding-left: 44px; border-radius: 22px" placeholder="Search by name" value="{{ pp.q }}" onChange="{{ pp.onQ }}"></div>
+<div role="group" aria-label="Filter people" style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{ pp.chips }}" as="c" hint-placeholder-count="4"><button class="chip" aria-pressed="{{ c.pressed }}" onClick="{{ c.pick }}" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}"><sc-if value="{{ c.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>{{ c.label }}</button></sc-for></div>
+</section>
+<section aria-labelledby="grid-h" class="card" style="padding: 0; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 4px; padding: 8px 8px 4px 16px"><h2 id="grid-h" class="tm" style="flex: 1">Office days · {{ pp.month }}</h2><button aria-label="Previous month" onClick="{{ pp.prev }}" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; color: #41474D; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button><button aria-label="Next month" onClick="{{ pp.next }}" disabled="{{ pp.noNext }}" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; color: #41474D; opacity: {{ pp.nextOp }}; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></button></div>
+<div style="overflow-x: auto">
+<table style="border-collapse: collapse; width: max-content; min-width: 100%">
+<thead><tr><th scope="col" style="position: sticky; left: 0; z-index: 1; background: #FFFFFF; text-align: left; padding: 4px 12px 6px 16px"><span class="vh">Person</span></th><sc-for list="{{ pp.cols }}" as="c" hint-placeholder-count="21"><th scope="col" style="width: 30px; padding: 4px 0 6px; text-align: center; font-size: 12px; line-height: 16px; font-weight: 600; color: {{ c.color }}"><span style="display: block; font-size: 11px; font-weight: 500">{{ c.dow }}</span>{{ c.n }}</th></sc-for></tr></thead>
+<tbody><sc-for list="{{ pp.rows }}" as="r" hint-placeholder-count="8"><tr style="border-top: 1px solid #DFE3E8; background: {{ r.bg }}"><th scope="row" style="position: sticky; left: 0; z-index: 1; background: {{ r.stickyBg }}; padding: 0; text-align: left"><button onClick="{{ r.pick }}" aria-current="{{ r.cur }}" style="border: 0; background: transparent; min-height: 44px; padding: 8px 12px 8px 16px; font-size: 14px; font-weight: 600; color: #181C20; text-align: left; white-space: nowrap">{{ r.name }}</button></th><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="21"><td style="text-align: center; padding: 0"><span aria-hidden="true" style="display: inline-block; width: 12px; height: 12px; border-radius: 6px; box-sizing: border-box; background: {{ c.bg }}; border: {{ c.border }}"></span><span class="vh">{{ c.aria }}</span></td></sc-for></tr></sc-for></tbody>
+</table>
+</div>
+<sc-if value="{{ pp.empty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 16px">No one matches. Try another name or filter.</p></sc-if>
+<div class="sm" style="display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 16px 14px"><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; background: #006493"></span>In office</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; background: #EBDCFF; border: 1px solid #7D5BA6; box-sizing: border-box"></span>Leave</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; border: 1px dashed #71787E; box-sizing: border-box"></span>Closed</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; border: 1px solid #C1C7CE; box-sizing: border-box"></span>Not in</span></div>
+</section>
+</div>
+
+<sc-if value="{{ pp.has }}" hint-placeholder-val="{{ false }}"><aside class="ppanel" aria-labelledby="pp-h">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<span aria-hidden="true" class="av" style="width: 48px; height: 48px; border-radius: 24px; font-size: 15px; background: {{ panel.p.avBg }}">{{ panel.p.ini }}</span>
+<div style="flex: 1; min-width: 0"><h2 id="pp-h" style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">{{ panel.p.name }}</h2><span class="sm">{{ panel.p.roleLine }}</span></div>
+<button onClick="{{ panel.close }}" aria-label="Close {{ panel.p.name }}" style="flex: none; width: 48px; height: 48px; border-radius: 24px; border: 0; background: transparent; color: #41474D; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+
+<section aria-labelledby="cal-h" style="display: flex; flex-direction: column; gap: 10px">
+<h3 id="cal-h" class="tm">{{ panel.p.calTitle }}</h3>
+<div class="calg" aria-hidden="true"><span class="sm" style="font-weight: 600">Mon</span><span class="sm" style="font-weight: 600">Tue</span><span class="sm" style="font-weight: 600">Wed</span><span class="sm" style="font-weight: 600">Thu</span><span class="sm" style="font-weight: 600">Fri</span><span class="sm">Sat</span><span class="sm">Sun</span></div>
+<div class="calg">
+<sc-for list="{{ panel.cal }}" as="c" hint-placeholder-count="36"><div style="display: flex; justify-content: center"><sc-if value="{{ c.btn }}" hint-placeholder-val="{{ false }}"><button class="cell" aria-label="{{ c.aria }}" onClick="{{ c.pick }}" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}; outline: {{ c.outline }}">{{ c.n }}</button></sc-if><sc-if value="{{ c.span }}" hint-placeholder-val="{{ true }}"><span class="cell" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}; outline: {{ c.outline }}"><span aria-hidden="true">{{ c.n }}</span><span class="vh">{{ c.aria }}</span></span></sc-if></div></sc-for>
+</div>
+<div class="sm" style="display: flex; flex-wrap: wrap; gap: 6px 14px"><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; background: #006493"></span>In office</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; border: 2px solid #006493; box-sizing: border-box"></span>Planned</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; background: #EBDCFF; border: 1px solid #7D5BA6; box-sizing: border-box"></span>Leave (Zoho)</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; background: #E5E8EE; border: 1px dashed #71787E; box-sizing: border-box"></span>Closed</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 6px; border: 1px solid #C1C7CE; box-sizing: border-box"></span>Not in</span></div>
+<span class="sm">Click a past weekday to fix it.</span>
+</section>
+
+<section aria-labelledby="fix-h" style="display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #DFE3E8; padding-top: 18px">
+<h3 id="fix-h" class="tm">Fix a day</h3>
+<div class="fcol"><label for="fx-d" class="lbl">Date</label><input id="fx-d" type="date" class="field" min="2026-11-01" max="2026-11-17" value="{{ panel.fixDate }}" onChange="{{ panel.onFixDate }}"></div>
+<span id="fx-q" class="lbl">Where were they?</span>
+<div role="radiogroup" aria-labelledby="fx-q" style="display: flex; gap: 8px; flex-wrap: wrap">
+<button role="radio" aria-checked="{{ panel.fxIn.checked }}" onClick="{{ panel.fxIn.pick }}" style="flex: 1 1 140px; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 16px; border: {{ panel.fxIn.border }}; background: {{ panel.fxIn.bg }}; color: #181C20; font-size: 15px; text-align: left"><span aria-hidden="true" style="flex: none; width: 20px; height: 20px; border-radius: 10px; box-sizing: border-box; border: {{ panel.fxIn.ring }}; background: #FFFFFF"></span>In office</button>
+<button role="radio" aria-checked="{{ panel.fxOut.checked }}" onClick="{{ panel.fxOut.pick }}" style="flex: 1 1 140px; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 16px; border: {{ panel.fxOut.border }}; background: {{ panel.fxOut.bg }}; color: #181C20; font-size: 15px; text-align: left"><span aria-hidden="true" style="flex: none; width: 20px; height: 20px; border-radius: 10px; box-sizing: border-box; border: {{ panel.fxOut.ring }}; background: #FFFFFF"></span>Not in office</button>
+</div>
+<sc-if value="{{ panel.fixBad }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">{{ panel.fixBadMsg }}</p></sc-if>
+<div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ panel.fixOp }}" disabled="{{ panel.cantFix }}" onClick="{{ panel.saveFix }}">Save change</button><sc-if value="{{ panel.hasPMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ panel.pMsg }}</span></sc-if></div>
+<sc-if value="{{ panel.hasLog }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Change log</span><ul style="margin: 0; padding: 0 0 0 18px"><sc-for list="{{ panel.log }}" as="l" hint-placeholder-count="1"><li class="sm">{{ l.text }}</li></sc-for></ul></div></sc-if>
+</section>
+
+<section aria-label="Rules and access" style="border-top: 1px solid #DFE3E8; margin: 0 -20px">
+<div class="srow" style="padding: 8px 20px"><div style="flex: 1; min-width: 0"><span id="ex-l" style="display: block; font-weight: 600">Exempt from the 8 days</span></div><button class="swb" role="switch" aria-checked="{{ panel.exSw.aria }}" aria-labelledby="ex-l" onClick="{{ panel.toggleEx }}" style="border: {{ panel.exSw.border }}; background: {{ panel.exSw.track }}"><span class="swt" style="left: {{ panel.exSw.left }}; width: {{ panel.exSw.size }}; height: {{ panel.exSw.size }}; background: {{ panel.exSw.thumb }}"></span></button></div>
+<div class="div" style="margin: 0 20px"></div>
+<div class="srow" style="padding: 8px 20px"><div style="flex: 1; min-width: 0"><span id="ad-l" style="display: block; font-weight: 600">Admin</span><sc-if value="{{ panel.hasAdNote }}" hint-placeholder-val="{{ false }}"><span id="ad-d" class="sm">{{ panel.adNote }}</span></sc-if></div><button class="swb" role="switch" aria-checked="{{ panel.adSw.aria }}" aria-labelledby="ad-l" disabled="{{ panel.adDisabled }}" onClick="{{ panel.toggleAd }}" style="border: {{ panel.adSw.border }}; background: {{ panel.adSw.track }}; opacity: {{ panel.adSw.op }}"><span class="swt" style="left: {{ panel.adSw.left }}; width: {{ panel.adSw.size }}; height: {{ panel.adSw.size }}; background: {{ panel.adSw.thumb }}"></span></button></div>
+<div class="div" style="margin: 0 20px"></div>
+<div class="srow" style="padding: 8px 20px"><div style="flex: 1; min-width: 0"><span id="lf-l" style="display: block; font-weight: 600">Left the company</span><sc-if value="{{ panel.isLeft }}" hint-placeholder-val="{{ false }}"><span class="sm">No calendar invites</span></sc-if></div><button class="swb" role="switch" aria-checked="{{ panel.lfSw.aria }}" aria-labelledby="lf-l" disabled="{{ panel.adDisabled }}" onClick="{{ panel.toggleLf }}" style="border: {{ panel.lfSw.border }}; background: {{ panel.lfSw.track }}; opacity: {{ panel.lfSw.op }}"><span class="swt" style="left: {{ panel.lfSw.left }}; width: {{ panel.lfSw.size }}; height: {{ panel.lfSw.size }}; background: {{ panel.lfSw.thumb }}"></span></button></div>
+</section>
+
+<section aria-labelledby="bd-h" style="display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #DFE3E8; padding-top: 18px">
+<h3 id="bd-h" class="tm">Birthday</h3>
+<div style="display: flex; gap: 12px; flex-wrap: wrap">
+<div class="fcol" style="flex: 1 1 100px"><label for="bd-d" class="lbl">Day</label><select id="bd-d" class="field" onChange="{{ panel.onBdD }}"><option value="" selected="{{ panel.bdNoD }}">Not set</option><sc-for list="{{ panel.dayOpts }}" as="o" hint-placeholder-count="31"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for></select></div>
+<div class="fcol" style="flex: 2 1 160px"><label for="bd-m" class="lbl">Month</label><select id="bd-m" class="field" onChange="{{ panel.onBdM }}"><option value="" selected="{{ panel.bdNoM }}">Not set</option><sc-for list="{{ panel.monOpts }}" as="o" hint-placeholder-count="12"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for></select></div>
+</div>
+<div style="display: flex; align-items: center; gap: 16px"><span id="bd-s" style="flex: 1">Show on their birthday in the Feed</span><button class="swb" role="switch" aria-checked="{{ panel.bdSw.aria }}" aria-labelledby="bd-s" onClick="{{ panel.toggleBdShow }}" style="border: {{ panel.bdSw.border }}; background: {{ panel.bdSw.track }}"><span class="swt" style="left: {{ panel.bdSw.left }}; width: {{ panel.bdSw.size }}; height: {{ panel.bdSw.size }}; background: {{ panel.bdSw.thumb }}"></span></button></div>
+<sc-if value="{{ panel.bdBad }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">{{ panel.bdBadMsg }}</p></sc-if>
+<sc-if value="{{ panel.bdHalf }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Pick both a day and a month, or clear both.</p></sc-if>
+<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ panel.bdOp }}" disabled="{{ panel.cantBd }}" onClick="{{ panel.saveBd }}">Save birthday</button><sc-if value="{{ panel.canClear }}" hint-placeholder-val="{{ false }}"><button class="bx" onClick="{{ panel.clearBd }}">Clear</button></sc-if><sc-if value="{{ panel.hasBdMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ panel.bdMsg }}</span></sc-if></div>
+</section>
+</aside></sc-if>
+</div>
+</sc-if>
+
+<!-- ============ SPEAK UP ============ -->
+<sc-if value="{{ v.speak }}" hint-placeholder-val="{{ false }}">
+<div class="cols">
+<div class="main">
+<sc-if value="{{ sp.hasReported }}" hint-placeholder-val="{{ true }}"><section aria-labelledby="rp-h" class="card" style="padding: 0; overflow: hidden">
+<h2 id="rp-h" class="tm" style="padding: 16px 20px 8px">{{ sp.reportedTitle }}</h2>
+<ul style="list-style: none; margin: 0; padding: 0; border-top: 1px solid #DFE3E8"><sc-for list="{{ sp.reported }}" as="r" hint-placeholder-count="2"><li style="border-top: {{ r.line }}; padding: 14px 20px; display: flex; flex-direction: column; gap: 8px"><span class="sm">{{ r.meta }}</span><p style="margin: 0; font-size: 16px; line-height: 24px">{{ r.text }}</p><div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end"><button class="bx" aria-label="Keep {{ r.author }}'s post" onClick="{{ r.keep }}">Keep</button><button class="bd" aria-label="Remove {{ r.author }}'s post" onClick="{{ r.remove }}">Remove post</button></div></li></sc-for></ul>
+</section></sc-if>
+<div role="group" aria-label="Filter messages" style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{ sp.chips }}" as="c" hint-placeholder-count="3"><button class="chip" aria-pressed="{{ c.pressed }}" onClick="{{ c.pick }}" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}"><sc-if value="{{ c.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>{{ c.label }}</button></sc-for></div>
+<sc-for list="{{ sp.rows }}" as="m" hint-placeholder-count="2"><article class="card" aria-label="{{ m.aria }}" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span class="tag" style="background: transparent; border: 1px solid #71787E; color: #181C20">{{ m.topic }}</span><span class="sm">{{ m.day }}</span><span style="flex: 1"></span><span class="tag" style="background: {{ m.stBg }}; color: {{ m.stFg }}">{{ m.status }}</span></div>
+<p style="margin: 0; font-size: 16px; line-height: 24px">{{ m.text }}</p>
+<div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap"><span id="{{ m.qid }}" class="lbl">Status they see</span><div role="radiogroup" aria-labelledby="{{ m.qid }}" style="display: inline-flex; border: 1px solid #71787E; border-radius: 20px; overflow: hidden">
+<button role="radio" aria-checked="{{ m.sNew.checked }}" onClick="{{ m.sNew.set }}" style="height: 40px; padding: 0 14px; border: 0; background: {{ m.sNew.bg }}; color: {{ m.sNew.color }}; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 0"><sc-if value="{{ m.sNew.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>New</button>
+<button role="radio" aria-checked="{{ m.sProg.checked }}" onClick="{{ m.sProg.set }}" style="height: 40px; padding: 0 14px; border: 0; border-left: 1px solid #71787E; background: {{ m.sProg.bg }}; color: {{ m.sProg.color }}; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 0"><sc-if value="{{ m.sProg.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>In progress</button>
+<button role="radio" aria-checked="{{ m.sRes.checked }}" onClick="{{ m.sRes.set }}" style="height: 40px; padding: 0 14px; border: 0; border-left: 1px solid #71787E; background: {{ m.sRes.bg }}; color: {{ m.sRes.color }}; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 0"><sc-if value="{{ m.sRes.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>Resolved</button>
+</div></div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end"><div class="fcol" style="flex: 1 1 240px"><label for="{{ m.nid }}" class="lbl">Note shown with the status (optional)</label><input id="{{ m.nid }}" class="field" value="{{ m.draft }}" placeholder="For example: Facilities are looking at it this week" onChange="{{ m.onNote }}"></div><button class="bo" style="height: 44px; flex: none; opacity: {{ m.saveOp }}" disabled="{{ m.cantSave }}" onClick="{{ m.saveNote }}">Save note</button></div>
+<sc-if value="{{ m.hasNote }}" hint-placeholder-val="{{ false }}"><span class="sm">{{ m.noteLine }}</span></sc-if>
+</article></sc-for>
+<sc-if value="{{ sp.empty }}" hint-placeholder-val="{{ false }}"><div class="card"><p class="bm" style="margin: 0">Nothing here.</p></div></sc-if>
+</div>
+</div>
+</sc-if>
+
+<!-- ============ PUBLISH ============ -->
+<sc-if value="{{ v.publish }}" hint-placeholder-val="{{ false }}">
+<div class="tabs" role="tablist" aria-label="What to publish"><sc-for list="{{ pub.tabs }}" as="t" hint-placeholder-count="2"><button class="tab" role="tab" aria-selected="{{ t.sel }}" onClick="{{ t.pick }}" style="color: {{ t.color }}; border-bottom: 3px solid {{ t.line }}">{{ t.label }}</button></sc-for></div>
+
+<sc-if value="{{ pub.ann }}" hint-placeholder-val="{{ true }}">
+<div class="cols">
+<section aria-labelledby="an-h" class="half card" style="gap: 14px">
+<h2 id="an-h" class="tm">New announcement</h2>
+<div class="fcol"><label for="an-t" class="lbl">Title</label><input id="an-t" class="field" placeholder="Office closed on Friday" value="{{ pub.a.title }}" onChange="{{ pub.a.onTitle }}"></div>
+<div class="fcol"><label for="an-b" class="lbl">Message</label><textarea id="an-b" class="field" style="height: 120px; padding: 12px 14px; line-height: 22px; resize: vertical" placeholder="What people need to know" value="{{ pub.a.body }}" onChange="{{ pub.a.onBody }}"></textarea></div>
+<div class="fcol"><label for="an-u" class="lbl">Pin to the top of the Feed until (optional)</label><input id="an-u" type="date" class="field" min="2026-11-18" value="{{ pub.a.until }}" onChange="{{ pub.a.onUntil }}"></div>
+<sc-if value="{{ pub.a.untilBad }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Pick today or a later date.</p></sc-if>
+<div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ pub.a.op }}" disabled="{{ pub.a.cant }}" onClick="{{ pub.a.publish }}">Publish</button><sc-if value="{{ pub.a.hasMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ pub.a.msg }}</span></sc-if></div>
+</section>
+<section aria-labelledby="al-h" class="half card" style="padding: 0; overflow: hidden; gap: 0">
+<h2 id="al-h" class="tm" style="padding: 16px 20px 8px">Published</h2>
+<sc-for list="{{ pub.anns }}" as="a" hint-placeholder-count="3"><div style="border-top: {{ a.line }}; padding: 14px 20px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; gap: 12px; align-items: flex-start"><div style="flex: 1; min-width: 0"><div style="font-weight: 600">{{ a.title }}</div><div class="sm">{{ a.meta }}</div></div><sc-if value="{{ a.idle }}" hint-placeholder-val="{{ true }}"><button class="bx" aria-label="Delete {{ a.title }}" onClick="{{ a.askDel }}" style="flex: none">Delete</button></sc-if></div>
+<p class="bm" style="margin: 0">{{ a.body }}</p>
+<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><sc-if value="{{ a.pinned }}" hint-placeholder-val="{{ false }}"><span class="tag" style="background: #FFDDB0; color: #4A2800">{{ a.pinLine }}</span></sc-if><span style="flex: 1"></span><span style="font-size: 14px; font-weight: 600">{{ a.seenLine }}</span></div>
+<sc-if value="{{ a.confirm }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="Confirm delete" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #FFDAD6; color: #410002; border-radius: 16px; padding: 10px 12px"><span style="flex: 1; min-width: 160px; font-size: 14px">Delete it from everyone's app?</span><button class="bx" style="color: #410002" onClick="{{ a.keep }}">Keep</button><button class="bd" onClick="{{ a.del }}">Delete</button></div></sc-if>
+</div></sc-for>
+<sc-if value="{{ pub.annEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 4px 20px 20px">Nothing published.</p></sc-if>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ pub.ev }}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="gc-h" class="card" style="gap: 10px; margin-bottom: 16px">
+<h2 id="gc-h" class="tm">Google Calendar</h2>
+<sc-if value="{{ pub.g.on }}" hint-placeholder-val="{{ true }}"><span class="sm">Invites go out from anita@innovinlabs.com</span>
+<sc-if value="{{ pub.g.idle }}" hint-placeholder-val="{{ true }}"><div><button class="bo" onClick="{{ pub.g.ask }}">Disconnect</button></div></sc-if>
+<sc-if value="{{ pub.g.confirm }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="Confirm disconnect" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #FFDAD6; color: #410002; border-radius: 16px; padding: 10px 12px"><span style="flex: 1; min-width: 160px; font-size: 14px">{{ pub.g.what }}</span><button class="bx" style="color: #410002" onClick="{{ pub.g.keep }}">Keep</button><button class="bd" onClick="{{ pub.g.off }}">Disconnect</button></div></sc-if>
+</sc-if>
+<sc-if value="{{ pub.g.notOn }}" hint-placeholder-val="{{ false }}"><div><button class="bf" onClick="{{ pub.g.connect }}">Connect Google Calendar</button></div></sc-if>
+</section>
+<div class="cols">
+<section aria-labelledby="ev-h" class="half card" style="gap: 14px">
+<h2 id="ev-h" class="tm">New event</h2>
+<div class="fcol"><label for="ev-t" class="lbl">Title</label><input id="ev-t" class="field" placeholder="Diwali potluck" value="{{ pub.e.title }}" onChange="{{ pub.e.onTitle }}"></div>
+<div style="display: flex; gap: 12px; flex-wrap: wrap"><div class="fcol" style="flex: 1 1 160px"><label for="ev-d" class="lbl">Date</label><input id="ev-d" type="date" class="field" min="2026-11-18" value="{{ pub.e.date }}" onChange="{{ pub.e.onDate }}"></div><div class="fcol" style="flex: 1 1 120px"><label for="ev-tm" class="lbl">Time (IST)</label><input id="ev-tm" type="time" class="field" value="{{ pub.e.time }}" onChange="{{ pub.e.onTime }}"></div></div>
+<sc-if value="{{ pub.e.dateBad }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Pick today or a later date.</p></sc-if>
+<div style="display: flex; gap: 12px; flex-wrap: wrap"><div class="fcol" style="flex: 2 1 200px"><label for="ev-p" class="lbl">Place</label><input id="ev-p" class="field" placeholder="Big room" value="{{ pub.e.place }}" onChange="{{ pub.e.onPlace }}"></div><div class="fcol" style="flex: 1 1 140px"><label for="ev-c" class="lbl">Category</label><select id="ev-c" class="field" onChange="{{ pub.e.onCat }}"><sc-for list="{{ pub.e.catOpts }}" as="o" hint-placeholder-count="5"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for></select></div></div>
+<div class="fcol"><label for="ev-b" class="lbl">Details (optional)</label><textarea id="ev-b" class="field" style="height: 96px; padding: 12px 14px; line-height: 22px; resize: vertical" placeholder="What to bring, who it's for" value="{{ pub.e.body }}" onChange="{{ pub.e.onBody }}"></textarea></div>
+<sc-if value="{{ pub.g.on }}" hint-placeholder-val="{{ true }}"><div style="display: flex; align-items: center; gap: 16px"><div style="flex: 1; min-width: 0"><span id="ev-g" style="display: block; font-weight: 600">Invite everyone in Google Calendar</span></div><button class="swb" role="switch" aria-checked="{{ pub.e.gSw.aria }}" aria-labelledby="ev-g" onClick="{{ pub.e.toggleGcal }}" style="border: {{ pub.e.gSw.border }}; background: {{ pub.e.gSw.track }}"><span class="swt" style="left: {{ pub.e.gSw.left }}; width: {{ pub.e.gSw.size }}; height: {{ pub.e.gSw.size }}; background: {{ pub.e.gSw.thumb }}"></span></button></div></sc-if>
+<div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ pub.e.op }}" disabled="{{ pub.e.cant }}" onClick="{{ pub.e.add }}">Post event</button><sc-if value="{{ pub.e.hasMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ pub.e.msg }}</span></sc-if></div>
+</section>
+<section aria-labelledby="el-h" class="half card" style="padding: 0; overflow: hidden; gap: 0">
+<h2 id="el-h" class="tm" style="padding: 16px 20px 8px">Upcoming events</h2>
+<sc-for list="{{ pub.evs }}" as="e" hint-placeholder-count="3"><div style="border-top: {{ e.line }}; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 14px; align-items: flex-start">
+<span aria-hidden="true" style="flex: none; width: 52px; border-radius: 14px; background: #EBEEF4; text-align: center; padding: 6px 0"><span style="display: block; font-size: 12px; font-weight: 600; color: #41474D; line-height: 16px">{{ e.mon }}</span><span style="display: block; font-size: 20px; font-weight: 700; line-height: 24px">{{ e.day }}</span></span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span style="font-weight: 600">{{ e.title }}</span><span class="tag" style="background: {{ e.catBg }}; color: {{ e.catFg }}">{{ e.cat }}</span></div><span class="sm">{{ e.whenPlace }}</span><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 2px"><span class="sm" style="font-weight: 600; color: #181C20">{{ e.going }}</span><sc-if value="{{ e.gcal }}" hint-placeholder-val="{{ true }}"><span class="tag" style="background: #D3E5F5; color: #0C1D29">In Google Calendar</span></sc-if></div><sc-if value="{{ e.gFail }}" hint-placeholder-val="{{ false }}"><span class="sm" style="color: #BA1A1A; font-weight: 600">Google invite didn’t go out</span></sc-if><sc-if value="{{ e.gOrphan }}" hint-placeholder-val="{{ false }}"><span class="sm">Google invite can’t be changed from here</span></sc-if></div>
+</div>
+<sc-if value="{{ e.idle }}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap"><sc-if value="{{ e.canResend }}" hint-placeholder-val="{{ false }}"><button class="bt" aria-label="Send invite for {{ e.title }} again" onClick="{{ e.resend }}">Send again</button></sc-if><sc-if value="{{ e.live }}" hint-placeholder-val="{{ true }}"><button class="bo" aria-label="Edit {{ e.title }}" onClick="{{ e.edit }}">Edit</button><button class="bo" aria-label="Cancel {{ e.title }}" onClick="{{ e.cancel }}">Cancel event</button></sc-if><button class="bx" aria-label="Delete {{ e.title }}" onClick="{{ e.askDel }}">Delete</button></div></sc-if>
+<sc-if value="{{ e.confirm }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="Confirm delete" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #FFDAD6; color: #410002; border-radius: 16px; padding: 10px 12px"><span style="flex: 1; min-width: 160px; font-size: 14px">Delete it? It disappears without a notification. Cancel tells people.</span><button class="bx" style="color: #410002" onClick="{{ e.keep }}">Keep</button><button class="bd" onClick="{{ e.del }}">Delete</button></div></sc-if>
+</div></sc-for>
+<sc-if value="{{ pub.evEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 4px 20px 20px">No events coming up.</p></sc-if>
+</section>
+</div>
+</sc-if>
+</sc-if>
+
+<!-- ============ OFFICE ============ -->
+<sc-if value="{{ v.office }}" hint-placeholder-val="{{ false }}">
+<div class="tabs" role="tablist" aria-label="Office settings"><sc-for list="{{ office.tabs }}" as="t" hint-placeholder-count="3"><button class="tab" role="tab" aria-selected="{{ t.sel }}" onClick="{{ t.pick }}" style="color: {{ t.color }}; border-bottom: 3px solid {{ t.line }}">{{ t.label }}</button></sc-for></div>
+
+<sc-if value="{{ office.closedTab }}" hint-placeholder-val="{{ true }}">
+<div class="cols">
+<section aria-labelledby="cd-add-h" class="half card" style="gap: 14px">
+<h2 id="cd-add-h" class="tm">Add a closed day</h2>
+<div class="fcol"><label for="cd-date" class="lbl">Date</label><input id="cd-date" class="field" type="date" min="2026-11-18" value="{{ office.c.date }}" onChange="{{ office.c.onDate }}"></div>
+<div class="fcol"><label for="cd-reason" class="lbl">Reason</label><input id="cd-reason" class="field" placeholder="Building maintenance" value="{{ office.c.reason }}" onChange="{{ office.c.onReason }}"></div>
+<sc-if value="{{ office.c.dup }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">That date is already marked closed.</p></sc-if>
+<div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ office.c.op }}" disabled="{{ office.c.cant }}" onClick="{{ office.c.add }}">Mark closed</button><sc-if value="{{ office.c.hasMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ office.c.msg }}</span></sc-if></div>
+</section>
+<section aria-labelledby="cd-list-h" class="half card" style="padding: 0; overflow: hidden; gap: 0">
+<h2 id="cd-list-h" class="tm" style="padding: 16px 20px 8px">Upcoming closed days</h2>
+<ul style="list-style: none; margin: 0; padding: 0; border-top: 1px solid #DFE3E8">
+<sc-for list="{{ office.c.rows }}" as="r" hint-placeholder-count="1"><li style="display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 20px; box-sizing: border-box; border-top: {{ r.line }}; flex-wrap: wrap"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #E5E8EE; border: 1px dashed #71787E; box-sizing: border-box; display: grid; place-items: center; font-size: 14px; font-weight: 600; color: #41474D">{{ r.dayNum }}</span><div style="flex: 1; min-width: 160px"><div style="font-weight: 600">{{ r.titleLine }}</div><div class="sm">{{ r.byLine }}</div></div><button class="bo" aria-label="Remove {{ r.dateLabel }}" onClick="{{ r.remove }}">Remove</button></li></sc-for>
+</ul>
+<sc-if value="{{ office.c.empty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 12px 20px 20px">No closed days coming up.</p></sc-if>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ office.teaTab }}" hint-placeholder-val="{{ false }}">
+<div class="cols">
+<section aria-labelledby="times-h" class="half card" style="gap: 14px">
+<h2 id="times-h" class="tm">Times</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 12px"><div class="fcol" style="flex: 1 1 150px"><label for="t-am" class="lbl">Morning tea round</label><input id="t-am" class="field" type="time" value="{{ office.t.f.am }}" onChange="{{ office.t.on.am }}"></div><div class="fcol" style="flex: 1 1 150px"><label for="t-amby" class="lbl">Answers close</label><input id="t-amby" class="field" type="time" value="{{ office.t.f.amBy }}" onChange="{{ office.t.on.amBy }}" aria-invalid="{{ office.t.amBad }}"></div></div>
+<sc-if value="{{ office.t.amBadOn }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Answers must close before the round.</p></sc-if>
+<div style="display: flex; flex-wrap: wrap; gap: 12px"><div class="fcol" style="flex: 1 1 150px"><label for="t-pm" class="lbl">Afternoon tea round</label><input id="t-pm" class="field" type="time" value="{{ office.t.f.pm }}" onChange="{{ office.t.on.pm }}"></div><div class="fcol" style="flex: 1 1 150px"><label for="t-pmby" class="lbl">Answers close</label><input id="t-pmby" class="field" type="time" value="{{ office.t.f.pmBy }}" onChange="{{ office.t.on.pmBy }}" aria-invalid="{{ office.t.pmBad }}"></div></div>
+<sc-if value="{{ office.t.pmBadOn }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Answers must close before the round.</p></sc-if>
+<div class="fcol" style="max-width: 320px"><label for="t-order" class="lbl">Snack order goes in</label><input id="t-order" class="field" type="time" value="{{ office.t.f.order }}" onChange="{{ office.t.on.order }}"></div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center"><button class="bf" style="opacity: {{ office.t.op }}" disabled="{{ office.t.cant }}" onClick="{{ office.t.save }}">Save times</button><sc-if value="{{ office.t.hasMsg }}" hint-placeholder-val="{{ false }}"><span role="status" class="bm" style="color: #0B3D1F">{{ office.t.msg }}</span></sc-if></div>
+</section>
+<section aria-labelledby="ttoday-h" class="half card" style="padding: 0; overflow: hidden; gap: 0">
+<h2 id="ttoday-h" class="tm" style="padding: 16px 20px 8px">Today</h2>
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{ office.t.rounds }}" as="r" hint-placeholder-count="2"><li style="display: flex; flex-direction: column; gap: 6px; padding: 12px 20px; box-sizing: border-box; border-top: 1px solid #DFE3E8">
+<div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-height: 40px"><div style="flex: 1; min-width: 180px; font-weight: 600">{{ r.line }}</div><button class="bx" aria-expanded="{{ r.expanded }}" aria-controls="{{ r.listId }}" onClick="{{ r.toggle }}">{{ r.btn }}</button></div>
+<sc-if value="{{ r.open }}" hint-placeholder-val="{{ false }}"><p id="{{ r.listId }}" class="bm" style="margin: 0">{{ r.names }}</p></sc-if>
+</li></sc-for>
+</ul>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ office.shelfTab }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px; max-width: 640px; width: 100%">
+<section aria-labelledby="ord-h" class="card" style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap"><h2 id="ord-h" class="tm">Today's order</h2><sc-if value="{{ office.sh.open }}" hint-placeholder-val="{{ true }}"><span class="tag" style="background: #FFDDB0; color: #4A2800">{{ office.sh.orderChip }}</span></sc-if><sc-if value="{{ office.sh.ordered }}" hint-placeholder-val="{{ false }}"><span class="tag" style="background: #CDEBD6; color: #0B3D1F">{{ office.sh.orderedLine }}</span></sc-if></div>
+<ul style="list-style: none; margin: 0; padding: 0"><sc-for list="{{ office.sh.picks }}" as="p" hint-placeholder-count="3"><li style="padding: 10px 0; border-top: {{ p.sep }}; font-size: 16px">{{ p.line }}</li></sc-for></ul>
+<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><button class="bf" style="opacity: {{ office.sh.orderOp }}" disabled="{{ office.sh.cantOrder }}" onClick="{{ office.sh.markOrdered }}">Mark ordered</button><sc-if value="{{ office.sh.ordered }}" hint-placeholder-val="{{ false }}"><button class="bx" onClick="{{ office.sh.undoOrdered }}">Undo</button></sc-if></div>
+</section>
+<section aria-label="Suggestions and shelf" class="card" style="padding: 0; overflow: hidden">
+<div class="tabs" role="tablist" aria-label="Suggestions and shelf" style="padding: 0 8px"><sc-for list="{{ office.sh.tabs }}" as="t" hint-placeholder-count="2"><button class="tab" role="tab" aria-selected="{{ t.sel }}" onClick="{{ t.pick }}" style="color: {{ t.color }}; border-bottom: 3px solid {{ t.line }}">{{ t.label }}</button></sc-for></div>
+<sc-if value="{{ office.sh.ideasTab }}" hint-placeholder-val="{{ true }}"><div role="tabpanel" aria-label="Suggestions">
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{ office.sh.ideas }}" as="x" hint-placeholder-count="3"><li style="display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 12px 8px 20px; box-sizing: border-box; border-top: {{ x.line }}; flex-wrap: wrap"><span style="flex: 1; min-width: 120px">{{ x.name }}</span><span class="sm" style="font-weight: 600; color: #181C20"><span aria-hidden="true">{{ x.n }}</span><span class="vh">{{ x.sr }}</span></span><button class="bt" style="height: 36px; padding: 0 14px" aria-label="Add {{ x.name }} to the shelf" onClick="{{ x.add }}">Add to shelf</button><button class="bx" style="height: 36px" aria-label="Dismiss {{ x.name }}" onClick="{{ x.dismiss }}">Dismiss</button></li></sc-for>
+</ul>
+<sc-if value="{{ office.sh.ideasEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 16px 20px 20px">No new suggestions.</p></sc-if>
+</div></sc-if>
+<sc-if value="{{ office.sh.shelfTab }}" hint-placeholder-val="{{ false }}"><div role="tabpanel" aria-label="Shelf">
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{ office.sh.shelf }}" as="x" hint-placeholder-count="4"><li style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 12px 6px 20px; box-sizing: border-box; border-top: {{ x.line }}"><span style="flex: 1">{{ x.name }}</span><button class="bx" aria-label="Remove {{ x.name }}" onClick="{{ x.remove }}">Remove</button></li></sc-for>
+</ul>
+<sc-if value="{{ office.sh.shelfEmpty }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0; padding: 12px 20px">The shelf is empty.</p></sc-if>
+<div style="display: flex; gap: 8px; padding: 12px 20px 16px; border-top: 1px solid #DFE3E8; align-items: flex-end"><div class="fcol" style="flex: 1"><label for="sh-new" class="lbl">Add a snack</label><input id="sh-new" class="field" placeholder="Roasted chana" value="{{ office.sh.newItem }}" onChange="{{ office.sh.onNew }}"></div><button class="bo" style="height: 44px; flex: none; opacity: {{ office.sh.addOp }}" disabled="{{ office.sh.cantAdd }}" onClick="{{ office.sh.addItem }}">Add</button></div>
+<sc-if value="{{ office.sh.itemDup }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; padding: 0 20px 16px; font-size: 14px; line-height: 20px; color: #4A2800">That's already on the shelf.</p></sc-if>
+</div></sc-if>
+</section>
+</div>
+</sc-if>
+</sc-if>
+
+<!-- ============ WI-FI ============ -->
+<sc-if value="{{ v.wifi }}" hint-placeholder-val="{{ false }}">
+<p class="bm" style="margin: 0; color: #181C20">{{ wifi.topLine }}</p>
+<div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><div role="group" aria-label="Filter reports" style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{ wifi.chips }}" as="c" hint-placeholder-count="2"><button class="chip" aria-pressed="{{ c.pressed }}" onClick="{{ c.pick }}" style="background: {{ c.bg }}; color: {{ c.color }}; border: {{ c.border }}"><sc-if value="{{ c.check }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>{{ c.label }}</button></sc-for></div></div>
+<section aria-label="Reports" class="card" style="padding: 0; overflow: hidden">
+<div class="wrow whead" aria-hidden="true"><span>Day</span><span>Area</span><span>Down / up</span><span>Note</span></div>
+<ul style="list-style: none; margin: 0; padding: 0">
+<sc-for list="{{ wifi.rows }}" as="r" hint-placeholder-count="3"><li class="wrow" style="border-top: 1px solid #DFE3E8"><span class="sm" style="color: #181C20">{{ r.day }}</span><span class="warea">{{ r.area }}</span><span style="font-weight: 600; text-align: left"><span aria-hidden="true">{{ r.down }} / {{ r.up }} Mbps</span><span class="vh">{{ r.speedSr }}</span></span><span class="wnote bm" style="color: {{ r.noteColor }}">{{ r.note }}</span></li></sc-for>
+</ul>
+</section>
+</sc-if>
+
+</main>
+</div>
+
+<!-- Phone bottom navigation -->
+<nav class="mnav" aria-label="Admin">
+<sc-for list="{{ mobItems }}" as="it" hint-placeholder-count="5"><button onClick="{{ it.go }}" aria-current="{{ it.cur }}" style="flex: 1; min-width: 0; border: 0; background: transparent; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; color: {{ it.color }}"><span style="position: relative; width: 56px; height: 32px; border-radius: 16px; background: {{ it.pill }}; display: grid; place-items: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.icon }}"></path></svg><sc-if value="{{ it.hasBadge }}" hint-placeholder-val="{{ false }}"><span class="badge" aria-hidden="true" style="position: absolute; top: -4px; right: 6px; min-width: 18px; height: 18px; line-height: 18px; font-size: 11px">{{ it.badge }}</span></sc-if></span><span style="font-size: 12px; line-height: 16px; font-weight: {{ it.weight }}">{{ it.label }}<span class="vh">{{ it.badgeSr }}</span></span></button></sc-for>
+</nav>
+
+<!-- Edit an event -->
+<sc-if value="{{ pub.ed.open }}" hint-placeholder-val="{{ false }}"><div style="position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px">
+<button aria-label="Close" onClick="{{ pub.ed.close }}" style="position: absolute; inset: 0; border: 0; background: rgba(0,0,0,0.32); padding: 0"></button>
+<div role="dialog" aria-modal="true" aria-labelledby="ed-h" style="position: relative; width: 100%; max-width: 520px; max-height: calc(100vh - 32px); overflow-y: auto; background: #FFFFFF; border-radius: 28px; padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+<h2 id="ed-h" class="tm" style="font-size: 22px; line-height: 28px">Edit event</h2>
+<div class="fcol"><label for="ed-t" class="lbl">Title</label><input id="ed-t" class="field" value="{{ pub.ed.title }}" onChange="{{ pub.ed.onTitle }}"></div>
+<div style="display: flex; gap: 12px; flex-wrap: wrap"><div class="fcol" style="flex: 1 1 160px"><label for="ed-d" class="lbl">Date</label><input id="ed-d" type="date" class="field" min="2026-11-18" value="{{ pub.ed.date }}" onChange="{{ pub.ed.onDate }}"></div><div class="fcol" style="flex: 1 1 120px"><label for="ed-tm" class="lbl">Time (IST)</label><input id="ed-tm" type="time" class="field" value="{{ pub.ed.time }}" onChange="{{ pub.ed.onTime }}"></div></div>
+<div class="fcol"><label for="ed-p" class="lbl">Place</label><input id="ed-p" class="field" value="{{ pub.ed.place }}" onChange="{{ pub.ed.onPlace }}"></div>
+<div class="fcol"><label for="ed-b" class="lbl">Details (optional)</label><textarea id="ed-b" class="field" style="height: 96px; padding: 12px 14px; line-height: 22px; resize: vertical" value="{{ pub.ed.body }}" onChange="{{ pub.ed.onBody }}"></textarea></div>
+<sc-if value="{{ pub.ed.bad }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin: 0; font-size: 14px; line-height: 20px; color: #4A2800">Pick today or a later date.</p></sc-if>
+<div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap"><button class="bx" onClick="{{ pub.ed.close }}">Cancel</button><button class="bf" style="opacity: {{ pub.ed.op }}" disabled="{{ pub.ed.cant }}" onClick="{{ pub.ed.save }}">Save</button></div>
+</div>
+</div></sc-if>
+
+<!-- Phone "More" sheet -->
+<sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}"><div style="position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; justify-content: flex-end">
+<button aria-label="Close menu" onClick="{{ closeMore }}" style="position: absolute; inset: 0; border: 0; background: rgba(0,0,0,0.32); padding: 0"></button>
+<div role="dialog" aria-modal="true" aria-labelledby="more-h" style="position: relative; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 12px 0 24px; animation: sheetUp .25s cubic-bezier(.2,.8,.2,1)">
+<div aria-hidden="true" style="width: 32px; height: 4px; border-radius: 2px; background: #71787E; margin: 0 auto 12px"></div>
+<h2 id="more-h" class="tm" style="padding: 0 24px 8px">More</h2>
+<sc-for list="{{ moreItems }}" as="it" hint-placeholder-count="2"><button class="li" onClick="{{ it.go }}" aria-current="{{ it.cur }}" style="padding: 8px 24px"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #E5E8EE; color: #41474D; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.icon }}"></path></svg></span><span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">{{ it.label }}</span><span class="sm">{{ it.sub }}</span></span></button></sc-for>
+<div class="div" style="margin: 8px 24px"></div>
+<button class="li" onClick="{{ openMember }}" style="padding: 8px 24px; color: #006493; font-weight: 600"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #D3E5F5; color: #0C1D29; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg></span><span style="flex: 1">Open the member app</span></button>
+</div>
+</div></sc-if>
+
+<!-- Snackbar -->
+<sc-if value="{{ toast.on }}" hint-placeholder-val="{{ false }}"><div class="snack" role="status"><span style="flex: 1">{{ toast.text }}</span><button onClick="{{ toast.close }}" style="flex: none; height: 40px; padding: 0 12px; border: 0; border-radius: 20px; background: transparent; color: #9CCBFB; font-size: 14px; font-weight: 600">Dismiss</button></div></sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startPage":{"editor":"enum","options":["today","people","speak","publish","office","wifi"],"default":"today","section":"Demo"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const P = (id, name, ini, bg, role, usual, extra) => Object.assign({ id: id, name: name, ini: ini, bg: bg, role: role, usual: usual, leave: [], missed: [], exempt: false, admin: false, bd: { d: '', m: '', show: true } }, extra || {});
+    const times = { am: '11:00', amBy: '10:45', pm: '16:00', pmBy: '15:30', order: '12:00' };
+    this.state = {
+      view: '', more: false, toast: '', teaNames: false,
+      // people
+      q: '', pf: 'all', sel: '', fixDate: '', fixWhere: '', pMsg: '', bdD: '', bdM: '', bdShow: true, bdMsg: '',
+      fixes: {},
+      log: [{ id: 'meera', text: 'Tue 3 Nov changed to In office · by Anita · 4 Nov' }],
+      people: [
+        P('anita', 'Anita Rao', 'AR', '#CAE6FF', 'Office manager', ['Mon', 'Tue', 'Wed', 'Thu'], { admin: true, bd: { d: '14', m: '3', show: true } }),
+        P('arjun', 'Arjun Kumar', 'AK', '#D7F0E4', 'Developer', ['Mon', 'Wed', 'Thu'], { bd: { d: '2', m: '12', show: true } }),
+        P('meera', 'Meera Shah', 'MS', '#FFD9E2', 'Designer', ['Tue', 'Thu'], { missed: [10] }),
+        P('nisha', 'Nisha Thomas', 'NT', '#FFF1C2', 'QA engineer', ['Mon', 'Wed'], { leave: [9, 10, 11, 12, 13] }),
+        P('rahul', 'Rahul Verma', 'RV', '#EBDCFF', 'Developer', ['Tue', 'Wed', 'Fri']),
+        P('priya', 'Priya Nair', 'PN', '#CAE6FF', 'Product designer', ['Mon', 'Wed', 'Thu'], { bd: { d: '21', m: '11', show: false } }),
+        P('kiran', 'Kiran Menon', 'KM', '#D7F0E4', 'Sales', ['Thu']),
+        P('dev', 'Dev Patel', 'DP', '#FFD9E2', 'Developer', ['Mon', 'Fri'], { missed: [2, 6] }),
+        P('sana', 'Sana Ali', 'SA', '#FFF1C2', 'People & HR', ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']),
+        P('vikram', 'Vikram Iyer', 'VI', '#EBDCFF', 'Finance', ['Tue'], { exempt: true, leave: [16, 17, 18, 19, 20] }),
+        P('divya', 'Divya Pillai', 'DV', '#CAE6FF', 'Support', ['Wed', 'Fri'], { leave: [20] }),
+        P('rohan', 'Rohan Das', 'RD', '#D7F0E4', 'Developer', ['Mon', 'Thu'], { missed: [5] })
+      ],
+      // speak up
+      sf: 'open', notes: {},
+      reported: [
+        { id: 'r1', author: 'Rahul Verma', day: 'Today', text: 'Whoever keeps taking my lunch from the fridge: I know who you are.' },
+        { id: 'r2', author: 'Kiran Menon', day: 'Tue 17 Nov', text: 'Selling my old bike, barely used. Message me for the price.' }
+      ],
+      msgs: [
+        { id: 'm1', topic: 'Facilities', day: 'Mon 16 Nov', text: 'The AC on the second floor is too cold in the afternoons. Several of us bring jackets now.', status: 'New', note: '' },
+        { id: 'm2', topic: 'Workload', day: 'Fri 13 Nov', text: 'Late-evening calls with the US team happen most weeks now. Could we agree on a cut-off time?', status: 'New', note: '' },
+        { id: 'm3', topic: 'Wellbeing', day: 'Wed 11 Nov', text: 'A quiet room for calls or a short break would help. The meeting rooms are always booked.', status: 'In progress', note: 'Looking at the small store room. Update by the end of the month.' },
+        { id: 'm4', topic: 'Policy', day: 'Thu 5 Nov', text: 'Is the 8-day rule counted per calendar month, or over a rolling 30 days?', status: 'Resolved', note: 'Per calendar month. It’s now in Help too.' }
+      ],
+      // publish
+      pubTab: 'ann', delId: '',
+      aTitle: '', aBody: '', aUntil: '', aMsg: '',
+      anns: [
+        { id: 'a1', title: 'Office closed Fri 27 Nov', body: 'Building maintenance. The office is closed for the day.', until: '2026-11-27', posted: 'Mon 16 Nov', seen: 31 },
+        { id: 'a2', title: 'Today’s snack options are up', body: 'Makhana, dark chocolate or banana chips. Pick yours before 12:00.', until: '', posted: 'Today', seen: 23 },
+        { id: 'a3', title: 'New guest Wi-Fi name', body: 'Guests now join “innovin-guest”. Ask at the front desk for the password.', until: '', posted: 'Thu 12 Nov', seen: 44 }
+      ],
+      eTitle: '', eDate: '', eTime: '', ePlace: '', eBody: '', eCat: 'Celebration', eGcal: true, eMsg: '', gConn: true, gConfirm: false,
+      edId: '', ed: { title: '', date: '', time: '', place: '', body: '' },
+      evs: [
+        { id: 'e1', title: 'Diwali potluck', date: '2026-11-19', time: '16:30', place: 'Big room', cat: 'Celebration', going: 14, gcal: 'sent', cancelled: false },
+        { id: 'e2', title: 'Book club: Deep Work', date: '2026-11-24', time: '17:30', place: 'Library corner', cat: 'Learning', going: 6, gcal: 'sent', cancelled: false },
+        { id: 'e3', title: 'Badminton evening', date: '2026-12-04', time: '18:00', place: 'Court near the office', cat: 'Sports', going: 9, gcal: 'failed', cancelled: false }
+      ],
+      // office
+      offTab: 'closed',
+      closed: [{ iso: '2026-11-27', reason: 'Building maintenance', by: 'Anita' }], cDate: '', cReason: '', cMsg: '',
+      tSaved: times, tDraft: Object.assign({}, times), tMsg: '', showAm: false, showPm: false,
+      picks: [{ name: 'Samosa', n: 9 }, { name: 'Fruit bowl', n: 6 }, { name: 'Biscuits', n: 2 }],
+      ordered: false, orderedAt: '', shTab: 'ideas',
+      shelf: ['Makhana', 'Banana chips', 'Dark chocolate', 'Murukku'], newItem: '',
+      ideas: [{ name: 'Masala peanuts', n: 7 }, { name: 'Dhokla', n: 5 }, { name: 'Protein bars', n: 2 }],
+      // wifi
+      wf: 'today'
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const self = this;
+    const set = (o) => self.setState(o);
+    const vw = s.view || (this.props && this.props.startPage) || 'today';
+    const v = { today: vw === 'today', people: vw === 'people', speak: vw === 'speak', publish: vw === 'publish', office: vw === 'office', wifi: vw === 'wifi' };
+    const TOTAL = 45;
+    const TODAY = 18;
+    const dn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const mn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const mnLong = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const label = (iso) => { const p = iso.split('-').map(Number); const dt = new Date(p[0], p[1] - 1, p[2]); return dn[dt.getDay()] + ' ' + p[2] + ' ' + mn[p[1] - 1]; };
+    const novIso = (d) => '2026-11-' + (d < 10 ? '0' + d : String(d));
+    const dowN = (d) => (d - 1) % 7; // 1 Nov 2026 is a Sunday
+    const fmtT = (t) => { if (!t) return ''; const p = t.split(':').map(Number); const h = p[0] % 12 === 0 ? 12 : p[0] % 12; return h + ':' + (p[1] < 10 ? '0' + p[1] : p[1]) + (p[0] < 12 ? ' AM' : ' PM'); };
+    const hm = (t) => { if (!t) return ''; const p = t.split(':'); return Number(p[0]) + ':' + p[1]; };
+    const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+    const sw = (on, disabled) => ({ aria: on ? 'true' : 'false', track: on ? '#006493' : '#E1E2E8', border: on ? '2px solid #006493' : '2px solid #71787E', thumb: on ? '#FFFFFF' : '#71787E', left: on ? '22px' : '6px', size: on ? '24px' : '16px', op: disabled ? 0.38 : 1 });
+    const chip = (on) => ({ pressed: on ? 'true' : 'false', bg: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#41474D', border: on ? '1px solid #D3E5F5' : '1px solid #71787E', check: on });
+    const radio = (on) => ({ checked: on ? 'true' : 'false', bg: on ? '#D3E5F5' : '#FFFFFF', border: on ? '2px solid #006493' : '1px solid #C1C7CE', ring: on ? '6px solid #006493' : '2px solid #71787E' });
+    const seg = (on) => ({ checked: on ? 'true' : 'false', bg: on ? '#D3E5F5' : '#FFFFFF', color: on ? '#0C1D29' : '#41474D', check: on });
+    const go = (view, extra) => () => set(Object.assign({ view: view, more: false, toast: '', delId: '' }, extra || {}));
+    const ICON = {
+      today: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M8 3v4M16 3v4',
+      people: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.5a4 4 0 0 1 0 7.5M22 21v-1a6 6 0 0 0-4-5.6',
+      speak: 'M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z',
+      publish: 'M3 10v4a1 1 0 0 0 1 1h3l5 4V5L7 9H4a1 1 0 0 0-1 1zM16 8.5a5 5 0 0 1 0 7M19 5.5a9 9 0 0 1 0 13',
+      office: 'M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h3a1 1 0 0 1 1 1v11M2 21h20M8 7h4M8 11h4M8 15h4',
+      wifi: 'M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.3a5 5 0 0 1 7 0M12 19.5h.01',
+      more: 'M4 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0M11 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0M18 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0',
+      flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
+      snack: 'M4 11h16a8 8 0 0 1-16 0zM8 7c0-1.5 1-2 2-2M12 7c0-1.5 1-2 2-2'
+    };
+
+    // ---------- office: closed days ----------
+    const closedSorted = s.closed.slice().sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
+    const closedNov = s.closed.filter((c) => c.iso.indexOf('2026-11-') === 0).map((c) => Number(c.iso.slice(8)));
+    const cReason = (s.cReason || '').trim();
+    const cDup = !!s.cDate && s.closed.some((d) => d.iso === s.cDate);
+    const cCant = !s.cDate || !cReason || cDup;
+
+    // ---------- people ----------
+    const dayKind = (p, d) => {
+      const dw = dowN(d);
+      if (dw === 0 || dw === 6) return 'wk';
+      if (closedNov.indexOf(d) >= 0) return 'closed';
+      if (p.leave.indexOf(d) >= 0) return 'leave';
+      const usual = p.usual.indexOf(dn[dw]) >= 0;
+      if (d <= TODAY) { const fx = s.fixes[p.id + ':' + d]; if (fx) return fx; return usual && p.missed.indexOf(d) < 0 ? 'in' : 'out'; }
+      return usual ? 'plan' : 'none';
+    };
+    const pstats = (p) => { let done = 0; let plan = 0; for (let d = 1; d <= 30; d++) { const k = dayKind(p, d); if (k === 'in') done++; if (k === 'plan') plan++; } return { done: done, plan: plan, status: p.exempt ? 'Exempt' : (done + plan >= 8 ? 'On track' : 'Behind') }; };
+    const chipC = { 'On track': ['#CDEBD6', '#0B3D1F'], 'Behind': ['#FFDDB0', '#4A2800'], 'Exempt': ['#E5E8EE', '#41474D'] };
+    const ppl = s.people.map((p) => Object.assign({}, p, pstats(p)));
+    const q = (s.q || '').trim().toLowerCase();
+    const pfDefs = [['all', 'Everyone'], ['exempt', 'Exempt'], ['admin', 'Admins'], ['left', 'Left']];
+    const pass = (p) => (s.pf === 'left' ? !!p.left : !p.left && (s.pf === 'all' || (s.pf === 'exempt' && p.exempt) || (s.pf === 'admin' && p.admin))) && (!q || p.name.toLowerCase().indexOf(q) >= 0);
+    const filtered = ppl.filter(pass);
+    const gridDays = []; for (let d = 1; d <= 30; d++) { const dw = dowN(d); if (dw !== 0 && dw !== 6) gridDays.push(d); }
+    const upd = (id, fn) => self.state.people.map((x) => (x.id === id ? fn(Object.assign({}, x)) : x));
+    const pickPerson = (p) => () => set({ sel: p.id, fixDate: '', fixWhere: '', pMsg: '', bdD: p.bd.d, bdM: p.bd.m, bdShow: p.bd.show, bdMsg: '' });
+    const selP = ppl.filter((p) => p.id === s.sel)[0] || null;
+    const cellStyle = { in: ['#006493', '#FFFFFF', '0'], plan: ['#FFFFFF', '#006493', '2px solid #006493'], leave: ['#EBDCFF', '#20142F', '0'], closed: ['#E5E8EE', '#41474D', '1px dashed #71787E'], out: ['#FFFFFF', '#41474D', '1px solid #C1C7CE'], none: ['transparent', '#181C20', '0'], wk: ['transparent', '#5C6369', '0'] };
+    const kindLabel = { in: 'in office', plan: 'planned', leave: 'leave', closed: 'office closed', out: 'not in office', none: 'nothing planned', wk: 'weekend' };
+    let panel = { p: {}, cal: [], log: [], hasLog: false, dayOpts: [], monOpts: [] };
+    if (selP) {
+      const cal = [];
+      for (let i = 0; i < 6; i++) cal.push({ n: '', aria: '', btn: false, span: true, bg: 'transparent', color: '#181C20', border: '0', outline: 'none', pick: () => {} });
+      for (let d = 1; d <= 30; d++) {
+        const k = dayKind(selP, d);
+        const st = cellStyle[k];
+        const fixable = d < TODAY && (k === 'in' || k === 'out');
+        cal.push({ n: String(d), aria: d + ' November, ' + kindLabel[k] + (d === TODAY ? ', today' : '') + (fixable ? '. Fix this day' : ''), btn: fixable, span: !fixable, bg: st[0], color: st[1], border: st[2], outline: d === TODAY ? '2px solid #181C20' : 'none', pick: () => set({ fixDate: novIso(d), fixWhere: k === 'in' ? 'out' : 'in', pMsg: '' }) });
+      }
+      const fd = s.fixDate || '';
+      let fixBadMsg = '';
+      let fdKind = '';
+      if (fd) {
+        if (fd.slice(0, 8) !== '2026-11-') fixBadMsg = 'Pick a date this month.';
+        else {
+          const dd = Number(fd.slice(8)); fdKind = dayKind(selP, dd);
+          if (dd >= TODAY) fixBadMsg = 'Only past days can be fixed.';
+          else if (fdKind === 'wk') fixBadMsg = 'That’s a weekend.';
+          else if (fdKind === 'closed') fixBadMsg = 'The office was closed that day.';
+          else if (fdKind === 'leave') fixBadMsg = 'That day is leave from Zoho People. It can only change there.';
+        }
+      }
+      const cantFix = !fd || !!fixBadMsg || !s.fixWhere || fdKind === s.fixWhere;
+      const maxD = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      const bdBad = !!s.bdD && !!s.bdM && Number(s.bdD) > maxD[Number(s.bdM) - 1];
+      const bdHalf = (!!s.bdD) !== (!!s.bdM);
+      const bdChanged = s.bdD !== selP.bd.d || s.bdM !== selP.bd.m || s.bdShow !== selP.bd.show;
+      const cantBd = !bdChanged || bdBad || bdHalf;
+      const dayOpts = []; for (let i = 1; i <= 31; i++) dayOpts.push({ v: String(i), label: String(i), sel: s.bdD === String(i) });
+      const monOpts = mnLong.map((m, i) => ({ v: String(i + 1), label: m, sel: s.bdM === String(i + 1) }));
+      const isSelf = selP.id === 'anita';
+      const plog = s.log.filter((l) => l.id === selP.id);
+      const addLog = (text) => [{ id: selP.id, text: text }].concat(self.state.log);
+      panel = {
+        p: { name: selP.name, ini: selP.ini, avBg: selP.bg, role: selP.role, usual: selP.usual.join(', '), roleLine: selP.role + ' · usually ' + selP.usual.join(', '), status: selP.status, chipBg: chipC[selP.status][0], chipFg: chipC[selP.status][1], count: selP.exempt ? selP.done + ' office days (exempt)' : selP.done + ' of 8 office days', calTitle: 'November', admin: selP.admin },
+        close: () => set({ sel: '' }),
+        cal: cal,
+        fixDate: fd, onFixDate: (e) => set({ fixDate: e.target.value, pMsg: '' }),
+        fxIn: Object.assign(radio(s.fixWhere === 'in'), { pick: () => set({ fixWhere: 'in', pMsg: '' }) }),
+        fxOut: Object.assign(radio(s.fixWhere === 'out'), { pick: () => set({ fixWhere: 'out', pMsg: '' }) }),
+        fixBad: !!fixBadMsg, fixBadMsg: fixBadMsg, cantFix: cantFix, fixOp: cantFix ? 0.4 : 1,
+        saveFix: () => {
+          if (cantFix) return;
+          const fixes = Object.assign({}, self.state.fixes); fixes[selP.id + ':' + Number(fd.slice(8))] = s.fixWhere;
+          set({ fixes: fixes, log: addLog(label(fd) + ' changed to ' + (s.fixWhere === 'in' ? 'In office' : 'Not in office') + ' · by Anita · today'), fixDate: '', fixWhere: '', pMsg: 'Saved.' });
+        },
+        hasPMsg: !!s.pMsg, pMsg: s.pMsg,
+        log: plog, hasLog: plog.length > 0,
+        exSw: sw(selP.exempt, false),
+        toggleEx: () => set({ people: upd(selP.id, (x) => { x.exempt = !x.exempt; return x; }), log: addLog((selP.exempt ? 'Exemption removed' : 'Marked exempt from the 8 days') + ' · by Anita · today') }),
+        lfSw: sw(!!selP.left, isSelf), isLeft: !!selP.left,
+        toggleLf: () => { if (isSelf) return; set({ people: upd(selP.id, (x) => { x.left = !x.left; return x; }), log: addLog((selP.left ? 'Marked as back' : 'Marked as left') + ' · by Anita · today') }); },
+        adSw: sw(selP.admin, isSelf), adDisabled: isSelf, adNote: isSelf ? 'You can’t remove yourself. Ask another admin.' : '', hasAdNote: isSelf,
+        toggleAd: () => { if (isSelf) return; set({ people: upd(selP.id, (x) => { x.admin = !x.admin; return x; }), log: addLog((selP.admin ? 'Admin removed' : 'Made an admin') + ' · by Anita · today') }); },
+        dayOpts: dayOpts, monOpts: monOpts, bdNoD: !s.bdD, bdNoM: !s.bdM,
+        onBdD: (e) => set({ bdD: e.target.value, bdMsg: '' }), onBdM: (e) => set({ bdM: e.target.value, bdMsg: '' }),
+        bdSw: sw(s.bdShow, false), toggleBdShow: () => set({ bdShow: !self.state.bdShow, bdMsg: '' }),
+        bdBad: bdBad, bdBadMsg: bdBad ? mnLong[Number(s.bdM) - 1] + ' doesn’t have ' + s.bdD + ' days.' : '',
+        bdHalf: bdHalf && bdChanged,
+        cantBd: cantBd, bdOp: cantBd ? 0.4 : 1,
+        canClear: !!(s.bdD || s.bdM), clearBd: () => set({ bdD: '', bdM: '', bdMsg: '' }),
+        saveBd: () => {
+          if (cantBd) return;
+          const bd = { d: s.bdD, m: s.bdM, show: s.bdShow };
+          const msg = !s.bdD ? 'Birthday removed.' : 'Saved.';
+          set({ people: upd(selP.id, (x) => { x.bd = bd; return x; }), bdMsg: msg });
+        },
+        hasBdMsg: !!s.bdMsg, bdMsg: s.bdMsg
+      };
+    }
+    const pp = {
+      q: s.q, onQ: (e) => set({ q: e.target.value }),
+      chips: pfDefs.map((c) => Object.assign(chip(s.pf === c[0]), { label: c[1], pick: () => set({ pf: c[0] }) })),
+      month: s.gridPrev ? 'October' : 'November', prev: () => set({ gridPrev: true }), next: () => set({ gridPrev: false }), noNext: !s.gridPrev, nextOp: s.gridPrev ? 1 : 0.38,
+      cols: gridDays.map((d) => ({ n: String(d), dow: 'MTWTF'[dowN(d) - 1], color: d === TODAY && !s.gridPrev ? '#006493' : '#41474D' })),
+      rows: filtered.map((p) => { const on = p.id === s.sel; return { name: p.name, cur: on ? 'true' : 'false', bg: on ? '#E8F1FA' : 'transparent', stickyBg: on ? '#E8F1FA' : '#FFFFFF', pick: pickPerson(p),
+        cells: gridDays.map((d) => { const k = s.gridPrev ? (p.usual.indexOf(dn[dowN(d)]) >= 0 ? 'in' : 'out') : dayKind(p, d); const fut = !s.gridPrev && d > TODAY;
+          const look = fut ? ['transparent', '0', ''] : k === 'in' ? ['#006493', '0', 'In office'] : k === 'leave' ? ['#EBDCFF', '1px solid #7D5BA6', 'On leave'] : k === 'closed' ? ['transparent', '1px dashed #71787E', 'Office closed'] : ['transparent', '1px solid #C1C7CE', 'Not in'];
+          return { bg: look[0], border: look[1], aria: look[2] ? (s.gridPrev ? 'Oct ' : label(novIso(d)) + ': ') + look[2] : '' }; }) }; }),
+      empty: filtered.length === 0,
+      has: !!selP, none: !selP
+    };
+
+    // ---------- speak up ----------
+    const stC = { 'New': ['#D3E5F5', '#0C1D29'], 'In progress': ['#FFDDB0', '#4A2800'], 'Resolved': ['#CDEBD6', '#0B3D1F'] };
+    const openN = s.msgs.filter((m) => m.status !== 'Resolved').length;
+    const newN = s.msgs.filter((m) => m.status === 'New').length;
+    const sfDefs = [['open', 'Open', openN], ['resolved', 'Resolved', s.msgs.length - openN], ['all', 'All', s.msgs.length]];
+    const sPass = (m) => s.sf === 'all' || (s.sf === 'open' ? m.status !== 'Resolved' : m.status === 'Resolved');
+    const setMsg = (id, fn) => self.state.msgs.map((x) => (x.id === id ? fn(Object.assign({}, x)) : x));
+    const sRows = s.msgs.filter(sPass).map((m) => {
+      const draft = s.notes[m.id] !== undefined ? s.notes[m.id] : m.note;
+      const mk = (val) => Object.assign(seg(m.status === val), { set: () => set({ msgs: setMsg(m.id, (x) => { x.status = val; return x; }), toast: 'Status set to ' + val + '.' }) });
+      return {
+        topic: m.topic, day: m.day, text: m.text, status: m.status, stBg: stC[m.status][0], stFg: stC[m.status][1],
+        aria: m.topic + ' message from ' + m.day, qid: 'sq-' + m.id, nid: 'sn-' + m.id,
+        sNew: mk('New'), sProg: mk('In progress'), sRes: mk('Resolved'),
+        draft: draft, onNote: (e) => { const n = Object.assign({}, self.state.notes); n[m.id] = e.target.value; set({ notes: n }); },
+        cantSave: draft.trim() === m.note, saveOp: draft.trim() === m.note ? 0.4 : 1,
+        saveNote: () => { if (draft.trim() === m.note) return; const n = Object.assign({}, self.state.notes); delete n[m.id]; set({ msgs: setMsg(m.id, (x) => { x.note = draft.trim(); return x; }), notes: n, toast: draft.trim() ? 'Note saved.' : 'Note removed.' }); },
+        hasNote: !!m.note, note: m.note, noteLine: 'They see: “' + m.note + '”'
+      };
+    });
+    const sp = {
+      chips: sfDefs.map((c) => Object.assign(chip(s.sf === c[0]), { label: c[1] + ' ' + c[2], pick: () => set({ sf: c[0] }) })),
+      rows: sRows, empty: sRows.length === 0,
+      hasReported: s.reported.length > 0, reportedTitle: 'Reported posts · ' + s.reported.length,
+      reported: s.reported.map((r, i) => ({ author: r.author, meta: r.author + ' · ' + r.day, text: r.text, line: i === 0 ? '0' : '1px solid #DFE3E8',
+        remove: () => set({ reported: self.state.reported.filter((x) => x.id !== r.id), toast: r.author.split(' ')[0] + '’s post removed from the Feed.' }),
+        keep: () => set({ reported: self.state.reported.filter((x) => x.id !== r.id), toast: 'Post kept.' }) }))
+    };
+    const repN = s.reported.length;
+
+    // ---------- publish ----------
+    const aTitle = (s.aTitle || '').trim(); const aBody = (s.aBody || '').trim();
+    const aUntilBad = !!s.aUntil && s.aUntil < '2026-11-18';
+    const aCant = !aTitle || !aBody || aUntilBad;
+    const eTitle = (s.eTitle || '').trim(); const ePlace = (s.ePlace || '').trim();
+    const eDateBad = !!s.eDate && s.eDate < '2026-11-18';
+    const eCant = !eTitle || !s.eDate || eDateBad || !s.eTime || !ePlace;
+    const cats = ['Celebration', 'Food', 'Learning', 'Sports', 'Other'];
+    const catC = { Celebration: ['#FFD9E2', '#3F0017'], Food: ['#FFF1C2', '#3D2E00'], Learning: ['#D3E5F5', '#0C1D29'], Sports: ['#CDEBD6', '#0B3D1F'], Other: ['#E5E8EE', '#41474D'] };
+    const pinAnn = s.anns.filter((a) => a.until && a.until >= '2026-11-18' && a.seen < TOTAL)[0] || null;
+    const pub = {
+      tabs: [['ann', 'Announcements'], ['ev', 'Events']].map((t) => { const on = s.pubTab === t[0]; return { label: t[1], sel: on ? 'true' : 'false', color: on ? '#006493' : '#41474D', line: on ? '#006493' : 'transparent', pick: () => set({ pubTab: t[0], delId: '' }) }; }),
+      ann: s.pubTab === 'ann', ev: s.pubTab === 'ev',
+      a: {
+        title: s.aTitle, body: s.aBody, until: s.aUntil,
+        onTitle: (e) => set({ aTitle: e.target.value, aMsg: '' }), onBody: (e) => set({ aBody: e.target.value, aMsg: '' }), onUntil: (e) => set({ aUntil: e.target.value, aMsg: '' }),
+        untilBad: aUntilBad, cant: aCant, op: aCant ? 0.4 : 1,
+        publish: () => { if (aCant) return; const a = { id: 'a' + Date.now(), title: aTitle, body: aBody, until: s.aUntil || '', posted: 'Today', seen: 0 }; set({ anns: [a].concat(self.state.anns), aTitle: '', aBody: '', aUntil: '', aMsg: 'Published.' }); },
+        hasMsg: !!s.aMsg, msg: s.aMsg
+      },
+      anns: s.anns.map((a, i) => ({ title: a.title, body: a.body, meta: 'Posted ' + (a.posted === 'Today' ? 'today' : a.posted), pinned: !!a.until, pinLine: a.until ? 'Pinned until ' + label(a.until) : '', seenLine: 'Seen by ' + a.seen + ' of ' + TOTAL, line: i === 0 ? '0' : '1px solid #DFE3E8', confirm: s.delId === a.id, idle: s.delId !== a.id, askDel: () => set({ delId: a.id }), keep: () => set({ delId: '' }), del: () => set({ anns: self.state.anns.filter((x) => x.id !== a.id), delId: '', toast: '“' + a.title + '” deleted. It’s gone from everyone’s app.' }) })),
+      annEmpty: s.anns.length === 0,
+      e: {
+        title: s.eTitle, date: s.eDate, time: s.eTime, place: s.ePlace, body: s.eBody, onBody: (e) => set({ eBody: e.target.value, eMsg: '' }),
+        gSw: sw(s.eGcal, false), toggleGcal: () => set({ eGcal: !self.state.eGcal, eMsg: '' }),
+        onTitle: (e) => set({ eTitle: e.target.value, eMsg: '' }), onDate: (e) => set({ eDate: e.target.value, eMsg: '' }), onTime: (e) => set({ eTime: e.target.value, eMsg: '' }), onPlace: (e) => set({ ePlace: e.target.value, eMsg: '' }), onCat: (e) => set({ eCat: e.target.value, eMsg: '' }),
+        catOpts: cats.map((c) => ({ v: c, label: c, sel: s.eCat === c })),
+        dateBad: eDateBad, cant: eCant, op: eCant ? 0.4 : 1,
+        add: () => { if (eCant) return; const ev = { id: 'e' + Date.now(), title: eTitle, date: s.eDate, time: s.eTime, place: ePlace, cat: s.eCat, body: (s.eBody || '').trim(), going: 0, gcal: s.gConn && s.eGcal ? 'sent' : false, cancelled: false }; set({ evs: self.state.evs.concat([ev]), eTitle: '', eDate: '', eTime: '', ePlace: '', eBody: '', eGcal: true, eMsg: 'Posted.' }); },
+        hasMsg: !!s.eMsg, msg: s.eMsg
+      },
+      evs: s.evs.slice().sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1)).map((e, i) => ({
+        title: e.title, when: label(e.date) + ' · ' + fmtT(e.time), place: e.place, whenPlace: label(e.date) + ' · ' + fmtT(e.time) + ' · ' + e.place, cat: e.cat, catBg: catC[e.cat][0], catFg: catC[e.cat][1],
+        going: e.cancelled ? 'Cancelled' : e.going + ' going', gcal: e.gcal === 'sent' && !e.cancelled, gFail: e.gcal === 'failed' && !e.cancelled, gOrphan: e.gcal === 'orphaned' && !e.cancelled, canResend: e.gcal === 'failed' && !e.cancelled && s.gConn,
+        edit: () => set({ edId: e.id, ed: { title: e.title, date: e.date, time: e.time, place: e.place, body: e.body || '' } }),
+        resend: () => set({ evs: self.state.evs.map((x) => (x.id === e.id ? Object.assign({}, x, { gcal: 'sent' }) : x)), toast: 'Invites sent.' }),
+        cancelled: e.cancelled, live: !e.cancelled, line: i === 0 ? '0' : '1px solid #DFE3E8', mon: mn[Number(e.date.slice(5, 7)) - 1], day: String(Number(e.date.slice(8))),
+        confirm: s.delId === e.id, idle: s.delId !== e.id, askDel: () => set({ delId: e.id }), keep: () => set({ delId: '' }),
+        cancel: () => set({ evs: self.state.evs.map((x) => (x.id === e.id ? Object.assign({}, x, { cancelled: true }) : x)), toast: e.title + ' cancelled.' }),
+        del: () => set({ evs: self.state.evs.filter((x) => x.id !== e.id), delId: '', toast: e.title + ' deleted.' })
+      })),
+      evEmpty: s.evs.length === 0,
+      ed: (() => {
+        const d = s.ed; const upd = (k) => (ev) => set({ ed: Object.assign({}, self.state.ed, { [k]: ev.target.value }) });
+        const bad = !!d.date && d.date < '2026-11-18';
+        const cant = !(d.title || '').trim() || !d.date || bad || !d.time || !(d.place || '').trim();
+        return {
+          open: !!s.edId, title: d.title, date: d.date, time: d.time, place: d.place, body: d.body, bad: bad, cant: cant, op: cant ? 0.4 : 1,
+          onTitle: upd('title'), onDate: upd('date'), onTime: upd('time'), onPlace: upd('place'), onBody: upd('body'),
+          close: () => set({ edId: '' }),
+          save: () => { if (cant) return; const id = s.edId; set({ edId: '', toast: 'Saved. People going were told.', evs: self.state.evs.map((x) => (x.id === id ? Object.assign({}, x, { title: d.title.trim(), date: d.date, time: d.time, place: d.place.trim(), body: (d.body || '').trim() }) : x)) }); }
+        };
+      })(),
+      g: (() => {
+        const owned = s.evs.filter((x) => x.gcal === 'sent' && !x.cancelled).length;
+        const next = s.people.filter((p) => p.admin && !p.left && p.id !== 'anita')[0];
+        const what = owned === 0 ? 'Invites stop going out from your calendar.'
+          : next ? (owned === 1 ? '1 upcoming invite moves' : owned + ' upcoming invites move') + ' to ' + next.name + '.'
+          : (owned === 1 ? '1 upcoming invite stays' : owned + ' upcoming invites stay') + ' in people’s calendars, but can’t be changed or cancelled from here.';
+        return {
+          on: s.gConn, notOn: !s.gConn, idle: !s.gConfirm, confirm: s.gConfirm, what: what,
+          ask: () => set({ gConfirm: true }), keep: () => set({ gConfirm: false }),
+          off: () => set({ gConn: false, gConfirm: false, toast: 'Disconnected.', evs: next ? self.state.evs : self.state.evs.map((x) => (x.gcal === 'sent' && !x.cancelled ? Object.assign({}, x, { gcal: 'orphaned' }) : x)) }),
+          connect: () => set({ gConn: true, toast: 'Google Calendar connected.' })
+        };
+      })()
+    };
+
+    // ---------- office: times ----------
+    const d = s.tDraft;
+    const tkeys = ['am', 'amBy', 'pm', 'pmBy', 'order'];
+    const tChanged = tkeys.some((k) => d[k] !== s.tSaved[k]);
+    const amBad = !!d.am && !!d.amBy && d.amBy >= d.am;
+    const pmBad = !!d.pm && !!d.pmBy && d.pmBy >= d.pm;
+    const tEmpty = tkeys.some((k) => !d[k]);
+    const tCant = !tChanged || amBad || pmBad || tEmpty;
+    const tOn = {}; tkeys.forEach((k) => { tOn[k] = (e) => { const nd = Object.assign({}, self.state.tDraft); nd[k] = e.target.value; set({ tDraft: nd, tMsg: '' }); }; });
+    const teaNamesAm = ['Arjun K', 'Kiran M', 'Meera S', 'Nisha T', 'Priya N', 'Rahul V', 'Sana A'];
+    const teaNamesPm = ['Arjun K', 'Divya P', 'Meera S', 'Rohan D'];
+    const T = s.tSaved;
+    const rounds = [['am', 'Morning round', T.am, teaNamesAm, 'showAm'], ['pm', 'Afternoon round', T.pm, teaNamesPm, 'showPm']].map((r) => { const open = !!s[r[4]]; return { line: r[1] + ' at ' + fmtT(r[2]) + ': ' + r[3].length + ' having tea', open: open, expanded: open ? 'true' : 'false', btn: open ? 'Hide names' : 'Show names', listId: 'names-' + r[0], names: r[3].join(', '), toggle: () => { const o = {}; o[r[4]] = !open; set(o); } }; });
+    const newItem = (s.newItem || '').trim();
+    const itemDup = !!newItem && s.shelf.some((x) => x.toLowerCase() === newItem.toLowerCase());
+    const office = {
+      tabs: [['closed', 'Closed days'], ['tea', 'Tea & snack times'], ['shelf', 'Snack shelf']].map((t) => { const on = s.offTab === t[0]; return { label: t[1], sel: on ? 'true' : 'false', color: on ? '#006493' : '#41474D', line: on ? '#006493' : 'transparent', pick: () => set({ offTab: t[0] }) }; }),
+      closedTab: s.offTab === 'closed', teaTab: s.offTab === 'tea', shelfTab: s.offTab === 'shelf',
+      c: {
+        date: s.cDate, reason: s.cReason, onDate: (e) => set({ cDate: e.target.value, cMsg: '' }), onReason: (e) => set({ cReason: e.target.value, cMsg: '' }),
+        dup: cDup, cant: cCant, op: cCant ? 0.4 : 1,
+        add: () => { if (cCant) return; set({ closed: self.state.closed.concat([{ iso: s.cDate, reason: cReason, by: 'Anita' }]), cDate: '', cReason: '', cMsg: label(s.cDate) + ' marked closed.' }); },
+        hasMsg: !!s.cMsg, msg: s.cMsg,
+        countLine: plural(closedSorted.length, 'day', 'days'), empty: closedSorted.length === 0,
+        rows: closedSorted.map((c, i) => ({ dateLabel: label(c.iso), dayNum: String(Number(c.iso.slice(8))), reason: c.reason, by: c.by, titleLine: label(c.iso) + ' · ' + c.reason, byLine: 'Added by ' + c.by, line: i === 0 ? '0' : '1px solid #DFE3E8', remove: () => set({ closed: self.state.closed.filter((x) => x.iso !== c.iso), cMsg: label(c.iso) + ' removed.' }) }))
+      },
+      t: {
+        f: d, on: tOn, amBad: amBad ? 'true' : 'false', pmBad: pmBad ? 'true' : 'false', amBadOn: amBad, pmBadOn: pmBad,
+        cant: tCant, op: tCant ? 0.4 : 1,
+        save: () => { if (tCant) return; set({ tSaved: Object.assign({}, d), tMsg: 'Saved.' }); },
+        hasMsg: !!s.tMsg, msg: s.tMsg, rounds: rounds
+      },
+      sh: {
+        orderChip: 'Goes in at ' + hm(T.order), orderedLine: 'Ordered at ' + s.orderedAt, ordered: s.ordered, open: !s.ordered,
+        markOrdered: () => { if (self.state.ordered) return; set({ ordered: true, orderedAt: '11:42' }); }, undoOrdered: () => set({ ordered: false, orderedAt: '' }),
+        cantOrder: s.ordered, orderOp: s.ordered ? 0.4 : 1,
+        picks: s.picks.slice().sort((a, b) => b.n - a.n).map((p, i) => ({ line: p.name + ' · ' + p.n, sep: i === 0 ? '0' : '1px solid #DFE3E8' })),
+        tabs: [['ideas', 'Suggestions · ' + s.ideas.length], ['shelf', 'Shelf · ' + s.shelf.length]].map((t) => { const on = s.shTab === t[0]; return { label: t[1], sel: on ? 'true' : 'false', color: on ? '#006493' : '#41474D', line: on ? '#006493' : 'transparent', pick: () => set({ shTab: t[0] }) }; }),
+        ideasTab: s.shTab === 'ideas', shelfTab: s.shTab === 'shelf',
+        shelf: s.shelf.map((x, i) => ({ name: x, line: i === 0 ? '0' : '1px solid #DFE3E8', remove: () => set({ shelf: self.state.shelf.filter((y) => y !== x), toast: x + ' taken off the shelf.' }) })),
+        shelfEmpty: s.shelf.length === 0,
+        newItem: s.newItem, onNew: (e) => set({ newItem: e.target.value }), itemDup: itemDup, cantAdd: !newItem || itemDup, addOp: !newItem || itemDup ? 0.4 : 1,
+        addItem: () => { if (!newItem || itemDup) return; set({ shelf: self.state.shelf.concat([newItem]), newItem: '' }); },
+        ideas: s.ideas.slice().sort((a, b) => b.n - a.n).map((x, i) => ({ name: x.name, n: '+' + x.n, sr: x.n + ' people asked for this', line: i === 0 ? '0' : '1px solid #DFE3E8', add: () => set({ ideas: self.state.ideas.filter((y) => y.name !== x.name), shelf: self.state.shelf.concat([x.name]), toast: x.name + ' added to the shelf.' }), dismiss: () => set({ ideas: self.state.ideas.filter((y) => y.name !== x.name), toast: x.name + ' dismissed.' }) })),
+        ideasEmpty: s.ideas.length === 0
+      }
+    };
+
+    // ---------- wifi ----------
+    const reports = [
+      { day: 'Today', today: true, area: '2nd floor, east side', down: '4.2', up: '1.1', note: 'Calls keep dropping' },
+      { day: 'Today', today: true, area: 'Meeting room B', down: '3.5', up: '0.9', note: 'Video freezes on calls' },
+      { day: 'Today', today: true, area: '2nd floor, east side', down: '6.8', up: '2.0', note: '' },
+      { day: 'Tue 17 Nov', today: false, area: 'Ground floor, near the pantry', down: '8.1', up: '3.4', note: '' },
+      { day: 'Mon 16 Nov', today: false, area: '2nd floor, east side', down: '5.0', up: '1.6', note: 'Slow after lunch' }
+    ];
+    const wList = reports.filter((r) => s.wf === 'week' || r.today);
+    const todayN = reports.filter((r) => r.today).length;
+    const areaCount = {}; reports.forEach((r) => { areaCount[r.area] = (areaCount[r.area] || 0) + 1; });
+    const topArea = Object.keys(areaCount).sort((a, b) => areaCount[b] - areaCount[a])[0];
+    const wifi = {
+      chips: [['today', 'Today', todayN], ['week', 'This week', reports.length]].map((c) => Object.assign(chip(s.wf === c[0]), { label: c[1] + ' ' + c[2], pick: () => set({ wf: c[0] }) })),
+      topArea: topArea, topLine: 'Most reported this week: ' + topArea,
+      rows: wList.map((r, i) => ({ day: r.day, area: r.area, down: r.down, up: r.up, speedSr: r.down + ' megabits per second down, ' + r.up + ' up', note: r.note || 'No note', noteColor: r.note ? '#181C20' : '#41474D', line: i === 0 ? '0' : '1px solid #DFE3E8' }))
+    };
+
+    // ---------- overview ----------
+    const nextEv = pub.evs.filter((e) => e.live)[0];
+    const nextClosed = closedSorted.filter((c) => c.iso >= '2026-11-18')[0];
+    let workLeft = 0; for (let x = TODAY; x <= 30; x++) { const w = dowN(x); if (w !== 0 && w !== 6 && closedNov.indexOf(x) < 0) workLeft++; }
+    const curRound = s.teaNames;
+    const needDefs = [];
+    if (newN) needDefs.push({ title: plural(newN, 'new Speak up message', 'new Speak up messages'), icon: ICON.speak, bg: '#D3E5F5', fg: '#0C1D29', go: go('speak', { sf: 'open' }) });
+    if (repN) needDefs.push({ title: plural(repN, 'reported Feed post', 'reported Feed posts'), icon: ICON.flag, bg: '#FFDAD6', fg: '#410002', go: go('speak', { sf: 'open' }) });
+    if (pinAnn) needDefs.push({ title: pinAnn.title + ' · seen by ' + pinAnn.seen + ' of ' + TOTAL, icon: ICON.publish, bg: '#FFDDB0', fg: '#4A2800', go: go('publish', { pubTab: 'ann' }) });
+    if (todayN) needDefs.push({ title: plural(todayN, 'slow Wi-Fi report', 'slow Wi-Fi reports') + ' today', icon: ICON.wifi, bg: '#E5E8EE', fg: '#41474D', go: go('wifi', { wf: 'today' }) });
+    if (!s.ordered) needDefs.push({ title: 'Snack order goes in at ' + hm(T.order), icon: ICON.snack, bg: '#CDEBD6', fg: '#0B3D1F', go: go('office', { offTab: 'shelf' }) });
+    const ov = {
+      who: (() => {
+        const first = (p) => p.name.split(' ')[0];
+        const inNow = ppl.filter((p) => !p.left && dayKind(p, TODAY) === 'in').map(first);
+        const away = ppl.filter((p) => !p.left && dayKind(p, TODAY) === 'leave').map(first);
+        return [{ label: 'In office', dot: '#006493', names: inNow.length ? inNow.join(', ') : 'No one yet' }, { label: 'On leave', dot: '#7D5BA6', names: away.length ? away.join(', ') : 'No one' }];
+      })(),
+      tea: {
+        line: 'Morning tea at ' + fmtT(T.am) + ' · ' + teaNamesAm.length + ' having tea',
+        open: curRound, expanded: curRound ? 'true' : 'false', btn: curRound ? 'Hide names' : 'Show names', names: teaNamesAm.join(', '),
+        toggle: () => set({ teaNames: !self.state.teaNames }),
+        next: 'Afternoon at ' + fmtT(T.pm) + ' · ' + teaNamesPm.length + ' so far'
+      },
+      needs: needDefs.map((n, i) => Object.assign(n, { line: i === 0 ? '0' : '1px solid #DFE3E8' })),
+      hasNeeds: needDefs.length > 0, noNeeds: needDefs.length === 0
+    };
+
+    // ---------- shell ----------
+    const spBadge = newN + repN ? String(newN + repN) : '';
+    const navDefs = [['today', 'Today', ''], ['people', 'People', ''], ['speak', 'Speak up', spBadge], ['publish', 'Publish', ''], ['office', 'Office', ''], ['wifi', 'Wi-Fi reports', '']];
+    const sideItems = navDefs.map((n) => { const on = vw === n[0]; return { label: n[1], icon: ICON[n[0]], badge: n[2], hasBadge: !!n[2], badgeSr: n[2] ? ', ' + n[2] + ' new' : '', go: go(n[0]), cur: on ? 'page' : 'false', bg: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#41474D', weight: on ? 700 : 500 }; });
+    const moreOn = vw === 'office' || vw === 'wifi';
+    const mobDefs = [['today', 'Today'], ['people', 'People'], ['speak', 'Speak up'], ['publish', 'Publish']];
+    const mobItems = mobDefs.map((n) => { const on = vw === n[0]; const b = n[0] === 'speak' ? spBadge : ''; return { label: n[1], icon: ICON[n[0]], badge: b, hasBadge: !!b, badgeSr: b ? ', ' + b + ' new' : '', go: go(n[0]), cur: on ? 'page' : 'false', pill: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#41474D', weight: on ? 700 : 500 }; }).concat([{ label: 'More', icon: ICON.more, badge: '', hasBadge: false, badgeSr: '', go: () => set({ more: true }), cur: moreOn ? 'page' : 'false', pill: moreOn ? '#D3E5F5' : 'transparent', color: moreOn ? '#0C1D29' : '#41474D', weight: moreOn ? 700 : 500 }]);
+    const moreItems = [['office', 'Office', 'Closed days, tea and snack times, snack shelf'], ['wifi', 'Wi-Fi reports', 'Slow Wi-Fi reports']].map((n) => ({ label: n[1], sub: n[2], icon: ICON[n[0]], go: go(n[0]), cur: vw === n[0] ? 'page' : 'false' }));
+    const heads = {
+      today: ['Today', 'Wednesday, 18 November'],
+      people: ['People', ''],
+      speak: ['Speak up', ''],
+      publish: ['Publish', ''],
+      office: ['Office', ''],
+      wifi: ['Wi-Fi reports', '']
+    };
+
+    return {
+      v: v, head: { title: heads[vw][0], sub: heads[vw][1], hasSub: !!heads[vw][1] },
+      sideItems: sideItems, mobItems: mobItems, moreItems: moreItems,
+      moreOpen: !!s.more, closeMore: () => set({ more: false }),
+      openMember: () => set({ more: false, toast: 'This opens the member app at Home. Come back from Account → Admin.' }),
+      toast: { on: !!s.toast, text: s.toast, close: () => set({ toast: '' }) },
+      ov: ov, pp: pp, panel: panel, sp: sp, pub: pub, office: office, wifi: wifi
+    };
+  }
+}
+</script>
+</body>
+</html>

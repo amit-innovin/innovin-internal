@@ -229,7 +229,7 @@ describe("the cut", () => {
     expect(Object.keys(await import("@/lib/submitter"))).not.toContain("pantryRef");
     expect(Object.keys(await import("@/lib/config"))).not.toContain("orderCutoffHour");
     const { existsSync } = await import("fs");
-    for (const p of ["lib/pantry", "lib/menu.ts", "lib/order-state.ts", "app/api/snacks", "app/api/pantry-shop", "app/api/pantry-provider"]) expect(existsSync(p), p).toBe(false);
+    for (const p of ["lib/pantry", "lib/menu.ts", "lib/order-state.ts", "app/api/pantry-shop", "app/api/pantry-provider"]) expect(existsSync(p), p).toBe(false);
   });
 
   it("the cut: notifications never contain ping or pantry items", async () => {

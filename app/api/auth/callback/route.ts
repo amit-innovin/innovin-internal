@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
+import { refreshGuests } from "@/lib/calendar";
 import { createUserSession, OAUTH_COOKIE, USER_COOKIE, USER_SESSION_MS, verifyOauthState } from "@/lib/auth";
 import { adminEmails } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie, secureAuthCookie } from "@/lib/cookies";
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
   // `role` applies to the insert only — upsert never overwrites a granted role. Bootstrap
   // admins (ADMIN_EMAILS) are re-promoted on every sign-in, so they can't be locked out.
   const bootstrapAdmin = adminEmails().includes(identity.email.toLowerCase());
+  const isNew = !(await store.getEmployee(identity.email));
   await store.upsertEmployee({
     email: identity.email,
     name: identity.name,
@@ -53,6 +55,8 @@ export async function GET(req: NextRequest) {
     lastSeenAt: now,
   });
   if (bootstrapAdmin) await store.setRole(identity.email, "admin");
+  // A first sign-in joins upcoming Google Calendar invites (quietly; it still lands in their calendar).
+  if (isNew) after(() => refreshGuests().catch(() => {}));
 
   const res = NextResponse.redirect(new URL(next, req.nextUrl.origin));
   const token = createUserSession({ email: identity.email, name: identity.name });

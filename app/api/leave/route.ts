@@ -3,6 +3,7 @@ import { currentActor, isAdmin } from "@/lib/admin";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
+import { closedMap } from "@/lib/days";
 import { leaveOverview, summarize } from "@/lib/leave-data";
 import { store } from "@/lib/store";
 import { todayIST } from "@/lib/time";
@@ -22,16 +23,21 @@ export async function GET(req: NextRequest) {
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
   if (!session) return NextResponse.json({ signedIn: false, year }, { status: 200 });
 
-  const [employee, rows, balances, zoho] = await Promise.all([
+  const [employee, rows, balances, zoho, closed] = await Promise.all([
     store.getEmployee(session.email),
     store.listAwayByEmail(session.email, 2147483647),
     store.listLeaveBalances(year),
     zohoLeave(session.email, year),
+    closedMap(`${year}-01-01`, `${year}-12-31`),
   ]);
   const person = { name: employee?.name ?? session.name, joinedOn: employee?.joinedOn ?? null };
   const balance = balances.find((b) => b.email === session.email);
-  return NextResponse.json({ signedIn: true, name: person.name, ...summarize(person, rows, year, today, balance), zoho }, { headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json({ signedIn: true, name: person.name, ...summarize(person, rows, year, today, balance, closed), zoho, applyUrl: zohoApplyUrl() }, { headers: { "Cache-Control": "private, no-store" } });
 }
+
+// Where members apply for leave: Zoho People, where each person's approver decides.
+// ZOHO_PEOPLE_LEAVE_URL can point straight at the portal's leave page.
+const zohoApplyUrl = () => process.env.ZOHO_PEOPLE_LEAVE_URL || `https://people.zoho.${process.env.ZOHO_DATA_CENTER || "com"}/`;
 
 const TYPES = ["cl", "sl", "el", "fl"] as const;
 

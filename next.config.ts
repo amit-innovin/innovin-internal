@@ -52,9 +52,21 @@ const nextConfig: NextConfig = {
   // (/snacks?tab=today → /?tab=today); Home reads no such parameters, so it is harmless.
   async redirects() {
     return [
-      { source: "/leave", destination: "/attendance?tab=leave", permanent: false },
-      { source: "/away", destination: "/attendance?tab=leave", permanent: false },
-      ...["/pantry", "/snacks", "/planner", "/people", "/admin/pantry"].map((source) => ({ source, destination: "/", permanent: false })),
+      // Old links to the notice board, from before Home was rebuilt.
+      { source: "/", has: [{ type: "query", key: "view", value: "board" }], destination: "/feed", permanent: false },
+      // The Feed replaced the notice board and the events list; Account replaced Settings.
+      { source: "/board", destination: "/feed", permanent: false },
+      { source: "/events", has: [{ type: "query", key: "event", value: "(?<event>[^&]+)" }], destination: "/feed/events/:event", permanent: false },
+      { source: "/events", destination: "/feed?filter=event", permanent: false },
+      { source: "/settings", destination: "/account", permanent: false },
+      { source: "/leave", destination: "/days", permanent: false },
+      { source: "/away", destination: "/days", permanent: false },
+      // Retired in the Material 3 rebuild: attendance and leave live on Days, the reading list is
+      // out of the design, and the old admin tools moved into the admin app.
+      { source: "/attendance", destination: "/days", permanent: false },
+      { source: "/reading", destination: "/", permanent: false },
+      { source: "/admin/tools", destination: "/admin", permanent: false },
+      ...["/pantry", "/planner", "/people", "/admin/pantry"].map((source) => ({ source, destination: "/", permanent: false })),
     ];
   },
 };

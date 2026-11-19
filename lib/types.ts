@@ -15,8 +15,56 @@ export type EmployeeRow = {
   joinedOn: string | null;
   // Days hit before the app took over the 10K challenge — copied from the sheet by an admin.
   stepsOffset: number;
+  // Regular office weekdays, Monday = 0. Empty until the person picks them. Stores always
+  // return both fields; they are optional only so a first sign-in doesn't have to supply them.
+  officeDays?: number[];
+  // Exempt from the 8-office-days target (e.g. fully remote). Admin-set.
+  officeExempt?: boolean;
+  // Day and month only ("MM-DD"), and shown to colleagues only when the person opts in.
+  birthday?: string | null;
+  showBirthday?: boolean;
   createdAt: string;
   lastSeenAt: string;
+  // Feed: everything created up to this moment has been seen. Only ever moves forward.
+  feedSeenAt?: string | null;
+  // Opted into the step league: listed for others who joined, and can nudge and be nudged.
+  stepsLeague?: boolean;
+  // Opted into Say hi: can send and get waves and invites from people in the office.
+  sayHi?: boolean;
+  // Marked as left by an admin (YYYY-MM-DD): no Google Calendar invites, not counted as a reader.
+  leftOn?: string | null;
+};
+
+// An admin's Google refresh token, sealed with AES-256-GCM (lib/calendar-crypto.ts). Never sent to a browser.
+export type CalendarTokenRow = { email: string; ciphertext: string; iv: string; tag: string; kid: string; scope: string; createdAt: string };
+
+// The Google Calendar invite behind an app event. `generation` changes only on a hand-over, and the
+// Google event id is derived from (eventId, generation), so retries can never send a second invite.
+export type InviteState = "sent" | "failed" | "orphaned";
+export type EventInviteRow = { eventId: string; owner: string; googleId: string; generation: number; state: InviteState; error: string | null; updatedAt: string };
+
+// How a day got its mark. wifi / location: verified at the office. self: declared remote.
+// late: added afterwards by the person (no location check). admin: fixed by an admin.
+export type AttendanceSource = "wifi" | "location" | "self" | "late" | "admin";
+export type DayMode = "office" | "remote";
+
+// One entry per day changed after the fact, by the person or by an admin.
+export type HiKind = "wave" | "five" | "thanks" | "chai" | "lunch" | "walk";
+// One wave or invite, today. atTime: "now", "30" (minutes) or "HH:MM" for invites; reply only for invites.
+export type HiRow = { id: string; date: string; from: string; to: string; kind: HiKind; atTime: string | null; reply: "yes" | "no" | null; createdAt: string; repliedAt?: string | null };
+
+export type PlanOverrideRow = { email: string; date: string; planned: boolean };
+export type ClosedDayRow = { date: string; reason: string; createdBy: string; createdAt: string };
+
+export type AttendanceChangeRow = {
+  id: string;
+  email: string;
+  date: string;
+  from: DayMode | null;
+  to: DayMode | null;
+  by: string;
+  kind: "late" | "admin";
+  at: string;
 };
 
 // 10K steps challenge: one row per person per day. `hit` is the toggle; `steps` is the
@@ -41,6 +89,7 @@ export type AttendanceRow = {
   lng: number | null;
   accuracyM: number | null;
   declaredMode?: "office" | "remote" | null;
+  source?: AttendanceSource | null;
 };
 
 export type AwayType = "leave" | "wfh";
@@ -131,6 +180,10 @@ export type GrievanceRow = {
   status: GrievanceStatus;
   updatedAt?: string;
   createdAt: string;
+  // Workplace, People, Facilities, Process, Something else; and an admin's reply, which only the
+  // device that sent the message ever sees.
+  topic?: string | null;
+  reply?: string | null;
 };
 
 export type WifiRow = {
@@ -140,6 +193,8 @@ export type WifiRow = {
   downMbps: number | null;
   upMbps: number | null;
   createdAt: string;
+  // Where in the office: Desk area, Meeting room, Pantry, Balcony. Never who.
+  area?: string | null;
 };
 
 export type AnnouncementRow = {
@@ -148,6 +203,10 @@ export type AnnouncementRow = {
   body: string;
   tag: string;
   createdAt: string;
+  // Important: shown once to everyone as a sheet and acknowledged, until pinnedUntil (a date).
+  important?: boolean;
+  authorName?: string | null;
+  pinnedUntil?: string | null;
 };
 
 export type WorkspaceProfile = {
@@ -164,7 +223,8 @@ export type WorkspaceProfile = {
 
 export type NoticeRow = {
   id: string;
-  kind: "quote" | "feedback";
+  // Feed posts anyone can make. Kudos and polls are notices too, so they share reactions.
+  kind: "quote" | "feedback" | "kudos" | "poll";
   title: string;
   body: string;
   attribution: string;
@@ -173,8 +233,27 @@ export type NoticeRow = {
   authorEmail: string | null;
   authorName: string | null;
   createdAt: string;
+  // A photo on a note (compressed data URL).
+  image?: string | null;
+  // Kudos: who it is for.
+  toEmail?: string | null;
+  toName?: string | null;
+  // Poll: the choices and when voting stops.
+  options?: string[];
+  closesAt?: string | null;
 };
 export type NoticeReaction = { noticeId: string; email: string; emoji: string };
+export type PollVote = { noticeId: string; email: string; option: number };
+export type TeaRow = { date: string; email: string; createdAt: string; round?: TeaRound; going?: boolean };
+export type TeaRound = "am" | "pm";
+// One person's answer for one tea round. Rows from before rounds existed read as an afternoon yes.
+export type TeaAnswer = { date: string; round: TeaRound; email: string; going: boolean; createdAt: string };
+// "suggested" by anyone (anonymously) → "shelf" when an admin adds it → "dismissed".
+export type SnackItem = { id: string; name: string; note: string; status: "suggested" | "shelf" | "dismissed"; orderedAt: string | null; createdAt: string };
+// voterRef is a keyed hash of the voter, so one vote per person without storing who.
+export type SnackVote = { itemId: string; voterRef: string };
+export type BookRow = { id: string; title: string; author: string; createdAt: string };
+export type ReadingRow = { email: string; bookId: string; status: "want" | "reading" | "done"; page: number; pages: number; updatedAt: string };
 
 
 export interface Store {
@@ -190,6 +269,49 @@ export interface Store {
   checkIn(row: AttendanceRow): Promise<AttendanceRow>;
   // Closes the open session; null when there isn't one.
   checkOut(email: string, date: string, at: string): Promise<AttendanceRow | null>;
+  votePoll(noticeId: string, email: string, option: number | null): Promise<boolean>;
+  listPollVotes(noticeIds: string[]): Promise<PollVote[]>;
+  setTea(date: string, email: string, going: boolean): Promise<void>;
+  listTea(date: string): Promise<TeaRow[]>;
+  setTeaAnswer(date: string, round: TeaRound, email: string, going: boolean | null): Promise<void>;
+  listTeaAnswers(date: string): Promise<TeaAnswer[]>;
+  // Today's snack: one pick per person per day, by anonymous voter ref. null clears it.
+  setSnackPick(date: string, voterRef: string, itemId: string | null): Promise<void>;
+  listSnackPicks(date: string): Promise<{ itemId: string; voterRef: string }[]>;
+  getSetting<T = unknown>(key: string): Promise<T | null>;
+  setSetting(key: string, value: unknown): Promise<void>;
+  addSnack(row: SnackItem): Promise<SnackItem>;
+  getSnack(id: string): Promise<SnackItem | null>;
+  listSnacks(): Promise<SnackItem[]>;
+  setSnackStatus(id: string, status: SnackItem["status"], orderedAt: string | null): Promise<boolean>;
+  // The voter's new state (true = voted), or null when the item doesn't exist.
+  toggleSnackVote(itemId: string, voterRef: string): Promise<boolean | null>;
+  listSnackVotes(): Promise<SnackVote[]>;
+  clearSnackVotes(itemId: string): Promise<void>;
+  addBook(row: BookRow): Promise<BookRow>;
+  listBooks(): Promise<BookRow[]>;
+  setReading(row: ReadingRow): Promise<ReadingRow>;
+  clearReading(email: string, bookId: string): Promise<void>;
+  listReadings(): Promise<ReadingRow[]>;
+  setBirthday(email: string, birthday: string | null, show: boolean): Promise<boolean>;
+  // One tap = the day's mark. Creates or replaces that person's row for the date (mode, source,
+  // position, time) and clears any old check-out.
+  markDay(row: AttendanceRow): Promise<AttendanceRow>;
+  // Removes the day's mark; false when there was none.
+  clearDay(email: string, date: string): Promise<boolean>;
+  addAttendanceChange(row: AttendanceChangeRow): Promise<AttendanceChangeRow>;
+  listAttendanceChanges(email: string, limit: number): Promise<AttendanceChangeRow[]>;
+  setOfficeDays(email: string, days: number[]): Promise<boolean>;
+  // One date added to or taken out of someone's usual office days; null removes the override.
+  setPlanOverride(email: string, date: string, planned: boolean | null): Promise<void>;
+  listPlanOverrides(email: string, from: string, to: string): Promise<PlanOverrideRow[]>;
+  listPlanOverridesOn(date: string): Promise<PlanOverrideRow[]>;
+  // Admin-set office closures. addClosedDay is false when the date is already closed.
+  listClosedDays(from: string, to: string): Promise<ClosedDayRow[]>;
+  addClosedDay(row: ClosedDayRow): Promise<boolean>;
+  removeClosedDay(date: string): Promise<boolean>;
+  // Admin-set: no 8-office-day target for this person (e.g. fully remote).
+  setOfficeExempt(email: string, exempt: boolean): Promise<boolean>;
   // The currently open session, or null.
   getAttendance(email: string, date: string): Promise<AttendanceRow | null>;
   // One person's day rows across a date range (inclusive), for the attendance calendar.
@@ -197,10 +319,20 @@ export interface Store {
   listAttendance(date: string): Promise<AttendanceRow[]>;
   // 10K challenge: one row per person per day — today is the only writable day.
   setSteps(row: StepsRow): Promise<StepsRow>;
+  // Adds to the day's total in one statement (two phones adding at once both count), capped at
+  // 200,000; returns the new total and the hit. Reaching STEP_GOAL is a hit, and a hit already
+  // marked (with the toggle) stays one.
+  addSteps(email: string, date: string, add: number): Promise<{ steps: number; hit: boolean }>;
   listSteps(): Promise<StepsRow[]>;
   listStepsByEmail(email: string, limit: number): Promise<StepsRow[]>;
   addGrievance(row: GrievanceRow): Promise<GrievanceRow>;
   setGrievanceStatus(id: string, status: GrievanceStatus): Promise<boolean>;
+  setGrievanceReply(id: string, reply: string | null): Promise<boolean>;
+  // A person flagging a Feed post for admins, by anonymous ref; false when they already did.
+  addNoticeReport(noticeId: string, reporterRef: string): Promise<boolean>;
+  countNoticeReports(): Promise<Record<string, number>>;
+  // An admin looked and kept the post: its reports are cleared.
+  clearNoticeReports(noticeId: string): Promise<void>;
   listGrievances(): Promise<GrievanceRow[]>;
   // "My submissions" lookup — ids come from the device's own cookie, never a stored ref.
   listGrievancesByIds(ids: string[], limit: number): Promise<GrievanceRow[]>;
@@ -210,6 +342,23 @@ export interface Store {
   getAnnouncement(id: string): Promise<AnnouncementRow | null>;
   deleteAnnouncement(id: string): Promise<void>;
   listAnnouncements(limit: number): Promise<AnnouncementRow[]>;
+  ackAnnouncement(id: string, email: string): Promise<void>;
+  listAckedAnnouncementIds(email: string): Promise<string[]>;
+  // Acknowledgements per announcement, leaving out people marked as left.
+  countAnnouncementAcks(ids: string[]): Promise<Record<string, number>>;
+  setFeedSeenAt(email: string, at: string): Promise<void>;
+  setStepsLeague(email: string, on: boolean): Promise<boolean>;
+  // One nudge per sender, recipient and day; false when it was already sent.
+  addNudge(date: string, from: string, to: string): Promise<boolean>;
+  setSayHi(email: string, on: boolean): Promise<boolean>;
+  // Adds it only while the sender is under `limit` today and hasn't sent to this person today;
+  // null otherwise. Checked and written together, so sends at the same moment can't beat it.
+  addHi(row: HiRow, limit: number): Promise<HiRow | null>;
+  listHiFrom(date: string, from: string): Promise<HiRow[]>;
+  listHiTo(date: string, to: string): Promise<HiRow[]>;
+  // Only the recipient, only an unanswered invite; false otherwise.
+  setHiReply(id: string, to: string, reply: "yes" | "no"): Promise<boolean>;
+  listNudgesFrom(date: string, from: string): Promise<string[]>;
   addAway(row: AwayRow): Promise<AwayRow>;
   setAwayStatus(id: string, status: AwayStatus, decidedBy: string | null, decidedAt: string, expected: AwayStatus): Promise<boolean>;
   getAway(id: string): Promise<AwayRow | null>;
@@ -234,6 +383,16 @@ export interface Store {
   getEmployee(email: string): Promise<EmployeeRow | null>;
   listEmployees(): Promise<EmployeeRow[]>;
   setRole(email: string, role: Role): Promise<boolean>;
+  setLeftOn(email: string, leftOn: string | null): Promise<boolean>;
+  getCalendarToken(email: string): Promise<CalendarTokenRow | null>;
+  saveCalendarToken(row: CalendarTokenRow): Promise<void>;
+  deleteCalendarToken(email: string): Promise<boolean>;
+  // Oldest connection first: the first one is who takes over invites from an admin who goes.
+  listCalendarTokens(): Promise<CalendarTokenRow[]>;
+  getEventInvite(eventId: string): Promise<EventInviteRow | null>;
+  setEventInvite(row: EventInviteRow): Promise<void>;
+  deleteEventInvite(eventId: string): Promise<boolean>;
+  listEventInvites(): Promise<EventInviteRow[]>;
   setJoinedOn(email: string, joinedOn: string | null): Promise<boolean>;
   // Days hit before the app took over tracking — admin-entered from the old sheet.
   setStepsOffset(email: string, days: number): Promise<boolean>;

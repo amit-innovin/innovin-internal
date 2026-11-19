@@ -6,6 +6,7 @@
 - Unit + store contract: `npm test`; add `TEST_DATABASE_URL=postgres://…` to include the Postgres contract
 - E2E: `npm run test:e2e` (builds, then Playwright on port 3210).
   `E2E_DATABASE_URL=postgres://…` runs against Postgres; `CHROME_PATH=/path/to/chromium` avoids the Playwright browser download.
+  `E2E_MOCK_PORT=3998` moves the Google sign-in mock off port 3999 when another checkout or session is already using it.
 - Full gate: `npm run test:all`
 
 ## How much to verify, and when
@@ -41,20 +42,34 @@ git checkout main && git pull        # next change starts here again
 Per the owner's instruction: every committed branch MUST ship as a pull request that is
 then merged into `main`. Never merge to `main` locally or push to `main` directly.
 
-Git access: the remote uses the `github.com-innovin` SSH host alias (work account), so
-push works. The `gh` CLI is authenticated as the *personal* `AmitJaison` account, which
-cannot resolve the private `amit-innovin/innovin-internal` — so `gh pr create` fails.
-Until `gh` is logged in as `amit-innovin` (or AmitJaison is added as a collaborator),
-the fallback is: push the branch, hand the owner the compare URL
-(`github.com/amit-innovin/innovin-internal/pull/new/<branch>`), and they open + merge
-the PR in the web UI. Do not self-merge to `main` even then.
+Git access: use the `gautham-inv` GitHub account for every push, PR and `gh` call (owner instruction).
+`gh` has more than one account logged in; check `gh auth status` shows `gautham-inv` as active, and
+`gh auth switch -u gautham-inv` if not. It has write access to `amit-innovin/innovin-internal`, so
+`gh pr create` works. Pushing, opening and merging a PR each need the owner's go-ahead; never
+self-merge to `main`.
 
 Then deploy (`npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"`, token in `.env`),
 smoke-test production, and delete any test rows created by the smoke test.
 
+## Design: the canvas is the source of truth
+- Every screen is built from the Material 3 canvas, not from spec prose: https://claude.ai/artifact/NRpZBjTSvvoWB2yJNuTy7e
+  (pages "Member app" and "Admin app"). The board files live in `docs/design/m3/` and are published from there, with the
+  route map in its README. Read the board before planning or building a screen. If a state is not drawn, draw it on the
+  canvas first; don't invent it in code. Change a board by editing its file and republishing it to the canvas.
+- Member screens live in `app/(member)/(m3)/` and render inside `components/m3/app-shell.tsx`; the admin app lives in
+  `app/(admin)/admin/(m3)/` with `components/admin-app/shell.tsx`. UI uses the primitives in `components/m3` (and
+  `components/admin-app/ui.tsx`) and the tokens and classes in `app/m3.css`. A page wraps its content in
+  `className="m3 m3-page"` (font, colours, grey ground, column width).
+- Tappable means a filled, tonal or outlined button, or a row with a chevron; flat means information. Lappy appears only where
+  the canvas draws it (Home header, Sign in, celebrations, empty states), never on attendance, leave or reminders.
+- No vanity numbers or explainer copy: show a number only when it drives an action; headcounts are admin-only.
+
 ## Conventions
-- UI: shadcn/ui primitives in `components/ui`, beUI motion components in `components/motion`, shared blocks in `components/kit.tsx`, transitions.dev CSS in `app/transitions.css`. Brand tokens (innovinlabs.com) live in `app/globals.css`.
-- Client network calls go through `lib/fetcher.ts` (`getJSON`, `send`, `readError`) — never raw `fetch` + `res.json().error`.
+- `components/ui` keeps only the toast and tooltip primitives; `app/globals.css` holds Tailwind and their tokens.
+- Client network calls go through `lib/fetcher.ts` — never raw `fetch` + `res.json().error`.
+  Rebuilt screens read server data with TanStack Query: hooks and query keys live in `lib/queries.ts`, use `fetchJSON` as the
+  query function and `send` + `readError` in mutations, and update or invalidate the query cache after a write. No Zustand or
+  other client store; filters and tabs belong in the URL.
 - API routes parse bodies with `readJSON` (400 on bad input) and apply limits via `enforce` (`lib/guard.ts`).
 - Any Store change must be implemented in both `lib/jsonstore.ts` and `lib/pgstore.ts` and covered in `tests/store/contract.ts`.
 - Leave rules live in `lib/leave.ts` (pure, unit-tested against the company policy and the 2026
@@ -69,3 +84,13 @@ smoke-test production, and delete any test rows created by the smoke test.
 - OAuth links must be plain `<a href>`, never `next/link` — a Link prefetches the route and the
   redirect to Google trips the `connect-src 'self'` CSP.
 - New dependencies: pin exact versions published ≥ 7 days ago.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

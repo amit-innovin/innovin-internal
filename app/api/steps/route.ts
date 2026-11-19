@@ -26,6 +26,13 @@ export async function POST(req: NextRequest) {
   const body = await readJSON(req);
   if (!body) return badRequest();
 
+  // { add: n } adds to today's total (the phone's step counter, a bit at a time).
+  if (body.add !== undefined) {
+    const add = Number(body.add);
+    if (!Number.isInteger(add) || add < 1 || add > 50_000) return badRequest("Add between 1 and 50,000 steps");
+    const { steps, hit } = await store.addSteps(session.email, todayIST(), add);
+    return NextResponse.json({ ok: true, hit, steps });
+  }
   const steps = body.steps === null || body.steps === undefined || body.steps === "" ? null : Number(body.steps);
   if (steps !== null && (!Number.isInteger(steps) || steps < 0 || steps > 200_000)) {
     return badRequest("Steps should be a whole number");

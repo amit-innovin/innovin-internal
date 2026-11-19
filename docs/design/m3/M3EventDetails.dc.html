@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Event details</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#006493}a:hover{color:#004B6F}
+button{font-family:inherit;cursor:pointer}
+button:disabled{cursor:default}
+button:focus-visible,a:focus-visible{outline:3px solid #006493;outline-offset:2px}
+.tm{font-size:16px;font-weight:600;line-height:24px;margin:0}
+.bm{font-size:14px;line-height:20px;color:#41474D}
+.sm{font-size:13px;line-height:18px;color:#41474D}
+.card{background:#FFFFFF;border-radius:24px;padding:20px;box-sizing:border-box}
+.bf{height:48px;padding:0 20px;border-radius:24px;border:0;background:#006493;color:#FFFFFF;font-size:15px;font-weight:600}
+.bo{height:48px;padding:0 20px;border-radius:24px;border:1px solid #71787E;background:transparent;color:#006493;font-size:15px;font-weight:600}
+.row{display:flex;align-items:flex-start;gap:14px}
+.ic{flex:none;width:40px;height:40px;border-radius:20px;background:#E5E8EE;color:#41474D;display:grid;place-items:center}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; overflow-y: auto; box-sizing: border-box; background: #F7F9FF; color: #181C20; font-family: Figtree, system-ui, sans-serif; font-size: 15px; line-height: 22px; padding: 8px 18px 32px; display: flex; flex-direction: column; gap: 16px">
+<header style="display: flex; align-items: center; gap: 4px; padding: 8px 0 0">
+<a href="#" aria-label="Back to feed" style="flex: none; width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; color: #181C20"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg></a>
+<span class="sm" style="font-weight: 600">Event</span>
+</header>
+
+<sc-if value="{{ found }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 0 4px">
+<span style="align-self: flex-start; font-size: 12px; font-weight: 600; line-height: 16px; padding: 4px 10px; border-radius: 8px; background: #FFD9E2; color: #3F0017">Celebration</span>
+<h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.01em">Diwali potluck</h1>
+</div>
+
+<sc-if value="{{ cancelled }}" hint-placeholder-val="{{ false }}"><div role="status" style="background: #FFDAD6; color: #410002; border-radius: 16px; padding: 12px 16px; font-weight: 600">This event was cancelled</div></sc-if>
+
+<section aria-label="When and where" class="card" style="display: flex; flex-direction: column; gap: 16px">
+<div class="row"><span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg></span><span style="display: flex; flex-direction: column"><span style="font-weight: 600">Thu 19 Nov</span><span class="bm">4:30 pm</span></span></div>
+<div class="row"><span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg></span><span style="font-weight: 600; padding-top: 9px">Big room</span></div>
+<sc-if value="{{ hasDetails }}" hint-placeholder-val="{{ true }}"><p class="bm" style="margin: 0; font-size: 15px; line-height: 22px; color: #181C20; white-space: pre-line">Bring one dish from home. Plates and drinks are sorted.</p></sc-if>
+</section>
+
+<sc-if value="{{ canAnswer }}" hint-placeholder-val="{{ true }}">
+<section aria-labelledby="ans-h" class="card" style="display: flex; flex-direction: column; gap: 14px">
+<h2 id="ans-h" class="tm">Are you going?</h2>
+<div role="group" aria-labelledby="ans-h" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<button aria-pressed="{{ goingPressed }}" onClick="{{ sayYes }}" style="height: 48px; border-radius: 24px; font-size: 15px; font-weight: 600; border: {{ yesBorder }}; background: {{ yesBg }}; color: {{ yesFg }}; display: flex; align-items: center; justify-content: center; gap: 8px"><sc-if value="{{ going }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>{{ yesLabel }}</button>
+<button aria-pressed="{{ notPressed }}" onClick="{{ sayNo }}" style="height: 48px; border-radius: 24px; font-size: 15px; font-weight: 600; border: {{ noBorder }}; background: {{ noBg }}; color: {{ noFg }}">Not this time</button>
+</div>
+<sc-if value="{{ inCalendar }}" hint-placeholder-val="{{ true }}"><span class="sm">It's in your Google Calendar too.</span></sc-if>
+</section>
+</sc-if>
+
+<sc-if value="{{ past }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0 4px">This event has passed.</p></sc-if>
+</sc-if>
+
+<sc-if value="{{ missing }}" hint-placeholder-val="{{ false }}">
+<section class="card" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-top: 24px">
+<h1 class="tm" style="font-size: 22px; line-height: 28px">This event isn't here any more</h1>
+<p class="bm" style="margin: 0">It may have been removed, or the link is wrong.</p>
+<a href="#" class="bf" style="display: inline-flex; align-items: center; text-decoration: none; height: 40px">Back to Feed</a>
+</section>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["upcoming","cancelled","past","removed"],"default":"upcoming","section":"Demo"},"inCalendar":{"editor":"boolean","default":true,"section":"Demo"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { answer: null };
+  }
+  renderVals() {
+    const st = this.props.state ?? 'upcoming';
+    const a = this.state.answer;
+    const on = (yes) => ({ border: yes ? '0' : '1px solid #71787E', bg: yes ? '#006493' : 'transparent', fg: yes ? '#FFFFFF' : '#006493' });
+    const y = on(a === 'yes'), n = on(a === 'no');
+    return {
+      found: st !== 'removed', missing: st === 'removed',
+      cancelled: st === 'cancelled', past: st === 'past', canAnswer: st === 'upcoming', hasDetails: true,
+      inCalendar: (this.props.inCalendar ?? true) && st === 'upcoming',
+      going: a === 'yes', goingPressed: a === 'yes' ? 'true' : 'false', notPressed: a === 'no' ? 'true' : 'false',
+      yesLabel: a === 'yes' ? "You're going" : "I'm going",
+      yesBorder: y.border, yesBg: y.bg, yesFg: y.fg, noBorder: n.border, noBg: n.bg, noFg: n.fg,
+      sayYes: () => this.setState({ answer: 'yes' }),
+      sayNo: () => this.setState({ answer: 'no' })
+    };
+  }
+}
+</script>
+</body>
+</html>

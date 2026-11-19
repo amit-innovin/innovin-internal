@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>innovin prototype</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#006493}a:hover{color:#004B6F}
+button{font-family:inherit;cursor:pointer}
+button{transition:transform .12s ease, background-color .2s ease, color .2s ease, border-color .2s ease}
+button:active:not(:disabled){transform:scale(.96)}
+button[aria-pressed="true"]{animation:pressPop .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes pressPop{0%{transform:scale(.92)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+.ind{transition:background-color .25s ease}
+input{font-family:inherit}
+.tm{font-size:16px;font-weight:600;line-height:24px;margin:0}
+.bm{font-size:14px;line-height:20px;color:#41474D}
+.sm{font-size:13px;line-height:18px;color:#41474D}
+.h1{margin:0;font-size:28px;line-height:36px;font-weight:600;letter-spacing:-0.01em}
+.av{flex:none;width:40px;height:40px;border-radius:20px;display:grid;place-items:center;font-size:13px;font-weight:600;color:#181C20}
+.list{background:#FFFFFF;border-radius:24px;overflow:hidden}
+.li{display:flex;align-items:center;gap:14px;min-height:64px;padding:10px 16px;box-sizing:border-box;width:100%;border:0;background:transparent;text-align:left;color:#181C20;font-size:15px}
+.div{height:1px;background:#DFE3E8;margin:0 16px}
+.bf{height:40px;padding:0 20px;border-radius:20px;border:0;background:#006493;color:#FFFFFF;font-size:14px;font-weight:600}
+.bt{height:40px;padding:0 20px;border-radius:20px;border:0;background:#D3E5F5;color:#0C1D29;font-size:14px;font-weight:600}
+.bx{height:40px;padding:0 12px;border-radius:20px;border:0;background:transparent;color:#006493;font-size:14px;font-weight:600}
+.bo{height:40px;padding:0 18px;border-radius:20px;border:1px solid #71787E;background:transparent;color:#006493;font-size:14px;font-weight:600}
+.nav{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:0}
+.ind{width:64px;height:32px;border-radius:16px;display:grid;place-items:center}
+.field{height:48px;border-radius:12px;border:1px solid #71787E;padding:0 14px;font-size:16px;background:#FFFFFF;color:#181C20;width:100%;box-sizing:border-box}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes chipIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes sheetUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:0s!important;animation-delay:0s!important;transition:none!important}}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; background: #F1F4FA; color: #181C20; font-family: Figtree, system-ui, sans-serif; font-size: 16px; line-height: 24px; overflow: hidden">
+
+<div style="position: absolute; left: 0; right: 0; top: 0; bottom: 80px; overflow-y: auto; overflow-x: hidden">
+
+<!-- ================= HOME ================= -->
+<sc-if value="{{ v.home }}" hint-placeholder-val="{{ true }}">
+<div style="padding: 36px 16px 104px; display: flex; flex-direction: column; gap: 14px">
+<header><div style="position: relative; overflow: hidden; margin: -36px -16px 0; padding: 36px 16px 18px; min-height: 196px; box-sizing: border-box; background: {{ sky.bg }}; border-radius: 0 0 28px 28px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px"><sc-if value="{{ sky.morning }}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" viewBox="0 0 220 150" width="200" height="140" style="position: absolute; right: 0; bottom: 0"><circle cx="184" cy="34" r="16" fill="#FFD36E"></circle><ellipse cx="46" cy="34" rx="24" ry="8" fill="#FFFFFF" opacity=".85"></ellipse><path d="M0 150 C40 112 90 114 130 128 C160 138 190 120 220 112 V150 Z" fill="#B9E1C4"></path><rect x="40" y="118" width="4" height="18" fill="#6B4F3A"></rect><circle cx="42" cy="112" r="11" fill="#7CC59B"></circle><path d="M0 150 C60 134 140 142 220 136 V150 Z" fill="#9FD3AE"></path><ellipse cx="136" cy="131" rx="46" ry="5" fill="#000000" opacity=".08"></ellipse><g transform="translate(96 54) scale(1.25)"><rect x="6" y="4" width="52" height="38" rx="8" fill="#A5A7C3"></rect><rect x="11" y="9" width="42" height="28" rx="5" fill="#4B4E6C"></rect><path d="M2 42 h60 l-5 10 H7z" fill="#B6B8CF"></path><rect x="14" y="45" width="36" height="2.5" rx="1" fill="#9FA1BD"></rect><rect x="16" y="51" width="8" height="9" rx="3" fill="#9FA1BD"></rect><rect x="40" y="51" width="8" height="9" rx="3" fill="#9FA1BD"></rect><circle cx="24" cy="21" r="6" fill="#FFFFFF"></circle><circle cx="40" cy="21" r="6" fill="#FFFFFF"></circle><circle cx="25" cy="22" r="2.8" fill="#4B4E6C"></circle><circle cx="41" cy="22" r="2.8" fill="#4B4E6C"></circle><path d="M27 30 q5 4 10 0" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"></path><path d="M6 40 L0 50" stroke="#9FA1BD" stroke-width="5" stroke-linecap="round" fill="none"></path><path d="M58 40 L66 32" stroke="#9FA1BD" stroke-width="5" stroke-linecap="round" fill="none"></path><rect x="62" y="20" width="13" height="12" rx="3" fill="#FFFFFF" stroke="#65587B" stroke-width="1.5"></rect><path d="M75 23 h2 a3 3 0 0 1 0 6 h-2" fill="none" stroke="#65587B" stroke-width="1.5"></path><path d="M66 17 q-2 -3 0 -6 M71 17 q-2 -3 0 -6" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"></path></g></svg></sc-if><sc-if value="{{ sky.afternoon }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" viewBox="0 0 220 150" width="200" height="140" style="position: absolute; right: 0; bottom: 0"><circle cx="176" cy="22" r="15" fill="#FFC94D"></circle><ellipse cx="40" cy="30" rx="26" ry="9" fill="#FFFFFF" opacity=".9"></ellipse><ellipse cx="96" cy="18" rx="18" ry="6" fill="#FFFFFF" opacity=".85"></ellipse><path d="M0 150 C40 112 90 114 130 128 C160 138 190 120 220 112 V150 Z" fill="#A9DDB7"></path><rect x="40" y="118" width="4" height="18" fill="#6B4F3A"></rect><circle cx="42" cy="112" r="11" fill="#6DBA8C"></circle><path d="M0 150 C60 134 140 142 220 136 V150 Z" fill="#8CCB9F"></path><ellipse cx="136" cy="131" rx="46" ry="5" fill="#000000" opacity=".08"></ellipse><g transform="translate(96 54) scale(1.25)"><rect x="6" y="4" width="52" height="38" rx="8" fill="#A5A7C3"></rect><rect x="11" y="9" width="42" height="28" rx="5" fill="#4B4E6C"></rect><path d="M2 42 h60 l-5 10 H7z" fill="#B6B8CF"></path><rect x="14" y="45" width="36" height="2.5" rx="1" fill="#9FA1BD"></rect><rect x="16" y="51" width="8" height="9" rx="3" fill="#9FA1BD"></rect><rect x="40" y="51" width="8" height="9" rx="3" fill="#9FA1BD"></rect><circle cx="24" cy="21" r="6" fill="#FFFFFF"></circle><circle cx="40" cy="21" r="6" fill="#FFFFFF"></circle><circle cx="25" cy="22" r="2.8" fill="#4B4E6C"></circle><circle cx="41" cy="22" r="2.8" fill="#4B4E6C"></circle><path d="M27 30 q5 4 10 0" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"></path><path d="M6 38 L-4 24" stroke="#9FA1BD" stroke-width="5" stroke-linecap="round" fill="none"></path><circle cx="-5" cy="21" r="4.5" fill="#9FA1BD"></circle><path d="M-12 16 l-3 -3 M-12 23 l-4 0" stroke="#FFC94D" stroke-width="2" stroke-linecap="round" fill="none"></path><path d="M58 40 L64 50" stroke="#9FA1BD" stroke-width="5" stroke-linecap="round" fill="none"></path></g></svg></sc-if><sc-if value="{{ sky.evening }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" viewBox="0 0 220 150" width="200" height="140" style="position: absolute; right: 0; bottom: 0"><circle cx="186" cy="30" r="13" fill="#F3E6B3"></circle><circle cx="192" cy="26" r="11" fill="#2E3A66"></circle><circle cx="30" cy="22" r="1.6" fill="#FFFFFF" opacity=".9"></circle><circle cx="64" cy="40" r="1.2" fill="#FFFFFF" opacity=".7"></circle><circle cx="110" cy="16" r="1.4" fill="#FFFFFF" opacity=".8"></circle><circle cx="150" cy="40" r="1.1" fill="#FFFFFF" opacity=".6"></circle><circle cx="18" cy="58" r="1.1" fill="#FFFFFF" opacity=".6"></circle><path d="M0 150 C40 112 90 114 130 128 C160 138 190 120 220 112 V150 Z" fill="#3E5C59"></path><rect x="40" y="118" width="4" height="18" fill="#2B2420"></rect><circle cx="42" cy="112" r="11" fill="#3E6B57"></circle><path d="M0 150 C60 134 140 142 220 136 V150 Z" fill="#2F4A47"></path><ellipse cx="136" cy="131" rx="46" ry="5" fill="#000000" opacity=".08"></ellipse><g transform="translate(96 54) scale(1.25)"><rect x="6" y="4" width="52" height="38" rx="8" fill="#A5A7C3"></rect><rect x="11" y="9" width="42" height="28" rx="5" fill="#4B4E6C"></rect><path d="M2 42 h60 l-5 10 H7z" fill="#B6B8CF"></path><rect x="14" y="45" width="36" height="2.5" rx="1" fill="#9FA1BD"></rect><rect x="16" y="51" width="8" height="9" rx="3" fill="#9FA1BD"></rect><rect x="40" y="51" width="8" height="9" rx="3" fill="#9FA1BD"></rect><path d="M19 23 q5 4 10 0" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"></path><path d="M35 23 q5 4 10 0" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"></path><path d="M29 31 q3 2 6 0" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"></path><path d="M6 40 L0 50" stroke="#9FA1BD" stroke-width="5" stroke-linecap="round" fill="none"></path><path d="M58 40 L64 50" stroke="#9FA1BD" stroke-width="5" stroke-linecap="round" fill="none"></path><path d="M66 6 h7 l-7 8 h7 M76 -4 h5 l-5 6 h5" fill="none" stroke="#D6DDF5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></g></svg></sc-if><div style="position: relative; display: flex; justify-content: flex-end; align-items: center; gap: 2px; margin-top: -24px"><button onClick="{{ go.wifi }}" aria-label="Check office Wi-Fi" style="width: 48px; height: 48px; border-radius: 24px; border: 0; background: rgba(255,255,255,0.7); color: #181C20; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.8a15 15 0 0 1 20 0"></path><path d="M5 12.6a10 10 0 0 1 14 0"></path><path d="M8.5 16.3a5 5 0 0 1 7 0"></path><circle cx="12" cy="19.6" r="0.9" fill="currentColor"></circle></svg></button>
+<button onClick="{{ go.notifs }}" aria-label="Notifications, 3 new" style="position: relative; width: 48px; height: 48px; border-radius: 24px; border: 0; background: rgba(255,255,255,0.7); color: #181C20; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg><span aria-hidden="true" style="position: absolute; top: 10px; right: 10px; min-width: 16px; height: 16px; border-radius: 8px; background: #BA1A1A; color: #FFFFFF; font-size: 11px; line-height: 16px; font-weight: 600">3</span></button>
+<button onClick="{{ go.account }}" aria-label="Account" style="width: 40px; height: 40px; border-radius: 20px; border: 0; background: #CAE6FF; color: #001E30; font-weight: 600; font-size: 15px; padding: 0">P</button>
+</div><div style="position: relative; max-width: 62%"><h1 class="h1" style="font-size: 26px; line-height: 32px; color: {{ sky.fg }}">{{ sky.greet }}, Priya</h1><span class="bm" style="color: {{ sky.sub }}">Monday, 16 November</span><sc-if value="{{ isSet }}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 2px; margin-top: 8px; flex-wrap: nowrap"><span style="animation: chipIn .35s ease-out; height: 32px; padding: 0 12px 0 8px; border-radius: 16px; background: {{ set.chipBg }}; color: {{ set.chipColor }}; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; white-space: nowrap"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{ set.chip }}</span><button class="bx" style="height: 32px; padding: 0 8px; font-size: 13px; white-space: nowrap" onClick="{{ reset }}" aria-label="Change today's status">Change</button></div></sc-if></div>
+</div></header>
+
+<sc-if value="{{ quietCheckIn }}" hint-placeholder-val="{{ false }}"><section aria-label="Check in" style="background: #FFFFFF; border-radius: 24px; padding: 14px 16px; display: flex; align-items: center; gap: 12px"><div style="flex: 1; min-width: 0"><div style="font-weight: 600">Not planned in today</div><div class="sm">In the office after all?</div></div><button class="bt" style="flex: none" onClick="{{ goOffice }}">Check in</button></section></sc-if>
+<sc-if value="{{ fullCheckIn }}" hint-placeholder-val="{{ true }}">
+<section aria-label="Check in" style="background: {{ loc.cardBg }}; transition: background .3s ease; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<sc-if value="{{ loc.success }}" hint-placeholder-val="{{ false }}"><div role="status" style="display: flex; align-items: center; gap: 14px"><span aria-hidden="true" style="flex: none; width: 52px; height: 52px; border-radius: 26px; background: #2E7D4F; color: #FFFFFF; display: grid; place-items: center; animation: pop .45s cubic-bezier(.2,.8,.2,1) both"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" style="stroke-dasharray: 24; stroke-dashoffset: 24; animation: draw .4s .25s ease-out forwards"></path></svg></span><div><div style="font-size: 20px; line-height: 26px; font-weight: 600; color: #0B3D1F">You're in</div><div class="bm" style="color: #0B3D1F">Checked in at 9:12 · location confirmed</div></div></div></sc-if>
+<sc-if value="{{ isNone }}" hint-placeholder-val="{{ true }}">
+<sc-if value="{{ loc.showHead }}" hint-placeholder-val="{{ true }}"><h2 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">Not checked in yet</h2></sc-if>
+<sc-if value="{{ loc.idle }}" hint-placeholder-val="{{ true }}">
+<span class="bm" style="display: flex; gap: 8px; align-items: flex-start"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>We check your location once, when you tap Check in. It isn't tracked.</span>
+<button class="bf" style="width: 100%; height: 48px; border-radius: 24px; font-size: 15px" onClick="{{ goOffice }}">Check in</button>
+</sc-if>
+<sc-if value="{{ loc.checking }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; align-items: center; gap: 12px; height: 48px"><span aria-hidden="true" style="width: 22px; height: 22px; border-radius: 11px; border: 3px solid #CAE6FF; border-top-color: #006493; box-sizing: border-box; animation: spin 0.8s linear infinite"></span><span style="font-size: 15px">Checking your location…</span></div>
+</sc-if>
+<sc-if value="{{ loc.problem }}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="background: #FFDDB0; color: #4A2800; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 4px"><b style="font-size: 15px">{{ loc.title }}</b><span style="font-size: 14px; line-height: 20px">{{ loc.body }}</span></div>
+<button class="bf" style="width: 100%; height: 48px; border-radius: 24px; font-size: 15px" onClick="{{ goOffice }}">Try again</button>
+</sc-if>
+</sc-if>
+</section>
+</sc-if>
+<section aria-label="Up next" style="background: #FFFFFF; border-radius: 24px; padding: 6px 0; display: flex; flex-direction: column">
+<h2 class="tm" style="padding: 12px 16px 4px">Up next</h2>
+<sc-if value="{{ isOffice }}" hint-placeholder-val="{{ false }}"><div class="li" style="align-items: flex-start"><div style="flex: none; width: 52px"><div style="font-size: 15px; font-weight: 700; line-height: 20px">{{ tea.at }}</div><div class="sm">Today</div></div><div style="flex: 1; display: flex; flex-direction: column; gap: 8px"><div style="display: flex; align-items: center; justify-content: space-between; gap: 10px"><div><div style="font-weight: 600">{{ tea.rowTitle }}</div><div class="sm">{{ tea.line }}</div></div><sc-if value="{{ tea.lappy }}" hint-placeholder-val="{{ false }}"><svg role="img" aria-label="Lappy holding a cup of tea" width="36" height="36" viewBox="0 0 64 64" style="flex: none"><rect x="6" y="6" width="44" height="34" rx="7" fill="#A5A7C3"></rect><rect x="10" y="10" width="36" height="26" rx="4" fill="#4B4E6C"></rect><path d="M18 23q4-5 8 0M30 23q4-5 8 0" stroke="#FFFFFF" stroke-width="2.4" fill="none" stroke-linecap="round"></path><path d="M23 29q5 4 10 0" stroke="#FFFFFF" stroke-width="2.2" fill="none" stroke-linecap="round"></path><path d="M2 40h48l-4 9H6z" fill="#B6B8CF"></path><rect x="42" y="42" width="14" height="14" rx="3" fill="#FFFFFF" stroke="#65587B" stroke-width="2"></rect><path d="M56 46h2a3 3 0 0 1 0 6h-2" stroke="#65587B" stroke-width="2" fill="none"></path><path d="M46 38q-2-3 0-6M51 38q-2-3 0-6" stroke="#65587B" stroke-width="1.8" fill="none" stroke-linecap="round"></path></svg></sc-if></div><sc-if value="{{ tea.open }}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 8px"><button class="bf" style="height: 36px; padding: 0 16px" onClick="{{ tea.yes }}">Yes, I'll have tea</button><button class="bx" style="height: 36px" onClick="{{ tea.no }}">Skip</button></div></sc-if><sc-if value="{{ tea.done }}" hint-placeholder-val="{{ false }}"><button class="bx" style="align-self: flex-start; height: 32px; padding: 0" onClick="{{ tea.undo }}">Change answer</button></sc-if></div></div><div class="div"></div></sc-if>
+<div class="li"><div style="flex: none; width: 52px"><div style="font-size: 15px; font-weight: 700; line-height: 20px">Thu</div><div class="sm">4:30 pm</div></div><div style="flex: 1"><div style="font-weight: 600">Diwali potluck</div><div class="sm">Big room</div></div><button onClick="{{ ev.toggle }}" aria-pressed="{{ ev.pressed }}" style="flex: none; height: 36px; padding: 0 14px; border-radius: 18px; font-size: 14px; font-weight: 600; border: {{ ev.border }}; background: {{ ev.bg }}; color: {{ ev.color }}">{{ ev.label }}</button></div>
+<div class="div"></div>
+<button class="li" onClick="{{ go.feed }}"><div style="flex: none; width: 52px"><div style="font-size: 15px; font-weight: 700; line-height: 20px">Thu</div><div class="sm">closes</div></div><div style="flex: 1"><div style="font-weight: 600">Poll: Friday lunch</div><div class="sm">{{ pollShort }}</div></div><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+</section>
+<section aria-label="Office days this week" style="background: #FFFFFF; border-radius: 24px; padding: 16px 16px 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px"><div style="display: flex; align-items: center; gap: 8px"><h2 class="tm">This week</h2><span style="height: 26px; padding: 0 10px; border-radius: 8px; background: {{ pace.bg }}; color: {{ pace.color }}; display: inline-flex; align-items: center; font-size: 12px; font-weight: 600">{{ pace.short }}</span></div><button class="bx" style="height: 36px; padding: 0 8px" onClick="{{ go.days }}">Plan days</button></div>
+<div role="img" aria-label="{{ pace.aria }}" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; text-align: center">
+<sc-for list="{{ weekStrip }}" as="w" hint-placeholder-count="5"><div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="font-size: 12px; font-weight: {{ w.labelWeight }}; color: #41474D">{{ w.label }}</span><span style="width: 40px; height: 40px; border-radius: 20px; box-sizing: border-box; display: grid; place-items: center; font-size: 15px; font-weight: 600; background: {{ w.bg }}; color: {{ w.color }}; border: {{ w.border }}; outline: {{ w.outline }}; outline-offset: 2px">{{ w.n }}</span></div></sc-for>
+</div>
+</section>
+
+<section aria-label="In office today" style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px"><h2 class="tm">In office today</h2></div>
+<div style="display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 0 16px">
+<sc-for list="{{ crowd }}" as="p" hint-placeholder-count="5">
+<div style="flex: none; width: 112px; border-radius: 20px; background: #FFFFFF; padding: 14px 10px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; opacity: {{ p.op }}">
+<span aria-hidden="true" style="position: relative; width: 52px; height: 52px; border-radius: 26px; background: {{ p.bg }}; display: grid; place-items: center; font-weight: 600">{{ p.i }}<span style="position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; border-radius: 7px; border: 2px solid #FFFFFF; background: {{ p.dot }}"></span></span>
+<span style="font-size: 14px; font-weight: 600; line-height: 20px">{{ p.name }}</span><span style="font-size: 12px; line-height: 16px; color: #41474D">{{ p.where }}</span>
+<sc-if value="{{ p.canWave }}" hint-placeholder-val="{{ true }}"><button onClick="{{ p.wave }}" aria-pressed="{{ p.waved }}" aria-label="Wave at {{ p.name }}" style="margin-top: 2px; height: 32px; padding: 0 12px; border-radius: 16px; font-size: 13px; font-weight: 600; border: {{ p.waveBorder }}; background: {{ p.waveBg }}; color: #006493; display: inline-flex; align-items: center; gap: 4px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12"></path><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11"></path><path d="M14 11V6.5a1.5 1.5 0 0 1 3 0v6.5a7 7 0 0 1-7 7h-.5A6.5 6.5 0 0 1 4 14l-.6-1.6a1.5 1.5 0 0 1 2.7-1.3L8 13"></path></svg>{{ p.waveLabel }}</button></sc-if>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{ sayHiOff }}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 4px"><span class="sm" style="flex: 1; min-width: 180px">Say hi is off. Turn it on to wave at people and get invites.</span><button class="bx" onClick="{{ turnOnSayHi }}">Turn on</button></div></sc-if>
+</section>
+
+
+
+<section aria-label="Your extras" style="display: flex; flex-direction: column; gap: 10px">
+<h2 class="tm" style="padding: 0 4px">Your extras</h2>
+<div style="display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px">
+<button onClick="{{ go.steps }}" style="border: 0; background: #FFFFFF; border-radius: 24px; padding: 16px; text-align: left; color: #181C20; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; width: 100%"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #D7F0E4; color: #0B3D1F; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3c-2 0-3 2.5-3 5s1 4 3 4 2.5-2 2.5-4.5S10 3 8 3z"></path><path d="M6 15h4.5v2.5a2.2 2.2 0 0 1-4.5 0z"></path><path d="M16 7c-2 0-2.5 2.5-2.5 4.5S14 16 16 16s3-1.5 3-4-1-5-3-5z"></path><path d="M14 19h4.5v.5a2.2 2.2 0 0 1-4.5 0z"></path></svg></span><svg aria-hidden="true" width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#EEF0F3" stroke-width="5"></circle><circle cx="22" cy="22" r="18" fill="none" stroke="#006493" stroke-width="5" stroke-linecap="round" stroke-dasharray="{{ stepsRing }}" transform="rotate(-90 22 22)"></circle></svg></div>
+<div><div style="font-size: 20px; line-height: 26px; font-weight: 600">{{ stepsFmt }}</div><div class="sm">steps · {{ steps.rankLine }}</div></div>
+</button>
+
+</div>
+</section>
+
+</div>
+</sc-if>
+
+<!-- ================= FEED ================= -->
+<sc-if value="{{ v.feed }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 36px 16px 32px; display: flex; flex-direction: column; gap: 14px">
+<header><div style="position: relative; overflow: hidden; margin: -36px -16px 0; padding: 36px 16px 18px; min-height: 170px; box-sizing: border-box; background: #FFE9D6; border-radius: 0 0 28px 28px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px"><svg aria-hidden="true" viewBox="0 0 220 150" width="200" height="140" style="position: absolute; right: 0; bottom: 0"><rect x="34" y="26" width="150" height="104" rx="12" fill="#FFFFFF"></rect><rect x="34" y="26" width="150" height="104" rx="12" fill="none" stroke="#F2C9A6" stroke-width="3"></rect><rect x="48" y="40" width="46" height="36" rx="4" fill="#FFE08A" transform="rotate(-4 71 58)"></rect><circle cx="71" cy="42" r="3.5" fill="#B3264F"></circle><rect x="104" y="38" width="64" height="30" rx="4" fill="#CAE6FF" transform="rotate(3 136 53)"></rect><circle cx="136" cy="39" r="3.5" fill="#006493"></circle><rect x="56" y="86" width="56" height="32" rx="4" fill="#FFD9E2" transform="rotate(2 84 102)"></rect><circle cx="84" cy="87" r="3.5" fill="#65587B"></circle><rect x="122" y="80" width="48" height="38" rx="4" fill="#D7F0E4" transform="rotate(-3 146 99)"></rect><circle cx="146" cy="81" r="3.5" fill="#2E7D4F"></circle><path d="M178 104 h30 a8 8 0 0 1 8 8 v14 a8 8 0 0 1 -8 8 h-14 l-8 8 v-8 h-8 a8 8 0 0 1 -8 -8 v-14 a8 8 0 0 1 8 -8z" fill="#FFFFFF" stroke="#F2C9A6" stroke-width="2"></path><circle cx="186" cy="119" r="2.2" fill="#B07A52"></circle><circle cx="194" cy="119" r="2.2" fill="#B07A52"></circle><circle cx="202" cy="119" r="2.2" fill="#B07A52"></circle></svg><div style="position: relative; display: flex; justify-content: flex-end; margin-top: -20px"><button class="bt" onClick="{{ np.open }}" style="display: inline-flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Post</button>
+</div><div style="position: relative; max-width: 60%"><h1 class="h1">Feed</h1><span class="bm">{{ feed.headerSub }}</span></div>
+</div></header>
+
+<sc-if value="{{ feed.inStack }}" hint-placeholder-val="{{ true }}">
+<div aria-hidden="true" style="display: grid; grid-template-columns: repeat({{ feed.total }}, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{ feed.bars }}" as="b" hint-placeholder-count="5"><span style="height: 4px; border-radius: 2px; background: {{ b }}"></span></sc-for>
+</div>
+<div style="position: relative; height: 340px">
+<sc-if value="{{ feed.behind2 }}" hint-placeholder-val="{{ true }}"><div aria-hidden="true" style="position: absolute; left: 20px; right: 20px; top: 24px; bottom: -12px; border-radius: 28px; background: #E1E6EE"></div></sc-if>
+<sc-if value="{{ feed.behind1 }}" hint-placeholder-val="{{ true }}"><div aria-hidden="true" style="position: absolute; left: 10px; right: 10px; top: 12px; bottom: -6px; border-radius: 28px; background: #E9EDF3"></div></sc-if>
+<article aria-live="polite" onPointerDown="{{ feed.onDown }}" onPointerMove="{{ feed.onMove }}" onPointerUp="{{ feed.onUp }}" onPointerCancel="{{ feed.onUp }}" style="position: absolute; inset: 0; background: radial-gradient(circle at 100% 0, {{ c.tint }} 0 92px, {{ c.cardBg }} 93px); border-radius: 28px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; touch-action: pan-y; user-select: none; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transform: {{ feed.transform }}; transition: {{ feed.transition }}; cursor: grab">
+<span style="align-self: flex-start; height: 26px; padding: 0 10px; border-radius: 8px; background: {{ c.kindBg }}; color: {{ c.kindColor }}; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">{{ c.kind }}</span>
+<div style="display: flex; gap: 12px; align-items: center">
+<sc-if value="{{ c.showLappy }}" hint-placeholder-val="{{ false }}"><svg role="img" aria-label="Lappy" width="40" height="40" viewBox="0 0 64 64"><rect x="10" y="6" width="44" height="34" rx="7" fill="#A5A7C3"></rect><rect x="14" y="10" width="36" height="26" rx="4" fill="#4B4E6C"></rect><circle cx="26" cy="22" r="5" fill="#FFFFFF"></circle><circle cx="38" cy="22" r="5" fill="#FFFFFF"></circle><circle cx="27" cy="23" r="2.4" fill="#4B4E6C"></circle><circle cx="39" cy="23" r="2.4" fill="#4B4E6C"></circle><path d="M28 30q4 3 8 0" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round"></path><path d="M6 40h52l-4 9H10z" fill="#B6B8CF"></path></svg></sc-if>
+<sc-if value="{{ c.showAv }}" hint-placeholder-val="{{ true }}"><span class="av" style="background: {{ c.avBg }}">{{ c.av }}</span></sc-if>
+<div><div style="font-size: 15px; font-weight: 600">{{ c.authorShown }}</div><div class="sm">{{ c.time }}</div></div>
+</div>
+<h2 style="margin: 0; font-size: 21px; line-height: 28px; font-weight: 600">{{ c.title }}</h2>
+<p style="margin: 0; font-size: 16px; line-height: 24px; color: #2B3036">{{ c.body }}</p>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px">
+<sc-if value="{{ c.isPoll }}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{ pollOpts }}" as="o" hint-placeholder-count="2">
+<button onClick="{{ o.vote }}" aria-pressed="{{ o.pressed }}" style="position: relative; overflow: hidden; height: 48px; border-radius: 12px; border: {{ o.border }}; background: #FFFFFF; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; color: #181C20"><span aria-hidden="true" style="position: absolute; left: 0; top: 0; bottom: 0; width: {{ o.pct }}; transition: width .45s cubic-bezier(.2,.8,.2,1); background: {{ o.fill }}"></span><span style="position: relative; font-weight: {{ o.weight }}">{{ o.label }}</span><span style="position: relative; font-weight: 600">{{ o.result }}</span></button>
+</sc-for>
+</sc-if>
+<sc-if value="{{ c.hasAction }}" hint-placeholder-val="{{ false }}"><button onClick="{{ c.act }}" aria-pressed="{{ c.actPressed }}" style="align-self: flex-start; height: 44px; padding: 0 20px; border-radius: 22px; border: 0; font-size: 15px; font-weight: 600; background: {{ c.actBg }}; color: {{ c.actColor }}">{{ c.actLabel }}</button></sc-if>
+<span class="sm">{{ c.metaShown }}</span>
+</div>
+</article>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px">
+<button onClick="{{ feed.back }}" aria-label="Previous post" disabled="{{ feed.cantBack }}" style="width: 48px; height: 48px; border-radius: 24px; border: 1px solid #C1C7CE; background: #FFFFFF; color: #181C20; display: grid; place-items: center; padding: 0; opacity: {{ feed.backOp }}"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<span class="bm" aria-live="polite">{{ feed.counter }}</span>
+<button onClick="{{ feed.next }}" aria-label="Next post" style="width: 48px; height: 48px; border-radius: 24px; border: 0; background: #006493; color: #FFFFFF; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+</div>
+<p style="margin: 0; text-align: center; font-size: 12px; color: #41474D">Swipe left for the next post, right to go back</p>
+</sc-if>
+
+<sc-if value="{{ feed.caughtUp }}" hint-placeholder-val="{{ false }}">
+<section style="background: #FFFFFF; border-radius: 28px; padding: 28px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+<span aria-hidden="true" style="width: 56px; height: 56px; border-radius: 28px; background: #CDEBD6; color: #0B3D1F; display: grid; place-items: center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+<h2 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">You're all caught up</h2>
+<p style="margin: 0" class="bm">{{ feed.caughtLine }}</p>
+<button class="bo" onClick="{{ feed.restart }}">Start over</button>
+</section>
+<sc-if value="{{ feed.hasOpen }}" hint-placeholder-val="{{ false }}">
+<h2 class="tm" style="padding: 6px 4px 0">Still open</h2>
+<div class="list">
+<sc-if value="{{ feed.openRsvp }}" hint-placeholder-val="{{ false }}"><div class="li"><div style="flex: 1"><div>Diwali potluck</div><div class="sm">RSVP closes Thu 12:00</div></div><button onClick="{{ ev.toggle }}" class="bo">I'm in</button></div></sc-if>
+<sc-if value="{{ feed.openBoth }}" hint-placeholder-val="{{ false }}"><div class="div"></div></sc-if>
+<sc-if value="{{ feed.openPoll }}" hint-placeholder-val="{{ false }}"><div class="li"><div style="flex: 1"><div>Friday lunch poll</div><div class="sm">Closes Thu 17:00</div></div><button onClick="{{ voteB }}" class="bo" style="padding: 0 12px">Biryani</button><button onClick="{{ voteP }}" class="bo" style="padding: 0 12px">Pizza</button></div></sc-if>
+</div>
+</sc-if>
+</sc-if>
+
+<h2 class="tm" style="padding: 6px 4px 0">Earlier</h2>
+<div class="list">
+<sc-for list="{{ np.mine }}" as="mp" hint-placeholder-count="0"><div class="li" style="border-bottom: 1px solid #DFE3E8"><span class="av" style="background: #006493; color: #FFFFFF">P</span><div style="flex: 1"><div>{{ mp.line }}</div><div class="sm">{{ mp.sub }}</div></div></div></sc-for>
+<sc-if value="{{ imp.seen }}" hint-placeholder-val="{{ false }}"><div class="li"><span class="av" style="background: #006493; color: #FFFFFF"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"></path></svg></span><div style="flex: 1"><div>Office closed on Friday 27 Nov</div><div class="sm">Important · pinned until 27 Nov · you've seen it</div></div></div><div class="div"></div></sc-if>
+<div class="li"><span class="av" style="background: #DFE3E8">DP</span><div style="flex: 1"><div>Dev posted a photo</div><div class="sm">The balcony finally has plants · yesterday</div></div></div>
+<div class="div"></div>
+<div class="li"><span class="av" style="background: #CAE6FF">AN</span><div style="flex: 1"><div>Anita: parking slots are being re-marked</div><div class="sm">Announcement · Mon</div></div></div>
+<div class="div"></div>
+<div class="li"><span class="av" style="background: #EBDCFF">KM</span><div style="flex: 1"><div>Kudos to Rahul from Kiran</div><div class="sm">For the design review notes · last week</div></div></div>
+</div>
+</div>
+</sc-if>
+
+<!-- ================= DAYS ================= -->
+<sc-if value="{{ v.days }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 36px 16px 104px; display: flex; flex-direction: column; gap: 16px">
+<header><div style="position: relative; overflow: hidden; margin: -36px -16px 0; padding: 36px 16px 18px; min-height: 170px; box-sizing: border-box; background: #ECE6FB; border-radius: 0 0 28px 28px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px"><svg aria-hidden="true" viewBox="0 0 220 150" width="200" height="140" style="position: absolute; right: 0; bottom: 0"><path d="M0 150 C50 126 110 140 160 122 C185 113 205 116 220 110 V150 Z" fill="#D9CFF5"></path><path d="M20 146 C70 120 110 132 150 112 C170 102 186 98 200 84" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 12"></path><rect x="196" y="62" width="3" height="26" fill="#65587B"></rect><path d="M199 62 h16 l-5 6 l5 6 h-16z" fill="#E8467C"></path><rect x="52" y="20" width="92" height="92" rx="10" fill="#FFFFFF"></rect><rect x="52" y="20" width="92" height="20" rx="10" fill="#65587B"></rect><rect x="52" y="32" width="92" height="8" fill="#65587B"></rect><rect x="70" y="13" width="5" height="14" rx="2.5" fill="#41474D"></rect><rect x="121" y="13" width="5" height="14" rx="2.5" fill="#41474D"></rect><circle cx="66" cy="56" r="5" fill="#006493"></circle><circle cx="82" cy="56" r="5" fill="#EBE6F8"></circle><circle cx="98" cy="56" r="5" fill="#006493"></circle><circle cx="114" cy="56" r="5" fill="#EBE6F8"></circle><circle cx="130" cy="56" r="5" fill="#EBE6F8"></circle><circle cx="66" cy="72" r="5" fill="#006493"></circle><circle cx="82" cy="72" r="5" fill="#EBE6F8"></circle><circle cx="98" cy="72" r="5" fill="#006493"></circle><circle cx="114" cy="72" r="5" fill="#EBE6F8"></circle><circle cx="130" cy="72" r="5" fill="#EBE6F8"></circle><circle cx="66" cy="88" r="5" fill="#EBE6F8"></circle><circle cx="82" cy="88" r="5" fill="#EBE6F8"></circle><circle cx="98" cy="88" r="5" fill="#EBE6F8"></circle><circle cx="114" cy="88" r="5" fill="#EBE6F8"></circle><circle cx="130" cy="88" r="5" fill="#EBE6F8"></circle><path d="M116 88 l5 5 l10 -11" fill="none" stroke="#006493" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path></svg><span></span><div style="position: relative; max-width: 58%"><h1 class="h1">Days</h1><span class="bm">Tap a date to plan a day in, or to apply for leave</span></div></div></header>
+<section aria-label="November calendar" style="background: #FFFFFF; border-radius: 24px; padding: 16px 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 6px 12px; flex-wrap: wrap"><h2 class="tm">November</h2><span style="height: 28px; padding: 0 10px; border-radius: 8px; background: {{ pace.bg }}; color: {{ pace.color }}; display: inline-flex; align-items: center; font-size: 12px; font-weight: 600">{{ pace.short }}</span></div><div aria-label="Leave left" role="group" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 0 6px 12px"><span class="sm" style="font-weight: 600; color: #181C20">Leave left</span><sc-for list="{{ leaveTypes }}" as="l" hint-placeholder-count="4"><span style="height: 28px; padding: 0 10px; border-radius: 8px; background: #F1F4FA; font-size: 13px; display: inline-flex; align-items: center; gap: 4px">{{ l.name }} <b style="font-variant-numeric: tabular-nums; color: {{ l.color }}">{{ l.left }}</b></span></sc-for><span class="sm" style="flex-basis: 100%">From Zoho People · updated 10 Nov</span></div><sc-if value="{{ pace.isShort }}" hint-placeholder-val="{{ false }}"><p class="sm" style="margin: 0 6px 12px; color: #4A2800">11 weekdays left in November, including today. Tap a date to plan it.</p></sc-if>
+
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 6px; text-align: center">
+<sc-for list="{{ heads }}" as="h" hint-placeholder-count="7"><span style="font-size: 12px; font-weight: 600; color: #41474D">{{ h }}</span></sc-for>
+<sc-for list="{{ cells }}" as="x" hint-placeholder-count="35"><div style="display: grid; place-items: center; height: 40px"><button onClick="{{ x.toggle }}" disabled="{{ x.disabled }}" aria-pressed="{{ x.pressed }}" aria-label="{{ x.aria }}" style="width: 36px; height: 36px; border-radius: 18px; box-sizing: border-box; display: grid; place-items: center; font-size: 14px; font-weight: {{ x.weight }}; background: {{ x.bg }}; color: {{ x.color }}; border: {{ x.border }}; padding: 0; font-family: inherit; cursor: {{ x.cursor }}; outline: {{ x.outline }}; outline-offset: 2px">{{ x.n }}</button></div></sc-for>
+</div>
+<div aria-hidden="true" style="display: flex; flex-wrap: wrap; gap: 14px; padding: 12px 6px 0; font-size: 12px; color: #41474D">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 6px; background: #006493"></span>Done</span><span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 6px; border: 1.5px solid #006493; box-sizing: border-box"></span>Planned</span><span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 6px; background: #EBDCFF"></span>Leave</span>
+</div>
+</section>
+<h2 class="tm" style="padding: 0 4px">Coming up</h2>
+<div style="display: flex; gap: 10px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 4px">
+<sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="4"><div style="flex: none; width: 132px; background: #FFFFFF; border-radius: 20px; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px"><span class="sm" style="font-weight: 600">{{ u.wd }}</span><span style="font-size: 28px; line-height: 32px; font-weight: 600">{{ u.n }}</span><span class="sm">{{ u.note }}</span></div></sc-for>
+</div>
+<section aria-label="Your usual office days" style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<h2 class="tm">Your usual office days</h2>
+<div role="group" aria-label="Your usual office days" style="display: flex; gap: 8px; flex-wrap: wrap">
+<sc-for list="{{ usualDays }}" as="u" hint-placeholder-count="5"><button onClick="{{ u.toggle }}" aria-pressed="{{ u.pressed }}" aria-label="{{ u.full }}" style="height: 40px; min-width: 52px; padding: 0 12px; border-radius: 8px; font-size: 14px; font-weight: 600; border: {{ u.border }}; background: {{ u.bg }}; color: {{ u.color }}">{{ u.label }}</button></sc-for>
+</div>
+<span class="sm">These repeat every week. Change single dates on the calendar.</span>
+</section>
+<h2 class="tm" style="padding: 0 4px">Your leave requests</h2>
+<div class="list">
+<div class="li"><div style="flex: 1; min-width: 0"><div>Casual leave</div><div class="sm">Fri 6 Nov · 1 day</div></div><span style="flex: none; height: 28px; padding: 0 10px; border-radius: 8px; background: #CDEBD6; color: #0B3D1F; display: inline-flex; align-items: center; font-size: 12px; font-weight: 600">Approved</span></div>
+<sc-for list="{{ myLeave }}" as="r" hint-placeholder-count="0"><div><div class="div"></div><div class="li"><div style="flex: 1; min-width: 0"><div>{{ r.title }}</div><div class="sm">{{ r.sub }}</div></div><span style="flex: none; height: 28px; padding: 0 10px; border-radius: 8px; background: #FFDDB0; color: #4A2800; display: inline-flex; align-items: center; font-size: 12px; font-weight: 600">Pending</span><button class="bx" style="flex: none; padding: 0 8px" onClick="{{ r.cancel }}" aria-label="{{ r.aria }}">Cancel</button></div></div></sc-for>
+</div>
+</div>
+</sc-if>
+
+<!-- ================= SNACKS ================= -->
+<sc-if value="{{ v.snacks }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 36px 16px 104px; display: flex; flex-direction: column; gap: 16px">
+<header><div style="position: relative; overflow: hidden; margin: -36px -16px 0; padding: 36px 16px 18px; min-height: 170px; box-sizing: border-box; background: #FFF3CC; border-radius: 0 0 28px 28px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px"><svg aria-hidden="true" viewBox="0 0 220 150" width="200" height="140" style="position: absolute; right: 0; bottom: 0"><ellipse cx="96" cy="134" rx="60" ry="8" fill="#F1D58A"></ellipse><path d="M56 86 h72 v16 a36 30 0 0 1 -72 0z" fill="#FFFFFF"></path><path d="M128 92 h8 a11 11 0 0 1 0 22 h-8" fill="none" stroke="#FFFFFF" stroke-width="6"></path><rect x="56" y="86" width="72" height="7" fill="#65587B"></rect><path d="M78 76 q-8 -12 0 -24 q8 -12 0 -24" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity=".9"></path><path d="M100 76 q-8 -12 0 -24 q8 -12 0 -24" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity=".7"></path><ellipse cx="176" cy="128" rx="34" ry="8" fill="#FFFFFF"></ellipse><path d="M146 124 a30 18 0 0 0 60 0z" fill="#FFE08A"></path><circle cx="160" cy="116" r="6" fill="#FFF8E1" stroke="#E8C873" stroke-width="1.5"></circle><circle cx="174" cy="112" r="6" fill="#FFF8E1" stroke="#E8C873" stroke-width="1.5"></circle><circle cx="188" cy="116" r="6" fill="#FFF8E1" stroke="#E8C873" stroke-width="1.5"></circle><circle cx="167" cy="121" r="6" fill="#FFF8E1" stroke="#E8C873" stroke-width="1.5"></circle><circle cx="182" cy="121" r="6" fill="#FFF8E1" stroke="#E8C873" stroke-width="1.5"></circle></svg><span></span><div style="position: relative; max-width: 58%"><h1 class="h1">Tea &amp; snacks</h1><span class="bm">Everything here is anonymous except tea</span></div></div></header>
+<sc-if value="{{ notOffice }}" hint-placeholder-val="{{ true }}"><section aria-labelledby="m-gate-h" style="background: #FFFFFF; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<h2 id="m-gate-h" class="tm" style="font-size: 18px">Tea &amp; snacks are for people in the office today</h2>
+<p class="bm" style="margin: 0">Check in on Home to book tea and pick a snack.</p>
+<button class="bf" style="align-self: flex-end; height: 44px; padding: 0 24px" onClick="{{ go.home }}">Check in</button>
+</section></sc-if>
+<sc-if value="{{ isOffice }}" hint-placeholder-val="{{ false }}">
+<section style="background: #EBDCFF; color: #20142F; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="tm" style="font-size: 18px">Tea round at {{ tea.at }}</h2></div>
+<sc-if value="{{ isOffice }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ tea.lappy }}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 12px"><svg role="img" aria-label="Lappy holding a cup of tea" width="52" height="52" viewBox="0 0 64 64" style="flex: none"><rect x="6" y="6" width="44" height="34" rx="7" fill="#A5A7C3"></rect><rect x="10" y="10" width="36" height="26" rx="4" fill="#4B4E6C"></rect><path d="M18 23q4-5 8 0M30 23q4-5 8 0" stroke="#FFFFFF" stroke-width="2.4" fill="none" stroke-linecap="round"></path><path d="M23 29q5 4 10 0" stroke="#FFFFFF" stroke-width="2.2" fill="none" stroke-linecap="round"></path><path d="M2 40h48l-4 9H6z" fill="#B6B8CF"></path><rect x="42" y="42" width="14" height="14" rx="3" fill="#FFFFFF" stroke="#65587B" stroke-width="2"></rect><path d="M56 46h2a3 3 0 0 1 0 6h-2" stroke="#65587B" stroke-width="2" fill="none"></path><path d="M46 38q-2-3 0-6M51 38q-2-3 0-6" stroke="#65587B" stroke-width="1.8" fill="none" stroke-linecap="round"></path></svg><div><b style="display: block; font-size: 15px; line-height: 20px">{{ tea.lappyTitle }}</b><span style="font-size: 14px">{{ tea.line }}</span></div></div></sc-if><sc-if value="{{ tea.plain }}" hint-placeholder-val="{{ true }}"><span style="font-size: 14px">{{ tea.line }}</span></sc-if>
+<sc-if value="{{ tea.open }}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 8px"><button class="bf" style="background: #65587B" onClick="{{ tea.yes }}">Yes, I'll have tea</button><button class="bx" style="color: #65587B" onClick="{{ tea.no }}">Skip</button></div></sc-if>
+<sc-if value="{{ tea.done }}" hint-placeholder-val="{{ false }}"><button class="bx" style="align-self: flex-start; color: #65587B; padding: 0" onClick="{{ tea.undo }}">Change answer</button></sc-if>
+</sc-if>
+<sc-if value="{{ tea.another }}" hint-placeholder-val="{{ true }}"><span class="sm">There's another round at 4 PM.</span></sc-if>
+</section>
+<section style="background: #FFFFFF; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap"><h2 class="tm">Today's snacks</h2><sc-if value="{{ snack.open }}" hint-placeholder-val="{{ true }}"><span style="height: 28px; padding: 0 10px; border-radius: 8px; background: #FFDDB0; color: #4A2800; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Order goes in at {{ snackOrderAt }}</span></sc-if><sc-if value="{{ snack.ordered }}" hint-placeholder-val="{{ false }}"><span style="height: 28px; padding: 0 10px; border-radius: 8px; background: #D7F0E4; color: #0B3D1F; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Order placed</span></sc-if></div>
+<sc-if value="{{ snack.open }}" hint-placeholder-val="{{ true }}"><p class="sm" style="margin: 0">Pick one for today. You can switch until the order goes in at {{ snackOrderAt }}. Nobody sees who picked what.</p></sc-if><sc-if value="{{ snack.ordered }}" hint-placeholder-val="{{ false }}"><p class="sm" style="margin: 0">Today's order is in. Picks open again tomorrow.</p></sc-if>
+<sc-for list="{{ shelf }}" as="s" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px">
+<span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: {{ s.iconBg }}; color: #3D2E00; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16a8 8 0 0 1-16 0z"></path><path d="M8 7c0-1.5 1-2 2-2M12 7c0-1.5 1-2 2-2"></path></svg></span>
+<span style="flex: 1; min-width: 0">{{ s.name }}</span>
+<sc-if value="{{ s.canPick }}" hint-placeholder-val="{{ true }}"><button onClick="{{ s.toggle }}" aria-pressed="{{ s.pressed }}" style="flex: none; height: 36px; padding: 0 14px; border-radius: 18px; font-size: 13px; font-weight: 600; border: {{ s.border }}; background: {{ s.bg }}; color: {{ s.color }}">{{ s.label }}</button></sc-if><sc-if value="{{ s.lockedMine }}" hint-placeholder-val="{{ false }}"><span style="flex: none; font-size: 13px; font-weight: 600; color: #0C1D29">Your pick</span></sc-if>
+</div>
+</sc-for>
+</section>
+</sc-if>
+
+
+<section style="background: #FFFFFF; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 12px"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #FFF1C2; color: #5C4300; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"></path><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"></path></svg></span><div><h2 class="tm">Suggestions for coming days</h2><span class="sm">Anonymous. Popular ones get added to a future day’s options.</span></div></div>
+<sc-for list="{{ ideas }}" as="s" hint-placeholder-count="3"><div style="display: flex; align-items: center; gap: 12px; min-height: 44px"><span style="flex: 1">{{ s.name }}</span><button onClick="{{ s.toggle }}" aria-pressed="{{ s.pressed }}" aria-label="Plus one {{ s.name }}" style="height: 34px; min-width: 60px; padding: 0 12px; border-radius: 17px; font-size: 14px; font-weight: 600; border: {{ s.border }}; background: {{ s.bg }}; color: {{ s.color }}">+{{ s.count }}</button></div></sc-for>
+<div style="display: flex; gap: 8px"><label for="m-sug" style="position: absolute; left: -9999px">Suggest a snack</label><input id="m-sug" class="field" placeholder="Suggest a snack" style="flex: 1; min-width: 0"><button class="bo" style="height: 44px; flex: none">Add</button></div>
+</section>
+</div>
+</sc-if>
+
+<!-- ================= ACCOUNT ================= -->
+<sc-if value="{{ v.account }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 36px 16px 104px; display: flex; flex-direction: column; gap: 16px">
+<header><div style="position: relative; overflow: hidden; margin: -36px -16px 0; padding: 36px 16px 18px; min-height: 200px; box-sizing: border-box; background: #DDF1E4; border-radius: 0 0 28px 28px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px"><svg aria-hidden="true" viewBox="0 0 220 150" width="200" height="140" style="position: absolute; right: 0; bottom: 0"><ellipse cx="40" cy="30" rx="22" ry="7" fill="#FFFFFF" opacity=".8"></ellipse><path d="M0 150 C40 108 100 112 140 128 C170 140 200 124 220 116 V150 Z" fill="#BFE6CC"></path><path d="M0 150 C70 132 150 142 220 134 V150 Z" fill="#9FD3AE"></path><rect x="28" y="104" width="3" height="22" fill="#6B4F3A"></rect><circle cx="30" cy="98" r="11" fill="#7CC59B"></circle></svg><span></span><div style="position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px"><div><h1 class="h1" style="font-size: 30px; line-height: 36px">Priya</h1><div class="bm" style="color: #2B3036">Product designer</div><span style="display: inline-flex; margin-top: 8px; height: 28px; padding: 0 10px; border-radius: 14px; background: rgba(255,255,255,0.75); align-items: center; font-size: 13px; font-weight: 600">Usually in Mon &amp; Wed</span></div><span aria-hidden="true" style="flex: none; width: 76px; height: 76px; border-radius: 38px; background: #CAE6FF; color: #001E30; display: grid; place-items: center; font-size: 30px; font-weight: 600; border: 4px solid #FFFFFF">P</span></div></div></header>
+<div class="list">
+
+<button class="li" onClick="{{ ns.open }}"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #D3E5F5; color: #0C1D29; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg></span><div style="flex: 1"><div>Notification settings</div><div class="sm">Tea round, events, kudos</div></div></button>
+<div class="div"></div>
+<button class="li"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #E5E8EE; color: #41474D; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2-2.4 3.8M12 17h.01"></path></svg></span><div style="flex: 1">Help</div></button>
+<div class="div"></div>
+<sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}"><button class="li"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #E5E8EE; color: #41474D; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path></svg></span><div style="flex: 1"><div>Admin</div><div class="sm">Opens the admin app</div></div><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+<div class="div"></div></sc-if>
+<button class="li" style="color: #BA1A1A"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #FFDAD6; color: #93000A; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"></path><path d="M10 16l-4-4 4-4M6 12h10"></path></svg></span><div style="flex: 1">Sign out</div></button>
+</div>
+</div>
+</sc-if>
+
+<!-- ================= STEPS (sub) ================= -->
+<sc-if value="{{ v.steps }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 20px 16px 32px; display: flex; flex-direction: column; gap: 16px">
+<header style="display: flex; align-items: center; gap: 8px"><button onClick="{{ back }}" aria-label="Back" style="width: 48px; height: 48px; border-radius: 24px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; color: #181C20"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button><span aria-hidden="true" style="flex: none; width: 36px; height: 36px; border-radius: 18px; background: #D7F0E4; color: #0B3D1F; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3c-2 0-3 2.5-3 5s1 4 3 4 2.5-2 2.5-4.5S10 3 8 3z"></path><path d="M6 15h4.5v2.5a2.2 2.2 0 0 1-4.5 0z"></path><path d="M16 7c-2 0-2.5 2.5-2.5 4.5S14 16 16 16s3-1.5 3-4-1-5-3-5z"></path><path d="M14 19h4.5v.5a2.2 2.2 0 0 1-4.5 0z"></path></svg></span><h1 class="h1" style="font-size: 22px">10K steps</h1></header>
+<section style="background: #EBEEF4; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<span class="sm">Today</span>
+<span style="font-size: 40px; line-height: 44px; font-weight: 600; letter-spacing: -0.02em">{{ stepsFmt }} <span style="font-size: 18px; color: #41474D">/ 10,000</span></span>
+<div role="img" aria-label="{{ steps.pctLabel }}" style="height: 8px; border-radius: 4px; background: #DFE3E8"><div style="height: 8px; border-radius: 4px; background: #006493; width: {{ steps.pct }}; transition: width .45s cubic-bezier(.2,.8,.2,1)"></div></div>
+<label for="steps-in" class="sm">Add steps from your phone's step counter</label>
+<div style="display: flex; gap: 8px"><input id="steps-in" class="field" inputmode="numeric" placeholder="e.g. 2500" value="{{ stepInput }}" onChange="{{ onStepInput }}"><button class="bf" style="height: 48px; flex: none" onClick="{{ addSteps }}">Add</button></div>
+</section>
+<sc-if value="{{ steps.celebrate }}" hint-placeholder-val="{{ false }}">
+<section style="background: #FFF8E1; border-radius: 24px; padding: 20px; display: flex; gap: 14px; align-items: center">
+<sc-if value="{{ mascot }}" hint-placeholder-val="{{ true }}"><svg role="img" aria-label="Lappy cheering" width="64" height="64" viewBox="0 0 64 64"><rect x="10" y="6" width="44" height="34" rx="7" fill="#A5A7C3"></rect><rect x="14" y="10" width="36" height="26" rx="4" fill="#4B4E6C"></rect><path d="M22 23q4-5 8 0M34 23q4-5 8 0" stroke="#FFFFFF" stroke-width="2.4" fill="none" stroke-linecap="round"></path><path d="M27 29q5 5 10 0" stroke="#FFFFFF" stroke-width="2.2" fill="none" stroke-linecap="round"></path><path d="M6 40h52l-4 9H10z" fill="#B6B8CF"></path></svg></sc-if>
+<div><div class="tm">10,000 today</div><div class="bm">That's your goal for the day. Anything more is a bonus.</div></div>
+</section>
+</sc-if>
+<section style="background: #FFFFFF; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="tm">Last 7 days</h2><span class="sm">Goal line: 10,000</span></div>
+<div role="img" aria-label="Steps for the last 7 days" style="position: relative; height: 120px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; padding-top: 12px">
+<span aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 80px; border-top: 1.5px dashed #9AA0A6"></span>
+<sc-for list="{{ chart }}" as="c" hint-placeholder-count="7"><div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 100%; max-width: 28px; height: {{ c.h }}; border-radius: 8px 8px 4px 4px; background: {{ c.bg }}"></span></div></sc-for>
+</div>
+<div aria-hidden="true" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; text-align: center"><sc-for list="{{ chart }}" as="c" hint-placeholder-count="7"><span style="font-size: 12px; font-weight: {{ c.weight }}; color: #41474D">{{ c.label }}</span></sc-for></div>
+</section>
+<sc-if value="{{ inLeague }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap">
+<h2 class="tm">Step league</h2>
+<div role="group" aria-label="Range" style="display: flex; border: 1px solid #71787E; border-radius: 20px; overflow: hidden">
+<sc-for list="{{ rangeBtns }}" as="r" hint-placeholder-count="2"><button onClick="{{ r.pick }}" aria-pressed="{{ r.pressed }}" style="height: 36px; padding: 0 14px; border: 0; background: {{ r.bg }}; color: {{ r.color }}; font-size: 13px; font-weight: 600">{{ r.label }}</button></sc-for>
+</div>
+</div>
+<span class="sm" style="padding: 0 4px">{{ gapLine }}</span>
+<div style="background: #FFFFFF; border-radius: 24px; overflow: hidden">
+<sc-for list="{{ board }}" as="r" hint-placeholder-count="5">
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: {{ r.rowBg }}; border-bottom: 1px solid #EEF0F3">
+<span style="width: 16px; font-weight: 600; color: #41474D; font-size: 14px">{{ r.rank }}</span>
+<span aria-hidden="true" style="flex: none; width: 36px; height: 36px; border-radius: 18px; background: {{ r.avBg }}; color: {{ r.avColor }}; display: grid; place-items: center; font-size: 12px; font-weight: 600">{{ r.i }}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: {{ r.weight }}">{{ r.name }}</span><span style="font-weight: 600; font-variant-numeric: tabular-nums">{{ r.steps }}</span></div>
+<div aria-hidden="true" style="height: 6px; border-radius: 3px; background: #EEF0F3"><div style="height: 6px; border-radius: 3px; width: {{ r.pct }}; transition: width .45s cubic-bezier(.2,.8,.2,1); background: {{ r.bar }}"></div></div>
+</div>
+<sc-if value="{{ r.canNudge }}" hint-placeholder-val="{{ true }}"><button onClick="{{ r.nudge }}" aria-pressed="{{ r.nudgePressed }}" aria-label="Nudge {{ r.name }}" style="flex: none; height: 32px; padding: 0 12px; border-radius: 16px; font-size: 13px; font-weight: 600; border: {{ r.nudgeBorder }}; background: {{ r.nudgeBg }}; color: #006493">{{ r.nudgeLabel }}</button></sc-if>
+<sc-if value="{{ r.isYou }}" hint-placeholder-val="{{ false }}"><span style="flex: none; width: 64px"></span></sc-if>
+</div>
+</sc-for>
+</div>
+<p class="sm" style="margin: 0 4px">A nudge sends one friendly "time for a walk?" and only to people in the league, at most once a day each. You joined the league; leave it any time here.</p>
+<button class="bx" style="align-self: flex-start" onClick="{{ leaveLeague }}">Leave the league</button>
+</sc-if>
+<sc-if value="{{ notInLeague }}" hint-placeholder-val="{{ false }}">
+<section style="background: #FFFFFF; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<h2 class="tm">Step league</h2>
+<p class="bm" style="margin: 0">See how your week compares with others who joined, and send a friendly nudge. Only people who join are listed, and you can leave any time.</p>
+<button class="bt" style="align-self: flex-start" onClick="{{ joinLeague }}">Join the league</button>
+</section>
+</sc-if>
+</div>
+</sc-if>
+
+<!-- ================= READING (sub) ================= -->
+<sc-if value="{{ v.reading }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 20px 16px 32px; display: flex; flex-direction: column; gap: 16px">
+<header style="display: flex; align-items: center; gap: 4px"><button onClick="{{ back }}" aria-label="Back" style="width: 48px; height: 48px; border-radius: 24px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; color: #181C20"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button><h1 class="h1" style="font-size: 22px">Reading list</h1></header>
+<sc-if value="{{ book.reading }}" hint-placeholder-val="{{ true }}">
+<section style="background: #EBEEF4; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; gap: 14px; align-items: center"><div aria-hidden="true" style="width: 52px; height: 74px; border-radius: 4px 8px 8px 4px; background: #2B3A4A; color: #E9E4D8; font-size: 9px; font-weight: 700; padding: 8px 6px; box-sizing: border-box; line-height: 1.2">DEEP WORK</div><div><div class="sm">Reading now</div><div class="tm" style="font-size: 18px">Deep Work</div><div class="bm">Cal Newport</div></div></div>
+<div role="img" aria-label="{{ book.aria }}" style="height: 8px; border-radius: 4px; background: #DFE3E8"><div style="height: 8px; border-radius: 4px; background: #006493; width: {{ book.pct }}; transition: width .45s cubic-bezier(.2,.8,.2,1)"></div></div>
+<span class="bm">Page {{ page }} of 296</span>
+<label for="page-in" class="sm">Update your page</label>
+<div style="display: flex; gap: 8px"><input id="page-in" class="field" inputmode="numeric" placeholder="Page number" value="{{ pageInput }}" onChange="{{ onPageInput }}"><button class="bt" style="height: 48px; flex: none" onClick="{{ savePage }}">Save</button></div>
+<button class="bo" style="align-self: flex-start" onClick="{{ finishBook }}">I finished it</button>
+</section>
+</sc-if>
+<sc-if value="{{ book.finished }}" hint-placeholder-val="{{ false }}">
+<section style="background: #FFF8E1; border-radius: 24px; padding: 24px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+<sc-if value="{{ mascot }}" hint-placeholder-val="{{ true }}"><svg role="img" aria-label="Lappy holding a book" width="80" height="80" viewBox="0 0 64 64"><rect x="10" y="6" width="44" height="34" rx="7" fill="#A5A7C3"></rect><rect x="14" y="10" width="36" height="26" rx="4" fill="#4B4E6C"></rect><path d="M22 23q4-5 8 0M34 23q4-5 8 0" stroke="#FFFFFF" stroke-width="2.4" fill="none" stroke-linecap="round"></path><path d="M27 29q5 5 10 0" stroke="#FFFFFF" stroke-width="2.2" fill="none" stroke-linecap="round"></path><path d="M6 40h52l-4 9H10z" fill="#B6B8CF"></path><rect x="22" y="44" width="20" height="14" rx="2" fill="#2B3A4A"></rect></svg></sc-if>
+<h2 style="margin: 0; font-size: 22px; font-weight: 600">You finished Deep Work</h2>
+<p style="margin: 0" class="bm">It's on your shelf now. Recommend it if it was worth the time.</p>
+<div style="display: flex; gap: 8px"><button class="bf">Recommend it</button><button class="bx" onClick="{{ unfinish }}">Undo</button></div>
+</section>
+</sc-if>
+<h2 class="tm" style="padding: 0 4px">Team shelf</h2>
+<div class="list">
+<div class="li"><span aria-hidden="true" style="flex: none; width: 28px; height: 40px; border-radius: 2px 5px 5px 2px; background: #8C4A2F"></span><div style="flex: 1"><div>The Design of Everyday Things</div><div class="sm">Meera is reading · 3 want to read</div></div><button class="bo" style="height: 36px">Want to read</button></div>
+<div class="div"></div>
+<div class="li"><span aria-hidden="true" style="flex: none; width: 28px; height: 40px; border-radius: 2px 5px 5px 2px; background: #2F6B4F"></span><div style="flex: 1"><div>Shape Up</div><div class="sm">Recommended by Arjun</div></div><button class="bo" style="height: 36px">Want to read</button></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ v.wifi }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 20px 16px 32px; display: flex; flex-direction: column; gap: 16px">
+<header style="display: flex; align-items: center; gap: 4px"><button onClick="{{ back }}" aria-label="Back" style="width: 48px; height: 48px; border-radius: 24px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; color: #181C20"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button><h1 class="h1" style="font-size: 22px">Wi-Fi check</h1></header>
+<p class="bm" style="margin: 0 4px">Tests the connection you're on right now: download, upload and delay. It takes about 10 seconds.</p>
+<sc-if value="{{ wf.idle }}" hint-placeholder-val="{{ true }}">
+<section style="background: #EBEEF4; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+<span aria-hidden="true" style="width: 56px; height: 56px; border-radius: 28px; background: #CAE6FF; color: #001E30; display: grid; place-items: center"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.8a15 15 0 0 1 20 0"></path><path d="M5 12.6a10 10 0 0 1 14 0"></path><path d="M8.5 16.3a5 5 0 0 1 7 0"></path><circle cx="12" cy="19.6" r="0.9" fill="currentColor"></circle></svg></span>
+<button class="bf" style="height: 48px; border-radius: 24px; font-size: 15px; padding: 0 28px" onClick="{{ wf.run }}">Run check</button>
+<span class="sm">{{ wf.ctx }}</span>
+</section>
+</sc-if>
+<sc-if value="{{ wf.running }}" hint-placeholder-val="{{ false }}">
+<section style="background: #EBEEF4; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div role="status" style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 22px; height: 22px; border-radius: 11px; border: 3px solid #CAE6FF; border-top-color: #006493; box-sizing: border-box; animation: spin 0.8s linear infinite"></span><span>Testing download, upload and delay…</span></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline"><b style="font-size: 15px">While you wait: catch the packets</b><span class="sm" aria-live="polite">{{ game.score }} caught</span></div>
+<div style="position: relative; height: 180px; border-radius: 16px; background: #FFFFFF; overflow: hidden">
+<button onClick="{{ game.catchIt }}" aria-label="Catch packet" style="position: absolute; left: {{ game.x }}; top: {{ game.y }}; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 12px; border: 0; background: #006493; color: #FFFFFF; display: grid; place-items: center; padding: 0; transition: left 0.25s, top 0.25s"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M7 11l5 5 5-5"></path><path d="M5 20h14"></path></svg></button>
+</div>
+<span class="sm">Just for fun. The test runs either way.</span>
+</section>
+</sc-if>
+<sc-if value="{{ wf.done }}" hint-placeholder-val="{{ false }}">
+<section style="background: {{ wf.bg }}; color: {{ wf.color }}; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<span style="align-self: flex-start; height: 26px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,0.6); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">{{ wf.verdict }}</span>
+<h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">{{ wf.title }}</h2>
+<span style="font-size: 13px">You caught {{ game.score }} packets while you waited.</span>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<div><div style="font-size: 22px; font-weight: 600">{{ wf.down }}</div><div style="font-size: 12px">Mbps down</div></div>
+<div><div style="font-size: 22px; font-weight: 600">{{ wf.up }}</div><div style="font-size: 12px">Mbps up</div></div>
+<div><div style="font-size: 22px; font-weight: 600">{{ wf.ping }}</div><div style="font-size: 12px">ms delay</div></div>
+</div>
+</section>
+<sc-if value="{{ wf.canReport }}" hint-placeholder-val="{{ false }}">
+<section style="background: #FFFFFF; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 class="tm">Report it to admins</h2>
+<span class="sm">Your result is attached. Where are you sitting?</span>
+<div role="group" aria-label="Where are you sitting" style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ wf.areas }}" as="a" hint-placeholder-count="4"><button onClick="{{ a.pick }}" aria-pressed="{{ a.pressed }}" style="height: 36px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 500; border: {{ a.border }}; background: {{ a.bg }}; color: {{ a.color }}">{{ a.label }}</button></sc-for>
+</div>
+<label for="m-wnote" class="sm">Anything else? (optional)</label>
+<input id="m-wnote" class="field" placeholder="e.g. calls drop every few minutes" value="{{ wf.note }}" onChange="{{ wf.onNote }}">
+<button class="bf" style="align-self: flex-start; height: 44px" onClick="{{ wf.send }}">Send report</button>
+</section>
+</sc-if>
+<sc-if value="{{ wf.needCheckin }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0 4px">You're not checked in, so this isn't the office Wi-Fi. Check in to report office Wi-Fi problems.</p></sc-if>
+<sc-if value="{{ wf.goodNote }}" hint-placeholder-val="{{ false }}"><p class="bm" style="margin: 0 4px">Looks fine from here. Calls still dropping? <button class="bx" style="padding: 0 4px; height: 32px" onClick="{{ wf.reportAnyway }}">Report anyway</button></p></sc-if>
+<sc-if value="{{ wf.sent }}" hint-placeholder-val="{{ false }}">
+<section role="status" style="background: #FFFFFF; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 6px"><b>Sent to admins with your result</b></section>
+</sc-if>
+<button class="bx" style="align-self: flex-start" onClick="{{ wf.again }}">Run again</button>
+</sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ v.speak }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 20px 16px 32px; display: flex; flex-direction: column; gap: 16px">
+<header style="display: flex; align-items: center; gap: 4px"><button onClick="{{ back }}" aria-label="Back" style="width: 48px; height: 48px; border-radius: 24px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; color: #181C20"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button><h1 class="h1" style="font-size: 22px">Speak up</h1></header>
+<section style="background: #EBEEF4; border-radius: 24px; padding: 18px; display: flex; gap: 12px; align-items: flex-start">
+<span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #CAE6FF; color: #001E30; display: grid; place-items: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path></svg></span>
+<div><b style="display: block">Anonymous by design</b><span class="bm">Admins see the topic and your message. They don't see your name, email or device, and the date shows only the day, not the time.</span></div>
+</section>
+<sc-if value="{{ sp.compose }}" hint-placeholder-val="{{ true }}">
+<span class="tm" style="padding: 0 4px">What's it about?</span>
+<div role="group" aria-label="Topic" style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ sp.topics }}" as="t" hint-placeholder-count="5"><button onClick="{{ t.pick }}" aria-pressed="{{ t.pressed }}" style="height: 36px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 500; border: {{ t.border }}; background: {{ t.bg }}; color: {{ t.color }}">{{ t.label }}</button></sc-for>
+</div>
+<label for="m-speak" class="tm" style="padding: 0 4px">What's going on?</label>
+<textarea id="m-speak" class="field" style="height: 160px; padding: 12px 14px; line-height: 22px; resize: vertical; width: 100%; flex: none" placeholder="Write it the way you'd say it. Leave out details that would identify you if you want to stay anonymous." value="{{ sp.text }}" onChange="{{ sp.onText }}"></textarea>
+<button class="bf" style="align-self: flex-start; height: 48px; border-radius: 24px; font-size: 15px; opacity: {{ sp.sendOp }}" disabled="{{ sp.cantSend }}" onClick="{{ sp.send }}">Send anonymously</button>
+<p class="sm" style="margin: 0 4px">Something serious, like harassment or a safety issue? You can also go straight to [HR CONTACT].</p>
+</sc-if>
+<sc-if value="{{ sp.sent }}" hint-placeholder-val="{{ false }}">
+<section role="status" style="background: #FFFFFF; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 6px">
+<b style="font-size: 17px">Sent anonymously</b>
+<span class="bm">Reference {{ sp.ref }}. If an admin replies, it shows under My reports. Only this device can see your reports.</span>
+<button class="bx" style="align-self: flex-start; padding: 0" onClick="{{ sp.again }}">Write another</button>
+</section>
+</sc-if>
+<sc-if value="{{ sp.hasReports }}" hint-placeholder-val="{{ false }}">
+<h2 class="tm" style="padding: 4px 4px 0">My reports</h2>
+<div style="background: #FFFFFF; border-radius: 24px; overflow: hidden">
+<sc-for list="{{ sp.reports }}" as="r" hint-placeholder-count="1"><div class="li" style="border-bottom: {{ r.divider }}"><div style="flex: 1"><div>{{ r.topic }} · {{ r.ref }}</div><div class="sm">{{ r.status }}</div></div></div></sc-for>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<!-- ================= NOTIFICATIONS (sub) ================= -->
+<sc-if value="{{ v.notifs }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 20px 16px 32px; display: flex; flex-direction: column; gap: 16px">
+<header style="display: flex; align-items: center; gap: 4px"><button onClick="{{ back }}" aria-label="Back" style="width: 48px; height: 48px; border-radius: 24px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; color: #181C20"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button><h1 class="h1" style="font-size: 22px">Notifications</h1></header>
+<div class="list">
+<div class="li" style="align-items: flex-start"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #EBDCFF; color: #20142F; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h12v5a6 6 0 0 1-12 0z"></path><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"></path><path d="M9 3v3M13 3v3"></path></svg></span><div style="flex: 1; display: flex; flex-direction: column; gap: 6px"><div><div>Arjun: chai break in 30 min?</div><div class="sm">{{ inc.sub }}</div></div><sc-if value="{{ inc.open }}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 8px"><button class="bf" style="height: 36px" onClick="{{ inc.yes }}">I'm in</button><button class="bo" style="height: 36px" onClick="{{ inc.no }}">Not today</button></div></sc-if></div></div>
+<div class="div"></div>
+<button class="li" onClick="{{ go.snacks }}"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 4px; background: #006493; flex: none"></span><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #EBDCFF; color: #20142F; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h12v5a6 6 0 0 1-12 0z"></path><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"></path><path d="M9 3v3M13 3v3"></path></svg></span><div style="flex: 1"><div>Tea round closes at {{ tea.by }}</div><div class="sm">Answer by {{ tea.by }} · 10 min ago</div></div></button>
+<div class="div"></div>
+<button class="li" onClick="{{ go.feed }}"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 4px; background: #006493; flex: none"></span><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #D3E5F5; color: #0C1D29; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="3"></rect><path d="M4 10h16M9 3v4M15 3v4"></path></svg></span><div style="flex: 1"><div>Meera posted an event</div><div class="sm">Diwali potluck · yesterday</div></div></button>
+<div class="div"></div>
+<button class="li" onClick="{{ go.days }}"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 4px; background: #006493; flex: none"></span><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #CDEBD6; color: #0B3D1F; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><div style="flex: 1"><div>Your leave on 6 Nov was approved</div><div class="sm">From Zoho People · 10 days ago</div></div></button>
+</div>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{ nsOpen }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end"><div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(0,0,0,0.32)"></div><div role="dialog" aria-modal="true" aria-label="Notification settings" style="position: relative; background: #F7F9FF; border-radius: 28px 28px 0 0; padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 8px"><span aria-hidden="true" style="align-self: center; width: 32px; height: 4px; border-radius: 2px; background: #C1C7CE"></span><div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600">Notification settings</h2><button onClick="{{ ns.close }}" aria-label="Close" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; color: #41474D"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div><div style="background: #FFFFFF; border-radius: 20px; padding: 0 16px"><div style="display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #DFE3E8"><div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; color: #181C20">Notifications on this device</span><span class="sm">Tea round, events, kudos, leave decisions</span></div><button role="switch" aria-checked="{{ ns.dev.aria }}" aria-label="Notifications on this device" onClick="{{ ns.toggleDev }}" style="flex: none; width: 52px; height: 32px; border-radius: 16px; border: {{ ns.dev.border }}; background: {{ ns.dev.track }}; padding: 0; position: relative"><span style="position: absolute; top: 50%; left: {{ ns.dev.left }}; width: {{ ns.dev.size }}; height: {{ ns.dev.size }}; border-radius: 12px; background: {{ ns.dev.thumb }}; transform: translateY(-50%)"></span></button></div><div style="display: flex; align-items: center; gap: 14px; padding: 12px 0"><div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; color: #181C20">Say hi</span><span class="sm">Waves and invites from people in the office. Only people who turn it on can send or get them.</span></div><button role="switch" aria-checked="{{ ns.hi.aria }}" aria-label="Say hi" onClick="{{ ns.toggleHi }}" style="flex: none; width: 52px; height: 32px; border-radius: 16px; border: {{ ns.hi.border }}; background: {{ ns.hi.track }}; padding: 0; position: relative"><span style="position: absolute; top: 50%; left: {{ ns.hi.left }}; width: {{ ns.hi.size }}; height: {{ ns.hi.size }}; border-radius: 12px; background: {{ ns.hi.thumb }}; transform: translateY(-50%)"></span></button></div></div></div></div></sc-if>
+<sc-if value="{{ hiOpen }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end"><div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(0,0,0,0.32)"></div><div role="dialog" aria-modal="true" style="position: relative; background: #F7F9FF; border-radius: 28px 28px 0 0; padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 12px; max-height: 760px; overflow-y: auto"><span aria-hidden="true" style="align-self: center; width: 32px; height: 4px; border-radius: 2px; background: #C1C7CE"></span><div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600">Say hi to {{ hi.name }}</h2><button onClick="{{ hi.close }}" aria-label="Close" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; color: #41474D"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div><span class="sm">{{ hi.where }}</span><div role="group" aria-label="What to send" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px"><button onClick="{{ hi.o.wave.pick }}" aria-pressed="{{ hi.o.wave.pressed }}" style="border: {{ hi.o.wave.border }}; background: {{ hi.o.wave.bg }}; border-radius: 16px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #181C20; min-height: 96px"><span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 20px; background: #CAE6FF; color: #001E30; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12"></path><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11"></path><path d="M14 11V6.5a1.5 1.5 0 0 1 3 0v6.5a7 7 0 0 1-7 7h-.5A6.5 6.5 0 0 1 4 14l-.6-1.6a1.5 1.5 0 0 1 2.7-1.3L8 13"></path></svg></span><span style="font-size: 14px; font-weight: 600; line-height: 18px">Wave</span><span style="font-size: 11px; line-height: 14px; color: #41474D">Just saying hi</span></button><button onClick="{{ hi.o.five.pick }}" aria-pressed="{{ hi.o.five.pressed }}" style="border: {{ hi.o.five.border }}; background: {{ hi.o.five.bg }}; border-radius: 16px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #181C20; min-height: 96px"><span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 20px; background: #FFE08A; color: #3D2E00; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"></path></svg></span><span style="font-size: 14px; font-weight: 600; line-height: 18px">High five</span><span style="font-size: 11px; line-height: 14px; color: #41474D">For a good day</span></button><button onClick="{{ hi.o.thanks.pick }}" aria-pressed="{{ hi.o.thanks.pressed }}" style="border: {{ hi.o.thanks.border }}; background: {{ hi.o.thanks.bg }}; border-radius: 16px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #181C20; min-height: 96px"><span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 20px; background: #FFD9E2; color: #5C1130; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg></span><span style="font-size: 14px; font-weight: 600; line-height: 18px">Thanks!</span><span style="font-size: 11px; line-height: 14px; color: #41474D">A small thank-you</span></button><button onClick="{{ hi.o.chai.pick }}" aria-pressed="{{ hi.o.chai.pressed }}" style="border: {{ hi.o.chai.border }}; background: {{ hi.o.chai.bg }}; border-radius: 16px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #181C20; min-height: 96px"><span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 20px; background: #EBDCFF; color: #20142F; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h12v5a6 6 0 0 1-12 0z"></path><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"></path><path d="M9 3v3M13 3v3"></path></svg></span><span style="font-size: 14px; font-weight: 600; line-height: 18px">Chai break?</span><span style="font-size: 11px; line-height: 14px; color: #41474D">Invite: they reply in one tap</span></button><button onClick="{{ hi.o.lunch.pick }}" aria-pressed="{{ hi.o.lunch.pressed }}" style="border: {{ hi.o.lunch.border }}; background: {{ hi.o.lunch.bg }}; border-radius: 16px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #181C20; min-height: 96px"><span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 20px; background: #FFDDB0; color: #4A2800; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8a2 2 0 0 0 2 2v8"></path><path d="M11 3v8"></path><path d="M3 3v8a2 2 0 0 0 2 2"></path><path d="M17 3c-2 2-2 6 0 8v10"></path></svg></span><span style="font-size: 14px; font-weight: 600; line-height: 18px">Lunch together?</span><span style="font-size: 11px; line-height: 14px; color: #41474D">Invite: they reply in one tap</span></button><button onClick="{{ hi.o.walk.pick }}" aria-pressed="{{ hi.o.walk.pressed }}" style="border: {{ hi.o.walk.border }}; background: {{ hi.o.walk.bg }}; border-radius: 16px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #181C20; min-height: 96px"><span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 20px; background: #D7F0E4; color: #0B3D1F; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3c-2 0-3 2.5-3 5s1 4 3 4 2.5-2 2.5-4.5S10 3 8 3z"></path><path d="M6 15h4.5v2.5a2.2 2.2 0 0 1-4.5 0z"></path><path d="M16 7c-2 0-2.5 2.5-2.5 4.5S14 16 16 16s3-1.5 3-4-1-5-3-5z"></path><path d="M14 19h4.5v.5a2.2 2.2 0 0 1-4.5 0z"></path></svg></span><span style="font-size: 14px; font-weight: 600; line-height: 18px">Walk?</span><span style="font-size: 11px; line-height: 14px; color: #41474D">Invite: counts for steps</span></button></div><sc-if value="{{ hi.isInvite }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; gap: 8px"><span class="sm">When?</span><div role="group" aria-label="When" style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{ hi.times }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.pick }}" aria-pressed="{{ t.pressed }}" style="height: 36px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 500; border: {{ t.border }}; background: {{ t.bg }}; color: {{ t.color }}">{{ t.label }}</button></sc-for></div><sc-if value="{{ hi.showClock }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="Pick a time" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #FFFFFF; border: 1px solid #C1C7CE; border-radius: 16px; padding: 6px"><button onClick="{{ hi.earlier }}" aria-label="15 minutes earlier" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: #EBEEF4; color: #181C20; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path></svg></button><span aria-live="polite" style="font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums">{{ hi.clockLabel }}</span><button onClick="{{ hi.later }}" aria-label="15 minutes later" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: #EBEEF4; color: #181C20; display: grid; place-items: center; padding: 0"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></button></div></sc-if></div></sc-if><button class="bf" style="height: 48px; border-radius: 24px; font-size: 15px; opacity: {{ hi.sendOp }}" disabled="{{ hi.cantSend }}" onClick="{{ hi.send }}">{{ hi.sendLabel }}</button><span class="sm" style="text-align: center">Up to 3 a day, so nobody gets flooded.</span><span class="sm" style="text-align: center">You can turn Say hi off in Account › Notification settings.</span></div></div></sc-if>
+<sc-if value="{{ np.isOpen }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end"><div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(0,0,0,0.32)"></div><div role="dialog" aria-modal="true" style="position: relative; background: #F7F9FF; border-radius: 28px 28px 0 0; padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 12px; max-height: 760px; overflow-y: auto"><span aria-hidden="true" style="align-self: center; width: 32px; height: 4px; border-radius: 2px; background: #C1C7CE"></span><div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600">{{ np.title }}</h2><button onClick="{{ np.close }}" aria-label="Close" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; color: #41474D"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div><sc-if value="{{ np.choosing }}" hint-placeholder-val="{{ true }}"><div style="display: flex; flex-direction: column; gap: 4px"><button class="li" onClick="{{ np.pick.kudos }}" style="border-radius: 16px"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #FFD9E2; color: #5C1130; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"></path></svg></span><div style="flex: 1"><div style="font-weight: 600">Kudos</div><div class="sm">Thank someone in public. No points.</div></div></button><button class="li" onClick="{{ np.pick.poll }}" style="border-radius: 16px"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #FFDDB0; color: #4A2800; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"></path></svg></span><div style="flex: 1"><div style="font-weight: 600">Poll</div><div class="sm">Ask a quick question with options.</div></div></button><button class="li" onClick="{{ np.pick.quote }}" style="border-radius: 16px"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #EBDCFF; color: #20142F; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h4v4c0 3-1.5 5-4 6"></path><path d="M14 7h4v4c0 3-1.5 5-4 6"></path></svg></span><div style="flex: 1"><div style="font-weight: 600">Quote</div><div class="sm">Share a line that stuck with you.</div></div></button><button class="li" onClick="{{ np.pick.feedback }}" style="border-radius: 16px"><span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 20px; background: #D3E5F5; color: #0C1D29; display: grid; place-items: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10H9l-5 4z"></path></svg></span><div style="flex: 1"><div style="font-weight: 600">Feedback</div><div class="sm">Public, with your name. For anonymous, use Speak up.</div></div></button></div><span class="sm">Events and announcements are posted by admins.</span></sc-if><sc-if value="{{ np.composing }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; gap: 12px"><sc-if value="{{ np.isKudos }}" hint-placeholder-val="{{ false }}"><span class="sm">To</span><div role="group" aria-label="Kudos to" style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{ np.people }}" as="p" hint-placeholder-count="5"><button onClick="{{ p.pick }}" aria-pressed="{{ p.pressed }}" style="height: 36px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 500; border: {{ p.border }}; background: {{ p.bg }}; color: {{ p.color }}">{{ p.name }}</button></sc-for></div></sc-if><label for="m-np-text" class="sm">{{ np.textLabel }}</label><textarea id="m-np-text" class="field" style="height: 110px; padding: 12px 14px; line-height: 22px; resize: vertical; width: 100%; flex: none" placeholder="{{ np.placeholder }}" value="{{ np.text }}" onChange="{{ np.onText }}"></textarea><sc-if value="{{ np.isPoll }}" hint-placeholder-val="{{ false }}"><label for="m-np-o1" class="sm">Option 1</label><input id="m-np-o1" class="field" value="{{ np.o1 }}" onChange="{{ np.onO1 }}" placeholder="e.g. Biryani"><label for="m-np-o2" class="sm">Option 2</label><input id="m-np-o2" class="field" value="{{ np.o2 }}" onChange="{{ np.onO2 }}" placeholder="e.g. Pizza"></sc-if><sc-if value="{{ np.isQuote }}" hint-placeholder-val="{{ false }}"><label for="m-np-by" class="sm">Who said it? (optional)</label><input id="m-np-by" class="field" value="{{ np.by }}" onChange="{{ np.onBy }}"></sc-if><div style="display: flex; gap: 8px; justify-content: flex-end"><button class="bx" onClick="{{ np.backToKinds }}">Back</button><button class="bf" style="opacity: {{ np.postOp }}" disabled="{{ np.cantPost }}" onClick="{{ np.post }}">Post</button></div></div></sc-if></div></div></sc-if>
+<sc-if value="{{ imp.show }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; justify-content: flex-end"><div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(0,0,0,0.38)"></div><div role="dialog" aria-modal="true" aria-label="Important announcement" style="position: relative; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 12px 20px 28px; display: flex; flex-direction: column; gap: 12px; animation: sheetUp .3s cubic-bezier(.2,.8,.2,1)"><span aria-hidden="true" style="align-self: center; width: 32px; height: 4px; border-radius: 2px; background: #C1C7CE"></span><span aria-hidden="true" style="width: 48px; height: 48px; border-radius: 24px; background: #006493; color: #FFFFFF; display: grid; place-items: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3l10-5v15l-10-5H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1z"></path><path d="M7.5 14.5L9 20h2.5l-1.2-4.6"></path><path d="M20 10v4"></path></svg></span><span style="font-size: 12px; font-weight: 700; letter-spacing: .06em; color: #41474D">IMPORTANT · ANITA, ADMIN</span><h2 style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 600">Office closed on Friday 27 Nov</h2><p class="bm" style="margin: 0; font-size: 15px; line-height: 22px">Building maintenance. Plan your office days for that week around it.</p><div style="display: flex; align-items: center; gap: 10px; background: #F1F4FA; border-radius: 14px; padding: 12px 14px"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#006493" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="3"></rect><path d="M4 10h16M9 3v4M15 3v4"></path></svg><span class="sm" style="color: #181C20">Fri 27 is marked closed on your Days calendar, so you can't plan it by mistake.</span></div><div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 4px"><button class="bx" onClick="{{ imp.seeDays }}">See in Days</button><button class="bf" style="height: 44px; padding: 0 24px" onClick="{{ imp.ack }}">Got it</button></div></div></div></sc-if>
+<sc-if value="{{ showSpeakFab }}" hint-placeholder-val="{{ true }}"><button onClick="{{ go.speak }}" aria-label="Speak up anonymously" title="Speak up anonymously" style="position: absolute; right: 16px; bottom: 96px; z-index: 5; width: 56px; height: 56px; padding: 0; display: grid; place-items: center; border-radius: 16px; border: 0; background: #24222F; color: #FFFFFF; font-size: 15px; font-weight: 600;  box-shadow: 0 4px 10px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.3)"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H10l-5 4v-4H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"></path><path d="M12 7l3 1.2v2.2c0 1.9-1.3 3.2-3 3.9-1.7-.7-3-2-3-3.9V8.2z"></path></svg></button></sc-if>
+<sc-if value="{{ day.open }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end"><div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(0,0,0,0.32)"></div><div role="dialog" aria-modal="true" aria-label="Plan this day" style="position: relative; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 12px 20px 28px; display: flex; flex-direction: column; gap: 14px; animation: sheetUp .3s cubic-bezier(.2,.8,.2,1)"><span aria-hidden="true" style="align-self: center; width: 32px; height: 4px; border-radius: 2px; background: #C1C7CE"></span><div style="display: flex; justify-content: space-between; align-items: center"><div><h2 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">{{ day.title }}</h2><span class="sm">{{ day.status }}</span></div><button onClick="{{ day.close }}" aria-label="Close" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; color: #41474D"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div><sc-if value="{{ day.choosing }}" hint-placeholder-val="{{ true }}"><div style="display: flex; flex-direction: column; gap: 8px"><sc-if value="{{ day.showPlan }}" hint-placeholder-val="{{ true }}"><button class="bf" style="height: 48px; border-radius: 24px; font-size: 15px" onClick="{{ day.togglePlan }}">{{ day.planLabel }}</button></sc-if><button class="bt" style="height: 48px; border-radius: 24px; font-size: 15px" onClick="{{ day.openLeave }}">Apply for leave</button></div></sc-if><sc-if value="{{ day.leaveForm }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; gap: 14px">
+<span class="tm">Leave is applied in Zoho People</span>
+<span class="bm">Your approver decides there, and your balances show here.</span>
+<div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap"><button class="bx" onClick="{{ day.closeLeave }}">Back</button><a href="#" class="bf" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none">Apply in Zoho People<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"></path></svg></a></div>
+</div></sc-if></div></div></sc-if>
+<sc-if value="{{ fix.open }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end"><div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(0,0,0,0.32)"></div><div role="dialog" aria-modal="true" aria-label="Fix a day" style="position: relative; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 12px 20px 28px; display: flex; flex-direction: column; gap: 14px; animation: sheetUp .3s cubic-bezier(.2,.8,.2,1)"><span aria-hidden="true" style="align-self: center; width: 32px; height: 4px; border-radius: 2px; background: #C1C7CE"></span><div style="display: flex; justify-content: space-between; align-items: center"><div><h2 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">{{ fix.title }}</h2><span class="sm">{{ fix.status }}</span></div><button onClick="{{ fix.close }}" aria-label="Close" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: grid; place-items: center; padding: 0; color: #41474D"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div><div role="radiogroup" aria-label="Where were you?" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px"><sc-for list="{{ fix.opts }}" as="o" hint-placeholder-count="3"><button role="radio" aria-checked="{{ o.checked }}" onClick="{{ o.pick }}" style="height: 48px; padding: 0 8px; border-radius: 16px; border: {{ o.border }}; background: {{ o.bg }}; color: #181C20; font-size: 14px; font-weight: 600">{{ o.label }}</button></sc-for></div><p class="sm" style="margin: 0">Marked later, so there's no location check. Admins can see it was added after the day. Every change is logged.</p><div style="display: flex; gap: 8px; justify-content: flex-end"><button class="bx" onClick="{{ fix.close }}">Cancel</button><button class="bf" style="opacity: {{ fix.saveOp }}" disabled="{{ fix.cantSave }}" onClick="{{ fix.save }}">Save</button></div></div></div></sc-if>
+<sc-if value="{{ lock.open }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end"><div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(0,0,0,0.32)"></div><div role="dialog" aria-modal="true" aria-label="Locked day" style="position: relative; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 12px 20px 28px; display: flex; flex-direction: column; gap: 14px; animation: sheetUp .3s cubic-bezier(.2,.8,.2,1)"><span aria-hidden="true" style="align-self: center; width: 32px; height: 4px; border-radius: 2px; background: #C1C7CE"></span><h2 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">{{ lock.title }}</h2><p class="bm" style="margin: 0">You can fix your own last 7 days. Anything older needs an admin.</p><div style="display: flex; justify-content: flex-end"><button class="bf" onClick="{{ lock.close }}">OK</button></div></div></div></sc-if>
+<!-- Navigation bar -->
+<nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 80px; background: #EBEEF4; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 12px 0 16px; box-sizing: border-box">
+<button class="nav" onClick="{{ go.home }}" aria-current="{{ n.home.cur }}" style="color: {{ n.home.color }}; font-weight: {{ n.home.weight }}"><span class="ind" style="background: {{ n.home.bg }}"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V20H4z"></path></svg></span>Home</button>
+<button class="nav" onClick="{{ go.feed }}" aria-current="{{ n.feed.cur }}" style="color: {{ n.feed.color }}; font-weight: {{ n.feed.weight }}"><span class="ind" style="position: relative; background: {{ n.feed.bg }}"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M8 9h8M8 13h8M8 17h5"></path></svg><sc-if value="{{ feed.badge }}" hint-placeholder-val="{{ true }}"><span style="position: absolute; top: 0; left: 36px; min-width: 16px; height: 16px; border-radius: 8px; background: #BA1A1A; color: #FFFFFF; font-size: 11px; line-height: 16px; text-align: center; font-weight: 600">{{ feed.left }}</span></sc-if></span>Feed</button>
+<button class="nav" onClick="{{ go.days }}" aria-current="{{ n.days.cur }}" style="color: {{ n.days.color }}; font-weight: {{ n.days.weight }}"><span class="ind" style="background: {{ n.days.bg }}"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="3"></rect><path d="M4 10h16M9 3v4M15 3v4"></path></svg></span>Days</button>
+<button class="nav" onClick="{{ go.snacks }}" aria-current="{{ n.snacks.cur }}" style="color: {{ n.snacks.color }}; font-weight: {{ n.snacks.weight }}"><span class="ind" style="background: {{ n.snacks.bg }}"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h12v5a6 6 0 0 1-12 0z"></path><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"></path></svg></span>Snacks</button>
+<button class="nav" onClick="{{ go.account }}" aria-current="{{ n.account.cur }}" style="color: {{ n.account.color }}; font-weight: {{ n.account.weight }}"><span class="ind" style="background: {{ n.account.bg }}"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"></circle><path d="M5 20a7 7 0 0 1 14 0"></path></svg></span>Account</button>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"timeOfDay":{"editor":"enum","options":["morning","afternoon","evening","auto"],"default":"morning","section":"Demo"},"location":{"editor":"enum","options":["near","far","denied"],"default":"near","section":"Demo"},"teaTime":{"editor":"enum","options":["morning","morning-closed","afternoon","afternoon-closed"],"default":"morning","section":"Demo"},"snackState":{"editor":"enum","options":["open","ordered"],"default":"open","section":"Demo"},"wifiResult":{"editor":"enum","options":["slow","good"],"default":"slow","section":"Demo"},"plannedToday":{"editor":"boolean","default":true,"section":"Demo"},"isAdmin":{"editor":"boolean","default":false,"section":"Demo"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.posts = [
+      { id: 'a', cardBg: '#F2F8FD', tint: '#CAE6FF', kind: 'Announcement', kindBg: '#CAE6FF', kindColor: '#001E30', author: 'Anita · Admin', av: 'AN', avBg: '#CAE6FF', time: 'Today, 10:15', title: 'Today’s snack options are up', body: 'Makhana, dark chocolate or banana chips. Pick yours on the Snacks tab before 12:00.' },
+      { id: 'e', cardBg: '#F3F6FF', tint: '#D3E5F5', kind: 'Event', kindBg: '#D3E5F5', kindColor: '#0C1D29', author: 'Meera', av: 'MS', avBg: '#EBDCFF', time: 'Yesterday', title: 'Diwali potluck · Thu 19 Nov, 4:30', body: 'Big room after standup. Bring one dish from home.', action: 'rsvp' },
+      { id: 'p', cardBg: '#FFF7EC', tint: '#FFDDB0', kind: 'Poll', kindBg: '#FFDDB0', kindColor: '#4A2800', author: 'Rahul', av: 'RV', avBg: '#D3E5F5', time: 'Yesterday', title: 'Friday lunch: biryani or pizza?', body: '', poll: true },
+      { id: 'k', cardBg: '#FFF4F6', tint: '#FFD9E2', kind: 'Kudos', kindBg: '#FFD9E2', kindColor: '#5C1130', author: 'Arjun → Meera', av: 'AK', avBg: '#CAE6FF', time: '2 h ago', title: 'Kudos to Meera', body: '“Stayed back on Friday to get the client demo working. The client noticed. Thank you.”', action: 'like' },
+      { id: 'b', cardBg: '#FFFAEB', tint: '#FFE08A', kind: 'Birthday', kindBg: '#FFE08A', kindColor: '#3D2E00', author: 'Lappy', av: 'in', avBg: '#FFE08A', time: 'Today', title: 'It’s Nisha’s birthday', body: 'Say happy birthday with a kudos.', action: 'wish', system: true }
+    ];
+    this.state = { sayHiOn: true, devNotifs: true, nsOpen: false,
+      tab: 'home', sub: null, inLeague: true, status: 'none', teaR: {}, rsvp: false, vote: null, like: false, wish: false,
+      added: {}, queue: ['a', 'e', 'p', 'k', 'b'], pos: 0, laterIds: [], history: [], dx: 0, dragging: false,
+      mascot: true, wants: {}, plus: {}, steps: 6240, stepInput: '', page: 142, pageInput: '', finished: false, speak: false, wifi: null, loc: 'idle', ack: false, wifiState: 'idle', wifiArea: null, wifiNote: '', wifiSent: false, wifiAnyway: false, spTopic: null, spText: '', spSent: false, spReports: []
+    };
+    this.x0 = 0;
+  }
+  page(step) {
+    const s = this.state;
+    if (step > 0 && s.pos >= s.queue.length) return;
+    if (step < 0 && s.pos <= 0) { this.setState({ dragging: false, dx: 0 }); return; }
+    this.setState({ dx: step > 0 ? -480 : 480, dragging: false });
+    setTimeout(() => { this.setState({ pos: this.state.pos + step, dx: 0 }); }, 180);
+  }
+  withWave(list, s) {
+    const sent = s.sent || {};
+    return list.map((p) => { const label = sent[p.i]; return Object.assign({}, p, { canWave: s.sayHiOn !== false && p.sayHi !== false && p.where.indexOf('In since') === 0, waved: label ? 'true' : 'false', waveLabel: label ? label : 'Say hi', waveBg: label ? '#D3E5F5' : 'transparent', waveBorder: label ? '0' : '1px solid #71787E', wave: () => this.setState({ hiFor: p.i, hiWhere: p.where, hiPick: null, hiTime: null, crowdNames: Object.assign({}, s.crowdNames || {}, { [p.i]: p.name }) }) }); });
+  }
+  componentWillUnmount() { clearInterval(this.gt); clearTimeout(this.gd); }
+  renderVals() {
+    const s = this.state;
+    const tod = (() => { const t = this.props.timeOfDay ?? 'morning'; if (t !== 'auto') return t; const h = new Date().getHours(); return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; })();
+    const sky = { morning: tod === 'morning', afternoon: tod === 'afternoon', evening: tod === 'evening',
+      bg: tod === 'evening' ? '#2E3A66' : tod === 'afternoon' ? '#CFE8FB' : '#D6ECFA', fg: tod === 'evening' ? '#FFFFFF' : '#181C20', sub: tod === 'evening' ? '#D6DDF5' : '#41474D',
+      greet: tod === 'evening' ? 'Good evening' : tod === 'afternoon' ? 'Good afternoon' : 'Good morning' };
+    const office = s.status === 'office';
+    const plannedToday = this.props.plannedToday ?? true;
+    const fmt = (n) => n.toLocaleString('en-IN');
+    const go = (tab, sub) => () => this.setState({ tab, sub: sub || null });
+    const view = s.sub || s.tab;
+    const v = { home: view === 'home', feed: view === 'feed', days: view === 'days', snacks: view === 'snacks', account: view === 'account', steps: view === 'steps', reading: view === 'reading', notifs: view === 'notifs', wifi: view === 'wifi', speak: view === 'speak' };
+    const navOf = (k) => { const on = s.tab === k; return { cur: on ? 'page' : 'false', bg: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#41474D', weight: on ? 700 : 500 }; };
+
+    // office days
+    const fixes = s.fixes || {};
+    const doneDates = [3, 5, 10, 12, 13].filter((d) => !fixes[d] || fixes[d] === 'office').concat([9, 10, 11, 12, 13].filter((d) => fixes[d] === 'office' && ![10, 12, 13].includes(d))).concat(office ? [16] : []).sort((a, b) => a - b);
+    const addedDays = Object.keys(s.added).filter((k) => s.added[k]).map(Number);
+    const removedDays = s.removed || {};
+    const planned = (s.status === 'none' ? [16] : []).concat([18, 23, 25].filter((d) => !removedDays[d]), addedDays).sort((a, b) => a - b);
+    const total = doneDates.length + planned.length, spare = total - 8;
+    const good = spare >= 1;
+    const doneN = doneDates.length;
+    const paceState = doneN >= 8 ? 'done' : (doneN + planned.length >= 8 ? 'track' : 'short');
+    const spareN = doneN + planned.length - 8;
+    const pace = {
+      short: paceState === 'done' ? 'Done for November' : paceState === 'track' ? (spareN > 0 ? 'On track · ' + spareN + ' spare' : 'On track') : 'Plan ' + (-spareN) + ' more',
+      long: paceState === 'done' ? 'Done: 8 of 8 office days' : paceState === 'track' ? (spareN > 0 ? 'On track, with ' + spareN + ' spare day' + (spareN > 1 ? 's' : '') : 'On track. Every planned day counts') : 'Plan ' + (-spareN) + ' more day' + (-spareN > 1 ? 's' : '') + ' to reach 8',
+      counts: doneN + ' done · ' + planned.length + ' planned · 8 needed',
+      aria: doneN + ' days done, ' + planned.length + ' planned, 8 needed', isShort: paceState === 'short',
+      bg: paceState === 'short' ? '#FFDDB0' : '#CDEBD6', color: paceState === 'short' ? '#4A2800' : '#0B3D1F',
+      cardBg: paceState === 'short' ? '#FFDDB0' : '#CDEBD6', cardColor: paceState === 'short' ? '#4A2800' : '#0B3D1F'
+    };
+    const dateDots = doneDates.map((n) => ({ n, bg: '#006493', color: '#FFFFFF', border: '0' }))
+      .concat(planned.map((n) => ({ n, bg: 'transparent', color: '#006493', border: n === 16 ? '2.5px solid #006493' : '1.5px solid #006493' })));
+    const weekStrip = [16, 17, 18, 19, 20].map((d, i) => {
+      const isDone = doneDates.includes(d), isPl = planned.includes(d), today = d === 16;
+      return { n: d, label: today ? 'Today' : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][i], labelWeight: today ? 700 : 500,
+        bg: isDone ? '#006493' : 'transparent', color: isDone ? '#FFFFFF' : isPl ? '#006493' : '#71787E',
+        border: isDone ? '0' : isPl ? '1.5px solid #006493' : '1px dashed #C1C7CE', outline: today ? '2px solid #181C20' : 'none' };
+    });
+    const cells = [];
+    for (let i = 0; i < 6; i++) cells.push({ n: '', bg: 'transparent', color: '#181C20', border: '0', weight: 400, disabled: true, pressed: 'false', aria: '', cursor: 'default', outline: 'none', toggle: () => {} });
+    for (let d = 1; d <= 30; d++) {
+      const col = (5 + d) % 7, weekend = col === 5 || col === 6;
+      let c = { n: d, bg: 'transparent', color: weekend ? '#8A9096' : '#181C20', border: '0', weight: 400 };
+      if (doneDates.includes(d)) c = { n: d, bg: '#006493', color: '#FFFFFF', border: '0', weight: 600 };
+      else if (d === 6) c = { n: d, bg: '#EBDCFF', color: '#20142F', border: '0', weight: 600 };
+      else if (d === 27) c = { n: d, bg: '#E5E8EE', color: '#71787E', border: '1px dashed #9AA0A6', weight: 500 };
+      else if (planned.includes(d)) c = { n: d, bg: 'transparent', color: '#006493', border: d === 16 ? '2.5px solid #006493' : '1.5px solid #006493', weight: 700 };
+      else if (d === 16) c.border = '2.5px solid #181C20';
+      const plannable = !weekend && d > 16 && !doneDates.includes(d) && d !== 6 && d !== 27;
+      const isPl = planned.includes(d);
+      // Owner ruling: a date is only for planning a day in or applying for leave. Past dates do
+      // nothing; a missed day is fixed by an admin.
+      const fixable = false;
+      const locked = false;
+      const todayTap = d === 16 && s.status === 'none';
+      const tappable = plannable || fixable || locked || todayTap;
+      c.disabled = !tappable; c.pressed = isPl ? 'true' : 'false'; c.cursor = tappable ? 'pointer' : 'default';
+      c.aria = d + ' November' + (d === 16 ? ', today' : '') + (doneDates.includes(d) ? ', done' : d === 6 ? ', leave' : d === 27 ? ', office closed' : isPl ? ', planned' : '') + (plannable ? '. Tap to plan or request leave' : todayTap ? '. Not checked in yet. Tap to request leave' : fixable ? '. Tap to fix this day' : locked ? '. Locked' : '');
+      if ((s.leaveReq || {})[d]) Object.assign(c, { bg: 'transparent', color: '#65587B', border: '1.5px dashed #65587B', weight: 600 });
+      c.toggle = () => {
+        if (fixable) { this.setState({ fixDay: d, fixPick: doneDates.includes(d) ? 'office' : (fixes[d] || null) }); return; }
+        if (locked) { this.setState({ lockDay: d }); return; }
+        if (!plannable && !todayTap) return;
+        this.setState({ daySheet: d, leaveOpen: false, leaveType: null, halfDay: false, leaveUntil: null });
+      };
+      c.outline = d === 16 ? '2px solid #181C20' : 'none';
+      cells.push(c);
+    }
+    const wdOf = (d) => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][(5 + d) % 7];
+    const upcoming = planned.map((d, i) => ({ n: d, wd: d === 16 ? 'Today' : wdOf(d), label: (d === 16 ? 'Today' : wdOf(d) + ' ' + d) + ' Nov', note: [16, 18, 23, 25].includes(d) ? 'Your usual day' : 'Added by you', divider: i === planned.length - 1 ? '0' : '1px solid #DFE3E8' }));
+    const usualPlanned = (d) => [18, 23, 25].includes(d) && !removedDays[d];
+    const openDays = [];
+    for (let d = 17; d <= 30 && openDays.length < 4; d++) {
+      const col = (5 + d) % 7;
+      if (col > 4 || d === 27 || usualPlanned(d) || (s.leaveReq || {})[d]) continue;
+      openDays.push(d);
+    }
+    const open = {
+      line: paceState === 'short' ? (-spareN) + ' more office day' + (-spareN > 1 ? 's' : '') + ' needed in November. These weekdays are still open.' : 'You\u2019re on track. Add a day if you\u2019d like a spare.',
+      rows: openDays.map((n, i) => { const on = !!s.added[n]; return { n, dow: wdOf(n), line: on ? 'Planned by you' : 'Nothing planned yet', pressed: on ? 'true' : 'false', label: on ? 'Planned' : 'Add', aria: (on ? 'Planned, ' : 'Add ') + wdOf(n) + ' ' + n + ' November' + (on ? '. Tap to remove' : ' to your plan'), bg: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#006493', border: on ? '0' : '1px solid #71787E', divider: i === openDays.length - 1 ? '0' : '1px solid #DFE3E8', toggle: () => this.setState({ added: Object.assign({}, s.added, { [n]: !on }) }) }; })
+    };
+    const usual = s.usual || { Mon: true, Wed: true };
+    const usualDays = [['Mon', 'Monday'], ['Tue', 'Tuesday'], ['Wed', 'Wednesday'], ['Thu', 'Thursday'], ['Fri', 'Friday']].map((p) => { const on = !!usual[p[0]]; return { label: p[0], full: p[1], pressed: on ? 'true' : 'false', bg: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#41474D', border: on ? '1px solid #D3E5F5' : '1px solid #C1C7CE', toggle: () => this.setState({ usual: Object.assign({}, usual, { [p[0]]: !on }) }) }; });
+
+    // tea: two rounds a day; the card shows the next round that's still relevant (demo prop teaTime)
+    const teaTime = this.props.teaTime ?? 'morning';
+    const teaAft = teaTime.indexOf('afternoon') === 0;
+    const teaClosed = teaTime.indexOf('closed') >= 0;
+    const teaKey = teaAft ? 'pm' : 'am';
+    const teaAt = teaAft ? '4 PM' : '11:00';
+    const teaBy = teaAft ? '3:30' : '10:45';
+    const teaAns = (s.teaR || {})[teaKey] ?? null;
+    const setTea = (val) => this.setState({ teaR: Object.assign({}, this.state.teaR || {}, { [teaKey]: val }) });
+    const tea = {
+      at: teaAt, by: teaBy, another: !teaAft,
+      open: !teaClosed && teaAns === null, done: !teaClosed && teaAns !== null,
+      line: teaAns === 'yes' ? 'You\u2019re on the list.' : teaAns === 'no' ? 'Skipping this round.' : 'Answer by ' + teaBy + '.',
+      yes: () => setTea('yes'), no: () => setTea('no'), undo: () => setTea(null)
+    };
+    if (teaClosed) tea.line = teaAns === 'yes' ? 'Coming at ' + teaAt + '.' : 'The ' + teaAt + ' round is closed.';
+    tea.lappy = s.mascot && teaAns === 'yes'; tea.plain = !tea.lappy;
+    tea.rowTitle = tea.lappy ? (teaClosed ? 'Tea\u2019s on its way' : 'You\u2019re on the tea list') : 'Tea round';
+    tea.lappyTitle = teaClosed ? 'Tea\u2019s on its way' : 'You\u2019re on the tea list';
+    if (tea.lappy && !teaClosed) tea.line = 'You can change your answer until ' + teaBy + '.';
+
+    // shared actions
+    const toggles = {
+      rsvp: { on: s.rsvp, label: s.rsvp ? 'Going' : "I'm in" },
+      like: { on: s.like, label: s.like ? 'Appreciated' : 'Appreciate' },
+      wish: { on: s.wish, label: s.wish ? 'Wished' : 'Send a wish' }
+    };
+    const ev = { going: s.rsvp ? 19 : 18, pressed: s.rsvp ? 'true' : 'false', toggle: () => this.setState({ rsvp: !s.rsvp }), label: toggles.rsvp.label, bg: s.rsvp ? '#D3E5F5' : 'transparent', color: s.rsvp ? '#0C1D29' : '#006493', border: s.rsvp ? '0' : '1px solid #71787E' };
+    const votes = { b: 14 + (s.vote === 'b' ? 1 : 0), p: 9 + (s.vote === 'p' ? 1 : 0) }; const tv = votes.b + votes.p;
+    const opt = (k, label) => ({ label, pressed: s.vote === k ? 'true' : 'false', vote: () => this.setState({ vote: s.vote === k ? null : k }), pct: s.vote ? Math.round(votes[k] / tv * 100) + '%' : '0%', result: s.vote ? Math.round(votes[k] / tv * 100) + '%' : '', fill: s.vote === k ? '#CAE6FF' : '#EBEEF4', border: s.vote === k ? '1.5px solid #006493' : '1px solid #C1C7CE', weight: s.vote === k ? 700 : 500 });
+
+    // feed stack
+    const byId = {}; this.posts.forEach((p) => { byId[p.id] = p; });
+    const inStack = s.pos < s.queue.length;
+    const p = byId[s.queue[Math.min(s.pos, Math.max(0, s.queue.length - 1))]] || this.posts[0];
+    const t = toggles[p.action] || { on: false, label: '' };
+    const metas = { a: 'For everyone', e: 'RSVP closes Thu 12:00', p: s.vote ? tv + ' votes' : 'Results show after you vote · closes Thu', k: s.like ? 'You appreciated this' : 'From Arjun', b: s.wish ? 'You wished her' : 'Today' };
+    const c = Object.assign({}, p, {
+      showLappy: !!p.system && s.mascot, showAv: !(p.system && s.mascot), authorShown: p.system ? (s.mascot ? 'Lappy' : 'innovin') : p.author,
+      isPoll: !!p.poll, hasAction: !!p.action, metaShown: metas[p.id],
+      act: () => { if (p.action) this.setState({ [p.action]: !t.on }); },
+      actPressed: t.on ? 'true' : 'false', actLabel: t.label, actBg: t.on ? '#D3E5F5' : '#006493', actColor: t.on ? '#0C1D29' : '#FFFFFF'
+    });
+    const ignore = (e) => e.target && e.target.closest && e.target.closest('button');
+    const left = s.queue.length - s.pos;
+    const feed = {
+      inStack, caughtUp: !inStack, total: Math.max(1, s.queue.length),
+      bars: s.queue.map((_, i) => (i < s.pos ? '#006493' : i === s.pos ? '#71787E' : '#C1C7CE')),
+      headerSub: inStack ? (s.pos + 1) + ' of ' + s.queue.length + ' new since yesterday' : 'Nothing new since yesterday',
+      behind1: left > 1, behind2: left > 2,
+      transform: 'translateX(' + s.dx + 'px) rotate(' + (s.dx / 24).toFixed(2) + 'deg)', transition: s.dragging ? 'none' : 'transform 180ms ease-out',
+      counter: (Math.min(s.pos + 1, s.queue.length)) + ' / ' + s.queue.length,
+      onDown: (e) => { if (ignore(e)) return; this.x0 = e.clientX; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {} this.setState({ dragging: true, dx: 0 }); },
+      onMove: (e) => { if (!this.state.dragging) return; let dx = e.clientX - this.x0; if (dx > 0 && this.state.pos === 0) dx = dx / 4; this.setState({ dx }); },
+      onUp: () => { if (!this.state.dragging) return; const dx = this.state.dx; if (dx < -110) this.page(1); else if (dx > 110) this.page(-1); else this.setState({ dragging: false, dx: 0 }); },
+      next: () => this.page(1),
+      back: () => this.page(-1),
+      cantBack: s.pos === 0, backOp: s.pos === 0 ? 0.4 : 1,
+      hasOpen: !s.rsvp || !s.vote, openRsvp: !s.rsvp, openPoll: !s.vote, openBoth: !s.rsvp && !s.vote,
+      caughtLine: (!s.rsvp || !s.vote) ? 'You’ve seen everything new. ' + ((!s.rsvp && !s.vote) ? '2 things are' : '1 thing is') + ' still waiting for an answer.' : 'You’ve seen and answered everything new. Older posts are below.',
+      restart: () => this.setState({ pos: 0, dx: 0 }),
+      seenList: s.queue.map((qid, qi) => { const pp = byId[qid] || this.posts[0]; return { title: pp.title, kind: pp.kind, bg: pp.kindBg, fg: pp.kindColor, divider: qi === s.queue.length - 1 ? '0' : '1px solid #DFE3E8', open: () => this.setState({ pos: qi, dx: 0 }) }; }),
+      backToLast: () => this.setState({ pos: Math.max(0, s.queue.length - 1), dx: 0 }),
+      badge: left > 0 && s.tab !== 'feed', left: left
+    };
+
+    // snacks
+    const shelfDefs = [['mk', 'Roasted makhana', 11], ['dc', 'Dark chocolate', 8], ['bc', 'Banana chips', 6]];
+    const shelf = shelfDefs.map(([k, name, n], i) => { const on = s.want === k; return { name, count: n + (on ? 1 : 0), pressed: on ? 'true' : 'false', label: on ? 'Your pick' : (s.want ? 'Switch to this' : 'Pick this'), bg: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#006493', border: on ? '0' : '1px solid #71787E', divider: i === shelfDefs.length - 1 ? '0' : '1px solid #DFE3E8', toggle: () => this.setState({ want: on ? null : k }) }; });
+    const ideaDefs = [['ps', 'Peanut chikki', 5], ['ft', 'Fruit on Mondays', 4], ['gt', 'Green tea bags', 2]];
+    const ideas = ideaDefs.map(([k, name, n], i) => { const on = !!s.plus[k]; return { name, count: n + (on ? 1 : 0), pressed: on ? 'true' : 'false', bg: on ? '#D3E5F5' : 'transparent', color: on ? '#0C1D29' : '#41474D', border: on ? '0' : '1px solid #C1C7CE', divider: i === ideaDefs.length - 1 ? '0' : '1px solid #DFE3E8', toggle: () => this.setState({ plus: Object.assign({}, s.plus, { [k]: !on }) }) }; });
+
+    // steps
+    const stepsPct = Math.min(100, Math.round(s.steps / 100));
+    const weekYou = 30000 + s.steps;
+    const others = [['Meera', 48210], ['Arjun', 41905], ['Kiran', 39770], ['Nisha', 33120]];
+    const rows = others.map(([n, v]) => ({ name: n, v, you: false })).concat([{ name: 'You', v: weekYou, you: true }]).sort((a, b) => b.v - a.v);
+    const youRank = rows.findIndex((r) => r.you) + 1;
+    const league = rows.map((r, i) => ({ rank: i + 1, name: r.name, steps: fmt(r.v), bg: r.you ? '#EAF4FC' : 'transparent', weight: r.you ? 700 : 400, divider: i === rows.length - 1 ? '0' : '1px solid #DFE3E8' }));
+
+    // reading
+    const book = {
+      reading: !s.finished, finished: s.finished,
+      pct: Math.round(s.page / 296 * 100) + '%', aria: 'Page ' + s.page + ' of 296',
+      homeTitle: s.finished ? 'Finished Deep Work' : 'Deep Work', homeSub: s.finished ? 'Pick your next book from the team shelf' : 'Page ' + s.page + ' of 296'
+    };
+    const sw = s.mascot ? { track: '#006493', thumb: '#FFFFFF', border: '0', left: '24px', size: '24px' } : { track: '#DFE3E8', thumb: '#71787E', border: '2px solid #71787E', left: '6px', size: '16px' };
+
+
+    const range = s.range || 'week';
+    const todayOthers = { Meera: 7400, Arjun: 5900, Kiran: 8100, Nisha: 3300 };
+    const weekOthers = { Meera: 48210, Arjun: 41905, Kiran: 39770, Nisha: 33120 };
+    const src = range === 'week' ? weekOthers : todayOthers;
+    const youVal = range === 'week' ? 30000 + s.steps : s.steps;
+    const lrows = Object.keys(src).map((n) => ({ name: n, val: src[n], you: false })).concat([{ name: 'You', val: youVal, you: true }]).sort((a, b) => b.val - a.val);
+    const lmax = lrows[0].val;
+    const yi = lrows.findIndex((r) => r.you);
+    const gapLine = yi === 0 ? 'You’re leading. Enjoy the view.' : fmt(lrows[yi - 1].val - youVal + 1) + ' steps to pass ' + lrows[yi - 1].name + (range === 'week' ? ' this week' : ' today');
+    const initials = { Meera: 'MS', Arjun: 'AK', Kiran: 'KM', Nisha: 'NT', You: 'P' };
+    const avBgs = { Meera: '#EBDCFF', Arjun: '#CAE6FF', Kiran: '#FFDDB0', Nisha: '#D3E5F5', You: '#006493' };
+    const nudges = s.nudges || {};
+    const board = lrows.map((r, i) => { const nd = !!nudges[r.name]; return { rank: i + 1, name: r.name, i: initials[r.name], avBg: avBgs[r.name], avColor: r.you ? '#FFFFFF' : '#181C20', steps: fmt(r.val), pct: Math.max(4, Math.round(r.val / lmax * 100)) + '%', bar: r.you ? '#006493' : '#9CCAE8', rowBg: r.you ? '#EAF4FC' : 'transparent', weight: r.you ? 700 : 400, canNudge: !r.you, isYou: r.you, nudgeLabel: nd ? 'Nudged' : 'Nudge', nudgePressed: nd ? 'true' : 'false', nudgeBg: nd ? '#D3E5F5' : 'transparent', nudgeBorder: nd ? '0' : '1px solid #71787E', nudge: () => this.setState({ nudges: Object.assign({}, nudges, { [r.name]: !nd }) }) }; });
+    const weekDays = [['Tue', 6100], ['Wed', 10400], ['Thu', 4300], ['Fri', 5200], ['Sat', 2800], ['Sun', 1200], ['Today', s.steps]];
+    const chart = weekDays.map(([d, n], i) => ({ h: Math.max(4, Math.round(Math.min(n, 15000) / 10000 * 80)) + 'px', bg: n >= 10000 ? '#006493' : (i === 6 ? '#4F9BCB' : '#B8D8EE'), label: d, weight: i === 6 ? 700 : 500 }));
+    const rangeBtns = [['week', 'Last 7 days'], ['today', 'Today']].map(([k, l]) => ({ label: l, pressed: range === k ? 'true' : 'false', bg: range === k ? '#D3E5F5' : 'transparent', color: range === k ? '#0C1D29' : '#41474D', pick: () => this.setState({ range: k }) }));
+    const stepsRing = (Math.min(100, s.steps / 100) * 1.131).toFixed(1) + ' 113.1';
+    // snack order time is an admin setting (Admin > Snacks & tea); demo prop snackState shows the after-order view
+    const snackOrderAt = '12:00';
+    const snackOrdered = (this.props.snackState ?? 'open') === 'ordered';
+    const snack = { open: !snackOrdered, ordered: snackOrdered };
+    const shelfMax = Math.max.apply(null, shelf.map((x) => x.count));
+    const shelfIcon = ['#FFE08A', '#EBDCFF', '#D7F0E4'];
+    shelf.forEach((x, i) => { x.pct = Math.round(x.count / shelfMax * 100) + '%'; x.barColor = x.pressed === 'true' ? '#006493' : '#9CCAE8'; x.iconBg = shelfIcon[i % 3]; x.canPick = snack.open; x.lockedMine = snack.ordered && x.pressed === 'true'; });
+    const shelfTotal = shelf.reduce((a, x) => a + x.count, 0);
+    const rnd = () => ({ gx: 10 + Math.round(Math.random() * 78), gy: 14 + Math.round(Math.random() * 70) });
+    const game = { x: (s.gx || 40) + '%', y: (s.gy || 40) + '%', score: s.score || 0, catchIt: () => this.setState(Object.assign({ score: (this.state.score || 0) + 1 }, rnd())) };
+
+    const hiOpts = { wave: 'Wave', five: 'High five', thanks: 'Thanks!', chai: 'Chai break?', lunch: 'Lunch together?', walk: 'Walk?' };
+    const invites = { chai: 1, lunch: 1, walk: 1 };
+    const hiPerson = (s.crowdNames || {})[s.hiFor] || '';
+    const sentCount = Object.keys(s.sent || {}).length;
+    const fmtMin = (m) => { const h = Math.floor(m / 60), mm = m % 60; return ((h % 12) || 12) + ':' + String(mm).padStart(2, '0') + (h < 12 ? ' am' : ' pm'); };
+    const hi = {
+      name: hiPerson, where: s.hiWhere || '',
+      close: () => this.setState({ hiFor: null, hiPick: null, hiTime: null }),
+      o: {}, isInvite: !!invites[s.hiPick],
+      times: ['Now', 'In 30 min', 'Pick a time'].map((t) => ({ label: t, pressed: s.hiTime === t ? 'true' : 'false', bg: s.hiTime === t ? '#D3E5F5' : 'transparent', color: s.hiTime === t ? '#0C1D29' : '#41474D', border: s.hiTime === t ? '1px solid #D3E5F5' : '1px solid #C1C7CE', pick: () => this.setState({ hiTime: t, hiClock: t === 'Pick a time' ? (s.hiClock || 600) : s.hiClock }) })),
+      cantSend: !s.hiPick || (!!invites[s.hiPick] && (!s.hiTime || (s.hiTime === 'Pick a time' && !s.hiClock))) || sentCount >= 3,
+      showClock: s.hiTime === 'Pick a time', clockLabel: fmtMin(s.hiClock || 600), earlier: () => this.setState({ hiClock: Math.max(540, (s.hiClock || 600) - 15) }), later: () => this.setState({ hiClock: Math.min(1140, (s.hiClock || 600) + 15) }),
+      sendLabel: sentCount >= 3 ? 'You’ve sent 3 today' : s.hiPick ? 'Send ' + hiOpts[s.hiPick].replace('?', '') : 'Pick something to send',
+      send: () => { if (!s.hiPick) return; const fmtClock = (v) => { const [h, mm] = v.split(':').map(Number); return ((h % 12) || 12) + ':' + String(mm).padStart(2, '0') + (h < 12 ? ' am' : ' pm'); }; const when = s.hiTime === 'Pick a time' ? 'at ' + fmtMin(s.hiClock || 600) : s.hiTime.toLowerCase(); const label = hiOpts[s.hiPick] + (invites[s.hiPick] ? ' · ' + when : ''); this.setState({ sent: Object.assign({}, s.sent || {}, { [s.hiFor]: label }), hiFor: null, hiPick: null, hiTime: null, hiClock: '' }); }
+    };
+    hi.sendOp = hi.cantSend ? 0.4 : 1;
+    Object.keys(hiOpts).forEach((k) => { const on = s.hiPick === k; hi.o[k] = { pressed: on ? 'true' : 'false', bg: on ? '#EAF4FC' : '#FFFFFF', border: on ? '2px solid #006493' : '1px solid #DFE3E8', pick: () => this.setState({ hiPick: k, hiTime: invites[k] ? (s.hiTime || null) : null }) }; });
+    const inc = { open: !s.incReply, sub: s.incReply === 'yes' ? 'You said yes. Arjun can see it.' : s.incReply === 'no' ? 'You said not today.' : '10 min ago', yes: () => this.setState({ incReply: 'yes' }), no: () => this.setState({ incReply: 'no' }) };
+    const npK = s.npKind;
+    const npPeople = ['Arjun', 'Meera', 'Nisha', 'Rahul', 'Dev'];
+    const npText = s.npText || '';
+    const npValid = npText.trim() !== '' && (npK !== 'kudos' || !!s.npTo) && (npK !== 'poll' || ((s.npO1 || '').trim() !== '' && (s.npO2 || '').trim() !== ''));
+    const npTitles = { kudos: 'Give kudos', poll: 'New poll', quote: 'Share a quote', feedback: 'Share feedback' };
+    const np = {
+      open: () => this.setState({ npOpen: true, npKind: null }), close: () => this.setState({ npOpen: false, npKind: null, npText: '', npTo: null, npO1: '', npO2: '', npBy: '' }),
+      choosing: !npK, composing: !!npK, title: npK ? npTitles[npK] : 'New post',
+      pick: { kudos: () => this.setState({ npKind: 'kudos' }), poll: () => this.setState({ npKind: 'poll' }), quote: () => this.setState({ npKind: 'quote' }), feedback: () => this.setState({ npKind: 'feedback' }) },
+      backToKinds: () => this.setState({ npKind: null }),
+      isKudos: npK === 'kudos', isPoll: npK === 'poll', isQuote: npK === 'quote',
+      people: npPeople.map((n) => ({ name: n, pressed: s.npTo === n ? 'true' : 'false', bg: s.npTo === n ? '#D3E5F5' : 'transparent', color: s.npTo === n ? '#0C1D29' : '#41474D', border: s.npTo === n ? '1px solid #D3E5F5' : '1px solid #C1C7CE', pick: () => this.setState({ npTo: n }) })),
+      textLabel: { kudos: 'What did they do?', poll: 'Your question', quote: 'The quote', feedback: 'Your feedback' }[npK] || '',
+      placeholder: { kudos: 'Be specific: what happened and why it mattered', poll: 'e.g. Friday lunch: biryani or pizza?', quote: '', feedback: 'About the app, an event, the office… signed with your name' }[npK] || '',
+      text: npText, onText: (e) => this.setState({ npText: e.target.value }),
+      o1: s.npO1 || '', o2: s.npO2 || '', onO1: (e) => this.setState({ npO1: e.target.value }), onO2: (e) => this.setState({ npO2: e.target.value }),
+      by: s.npBy || '', onBy: (e) => this.setState({ npBy: e.target.value }),
+      cantPost: !npValid, postOp: npValid ? 1 : 0.4,
+      post: () => { if (!npValid) return; const line = { kudos: 'You gave kudos to ' + s.npTo, poll: 'Your poll: ' + npText, quote: 'You shared a quote', feedback: 'You shared feedback' }[npK]; this.setState({ myPosts: [{ line, sub: npK === 'poll' ? (s.npO1 + ' or ' + s.npO2 + ' · just now') : '“' + npText.slice(0, 60) + (npText.length > 60 ? '…' : '') + '” · just now' }].concat(s.myPosts || []), npOpen: false, npKind: null, npText: '', npTo: null, npO1: '', npO2: '', npBy: '' }); },
+      mine: (s.myPosts || []), isOpen: !!s.npOpen
+    };
+
+    const leaveBase = { Casual: 2.5, Sick: 5, Earned: 9.5, Flexible: 1 };
+    const leaveReq = s.leaveReq || {};
+    const pendingBy = {}; Object.keys(leaveReq).forEach((k) => { const r = leaveReq[k]; pendingBy[r.type] = (pendingBy[r.type] || 0) + r.amount; });
+    const fmtLeft = (n) => (Math.round(n * 10) / 10).toString();
+    const dsel = s.daySheet;
+    const dName = dsel ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][(5 + dsel) % 7] : '';
+    const dayPlanned = dsel ? planned.includes(dsel) : false;
+    const dayLabel = (d) => wdOf(d) + ' ' + (d > 30 ? (d - 30) + ' Dec' : d + ' Nov');
+    const untilOpts = [];
+    if (dsel) { untilOpts.push(dsel); for (let d = dsel + 1; untilOpts.length < 6; d++) { if ((5 + d) % 7 > 4 || d === 27) continue; untilOpts.push(d); } }
+    const untilIdx = Math.max(0, untilOpts.indexOf(s.leaveUntil));
+    const covered = untilOpts.slice(0, untilIdx + 1);
+    const multi = covered.length > 1;
+    const amount = !multi && s.halfDay && s.leaveType === 'Casual' ? 0.5 : 1;
+    const uOpt = (i) => { const d = untilOpts[i]; return d ? { v: String(d), sel: i === untilIdx, label: dayLabel(d) + (i === 0 ? ' (same day)' : '') } : { v: '', sel: false, label: '' }; };
+    const day = {
+      open: !!dsel, close: () => this.setState({ daySheet: null, leaveOpen: false, leaveType: null, halfDay: false, leaveUntil: null }),
+      title: dsel ? ({ Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday' })[dName] + ', ' + dsel + ' November' : '',
+      status: !dsel ? '' : leaveReq[dsel] ? leaveReq[dsel].type + ' leave requested · waiting for approval' : dsel === 16 ? 'Not checked in yet' : dayPlanned ? 'You’re planned to come in' : 'Not planned yet',
+      showPlan: !!dsel && dsel !== 16,
+      choosing: !!dsel && !s.leaveOpen, leaveForm: !!dsel && !!s.leaveOpen,
+      planLabel: dayPlanned ? 'Remove from my plan' : 'Plan to come in',
+      togglePlan: () => { const d0 = dsel; if ([18, 23, 25].includes(d0)) this.setState({ removed: Object.assign({}, s.removed || {}, { [d0]: dayPlanned }), daySheet: null }); else this.setState({ added: Object.assign({}, s.added, { [d0]: !dayPlanned }), daySheet: null }); },
+      openLeave: () => this.setState({ leaveOpen: true, leaveType: null, halfDay: false, leaveUntil: null }), closeLeave: () => this.setState({ leaveOpen: false }),
+      untilVal: String(covered[covered.length - 1] || ''), onUntil: (e) => this.setState({ leaveUntil: Number(e.target.value), halfDay: false }),
+      u0: uOpt(0), u1: uOpt(1), u2: uOpt(2), u3: uOpt(3), u4: uOpt(4), u5: uOpt(5),
+      untilNote: multi ? 'Covers ' + covered.length + ' working days' : 'Optional. Pick a later date to cover more than one day.',
+      backToChoose: () => this.setState({ leaveOpen: false }),
+      types: Object.keys(leaveBase).map((t) => { const left = leaveBase[t] - (pendingBy[t] || 0); const on = s.leaveType === t; const dis = left < 0.5; return { name: t, leftLine: fmtLeft(left) + ' left' + (pendingBy[t] ? ' (incl. pending)' : ''), pressed: on ? 'true' : 'false', disabled: dis, op: dis ? 0.45 : 1, bg: on ? '#EAF4FC' : '#FFFFFF', border: on ? '2px solid #006493' : '1px solid #DFE3E8', pick: () => this.setState({ leaveType: t, halfDay: t === 'Casual' ? s.halfDay : false }) }; }),
+      canHalf: s.leaveType === 'Casual' && !multi, halfAria: s.halfDay ? 'true' : 'false', toggleHalf: () => this.setState({ halfDay: !s.halfDay }),
+      sw: s.halfDay ? { track: '#006493', thumb: '#FFFFFF', border: '0', left: '24px', size: '24px' } : { track: '#DFE3E8', thumb: '#71787E', border: '2px solid #71787E', left: '6px', size: '16px' },
+      cantSend: !s.leaveType || covered.length * amount > leaveBase[s.leaveType] - (pendingBy[s.leaveType] || 0), sendOp: s.leaveType && covered.length * amount <= leaveBase[s.leaveType] - (pendingBy[s.leaveType] || 0) ? 1 : 0.4,
+      send: () => {
+        if (!s.leaveType) return; const d0 = dsel, d1 = covered[covered.length - 1];
+        const req = Object.assign({}, leaveReq), add = Object.assign({}, s.added), rem = Object.assign({}, s.removed || {});
+        covered.forEach((d) => { req[d] = { type: s.leaveType, amount, start: d0, end: d1, days: covered.length }; add[d] = false; if ([18, 23, 25].includes(d)) rem[d] = true; });
+        this.setState({ leaveReq: req, added: add, removed: rem, daySheet: null, leaveOpen: false, leaveType: null, halfDay: false, leaveUntil: null });
+      }
+    };
+    const reqStarts = []; Object.keys(leaveReq).forEach((k) => { const st = leaveReq[k].start || Number(k); if (!reqStarts.includes(st)) reqStarts.push(st); });
+    reqStarts.sort((a, b) => a - b);
+    const myLeave = reqStarts.map((st) => {
+      const keys = Object.keys(leaveReq).filter((k) => (leaveReq[k].start || Number(k)) === st);
+      const r = leaveReq[keys[0]], end = r.end || st, n = keys.reduce((a, k) => a + leaveReq[k].amount, 0);
+      const when = end === st ? dayLabel(st) : dayLabel(st) + ' \u2013 ' + dayLabel(end);
+      return { title: r.type + ' leave', sub: when + ' · ' + (n === 0.5 ? 'Half day' : n + ' day' + (n === 1 ? '' : 's')), aria: 'Cancel ' + r.type + ' leave request, ' + when,
+        cancel: () => { const next = Object.assign({}, leaveReq); const rem = Object.assign({}, s.removed || {}); keys.forEach((k) => { delete next[k]; if ([18, 23, 25].includes(Number(k))) rem[k] = false; }); this.setState({ leaveReq: next, removed: rem }); } };
+    });
+    const fd = s.fixDay;
+    const fixOpt = (k, label) => { const on = s.fixPick === k; return { label, checked: on ? 'true' : 'false', bg: on ? '#EAF4FC' : '#FFFFFF', border: on ? '2px solid #006493' : '1px solid #DFE3E8', pick: () => this.setState({ fixPick: k }) }; };
+    const fullDay = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday' };
+    const fix = {
+      open: !!fd, title: fd ? fullDay[wdOf(fd)] + ', ' + fd + ' November' : '',
+      status: !fd ? '' : doneDates.includes(fd) ? 'Marked in office' : 'Not in office',
+      opts: [fixOpt('office', 'In office'), fixOpt('none', 'Not in office')],
+      cantSave: !s.fixPick, saveOp: s.fixPick ? 1 : 0.4,
+      save: () => { if (!s.fixPick) return; this.setState({ fixes: Object.assign({}, fixes, { [fd]: s.fixPick }), fixDay: null, fixPick: null }); },
+      close: () => this.setState({ fixDay: null, fixPick: null })
+    };
+    const lock = { open: !!s.lockDay, title: s.lockDay ? wdOf(s.lockDay) + ' ' + s.lockDay + ' Nov is locked' : '', close: () => this.setState({ lockDay: null }) };
+    const leaveTypes = Object.keys(leaveBase).map((t) => ({ name: t, left: fmtLeft(leaveBase[t] - (pendingBy[t] || 0)), color: t === 'Flexible' ? '#8A5300' : '#006493' }));
+    const wifiSlow = (this.props.wifiResult ?? 'slow') === 'slow';
+    const wDone = s.wifiState === 'done';
+    const wf = {
+      idle: s.wifiState === 'idle', running: s.wifiState === 'running', done: wDone,
+      ctx: office ? 'You’re checked in, so you can report a problem to admins.' : 'You’re not checked in. The check still runs, but reports are for the office Wi-Fi only.',
+      run: () => { this.setState({ wifiState: 'running', wifiSent: false, wifiAnyway: false, score: 0, gx: 40, gy: 40 }); clearInterval(this.gt); this.gt = setInterval(() => this.setState({ gx: 10 + Math.round(Math.random() * 78), gy: 14 + Math.round(Math.random() * 70) }), 800); clearTimeout(this.gd); this.gd = setTimeout(() => { clearInterval(this.gt); this.setState({ wifiState: 'done' }); }, 8000); },
+      bg: wifiSlow ? '#FFDDB0' : '#CDEBD6', color: wifiSlow ? '#4A2800' : '#0B3D1F',
+      verdict: wifiSlow ? 'Slow' : 'Good', title: wifiSlow ? 'The connection is slow right now' : 'The connection looks good',
+      down: wifiSlow ? '3.2' : '48', up: wifiSlow ? '1.1' : '21', ping: wifiSlow ? '410' : '24',
+      canReport: wDone && office && !s.wifiSent && (wifiSlow || s.wifiAnyway),
+      needCheckin: wDone && !office && wifiSlow,
+      goodNote: wDone && office && !wifiSlow && !s.wifiAnyway && !s.wifiSent,
+      reportAnyway: () => this.setState({ wifiAnyway: true }),
+      areas: ['Desk area', 'Meeting room', 'Pantry', 'Balcony'].map((a) => ({ label: a, pressed: s.wifiArea === a ? 'true' : 'false', bg: s.wifiArea === a ? '#D3E5F5' : 'transparent', color: s.wifiArea === a ? '#0C1D29' : '#41474D', border: s.wifiArea === a ? '1px solid #D3E5F5' : '1px solid #C1C7CE', pick: () => this.setState({ wifiArea: a }) })),
+      note: s.wifiNote, onNote: (e) => this.setState({ wifiNote: e.target.value }),
+      send: () => this.setState({ wifiSent: true }), sent: wDone && s.wifiSent,
+      again: () => this.setState({ wifiState: 'idle', wifiSent: false, wifiAnyway: false, wifiArea: null, wifiNote: '' })
+    };
+    const spText = s.spText || '';
+    const sp = {
+      compose: !s.spSent, sent: s.spSent, text: spText,
+      onText: (e) => this.setState({ spText: e.target.value }),
+      topics: ['Workplace', 'People', 'Facilities', 'Process', 'Something else'].map((t) => ({ label: t, pressed: s.spTopic === t ? 'true' : 'false', bg: s.spTopic === t ? '#D3E5F5' : 'transparent', color: s.spTopic === t ? '#0C1D29' : '#41474D', border: s.spTopic === t ? '1px solid #D3E5F5' : '1px solid #C1C7CE', pick: () => this.setState({ spTopic: s.spTopic === t ? null : t }) })),
+      cantSend: spText.trim() === '', sendOp: spText.trim() === '' ? 0.4 : 1,
+      send: () => { if (!spText.trim()) return; const ref = 'SU-' + (4821 + s.spReports.length); this.setState({ spSent: true, spText: '', spTopic: null, spReports: [{ topic: s.spTopic || 'General', ref, status: 'Sent today · no reply yet' }].concat(s.spReports) }); },
+      ref: s.spReports.length ? s.spReports[0].ref : '',
+      again: () => this.setState({ spSent: false }),
+      hasReports: s.spReports.length > 0,
+      reports: s.spReports.map((r, i) => Object.assign({}, r, { divider: i === s.spReports.length - 1 ? '0' : '1px solid #DFE3E8' }))
+    };
+
+    const swOf = (on) => on ? { aria: 'true', track: '#006493', thumb: '#FFFFFF', border: '0', left: '24px', size: '24px' } : { aria: 'false', track: '#DFE3E8', thumb: '#71787E', border: '2px solid #71787E', left: '6px', size: '16px' };
+    const ns = {
+      open: () => this.setState({ nsOpen: true }), close: () => this.setState({ nsOpen: false }),
+      dev: swOf(s.devNotifs !== false), toggleDev: () => this.setState({ devNotifs: s.devNotifs === false }),
+      hi: swOf(s.sayHiOn !== false), toggleHi: () => this.setState({ sayHiOn: s.sayHiOn === false })
+    };
+
+    return {
+      ns, nsOpen: !!s.nsOpen, sayHiOff: s.sayHiOn === false, turnOnSayHi: () => this.setState({ sayHiOn: true }),
+      sky, leaveTypes, day, fix, lock, myLeave, open, usualDays,
+      hi, inc, np, hiOpen: !!s.hiFor,
+      inLeague: s.inLeague !== false, notInLeague: s.inLeague === false, isAdmin: !!(this.props.isAdmin ?? false),
+      leaveLeague: () => this.setState({ inLeague: false }), joinLeague: () => this.setState({ inLeague: true }),
+      board, gapLine, chart, rangeBtns, stepsRing, shelfTotal, game,
+      wf, sp,
+      showSpeakFab: ['home', 'days', 'snacks', 'account'].indexOf(view) >= 0 && !s.npOpen && !s.hiFor,
+      v, go: { home: go('home'), feed: go('feed'), days: go('days'), snacks: go('snacks'), account: go('account'), steps: go('home', 'steps'), reading: go('home', 'reading'), notifs: go('home', 'notifs'), wifi: go('home', 'wifi'), speak: go('home', 'speak') },
+      back: () => this.setState({ sub: null }),
+      n: { home: navOf('home'), feed: navOf('feed'), days: navOf('days'), snacks: navOf('snacks'), account: navOf('account') },
+      isNone: s.status === 'none', fullCheckIn: s.status === 'none' && (plannedToday || s.loc !== 'idle'), quietCheckIn: s.status === 'none' && !plannedToday && s.loc === 'idle', isSet: s.status !== 'none', isOffice: office, notOffice: !office,
+      loc: {
+        idle: s.loc === 'idle', checking: s.loc === 'checking', problem: s.loc === 'far' || s.loc === 'denied',
+        success: s.loc === 'success', showHead: s.loc !== 'success', showButtons: s.loc === 'idle' || s.loc === 'far' || s.loc === 'denied', cardBg: s.loc === 'success' ? '#CDEBD6' : '#FFFFFF',
+        title: s.loc === 'far' ? 'You’re about 2.3 km from the office' : 'Location is off for innovin',
+        body: s.loc === 'far' ? 'Check-in works within 200 m of the office. If you’re at the door, step outside for a better signal and try again.' : 'Allow location for this site in your browser settings, then try again. It’s only read when you tap Check in.'
+      },
+      set: { chip: 'In office · 9:12', chipBg: '#CDEBD6', chipColor: '#0B3D1F' },
+      goOffice: () => {
+        this.setState({ loc: 'checking' });
+        setTimeout(() => {
+          const where = this.props.location ?? 'near';
+          if (where === 'near') { this.setState({ loc: 'success' }); setTimeout(() => this.setState({ status: 'office', loc: 'idle' }), 1100); }
+          else this.setState({ loc: where === 'far' ? 'far' : 'denied' });
+        }, 1200);
+      },
+      reset: () => this.setState({ status: 'none', teaR: {}, loc: 'idle' }),
+      tea, pace, dateDots, weekStrip, cells, upcoming, heads: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+      inToday: office ? 15 : 14,
+      crowd: this.withWave([
+        { i: 'AK', name: 'Arjun', where: 'In since 9:05', bg: '#CAE6FF', dot: '#2E7D4F', op: 1 },
+        { i: 'MS', name: 'Meera', where: 'In since 9:20', bg: '#EBDCFF', dot: '#2E7D4F', op: 1 },
+        { i: 'NT', name: 'Nisha', sayHi: false, where: 'In since 9:40', bg: '#D3E5F5', dot: '#2E7D4F', op: 1 },
+        { i: 'RV', name: 'Rahul', where: 'Next in Wed', bg: '#DFE3E8', dot: '#71787E', op: 0.7 },
+        { i: 'DP', name: 'Dev', where: 'Leave · back Thu', bg: '#DFE3E8', dot: '#71787E', op: 0.7 }
+      ], s),
+      imp: { show: !s.ack, seen: s.ack, ack: () => this.setState({ ack: true }), seeDays: () => this.setState({ ack: true, tab: 'days', sub: null }) },
+      ev, pollOpts: [opt('b', 'Biryani'), opt('p', 'Pizza')],
+      voteB: () => this.setState({ vote: 'b' }), voteP: () => this.setState({ vote: 'p' }),
+      pollShort: s.vote ? 'You voted · ' + tv + ' votes' : 'Biryani or pizza · closes Thu',
+      c, feed, shelf, ideas, snack, snackOrderAt,
+      stepsFmt: fmt(s.steps),
+      steps: { pct: stepsPct + '%', pctLabel: stepsPct + '% of 10,000 steps', celebrate: s.steps >= 10000, rankLine: s.inLeague === false ? stepsPct + '% of 10,000 today' : (youRank === 1 ? '1st' : youRank === 2 ? '2nd' : youRank === 3 ? '3rd' : youRank + 'th') + ' in the step league this week' },
+      league, stepInput: s.stepInput,
+      onStepInput: (e) => this.setState({ stepInput: e.target.value.replace(/[^0-9]/g, '') }),
+      addSteps: () => { const n = parseInt(s.stepInput, 10); if (n > 0) this.setState({ steps: s.steps + n, stepInput: '' }); },
+      book, page: s.page, pageInput: s.pageInput,
+      onPageInput: (e) => this.setState({ pageInput: e.target.value.replace(/[^0-9]/g, '') }),
+      savePage: () => { const n = parseInt(s.pageInput, 10); if (n > 0 && n <= 296) this.setState({ page: n, pageInput: '', finished: n === 296 }); },
+      finishBook: () => this.setState({ finished: true, page: 296 }), unfinish: () => this.setState({ finished: false, page: 142 }),
+      mascot: s.mascot, mascotAria: s.mascot ? 'true' : 'false', toggleMascot: () => this.setState({ mascot: !s.mascot }), sw,
+      noop: null
+    };
+  }
+}
+</script>
+</body>
+</html>

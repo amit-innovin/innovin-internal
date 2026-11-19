@@ -38,7 +38,8 @@ describe("proxy", () => {
 // Removed pages send old links Home. next.config redirects run before the proxy, so a
 // signed-out visitor is redirected to "/" first and the proxy then sends "/" to sign-in.
 describe("old links to removed pages", () => {
-  const REMOVED = ["/pantry", "/snacks", "/planner", "/people", "/admin/pantry"];
+  // /snacks is back as Tea & snacks, so it no longer redirects.
+  const REMOVED = ["/pantry", "/planner", "/people", "/admin/pantry"];
 
   it.each(REMOVED)("%s redirects Home, temporarily", async (path) => {
     const rules = (await nextConfig.redirects!()).filter((r) => r.source === path);

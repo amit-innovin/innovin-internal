@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { MOCK_URL } from "./e2e/mock-url";
 
 // E2E runs against production builds (`next build` first — see `npm run test:e2e`).
 //   one server on :3210
@@ -22,9 +23,13 @@ const serverEnv = (name: string) => ({
   // Google sign-in against the local OAuth mock (e2e/google-mock.ts, started in global-setup).
   GOOGLE_CLIENT_ID: "e2e-client",
   GOOGLE_CLIENT_SECRET: "e2e-secret",
-  GOOGLE_AUTH_URL: "http://localhost:3999/auth",
-  GOOGLE_TOKEN_URL: "http://localhost:3999/token",
-  GOOGLE_TOKENINFO_URL: "http://localhost:3999/tokeninfo",
+  GOOGLE_AUTH_URL: `${MOCK_URL}/auth`,
+  GOOGLE_TOKEN_URL: `${MOCK_URL}/token`,
+  GOOGLE_TOKENINFO_URL: `${MOCK_URL}/tokeninfo`,
+  GOOGLE_REVOKE_URL: `${MOCK_URL}/revoke`,
+  GOOGLE_CALENDAR_URL: `${MOCK_URL}/calendar/v3`,
+  // A fixed test key (32 bytes, hex). Real deployments set their own secret.
+  CALENDAR_TOKEN_KEY: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
   SESSION_SECRET: "e2e-session-secret",
   // The suite signs in far more than 30 times per run (desktop + mobile share one server),
   // so the per-IP auth ceiling needs headroom it wouldn't need in production.
@@ -53,14 +58,10 @@ export default defineConfig({
     launchOptions,
   },
   projects: [
-    { name: "desktop", testIgnore: /(?:api|ios)\.spec/, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, launchOptions } },
-    { name: "mobile", testIgnore: /(?:api|ios)\.spec/, use: { ...devices["Pixel 7"], launchOptions } },
-    ...(process.env.E2E_IOS ? [
-      { name: "ios-journeys", testMatch: /journey-repairs\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
-      { name: "ios-small", testMatch: /(?:ios|mobile-shell)\.spec/, use: { ...devices["iPhone SE (3rd gen)"], browserName: "webkit" as const } },
-      { name: "ios", testMatch: /(?:ios|mobile-shell)\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } },
-      { name: "ios-large", testMatch: /(?:ios|mobile-shell)\.spec/, use: { ...devices["iPhone 16 Pro Max"], browserName: "webkit" as const } },
-    ] : []),
+    { name: "desktop", testIgnore: /api\.spec/, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, launchOptions } },
+    { name: "mobile", testIgnore: /api\.spec/, use: { ...devices["Pixel 7"], launchOptions } },
+    // Opt-in (E2E_IOS=1): the same UI specs in iPhone Safari.
+    ...(process.env.E2E_IOS ? [{ name: "ios", testIgnore: /api\.spec/, use: { ...devices["iPhone 13"], browserName: "webkit" as const } }] : []),
     // API tests run last: they deliberately trip rate limits.
     { name: "api", testMatch: /api\.spec/, dependencies: ["desktop", "mobile"] },
   ],

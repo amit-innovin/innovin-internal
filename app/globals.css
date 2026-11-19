@@ -1,9 +1,7 @@
-@layer theme, base, reference, components, utilities;
+@layer theme, base, components, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "./transitions.css";
-@import "./reference.css" layer(reference);
 
 @custom-variant dark (&:is(.dark *));
 
@@ -48,6 +46,7 @@
 /* Design tokens mirrored from innovinlabs.com — ink, brand blues, hairline borders,
    8px cards / 10px controls, Figtree. Layout is our own. */
 :root {
+  --font-sans: var(--font-figtree), system-ui, sans-serif;
   --brand: #015c89;
   --brand-sky: #65c2e2;
   --brand-tint: #e6f3fa;

@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { STEP_GOAL } from "./steps";
 import type {
   NoticeRow,
   NoticeReaction,
@@ -16,7 +17,7 @@ import type {
   Store,
   WifiRow,
   WorkspaceProfile,
-} from "./types";
+ AttendanceChangeRow, PollVote, TeaRow, SnackItem, SnackVote, BookRow, ReadingRow, PlanOverrideRow, ClosedDayRow, HiRow, CalendarTokenRow, EventInviteRow } from "./types";
 
 // Local/dev persistence: a flat JSON file. Used only when DATABASE_URL is unset — never on
 // serverless (see store.ts). DATA_FILE lets tests point at an isolated file.
@@ -37,11 +38,29 @@ type DB = {
   pushSubscriptions: PushSubscriptionRow[];
   steps: StepsRow[];
   workspaceProfiles: WorkspaceProfile[];
+  attendanceChanges: AttendanceChangeRow[];
+  pollVotes: PollVote[];
+  tea: TeaRow[];
+  snacks: SnackItem[];
+  snackVotes: SnackVote[];
+  books: BookRow[];
+  readings: ReadingRow[];
+  planOverrides: PlanOverrideRow[];
+  closedDays: ClosedDayRow[];
+  announcementAcks: { announcementId: string; email: string; at: string }[];
+  snackPicks: { date: string; voterRef: string; itemId: string }[];
+  settings: Record<string, unknown>;
+  nudges: { date: string; from: string; to: string }[];
+  noticeReports: { noticeId: string; reporterRef: string; at: string }[];
+  hi: HiRow[];
+  calendarTokens: CalendarTokenRow[];
+  eventInvites: EventInviteRow[];
 };
 
 // "owner" is the retired top role; such rows (old local data files) are admins now.
-const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0 });
-const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [] });
+const readEmployee = (e: EmployeeRow): EmployeeRow => ({ ...e, role: e.role === "admin" || (e.role as string) === "owner" ? "admin" : "member", stepsOffset: e.stepsOffset ?? 0, officeDays: e.officeDays ?? [], officeExempt: e.officeExempt ?? false, birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, feedSeenAt: e.feedSeenAt ?? null, stepsLeague: e.stepsLeague ?? false, sayHi: e.sayHi ?? false, leftOn: e.leftOn ?? null });
+const readAnnouncement = (a: AnnouncementRow): AnnouncementRow => ({ ...a, important: a.important ?? false, authorName: a.authorName ?? null, pinnedUntil: a.pinnedUntil ?? null });
+const empty = (): DB => ({ notices: [], noticeReactions: [], attendance: [], grievances: [], wifi: [], announcements: [], employees: [], away: [], events: [], rsvps: [], leaveBalances: [], pushSubscriptions: [], steps: [], workspaceProfiles: [], attendanceChanges: [], pollVotes: [], tea: [], snacks: [], snackVotes: [], books: [], readings: [], planOverrides: [], closedDays: [], announcementAcks: [], snackPicks: [], settings: {}, nudges: [], noticeReports: [], hi: [], calendarTokens: [], eventInvites: [] });
 
 const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
@@ -116,6 +135,7 @@ export const jsonStore: Store = {
     const exists = db.notices.some(n => n.id === id);
     db.notices = db.notices.filter(n => n.id !== id);
     db.noticeReactions = db.noticeReactions.filter(n => n.noticeId !== id);
+    db.pollVotes = db.pollVotes.filter(v => v.noticeId !== id);
     return { result: exists, changed: exists };
   }),
   toggleNoticeReaction: (id, email, emoji) => mutate((db) => {
@@ -161,6 +181,127 @@ export const jsonStore: Store = {
       db.attendance.unshift(normalized);
       return { result: normalized, changed: true };
     }),
+  votePoll: (noticeId, email, option) =>
+    mutate((db) => {
+      if (!db.notices.some((n) => n.id === noticeId)) return { result: false, changed: false };
+      db.pollVotes = db.pollVotes.filter((v) => !(v.noticeId === noticeId && v.email === email));
+      if (option !== null) db.pollVotes.push({ noticeId, email, option });
+      return { result: true, changed: true };
+    }),
+  listPollVotes: (ids) => query((db) => db.pollVotes.filter((v) => ids.includes(v.noticeId))),
+  // The afternoon round, for callers from before rounds existed.
+  setTea: (date, email, going) => jsonStore.setTeaAnswer(date, "pm", email, going ? true : null),
+  listTea: (date) => query((db) => db.tea.filter((t) => t.date === date && (t.round ?? "pm") === "pm" && (t.going ?? true)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  setTeaAnswer: (date, round, email, going) =>
+    mutate((db) => {
+      db.tea = db.tea.filter((t) => !(t.date === date && (t.round ?? "pm") === round && t.email === email));
+      if (going !== null) db.tea.push({ date, round, email, going, createdAt: new Date().toISOString() });
+      return { result: undefined, changed: true };
+    }),
+  listTeaAnswers: (date) => query((db) => db.tea.filter((t) => t.date === date).map((t) => ({ date: t.date, round: t.round ?? "pm", email: t.email, going: t.going ?? true, createdAt: t.createdAt })).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  setSnackPick: (date, voterRef, itemId) =>
+    mutate((db) => {
+      db.snackPicks = db.snackPicks.filter((p) => !(p.date === date && p.voterRef === voterRef));
+      if (itemId !== null) db.snackPicks.push({ date, voterRef, itemId });
+      return { result: undefined, changed: true };
+    }),
+  listSnackPicks: (date) => query((db) => db.snackPicks.filter((p) => p.date === date).map(({ itemId, voterRef }) => ({ itemId, voterRef }))),
+  getSetting: <T,>(key: string) => query((db) => (key in db.settings ? (db.settings[key] as T) : null)),
+  setSetting: (key, value) => mutate((db) => { db.settings[key] = value; return { result: undefined, changed: true }; }),
+  addSnack: (row) => mutate((db) => { db.snacks.push(row); return { result: row, changed: true }; }),
+  getSnack: (id) => query((db) => db.snacks.find((s) => s.id === id) ?? null),
+  listSnacks: () => query((db) => [...db.snacks].sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  setSnackStatus: (id, status, orderedAt) =>
+    mutate((db) => {
+      const row = db.snacks.find((s) => s.id === id);
+      if (row) Object.assign(row, { status, orderedAt });
+      return { result: !!row, changed: !!row };
+    }),
+  toggleSnackVote: (itemId, voterRef) =>
+    mutate((db) => {
+      if (!db.snacks.some((s) => s.id === itemId)) return { result: null, changed: false };
+      const i = db.snackVotes.findIndex((v) => v.itemId === itemId && v.voterRef === voterRef);
+      if (i >= 0) db.snackVotes.splice(i, 1);
+      else db.snackVotes.push({ itemId, voterRef });
+      return { result: i < 0, changed: true };
+    }),
+  listSnackVotes: () => query((db) => db.snackVotes),
+  clearSnackVotes: (itemId) => mutate((db) => { db.snackVotes = db.snackVotes.filter((v) => v.itemId !== itemId); return { result: undefined, changed: true }; }),
+  addBook: (row) => mutate((db) => { db.books.push(row); return { result: row, changed: true }; }),
+  listBooks: () => query((db) => [...db.books].sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  setReading: (row) =>
+    mutate((db) => {
+      db.readings = db.readings.filter((r) => !(r.email === row.email && r.bookId === row.bookId));
+      db.readings.push(row);
+      return { result: row, changed: true };
+    }),
+  clearReading: (email, bookId) => mutate((db) => { db.readings = db.readings.filter((r) => !(r.email === email && r.bookId === bookId)); return { result: undefined, changed: true }; }),
+  listReadings: () => query((db) => db.readings),
+  setBirthday: (email, birthday, show) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) Object.assign(row, { birthday, showBirthday: show });
+      return { result: !!row, changed: !!row };
+    }),
+  markDay: (row) =>
+    mutate((db) => {
+      const next = { checkInAt: row.checkInAt, checkOutAt: null, lat: row.lat, lng: row.lng, accuracyM: row.accuracyM, declaredMode: row.declaredMode ?? null, source: row.source ?? null };
+      const existing = db.attendance.find((r) => r.email === row.email && r.date === row.date);
+      if (existing) {
+        Object.assign(existing, next);
+        return { result: existing, changed: true };
+      }
+      const created = { ...row, ...next };
+      db.attendance.unshift(created);
+      return { result: created, changed: true };
+    }),
+  clearDay: (email, date) =>
+    mutate((db) => {
+      const before = db.attendance.length;
+      db.attendance = db.attendance.filter((r) => !(r.email === email && r.date === date));
+      return { result: db.attendance.length < before, changed: db.attendance.length < before };
+    }),
+  addAttendanceChange: (row) =>
+    mutate((db) => {
+      db.attendanceChanges.unshift(row);
+      return { result: row, changed: true };
+    }),
+  listAttendanceChanges: (email, limit) =>
+    query((db) => db.attendanceChanges.filter((c) => c.email === email).sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit)),
+  setOfficeExempt: (email, exempt) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.officeExempt = exempt;
+      return { result: !!row, changed: !!row };
+    }),
+  setPlanOverride: (email, date, planned) =>
+    mutate((db) => {
+      db.planOverrides = db.planOverrides.filter((r) => !(r.email === email && r.date === date));
+      if (planned !== null) db.planOverrides.push({ email, date, planned });
+      return { result: undefined, changed: true };
+    }),
+  listPlanOverrides: (email, from, to) =>
+    query((db) => db.planOverrides.filter((r) => r.email === email && r.date >= from && r.date <= to).sort((a, b) => a.date.localeCompare(b.date))),
+  listPlanOverridesOn: (date) => query((db) => db.planOverrides.filter((r) => r.date === date)),
+  listClosedDays: (from, to) => query((db) => db.closedDays.filter((r) => r.date >= from && r.date <= to).sort((a, b) => a.date.localeCompare(b.date))),
+  addClosedDay: (row) =>
+    mutate((db) => {
+      if (db.closedDays.some((r) => r.date === row.date)) return { result: false, changed: false };
+      db.closedDays.push(row);
+      return { result: true, changed: true };
+    }),
+  removeClosedDay: (date) =>
+    mutate((db) => {
+      const before = db.closedDays.length;
+      db.closedDays = db.closedDays.filter((r) => r.date !== date);
+      return { result: db.closedDays.length < before, changed: db.closedDays.length < before };
+    }),
+  setOfficeDays: (email, days) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.officeDays = [...days].sort((a, b) => a - b);
+      return { result: !!row, changed: !!row };
+    }),
   checkOut: (email, date, at) =>
     mutate((db) => {
       const open = db.attendance.find((r) => r.email === email && r.date === date && !r.checkOutAt);
@@ -186,7 +327,7 @@ export const jsonStore: Store = {
   addGrievance: (row) =>
     mutate((db) => {
       // Never persist a device-linked ref — "anonymous" must survive a DB leak.
-      const safe = { ...row, submitterRef: "anon" };
+      const safe = { ...row, submitterRef: "anon", topic: row.topic ?? null, reply: row.reply ?? null };
       db.grievances.unshift(safe);
       return { result: safe, changed: true };
     }),
@@ -196,6 +337,20 @@ export const jsonStore: Store = {
       if (row) { row.status = status; row.updatedAt = new Date().toISOString(); }
       return { result: !!row, changed: !!row };
     }),
+  setGrievanceReply: (id, reply) =>
+    mutate((db) => {
+      const row = db.grievances.find((r) => r.id === id);
+      if (row) { row.reply = reply; row.updatedAt = new Date().toISOString(); }
+      return { result: !!row, changed: !!row };
+    }),
+  addNoticeReport: (noticeId, reporterRef) =>
+    mutate((db) => {
+      if (db.noticeReports.some((r) => r.noticeId === noticeId && r.reporterRef === reporterRef)) return { result: false, changed: false };
+      db.noticeReports.push({ noticeId, reporterRef, at: new Date().toISOString() });
+      return { result: true, changed: true };
+    }),
+  clearNoticeReports: (noticeId) => mutate((db) => { db.noticeReports = db.noticeReports.filter((r) => r.noticeId !== noticeId); return { result: undefined, changed: true }; }),
+  countNoticeReports: () => query((db) => db.noticeReports.reduce<Record<string, number>>((m, r) => ({ ...m, [r.noticeId]: (m[r.noticeId] ?? 0) + 1 }), {})),
   listGrievances: () =>
     // Urgent floats above everything else, then newest first.
     query((db) => db.grievances.sort((a, b) => Number(b.urgent) - Number(a.urgent) || newestFirst(a, b))),
@@ -219,14 +374,67 @@ export const jsonStore: Store = {
       db.announcements.unshift(row);
       return { result: row, changed: true };
     }),
-  getAnnouncement: id=>query(db=>db.announcements.find(a=>a.id===id)??null),
+  getAnnouncement: id=>query(db=>{const a=db.announcements.find(a=>a.id===id);return a?readAnnouncement(a):null;}),
   deleteAnnouncement: (id) =>
     mutate((db) => {
       const before = db.announcements.length;
       db.announcements = db.announcements.filter((r) => r.id !== id);
       return { result: undefined, changed: db.announcements.length < before };
     }),
-  listAnnouncements: (limit) => query((db) => db.announcements.sort(newestFirst).slice(0, limit)),
+  listAnnouncements: (limit) => query((db) => db.announcements.sort(newestFirst).slice(0, limit).map(readAnnouncement)),
+  ackAnnouncement: (id, email) =>
+    mutate((db) => {
+      if (db.announcementAcks.some((a) => a.announcementId === id && a.email === email)) return { result: undefined, changed: false };
+      db.announcementAcks.push({ announcementId: id, email, at: new Date().toISOString() });
+      return { result: undefined, changed: true };
+    }),
+  listAckedAnnouncementIds: (email) => query((db) => db.announcementAcks.filter((a) => a.email === email).map((a) => a.announcementId)),
+  // People marked as left don't count as readers.
+  countAnnouncementAcks: (ids) => query((db) => {
+    const left = new Set(db.employees.filter((e) => e.leftOn).map((e) => e.email));
+    return Object.fromEntries(ids.map((id) => [id, db.announcementAcks.filter((a) => a.announcementId === id && !left.has(a.email)).length]));
+  }),
+  setSayHi: (email, on) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.sayHi = on;
+      return { result: !!row, changed: !!row };
+    }),
+  addHi: (row, limit) =>
+    mutate((db) => {
+      const today = db.hi.filter((h) => h.date === row.date && h.from === row.from);
+      if (today.length >= limit || today.some((h) => h.to === row.to)) return { result: null, changed: false };
+      db.hi.push(row);
+      return { result: row, changed: true };
+    }),
+  listHiFrom: (date, from) => query((db) => db.hi.filter((h) => h.date === date && h.from === from).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  listHiTo: (date, to) => query((db) => db.hi.filter((h) => h.date === date && h.to === to).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  setHiReply: (id, to, reply) =>
+    mutate((db) => {
+      const row = db.hi.find((h) => h.id === id && h.to === to && ["chai", "lunch", "walk"].includes(h.kind) && h.reply === null);
+      if (row) { row.reply = reply; row.repliedAt = new Date().toISOString(); }
+      return { result: !!row, changed: !!row };
+    }),
+  setStepsLeague: (email, on) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.stepsLeague = on;
+      return { result: !!row, changed: !!row };
+    }),
+  addNudge: (date, from, to) =>
+    mutate((db) => {
+      if (db.nudges.some((n) => n.date === date && n.from === from && n.to === to)) return { result: false, changed: false };
+      db.nudges.push({ date, from, to });
+      return { result: true, changed: true };
+    }),
+  listNudgesFrom: (date, from) => query((db) => db.nudges.filter((n) => n.date === date && n.from === from).map((n) => n.to)),
+  setFeedSeenAt: (email, at) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (!row || (row.feedSeenAt && row.feedSeenAt >= at)) return { result: undefined, changed: false };
+      row.feedSeenAt = at;
+      return { result: undefined, changed: true };
+    }),
 
   upsertEmployee: (row) =>
     mutate((db) => {
@@ -235,10 +443,10 @@ export const jsonStore: Store = {
         existing.name = row.name;
         existing.picture = row.picture;
         existing.lastSeenAt = row.lastSeenAt;
-        return { result: existing, changed: true };
+        return { result: readEmployee(existing), changed: true };
       }
       db.employees.unshift(row);
-      return { result: row, changed: true };
+      return { result: readEmployee(row), changed: true };
     }),
   getEmployee: (email) =>
     query((db) => {
@@ -251,6 +459,38 @@ export const jsonStore: Store = {
       if (row) row.role = role;
       return { result: !!row, changed: !!row };
     }),
+  setLeftOn: (email, leftOn) =>
+    mutate((db) => {
+      const row = db.employees.find((e) => e.email === email);
+      if (row) row.leftOn = leftOn;
+      return { result: !!row, changed: !!row };
+    }),
+  getCalendarToken: (email) => query((db) => db.calendarTokens.find((t) => t.email === email) ?? null),
+  saveCalendarToken: (row) =>
+    mutate((db) => {
+      db.calendarTokens = [...db.calendarTokens.filter((t) => t.email !== row.email), row];
+      return { result: undefined, changed: true };
+    }),
+  deleteCalendarToken: (email) =>
+    mutate((db) => {
+      const before = db.calendarTokens.length;
+      db.calendarTokens = db.calendarTokens.filter((t) => t.email !== email);
+      return { result: db.calendarTokens.length < before, changed: db.calendarTokens.length < before };
+    }),
+  listCalendarTokens: () => query((db) => [...db.calendarTokens].sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  getEventInvite: (eventId) => query((db) => db.eventInvites.find((r) => r.eventId === eventId) ?? null),
+  setEventInvite: (row) =>
+    mutate((db) => {
+      db.eventInvites = [...db.eventInvites.filter((r) => r.eventId !== row.eventId), row];
+      return { result: undefined, changed: true };
+    }),
+  deleteEventInvite: (eventId) =>
+    mutate((db) => {
+      const before = db.eventInvites.length;
+      db.eventInvites = db.eventInvites.filter((r) => r.eventId !== eventId);
+      return { result: db.eventInvites.length < before, changed: db.eventInvites.length < before };
+    }),
+  listEventInvites: () => query((db) => [...db.eventInvites]),
   setJoinedOn: (email, joinedOn) =>
     mutate((db) => {
       const row = db.employees.find((e) => e.email === email);
@@ -273,6 +513,15 @@ export const jsonStore: Store = {
       }
       db.steps.unshift(row);
       return { result: row, changed: true };
+    }),
+  addSteps: (email, date, add) =>
+    mutate((db) => {
+      const existing = db.steps.find((s) => s.email === email && s.date === date);
+      const total = Math.min(200_000, (existing?.steps ?? 0) + add);
+      const hit = (existing?.hit ?? false) || total >= STEP_GOAL;
+      if (existing) { existing.steps = total; existing.hit = hit; }
+      else db.steps.unshift({ id: crypto.randomUUID(), email, date, hit, steps: total, createdAt: new Date().toISOString() });
+      return { result: { steps: total, hit }, changed: true };
     }),
   listSteps: () =>
     query((db) => db.steps.slice().sort((a, b) => b.date.localeCompare(a.date))),

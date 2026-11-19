@@ -3,12 +3,13 @@ import { isAdmin } from "@/lib/admin";
 import { DEVICE_COOKIE, GRIEVANCE_IDS_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
-import { sendPush } from "@/lib/push";
 import { id, store } from "@/lib/store";
 import { grievanceIdsFromCookie, grievancesFromIds, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
+import { todayIST } from "@/lib/time";
 import type { GrievanceStatus } from "@/lib/types";
 
 const STATUSES: GrievanceStatus[] = ["open", "in_progress", "resolved"];
+const TOPICS = ["Workplace", "People", "Facilities", "Process", "Something else"];
 
 export async function GET(req: NextRequest) {
   if (req.nextUrl.searchParams.get("scope") === "mine") {
@@ -34,6 +35,8 @@ export async function POST(req: NextRequest) {
   if (!body) return badRequest();
   const text = str(body.body).trim();
   if (!text) return badRequest("Tell us what's on your mind");
+  const topic = body.topic === undefined || body.topic === null || body.topic === "" ? null : str(body.topic);
+  if (topic !== null && !TOPICS.includes(topic)) return badRequest("Pick one of the topics");
 
   // Optional photo, stored as a data URL (browser already compressed it).
   const image = str(body.image);
@@ -51,19 +54,14 @@ export async function POST(req: NextRequest) {
     // "anon" — even if the caller passed a ref, the store forces this constant.
     submitterRef: "anon",
     status: "open",
-    createdAt: new Date().toISOString(),
+    // The day only (midnight, office time): a time of day could be matched against check-ins.
+    createdAt: new Date(`${todayIST()}T00:00:00+05:30`).toISOString(),
+    topic,
+    reply: null,
   });
 
-  // Urgent goes straight to admins' devices — that's the whole point of the flag. The push
-  // carries no id or link to the submitter, so this doesn't touch anonymity.
-  if (urgent) {
-    const admins = (await store.listEmployees()).filter((e) => e.role === "admin");
-    await Promise.all(
-      admins.map((a) =>
-        sendPush({ title: "Urgent report just came in", body: "Someone marked a report urgent — worth a look.", href: "/admin?tab=approvals", tag: "urgent-report" }, a.email).catch(() => {}),
-      ),
-    );
-  }
+  // No push on submit (not even for old clients' "urgent"): an alert at the exact moment would let an
+  // admin match the message to who was around then, undoing the day-only date.
   const res = NextResponse.json(row);
   setSubmitterCookie(res, identity.deviceId);
   // Remember this submission's id on the device itself — that's the only record of "mine".
@@ -78,9 +76,13 @@ export async function PATCH(req: Request) {
   }
   const body = await readJSON(req);
   const gid = str(body?.id);
-  const status = body?.status as GrievanceStatus;
-  if (!gid || !STATUSES.includes(status)) return badRequest("Invalid status update");
-  const updated = await store.setGrievanceStatus(gid, status);
+  // { id, status } and/or { id, reply }. A reply shows only on the device that sent the message.
+  const status = body?.status as GrievanceStatus | undefined;
+  const reply = body?.reply === undefined ? undefined : body.reply === null ? null : str(body.reply).trim().slice(0, 1000) || null;
+  if (!gid || (status === undefined && reply === undefined) || (status !== undefined && !STATUSES.includes(status))) return badRequest("Invalid status update");
+  let updated = true;
+  if (status !== undefined) updated = await store.setGrievanceStatus(gid, status);
+  if (updated && reply !== undefined) updated = await store.setGrievanceReply(gid, reply);
   return updated
     ? NextResponse.json({ ok: true })
     : NextResponse.json({ error: "Grievance not found" }, { status: 404 });

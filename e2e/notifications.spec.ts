@@ -1,109 +1,99 @@
-import { adminLogin, expect, test, uniqueEmail, uniqueText, signInEmployee } from "./fixtures";
+import { ADMIN_EMAIL, expect, test, uniqueEmail, uniqueText, signInEmployee, signInOffice } from "./fixtures";
 
 test.describe("Notifications", () => {
-  test("an announcement appears in the feed and clears the unread badge once opened", async ({ page, browser }) => {
-    const title = uniqueText("Lift under maintenance");
-    const admin = await browser.newContext();
-    const a = await admin.newPage();
-    await adminLogin(a, "publish");
-    await a.getByRole("tab", { name: "Announcement" }).click();
-    await a.getByLabel("Title", { exact: true }).fill(title);
-    await a.getByRole("button", { name: "Post announcement" }).click();
-    await expect(a.getByText("Announcement posted")).toBeVisible();
-    await admin.close();
-
-    await signInEmployee(page, undefined, "/");
-    const bell = page.getByRole("button", { name: /Notifications/ }).filter({ visible: true });
-    // Unread count shows in the accessible name, so it's announced not just coloured.
-    await expect(bell).toHaveAccessibleName(/\d+ unread/);
-    await bell.click();
-    const panel = page.getByRole("region", { name: "Notifications" }).filter({ visible: true }).filter({ visible: true });
-    await expect(panel).toContainText(title);
-
-    // Reopening after it's been seen shows no unread count.
-    await page.reload();
-    await expect(page.getByRole("button", { name: "Notifications" }).filter({ visible: true })).toBeVisible();
+  test("a kudos to you shows up, links to the Feed, and opening the page marks it read", async ({ page, browser }) => {
+    const me = uniqueEmail("notif-kudos");
+    await signInEmployee(page, me, "/");
+    const giverContext = await browser.newContext();
+    const giver = await giverContext.newPage();
+    await signInEmployee(giver, uniqueEmail("notif-giver"), "/");
+    expect((await giver.request.post("/api/notices", { data: { kind: "kudos", toEmail: me, body: "Thanks for covering" } })).status()).toBe(201);
+    await giverContext.close();
+    expect((await (await page.request.get("/api/notifications")).json()).unread).toBeGreaterThan(0);
+    await page.goto("/notifications");
+    await expect(page.getByRole("heading", { level: 1, name: "Notifications" })).toBeVisible();
+    const kudos = page.getByRole("link", { name: /Notif-giver gave you kudos/ });
+    await expect(kudos).toBeVisible();
+    await expect.poll(async () => (await (await page.request.get("/api/notifications")).json()).unread).toBe(0);
+    await kudos.click();
+    await expect(page).toHaveURL(/\/feed$/);
   });
 
-  test("a published event reaches the feed and home", async ({ page, browser, isMobile }) => {
+  test("the tea reminder shows while the round is open and you haven't answered", async ({ page, browser }) => {
+    const adminContext = await browser.newContext();
+    const admin = await adminContext.newPage();
+    await signInEmployee(admin, ADMIN_EMAIL, "/");
+    const times = (t: object) => admin.request.patch("/api/admin/snack-times", { data: { amAt: "11:00", amClose: "10:45", pmAt: "16:00", pmClose: "15:30", orderAt: "12:00", ...t } });
+    try {
+      expect((await times({ amAt: "23:58", amClose: "23:57", pmAt: "23:59", pmClose: "23:58" })).status()).toBe(200);
+      await signInOffice(page, uniqueEmail("notif-tea"));
+      await page.goto("/notifications");
+      const tea = page.getByRole("link", { name: /^Tea round closes at/ });
+      await expect(tea).toHaveAttribute("href", "/snacks");
+      expect((await page.request.post("/api/tea", { data: { round: "am", going: true } })).status()).toBe(200);
+      await page.reload();
+      await expect(page.getByRole("heading", { level: 1, name: "Notifications" })).toBeVisible();
+      await expect(tea).toHaveCount(0);
+    } finally {
+      await times({});
+      await adminContext.close();
+    }
+  });
+
+  test("a published event reaches Notifications and opens its page", async ({ page, browser }) => {
     const title = uniqueText("Town hall");
     const admin = await browser.newContext();
     const a = await admin.newPage();
-    await adminLogin(a, "publish");
-    await a.getByRole("tab", { name: "Event" }).click();
-    await a.getByLabel("Event title").fill(title);
-    // Tomorrow, so it always outranks other specs' fixed-date leftovers on the persistent
-    // e2e database — home's "What's on" card shows only the two soonest events.
-    const soon = new Date(Date.now() + 86_400_000);
-    const startsAt = `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, "0")}-${String(soon.getDate()).padStart(2, "0")}T10:00`;
-    await a.getByLabel("Starts at").fill(startsAt);
-    await a.getByRole("button", { name: "Publish event" }).click();
-    await expect(a.getByText("Event published")).toBeVisible();
-
-    await signInEmployee(page, undefined, "/");
-    if (isMobile) await page.getByRole("button", { name: "Expand Events", exact: true }).click();
-    // Events used to be invisible on home; they now have their own card.
-    await expect(page.locator(".events-card")).toContainText(title);
-    await page.getByRole("button", { name: /Notifications/ }).filter({ visible: true }).click();
-    await expect(page.getByRole("region", { name: "Notifications" }).filter({ visible: true }).filter({ visible: true })).toContainText(title);
-
-    // Clean up after ourselves — leftover rows would crowd tomorrow's run off the card.
-    await a.goto("/admin?tab=publish");
-    const item = a.locator("li", { hasText: title });
-    await item.getByLabel(`Delete ${title}`).click();
-    await a.getByRole("button", { name: "Delete" }).click();
-    await expect(a.getByText("Event deleted")).toBeVisible();
-    await admin.close();
+    await signInEmployee(a, ADMIN_EMAIL, "/admin");
+    const soon = new Date(Date.now() + 5.5 * 3600_000 + 86_400_000).toISOString().slice(0, 10);
+    const res = await a.request.post("/api/events", { data: { title, category: "company", startsAt: `${soon}T09:00`, body: "", location: "Big room" } });
+    expect(res.status()).toBe(201);
+    const id = (await res.json()).event.id;
+    try {
+      // (Home's Up next shows only the soonest event, which other specs' events can be.)
+      await signInEmployee(page, undefined, "/notifications");
+      await page.getByRole("link").filter({ hasText: title }).click();
+      await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    } finally {
+      await a.request.post("/api/events", { data: { action: "delete", id } });
+      await admin.close();
+    }
   });
 
   test("a leave decision notifies the person who asked", async ({ page, browser }) => {
-    const reason = uniqueText("dentist");
-    const employee = await browser.newContext();
-    const e = await employee.newPage();
-    // Signed in, so the decision can be tied to an identity.
-    await e.goto("/api/auth/google?next=/attendance");
-    await e.getByRole("tab", { name: "Leave" }).click();
-    await e.locator("#away-start").fill("2026-11-17");
-    await e.locator("#away-end").fill("2026-11-17");
-    await e.getByLabel("Reason").fill(reason);
-    await e.getByRole("button", { name: "Request Leave" }).click();
-    await expect(e.getByText("Leave request sent")).toBeVisible();
-
-    await adminLogin(page, "approvals");
-    await page.locator("li", { hasText: reason }).getByRole("button", { name: "Approve" }).click();
-    await expect(page.getByText("Request approved")).toBeVisible();
-
-    await e.goto("/");
-    await e.getByRole("button", { name: /Notifications/ }).filter({ visible: true }).click();
-    await expect(e.getByRole("region", { name: "Notifications" }).filter({ visible: true })).toContainText(/leave approved/i);
-    await employee.close();
-  });
-
-  test("the feed is device-scoped for grievances and never leaks between devices", async ({ page, browser }) => {
-    const text = uniqueText("Chair is broken");
-    await page.goto("/grievances");
-    await page.getByLabel("Your feedback").fill(text);
-    await page.getByRole("button", { name: "Submit" }).click();
-    await expect(page.locator("#mine li", { hasText: text })).toContainText("Open");
-
-    // Resolve it as admin, from a different context.
+    await signInEmployee(page, uniqueEmail("leave-note"), "/");
+    const day = new Date(Date.now() + 5.5 * 3600_000 + 7 * 86_400_000);
+    while ([0, 6].includes(day.getUTCDay())) day.setUTCDate(day.getUTCDate() + 1);
+    const date = day.toISOString().slice(0, 10);
+    const req = await (await page.request.post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: date, endDate: date, reason: uniqueText("dentist") } })).json();
     const admin = await browser.newContext();
     const a = await admin.newPage();
-    await adminLogin(a, "approvals");
-    await a.locator("li", { hasText: text }).getByLabel("Status").click();
-    await a.getByRole("option", { name: "Resolved" }).click();
-    await expect(a.getByText(/Marked as resolved/i)).toBeVisible();
+    await signInEmployee(a, ADMIN_EMAIL, "/admin");
+    expect((await a.request.patch("/api/away", { data: { id: req.id, status: "approved" } })).status()).toBe(200);
+    await admin.close();
+    await page.goto("/notifications");
+    await expect(page.getByRole("link").filter({ hasText: /leave approved/i })).toBeVisible();
+  });
+
+  test("Speak up updates reach only the device that sent the message", async ({ page, browser }) => {
+    const text = uniqueText("Chair is broken");
+    const sent = await page.request.post("/api/grievances", { data: { body: text, topic: "Facilities" } });
+    expect(sent.ok()).toBe(true);
+    const id = (await sent.json()).id;
+    const admin = await browser.newContext();
+    const a = await admin.newPage();
+    await signInEmployee(a, ADMIN_EMAIL, "/admin");
+    expect((await a.request.patch("/api/grievances", { data: { id, status: "resolved" } })).ok()).toBe(true);
     await admin.close();
 
-    // The submitting device sees it, because it holds the grievance id in its own cookie.
+    // The sending device holds the message's id in its own cookie, so it sees the update.
     const mine = await (await page.request.get("/api/notifications")).json();
     expect(JSON.stringify(mine)).not.toContain("submitterRef");
-    expect(mine.items.some((i: { kind: string; body: string }) => i.kind === "grievance" && text.includes(i.body.slice(0, 20)))).toBe(true);
-
-    // Another device holds no ids, so it gets no grievance items at all.
+    expect(mine.items.some((i: { kind: string }) => i.kind === "grievance")).toBe(true);
+    // Another device holds no ids, so it gets no Speak up items at all.
     const other = await browser.newContext();
-    const feed = await (await other.request.get(`${page.url().replace(/\/grievances.*/, "")}/api/notifications`)).json();
-    expect(feed.items.some((i: { kind: string }) => i.kind === "grievance")).toBe(false);
+    const feed = await (await other.request.get("http://localhost:3210/api/notifications")).json();
+    expect((feed.items ?? []).some((i: { kind: string }) => i.kind === "grievance")).toBe(false);
     await other.close();
   });
 

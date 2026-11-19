@@ -2,7 +2,8 @@ import { attendanceLocation } from "@/lib/presence";
 // The shapes behind home's three action cards — shared between the API routes and the
 // server-rendered home page, so first paint already carries the data instead of the client
 // fetching it again after hydration.
-import { officeLocation, onOfficeNetwork } from "./geo";
+import { officeLocation } from "./geo";
+import { stepLeague } from "./member-features";
 import { STEP_GOAL, stepBoard, stepStreak } from "./steps";
 import { store } from "./store";
 import { todayIST } from "./time";
@@ -11,16 +12,12 @@ export type SessionLite = { email: string; name: string };
 
 export async function attendanceStatus(email: string | null, ip: string | null) {
   const date = todayIST();
-  const [rows, day] = await Promise.all([
-    store.listAttendance(date),
-    email ? store.getAttendance(email, date) : Promise.resolve(null),
-  ]);
+  const day = email ? await store.getAttendance(email, date) : null;
+  // No headcount: who's in is shown to members only as first names on Home.
   return {
-    count: new Set(rows.map((r) => r.email)).size,
     email,
-    // Lets the client do confident auto check-in: on office Wi-Fi (IP match) or inside the
-    // geofence. The office's own coordinates aren't secret to the people who work there.
-    onOfficeNetwork: onOfficeNetwork(ip ?? ""),
+    // Lets the client do confident auto check-in inside the geofence. The office's own
+    // coordinates aren't secret to the people who work there.
     office: officeLocation(),
     me: day
       ? {
@@ -36,7 +33,9 @@ export async function attendanceStatus(email: string | null, ip: string | null) 
 export async function stepsBoard(session: SessionLite | null) {
   const today = todayIST();
   const [employees, rows] = await Promise.all([store.listEmployees(), store.listSteps()]);
-  const board = stepBoard(employees, rows, today);
+  // Steps are only ever shown to others inside the opt-in league.
+  const league = employees.filter((e) => e.stepsLeague);
+  const board = stepBoard(league, rows.filter((r) => league.some((e) => e.email === r.email)), today);
 
   let me = null;
   if (session) {
@@ -54,5 +53,8 @@ export async function stepsBoard(session: SessionLite | null) {
     };
   }
 
-  return { goal: STEP_GOAL, today, signedIn: !!session, board, me };
+  const inLeague = !!session && league.some((e) => e.email === session.email);
+  const nudged = session && inLeague ? await store.listNudgesFrom(today, session.email) : [];
+  // Only people in the league see it (and its members' steps); everyone else gets their own numbers.
+  return { goal: STEP_GOAL, today, signedIn: !!session, board: inLeague ? board : [], me: me && !inLeague ? { ...me, rank: null } : me, inLeague, nudged, league: inLeague && session ? stepLeague(employees, rows, today, session.email) : null };
 }

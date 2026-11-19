@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
   const focused=req.nextUrl.searchParams.get("event");
   if(focused&&focused.length>180)return badRequest("Invalid event");
   const target=focused?await store.getEvent(focused):null;
-  const rows = focused ? (target?[target]:[]) : await store.listEvents(from, 30);
+  // Every upcoming event (an office has a handful): a later one must not drop off Publish.
+  const rows = focused ? (target?[target]:[]) : await store.listEvents(from, 200);
   const user = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
   const ref = user ? accountRef(`rsvp:${user.email}`) : submitterIdentity(req).ref;
   const [counts, mine] = await Promise.all([store.rsvpCounts(rows.map((r) => r.id)), store.myRsvpEventIds(ref, user?.email)]);

@@ -444,14 +444,13 @@ test.describe("API: behaviour", () => {
     const queue = await (await adm.get("/api/away?scope=pending")).json();
     expect(queue.map((r: { id: string }) => r.id)).not.toContain(LEGACY_WFH.id);
 
-    // Positive control: a pending leave request does reach the admin feed, so the WFH row's
-    // absence below means it was filtered, not that the feed was empty.
+    // Leave is approved in Zoho People, so admins get no "awaiting review" items at all,
+    // for a pending leave request or for the old WFH row.
     const who = email();
     const control = await (await (await signedIn(who)).post("/api/away", { data: { type: "leave", leaveType: "cl", startDate: FUTURE, endDate: FUTURE } })).json();
     const feed = await (await adm.get("/api/notifications")).json();
     const ids = feed.items.map((i: { id: string }) => i.id);
-    expect(ids).toContain(`pending-away-${control.id}`);
-    expect(ids).not.toContain(`pending-away-${LEGACY_WFH.id}`);
+    expect(ids.filter((id: string) => id.startsWith("pending-away-"))).toEqual([]);
     expect((await adm.patch("/api/away", { data: { id: control.id, status: "cancelled" } })).status()).toBe(200);
 
     for (const status of ["approved", "rejected"]) {

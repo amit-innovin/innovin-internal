@@ -38,7 +38,9 @@ export async function feedFor(opts: { email: string | null; grievances: Omit<Gri
 
   const [announcements, events, away, employees] = await Promise.all([
     store.listAnnouncements(10),
-    store.listEvents(new Date(opts.now).toISOString(), 10),
+    // Every upcoming event, not just the soonest few: a new event further out must still notify
+    // (the lookback filter below keeps only recently published or changed ones).
+    store.listEvents(new Date(opts.now).toISOString(), 500),
     opts.email ? store.listAwayByEmail(opts.email, 20) : Promise.resolve([]),
     opts.email ? store.listEmployees() : Promise.resolve([]),
   ]);

@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { pushSession } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
-import { allowedEmailDomains } from "@/lib/config";
+import { isAllowedEmail } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { officeLocation } from "@/lib/geo";
 import { enforce } from "@/lib/guard";
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
   const action = body.action;
 
   if (!EMAIL.test(email)) return badRequest("Enter a valid email");
-  if (!allowedEmailDomains().includes(email.split("@")[1])) {
+  if (!isAllowedEmail(email)) {
     return NextResponse.json({ error: "Use your Innovin email" }, { status: 403 });
   }
   if (action !== "in" && action !== "out") return badRequest("Invalid attendance action");

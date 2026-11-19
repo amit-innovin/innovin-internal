@@ -17,6 +17,21 @@ export function allowedEmailDomains() {
     .filter(Boolean);
 }
 
+// Individual addresses outside the allowed domains that may still sign in (a contractor or
+// partner on a personal account). ALLOWED_EMAILS is a comma list; it never grants admin.
+export function allowedEmails() {
+  return (process.env.ALLOWED_EMAILS || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function isAllowedEmail(email: string) {
+  const address = email.trim().toLowerCase();
+  const domain = address.split("@")[1] ?? "";
+  return !!address && (allowedEmailDomains().includes(domain) || allowedEmails().includes(address));
+}
+
 // Rate limits (requests per window). The office shares one public IP, so abuse limits are
 // keyed per device (cookie) with a looser per-IP ceiling on top.
 const MIN = 60_000;

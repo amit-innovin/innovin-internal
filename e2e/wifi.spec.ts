@@ -3,10 +3,10 @@ import { expect, test, uniqueEmail, signInEmployee, signInOffice } from "./fixtu
 // The Material 3 Wi-Fi check (prototype: docs/design/m3/Prototype.dc.html, "Wi-Fi"). The e2e
 // server measures against our own payload (SPEEDTEST_PROVIDER=self).
 test.describe("Wi-Fi check", () => {
-  test("Home's Wi-Fi button starts the check straight away and cleans the URL", async ({ page }) => {
+  test("Today's Wi-Fi card starts the check straight away and cleans the URL", async ({ page }) => {
     await signInEmployee(page, uniqueEmail("wifi-home"), "/");
-    await page.getByRole("link", { name: "Check office Wi-Fi" }).click();
-    await expect(page).toHaveURL(/\/\?view=wifi$/);
+    await page.getByRole("link", { name: "Check now" }).click();
+    await expect(page).toHaveURL(/\/wifi$/);
     await expect(page.getByText("Testing download, upload and delay…")).toBeVisible();
     await expect(page.getByText("While you wait: catch the packets")).toBeVisible();
   });

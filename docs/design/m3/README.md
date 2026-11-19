@@ -22,5 +22,8 @@ The build reference for the Material 3 rebuild (branch `m3-foundation-home` and 
 | Say hi (gestures and invites) | Home crowd cards, Notifications | 7 |
 | Admin app (`M3AdminApp`, `M3AdminAppPhone`) | `/admin/*` | 8 |
 | Event details, Help, Sign in (`M3EventDetails`, `M3Help`, `M3SignIn`); admin event Edit + Details | `/feed/events/[id]`, `/help`, `/sign-in`, `/admin/publish` | 9 |
+| Today (`M3Today`, `M3TodayPhone`): no sidebar, top tabs, Apple Health-style summary; Browse | `/`, `/browse` | 10 |
 
 The Reading list is out of the design for now: no navigation entry points.
+
+Today and Browse (19 Nov 2026) replace Home and the sidebar. Their canvas is https://claude.ai/artifact/1cR9t8dgrFiqAPsFeV1kPo; the board files here are a snapshot of it. Sample data on the boards is illustrative.

@@ -1,6 +1,6 @@
 import { expect, test, uniqueEmail, signInEmployee, signInOffice } from "./fixtures";
 
-// The Material 3 Home (prototype: docs/design/m3/Prototype.dc.html, "Home").
+// Today (design: https://claude.ai/artifact/1cR9t8dgrFiqAPsFeV1kPo): Apple Health-style summary in Material 3.
 // Check-in is verified by location only; the office network is not proof.
 test.describe("Home", () => {
   // Today counts as one of your days, so the full check-in card shows (skipped on a non-working day).
@@ -20,11 +20,10 @@ test.describe("Home", () => {
     await context.setGeolocation({ latitude: 12.9352, longitude: 77.6241 });
     await signInEmployee(page, uniqueEmail("home-in"), "/");
     await plannedToday(page);
-    await expect(page.getByText("We check your location once, when you tap Check in. It isn't tracked.")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Your day" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Working remote" })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Check in", exact: true }).click();
-    await expect(page.getByText("You're in", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Change today's status" })).toBeVisible();
     await expect(page.getByText(/^In office · \d{1,2}:\d{2}/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Check in", exact: true })).toHaveCount(0);
@@ -54,43 +53,48 @@ test.describe("Home", () => {
     await expect(page.getByText("Location is off for innovin")).toBeVisible();
   });
 
-  test("on a day you're not planned in, check-in is a quiet row", async ({ page, context }) => {
+  test("on a day you're not planned in, you can still check in", async ({ page, context, isMobile }) => {
     await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({ latitude: 12.9352, longitude: 77.6241 });
     await signInEmployee(page, uniqueEmail("home-quiet"), "/");
-    const card = page.getByRole("region", { name: "Check in" });
-    await expect(card).toContainText("Not planned in today");
-    await expect(card).toContainText("In the office after all?");
-    await expect(page.getByText("We check your location once")).toHaveCount(0);
+    if (!isMobile) await expect(page.getByText("In the office after all?")).toBeVisible();
     await expect(page.getByRole("button", { name: "Working remote" })).toHaveCount(0);
     await expect(page.getByText("Tea round", { exact: true })).toHaveCount(0);
-    await card.getByRole("button", { name: "Check in" }).click();
+    await page.getByRole("button", { name: "Check in", exact: true }).click();
     await expect(page.getByText(/^In office · \d{1,2}:\d{2}/)).toBeVisible();
   });
 
-  test("header greets by time of day and shows Lappy", async ({ page }) => {
+  test("large title greets by time of day, with the Your day ribbon under it", async ({ page }) => {
     await signInEmployee(page, uniqueEmail("home-hello"), "/");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Good (morning|afternoon|evening), /);
-    await expect(page.getByRole("img", { name: /^Lappy / })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Your day" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Pinned" })).toBeVisible();
   });
 
-  test("this week shows a verdict, not counts", async ({ page }) => {
+  test("office days show a verdict, not counts", async ({ page }) => {
     await signInEmployee(page, uniqueEmail("home-week"), "/");
-    const week = page.getByRole("region", { name: "This week" });
-    await expect(week).toContainText(/On track|Plan \d+ more|Done for|No office days needed/);
+    const pinned = page.getByRole("region", { name: "Pinned" });
+    await expect(pinned).toContainText(/more to plan|On track|Done for|No office days needed/);
     await expect(page.getByText(/\d+ in (the office|today)/)).toHaveCount(0);
     await expect(page.getByText(/\d+ done · \d+ planned/)).toHaveCount(0);
   });
 
-  test("the bell, Wi-Fi and Speak up open inside Home", async ({ page, isMobile }) => {
+  test("the bell, Wi-Fi and Speak up open their own pages", async ({ page }) => {
     await signInEmployee(page, uniqueEmail("home-nav"), "/");
-    await page.locator(".m3-home").getByRole("link", { name: /^Notifications/ }).click();
-    await expect(page).toHaveURL(/[?&]view=notifications/);
+    await page.getByRole("link", { name: /^Notifications/ }).filter({ visible: true }).first().click();
+    await expect(page).toHaveURL(/\/notifications$/);
     await page.goto("/");
-    await page.getByRole("link", { name: "Check office Wi-Fi" }).click();
-    await expect(page).toHaveURL(/[?&]view=wifi/);
+    await page.getByRole("link", { name: "Check now" }).click();
+    await expect(page).toHaveURL(/\/wifi\?check=1$/);
     await page.goto("/");
-    await page.getByRole("link", { name: isMobile ? "Speak up anonymously" : "Speak up" }).filter({ visible: true }).first().click();
-    await expect(page).toHaveURL(/[?&]view=speak-up/);
+    await page.getByRole("link", { name: /Speak up anonymously/ }).click();
+    await expect(page).toHaveURL(/\/grievances$/);
+  });
+
+  test("links to the old Home panels go to the real page", async ({ page }) => {
+    await signInEmployee(page, uniqueEmail("home-old"), "/?view=days");
+    await expect(page).toHaveURL(/\/days$/);
+    await page.goto("/?view=admin-people");
+    await expect(page).toHaveURL(/\/$/);
   });
 });

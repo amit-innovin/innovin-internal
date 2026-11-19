@@ -63,11 +63,10 @@ test.describe("Roles & access", () => {
   test("the Admin app entry appears only for admins, and works", async ({ browser }) => {
     const email = `nav.${Date.now().toString(36)}@innovinlabs.com`;
     const member = await signInAs(browser, email);
-    // Laptops: "Admin app" in the sidebar. Phones: "Admin" on the Account page.
+    // Every screen size: the Admin group on Browse (the server still guards /admin).
     const entry = async () => {
-      if (isMobile(member.page)) { await member.page.goto("/account"); return member.page.getByRole("link", { name: /^Admin/ }); }
-      await member.page.goto("/");
-      return member.page.getByRole("link", { name: /^Admin app/ }).filter({ visible: true });
+      await member.page.goto("/browse");
+      return member.page.getByRole("region", { name: "Admin" }).getByRole("link", { name: /^Today/ });
     };
     await expect(await entry()).toHaveCount(0);
     await setAdmin(browser, email, true);

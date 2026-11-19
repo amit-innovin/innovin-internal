@@ -1,59 +1,41 @@
-// Navigation for the Material 3 shell (prototype: docs/design/m3/): the phone bottom bar is
-// Home · Feed · Days · Snacks · Account; laptop and tablet use a sidebar with Home, Feed, Days,
-// Tea & snacks and 10K steps, plus Speak up and an account menu. The Reading list is out of the
-// design for now: its page still exists but nothing links to it.
-//
-// Screens are rebuilt one PR at a time. Until a screen exists, its item points at the legacy
-// page that does the same job, and items with nothing behind them yet are left out.
+// Navigation for the Material 3 shell (design: https://claude.ai/artifact/1cR9t8dgrFiqAPsFeV1kPo,
+// "Today"). There is no sidebar. Every screen size uses the same five destinations: a floating tab
+// bar in the top bar from 768px, and the bottom bar on phones. Account is the avatar in the top
+// bar (and on Today), Notifications the bell next to it. Browse lists everything else: 10K steps,
+// Wi-Fi, Speak up, Help and, for admins, the admin tools.
 
-export type NavId = "home" | "feed" | "days" | "snacks" | "steps" | "account";
-export type Surface = "bar" | "side";
-export type NavIcon = "home" | "feed" | "days" | "snacks" | "steps" | "account";
+export type NavId = "today" | "feed" | "days" | "snacks" | "browse";
+export type NavIcon = NavId;
 
 type Item = {
   id: NavId;
-  label: Record<Surface, string>;
-  icon: NavIcon;
-  // null: nothing to link to yet (built in a later PR).
-  href: string | null;
-  // Which surface shows the item.
-  on: Surface[];
-  // Paths (exact or prefix) that keep this item lit, per surface.
-  owns: Partial<Record<Surface, string[]>>;
+  // Short label for the phone bar, full label for the top bar.
+  label: { bar: string; top: string };
+  href: string;
+  // Paths (exact or prefix) that keep this item lit.
+  owns: string[];
 };
 
 const ITEMS: Item[] = [
-  { id: "home", label: { bar: "Home", side: "Home" }, icon: "home", href: "/", on: ["bar", "side"], owns: { bar: ["/", "/notifications", "/steps"], side: ["/", "/notifications"] } },
-  { id: "feed", label: { bar: "Feed", side: "Feed" }, icon: "feed", href: "/feed", on: ["bar", "side"], owns: { bar: ["/feed"], side: ["/feed"] } },
-  { id: "days", label: { bar: "Days", side: "Days" }, icon: "days", href: "/days", on: ["bar", "side"], owns: { bar: ["/days"], side: ["/days"] } },
-  { id: "snacks", label: { bar: "Snacks", side: "Tea & snacks" }, icon: "snacks", href: "/snacks", on: ["bar", "side"], owns: { bar: ["/snacks"], side: ["/snacks"] } },
-  { id: "steps", label: { bar: "10K steps", side: "10K steps" }, icon: "steps", href: "/steps", on: ["side"], owns: { side: ["/steps"] } },
-  { id: "account", label: { bar: "Account", side: "Account" }, icon: "account", href: "/account", on: ["bar"], owns: { bar: ["/account", "/grievances", "/wifi", "/help", "/admin"] } },
+  { id: "today", label: { bar: "Today", top: "Today" }, href: "/", owns: ["/", "/notifications"] },
+  { id: "feed", label: { bar: "Feed", top: "Feed" }, href: "/feed", owns: ["/feed"] },
+  { id: "days", label: { bar: "Days", top: "Days" }, href: "/days", owns: ["/days"] },
+  { id: "snacks", label: { bar: "Snacks", top: "Tea & snacks" }, href: "/snacks", owns: ["/snacks"] },
+  { id: "browse", label: { bar: "Browse", top: "Browse" }, href: "/browse", owns: ["/browse", "/steps", "/wifi", "/grievances", "/help", "/account", "/admin"] },
 ];
 
 const matches = (pathname: string, owned: string) => (owned === "/" ? pathname === "/" : pathname === owned || pathname.startsWith(`${owned}/`));
 
-
-// Laptop sidebar for admins: "Admin" with its sub-pages (D-AdminDesktop and D-AdminDesk-*).
-
-export function navFor(surface: Surface) {
-  return ITEMS.filter((i) => i.on.includes(surface) && i.href !== null).map((i) => ({ id: i.id, label: i.label[surface], icon: i.icon, href: i.href as string }));
+export function navFor(surface: "bar" | "top") {
+  return ITEMS.map((i) => ({ id: i.id, label: i.label[surface], icon: i.id as NavIcon, href: i.href }));
 }
 
-export function activeNav(pathname: string, surface: Surface): NavId | null {
-  return ITEMS.find((i) => i.on.includes(surface) && (i.owns[surface] ?? []).some((o) => matches(pathname, o)))?.id ?? null;
+export function activeNav(pathname: string): NavId | null {
+  return ITEMS.find((i) => i.owns.some((o) => matches(pathname, o)))?.id ?? null;
 }
 
-// Laptop and tablet: these live in the menu on the account button, so the pages themselves
-// don't repeat them. Sign out is rendered separately because it is an action, not a link.
-// Admin is not here: admins get an "Admin" item in the sidebar itself.
-// Speak up has its own sidebar item and floating button, and Wi-Fi check sits in the Home header.
+// The avatar menu. Sign out is rendered separately because it is an action, not a link.
 export const ACCOUNT_MENU = () => [
   { label: "Settings", href: "/account", icon: "settings" as const },
   { label: "Help", href: "/help", icon: "help" as const },
 ];
-
-// Speak up is a main feature, so its floating button shows on the main pages. Feed is left out
-// because it has its own Post button, and two floating actions would compete.
-const SPEAK_FAB_ROUTES = ["/", "/days", "/snacks", "/account"];
-export const showsSpeakFab = (pathname: string) => SPEAK_FAB_ROUTES.includes(pathname);

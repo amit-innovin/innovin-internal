@@ -21,7 +21,8 @@ const position = () => new Promise<GeolocationPosition>((resolve, reject) => {
 // server against the office geofence. Once the day is marked, the card plays its confirmation and
 // disappears; the header chip takes over (no check-out). There is no remote mark: not coming in
 // means remote. On a day you aren't planned in, the card shrinks to a quiet row.
-export function CheckIn({ days }: { days: DaysView }) {
+// The check-in flow, shared by the Check in card and Today's title button and phone FAB.
+export function useCheckIn() {
   const mark = useMarkDay();
   const [step, setStep] = useState<Step>("idle");
   const [distance, setDistance] = useState<number | null>(null);
@@ -42,9 +43,16 @@ export function CheckIn({ days }: { days: DaysView }) {
     try { coords = (await position()).coords; } catch (error) { return setStep(locationFailure(error)); }
     mark.mutate({ mode: "office", lat: coords.latitude, lng: coords.longitude, accuracyM: coords.accuracy }, { onSuccess: () => settle("success", 1100), onError: fail });
   };
+  const problem = !PROBLEMS.includes(step) ? null : {
+    title: step === "outside" ? `You're about ${distance !== null ? km(distance) : "a long way"} from the office` : step === "no-fix" ? "Couldn't get your location" : step === "closed" ? "The office is closed today" : "Location is off for innovin",
+    body: step === "outside" ? "Check-in works close to the office. If you're at the door, step outside for a better signal and try again." : step === "no-fix" ? "The signal is weak indoors. Move near a window and try again." : step === "closed" ? "Check-in is off for today." : "Allow location for this site in your browser settings, then try again. It's only read when you tap Check in.",
+  };
+  return { step, distance, problem, busy: step === "checking" || mark.isPending, checkIn, dismiss: () => setStep("idle") };
+}
 
+export function CheckIn({ days }: { days: DaysView }) {
+  const { step, distance, busy, checkIn } = useCheckIn();
   if (days.me && step === "idle") return null;
-  const busy = step === "checking" || mark.isPending;
   if (!days.isOfficeDayToday && step === "idle") {
     return (
       <Card aria-label="Check in" role="region" style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>

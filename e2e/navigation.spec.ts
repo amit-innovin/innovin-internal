@@ -1,35 +1,32 @@
 import { ADMIN_EMAIL, expect, test, signInEmployee, signInOffice } from "./fixtures";
 
 test.describe("Navigation", () => {
-  test("the shell opens the member workflows inside Home", async ({ page, isMobile }) => {
+  test("one set of five destinations, with Browse for everything else", async ({ page }) => {
     await signInEmployee(page, undefined, "/");
     const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
-    await expect(main.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(main.getByRole("link", { name: "Today", exact: true })).toHaveAttribute("aria-current", "page");
 
     await main.getByRole("link", { name: "Days", exact: true }).click();
-    await expect(page).toHaveURL(/[?&]view=days/);
+    await expect(page).toHaveURL(/\/days$/);
     await expect(page.getByRole("heading", { level: 1, name: "Days" })).toBeVisible();
     await expect(main.getByRole("link", { name: "Days", exact: true })).toHaveAttribute("aria-current", "page");
 
     await main.getByRole("link", { name: /^Feed(, \d+ new)?$/ }).click();
-    await expect(page).toHaveURL(/[?&]view=feed/);
+    await expect(page).toHaveURL(/\/feed$/);
     await expect(main.getByRole("link", { name: /^Feed(, \d+ new)?$/ })).toHaveAttribute("aria-current", "page");
 
-    await page.goto("/");
-    if (isMobile) {
-      await main.getByRole("link", { name: "Account", exact: true }).click();
-      // Account's header is your name (prototype); the page is known by its Sign out row.
-      await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
-    } else {
-      await main.getByRole("link", { name: "10K steps", exact: true }).click();
-      await expect(page).toHaveURL(/[?&]view=steps/);
-      for (const [item, heading] of [["Settings", "Account"], ["Help", "Help"]]) {
-        await page.goto("/");
-        await page.getByRole("button", { name: "Account menu" }).click();
-        await page.getByRole("menuitem", { name: item, exact: true }).click();
-        if (heading === "Account") await expect(page.getByRole("button", { name: "Sign out" }).filter({ visible: true }).last()).toBeVisible();
-        else await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
-      }
+    await main.getByRole("link", { name: "Browse", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Browse" })).toBeVisible();
+    await page.getByRole("link", { name: /^10K steps/ }).click();
+    await expect(page).toHaveURL(/\/steps$/);
+    await expect(main.getByRole("link", { name: "Browse", exact: true })).toHaveAttribute("aria-current", "page");
+
+    for (const [item, heading] of [["Settings", "Account"], ["Help", "Help"]]) {
+      await page.goto("/");
+      await page.getByRole("button", { name: "Account menu" }).filter({ visible: true }).click();
+      await page.getByRole("menuitem", { name: item, exact: true }).click();
+      if (heading === "Account") await expect(page.getByRole("button", { name: "Sign out" }).filter({ visible: true }).last()).toBeVisible();
+      else await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
     }
   });
 
@@ -106,10 +103,10 @@ test.describe("Navigation", () => {
     await signInEmployee(page, undefined, "/");
     const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
     await expect(main.getByRole("link").first()).toBeAttached();
-    if (isMobile) await expect(main.getByRole("link")).toHaveText(["Home", /^\d*Feed$/, "Days", "Snacks", "Account"]);
+    if (isMobile) await expect(main.getByRole("link")).toHaveText(["Today", /^\d*Feed$/, "Days", "Snacks", "Browse"]);
     else {
-      await expect(main.getByRole("link", { name: /^(Home|Feed(, \d+ new)?|Days|Tea & snacks|10K steps|Speak up)$/ })).toHaveCount(6);
-      await page.getByRole("button", { name: "Account menu" }).click();
+      await expect(main.getByRole("link", { name: /^(Today|Feed(, \d+ new)?|Days|Tea & snacks|Browse)$/ })).toHaveCount(5);
+      await page.getByRole("button", { name: "Account menu" }).filter({ visible: true }).click();
       await expect(page.getByRole("menuitem")).toHaveText(["Settings", "Help", "Sign out"]);
     }
     await expect(page.getByRole("link", { name: /pantry|plans|people|reading/i, includeHidden: true })).toHaveCount(0);

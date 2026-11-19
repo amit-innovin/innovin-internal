@@ -1,22 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCallback, type ComponentProps } from "react";
-import { workspaceHref } from "@/lib/workspace-navigation";
 
-const unchanged = (href: string) => href;
-
+// Every screen has its own route again (Today no longer hosts other screens as panels), so these
+// are plain links and replaces. Kept so the screens that use them don't need to change.
 export function useWorkspaceHref() {
-  return usePathname() === "/" ? workspaceHref : unchanged;
+  return (href: string) => href;
 }
 
 export function useWorkspaceReplace() {
   const router = useRouter();
-  const href = useWorkspaceHref();
-  return useCallback((path: string, options?: { scroll?: boolean }) => router.replace(href(path), options), [router, href]);
+  return useCallback((path: string, options?: { scroll?: boolean }) => router.replace(path, options), [router]);
 }
 
 export function WorkspaceLink({ href, ...props }: Omit<ComponentProps<typeof Link>, "href"> & { href: string }) {
-  return <Link href={useWorkspaceHref()(href)} {...props} />;
+  return <Link href={href} {...props} />;
 }

@@ -2,7 +2,8 @@
 // Admin › People (canvas: M3AdminApp › People): a month grid of who was in on which day, with no
 // counts or verdicts; a name opens that person's panel (month, Fix a day, exempt, admin, left,
 // birthday). Filter, month and person live in the URL.
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useWorkspaceReplace } from "@/components/m3/workspace-link";
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { Avatar } from "@/components/m3";
@@ -93,7 +94,7 @@ function OfficeDays({ team, people, selected, onPick, month, onMonth }: { team: 
 export function PeoplePage() {
   const overview = useAdminOverview();
   const params = useSearchParams();
-  const router = useRouter();
+  const replace = useWorkspaceReplace();
   const [q, setQ] = useState("");
   const filter = (["all", "exempt", "admin", "left"] as const).find((f) => f === params.get("show")) ?? "all";
   const thisMonth = todayIST().slice(0, 7);
@@ -105,7 +106,7 @@ export function PeoplePage() {
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
     if (value === null) next.delete(key); else next.set(key, value);
-    router.replace(`/admin/people${next.size ? `?${next}` : ""}`, { scroll: false });
+    replace(`/admin/people${next.size ? `?${next}` : ""}`, { scroll: false });
   };
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();

@@ -1,3 +1,5 @@
+export const SNACK_ORDER_KEY = "snackOrder";
+
 // Tea rounds and the daily snack pick (prototype: docs/design/m3/, Snacks). Pure, IST clock times.
 import type { TeaRound } from "./types";
 

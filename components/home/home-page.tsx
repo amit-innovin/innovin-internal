@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
 import { useState } from "react";
 import { Bell, ChevronRight, Footprints, Wifi } from "lucide-react";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import { PageHero } from "@/components/m3/hero";
 import { CheckIn, timeIST } from "@/components/home/check-in";
 import type { DaysView } from "@/lib/days";
 import { paceVerdict, plannedCount, timeOfDayIST, weekStrip, type WeekDay } from "@/lib/pace";
-import { useDays, useFeed, useMarkDay, useNotifications, useSend, useTea, useWorkspace, type FeedPost, type Tea } from "@/lib/queries";
+import { useDays, useFeed, useMarkDay, useNotifications, useSend, useSteps, useTea, type FeedPost, type Tea } from "@/lib/queries";
 
 const IST = "Asia/Kolkata";
 const longDate = (date: string) => new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
@@ -135,7 +135,7 @@ function ThisWeek({ days }: { days: DaysView }) {
 }
 
 function StepsTile() {
-  const steps = useWorkspace().data?.steps.me;
+  const steps = useSteps().data?.me;
   const today = steps?.today?.steps ?? 0;
   const pct = Math.min(100, today / 100);
   return (
@@ -160,13 +160,17 @@ export function HomePage({ firstName }: { firstName: string }) {
       {days.isPending || days.isError ? (
         <QueryState error={days.error} onRetry={() => days.refetch()} what="your day" />
       ) : (
-        <>
-          <CheckIn days={days.data} />
-          <UpNext days={days.data} />
-          <ThisWeek days={days.data} />
-          <InOfficeToday days={days.data} />
-          <StepsTile />
-        </>
+        <div className="m3-home-grid">
+          <div className="m3-stack">
+            <CheckIn days={days.data} />
+            <UpNext days={days.data} />
+          </div>
+          <div className="m3-stack">
+            <ThisWeek days={days.data} />
+            <InOfficeToday days={days.data} />
+            <StepsTile />
+          </div>
+        </div>
       )}
     </div>
   );

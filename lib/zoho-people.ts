@@ -7,7 +7,7 @@ type BalanceType = typeof TYPES[number];
 export type ZohoLeaveData = {
   fetchedAt: string;
   balances: { type: BalanceType; remaining: number | null; booked: number | null }[];
-  approved: { id: string; from: string; to: string; type: string; days: number }[];
+  approved: { id: string; from: string; to: string; type: string; days: number; dates: string[] }[];
 };
 export type ZohoLeaveResult = {
   state: "not-connected" | "unmapped" | "ready" | "stale" | "unavailable";
@@ -15,7 +15,7 @@ export type ZohoLeaveResult = {
   data?: ZohoLeaveData;
 };
 
-type Config = { domain: string; client: string; secret: string; refresh: string; employee: string; types: Record<BalanceType, string>; dateFormat: string; fingerprint: string };
+type Config = { employees: Record<string, string>; domain: string; client: string; secret: string; refresh: string; employee: string; types: Record<BalanceType, string>; dateFormat: string; fingerprint: string };
 const cache = new Map<string, { data?: ZohoLeaveData; checked: number; pending?: Promise<ZohoLeaveResult>; result?: ZohoLeaveResult }>();
 let tokenCache: { fingerprint: string; value: string; expires: number } | undefined;
 let tokenPending: { fingerprint: string; promise: Promise<string> } | undefined;
@@ -53,7 +53,7 @@ function configuration(email: string): Config | null {
   const dateFormat = process.env.ZOHO_DATE_FORMAT || "dd-MMM-yyyy";
   if (!["dd-MMM-yyyy", "yyyy-MM-dd", "dd-MM-yyyy", "MM/dd/yyyy"].includes(dateFormat)) throw new Error("Invalid Zoho date format");
   const fingerprint = crypto.createHash("sha256").update(JSON.stringify([domain, client, secret, refresh, process.env.ZOHO_EMPLOYEE_IDS, types, dateFormat, process.env.ZOHO_PEOPLE_PORTAL_ID])).digest("hex");
-  return { domain, client, secret, refresh, employee, types, dateFormat, fingerprint };
+  return { employees: Object.fromEntries(Object.entries(employees).map(([email, id]) => [email, identifier(id)])), domain, client, secret, refresh, employee, types, dateFormat, fingerprint };
 }
 
 async function jsonResponse(response: Response) {
@@ -116,17 +116,22 @@ function date(value: unknown, format: string) {
   return normalized;
 }
 
+function dateForRequest(iso: string, format: string) {
+  const [year, month, day] = iso.split("-");
+  if (format === "dd-MMM-yyyy") return `${day}-${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(month) - 1]}-${year}`;
+  if (format === "dd-MM-yyyy") return `${day}-${month}-${year}`;
+  if (format === "MM/dd/yyyy") return `${month}/${day}/${year}`;
+  return iso;
+};
+
+function yearParams(config: Config, year: number, employees: string[]) {
+  return { from: dateForRequest(`${year}-01-01`, config.dateFormat), to: dateForRequest(`${year}-12-31`, config.dateFormat), dateFormat: config.dateFormat, employee: JSON.stringify(employees) };
+}
+
 async function load(config: Config, year: number): Promise<ZohoLeaveData> {
   const token = await accessToken(config);
-  const formatDate = (iso: string) => {
-    const [year, month, day] = iso.split("-");
-    if (config.dateFormat === "dd-MMM-yyyy") return `${day}-${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(month) - 1]}-${year}`;
-    if (config.dateFormat === "dd-MM-yyyy") return `${day}-${month}-${year}`;
-    if (config.dateFormat === "MM/dd/yyyy") return `${month}/${day}/${year}`;
-    return iso;
-  };
-  const params = { from: formatDate(`${year}-01-01`), to: formatDate(`${year}-12-31`), dateFormat: config.dateFormat, employee: JSON.stringify([config.employee]) };
-  const report = await read(config, "/people/api/v2/leavetracker/reports/bookedAndBalance", { ...params, to: year === Number(todayIST().slice(0, 4)) ? formatDate(todayIST()) : params.to, unit: "Day", leavetype: JSON.stringify(Object.values(config.types)), startIndex: "0", limit: "1" }, token);
+  const params = yearParams(config, year, [config.employee]);
+  const report = await read(config, "/people/api/v2/leavetracker/reports/bookedAndBalance", { ...params, to: year === Number(todayIST().slice(0, 4)) ? dateForRequest(todayIST(), config.dateFormat) : params.to, unit: "Day", leavetype: JSON.stringify(Object.values(config.types)), startIndex: "0", limit: "1" }, token);
   const employeeReport = object(object(report.report)[config.employee]);
   if (!Object.keys(employeeReport).length) throw new Error("Zoho employee report missing");
   const balances = TYPES.map(type => {
@@ -136,7 +141,13 @@ async function load(config: Config, year: number): Promise<ZohoLeaveData> {
     return { type, remaining: numeric(row.balance), booked: numeric(row.booked) };
   });
   if (balances.every(row => row.remaining === null)) throw new Error("Zoho balances missing");
-  const approved: ZohoLeaveData["approved"] = [];
+  const approved = await fetchApproved(config, year, [config.employee], token);
+  return { fetchedAt: new Date().toISOString(), balances, approved: approved.get(config.employee) ?? [] };
+}
+
+async function fetchApproved(config: Config, year: number, employees: string[], token: string) {
+  const params = yearParams(config, year, employees);
+  const approved = new Map<string, ZohoLeaveData["approved"]>(employees.map((id) => [id, []]));
   const ids = new Set<string>();
   for (let page = 0; page < 5; page++) {
     // Zoho documents this v2 records path without /people; the balance path above includes it.
@@ -145,18 +156,22 @@ async function load(config: Config, year: number): Promise<ZohoLeaveData> {
     const rows = Object.entries(object(body.records));
     for (const [id, value] of rows) {
       const row = object(value);
-      if (identifier(row["Employee.ID"]) !== config.employee) throw new Error("Zoho employee mismatch");
+      const person = approved.get(identifier(row["Employee.ID"]));
+      if (!person) throw new Error("Zoho employee mismatch");
       if (String(row.ApprovalStatus).toLowerCase() !== "approved") continue;
       if (!/^days?$/i.test(String(row.Unit))) throw new Error("Zoho leave units require mapping");
       if (ids.has(id)) throw new Error("Zoho pagination repeated records");
       ids.add(id);
-      const amounts = Object.values(object(row.Days)).map(day => numeric(object(day).LeaveCount));
-      if (!amounts.length || amounts.some(amount => amount === null || amount < 0 || amount > 1)) throw new Error("Zoho leave days missing");
+      const amounts = Object.entries(object(row.Days)).map(([value, day]) => ({ date: date(value, config.dateFormat), amount: numeric(object(day).LeaveCount) }));
+      if (!amounts.length || amounts.some(({ amount }) => amount === null || amount < 0 || amount > 1)) throw new Error("Zoho leave days missing");
       const from = date(row.From, config.dateFormat), to = date(row.To, config.dateFormat);
-      if (from > to) throw new Error("Invalid Zoho leave range");
-      approved.push({ id, from, to, type: typeof row.Leavetype === "string" ? row.Leavetype : "Leave", days: amounts.reduce<number>((total, amount) => total + amount!, 0) });
+      if (from > to || amounts.some(({ date }) => date < from || date > to)) throw new Error("Invalid Zoho leave range");
+      person.push({ id, from, to, type: typeof row.Leavetype === "string" ? row.Leavetype : "Leave", days: amounts.reduce((total, { amount }) => total + (amount ?? 0), 0), dates: amounts.filter(({ amount }) => (amount ?? 0) > 0).map(({ date }) => date) });
     }
-    if (rows.length < 200) return { fetchedAt: new Date().toISOString(), balances, approved: approved.sort((a, b) => a.from.localeCompare(b.from)) };
+    if (rows.length < 200) {
+      for (const rows of approved.values()) rows.sort((a, b) => a.from.localeCompare(b.from));
+      return approved;
+    }
   }
   throw new Error("Zoho leave pagination incomplete");
 }
@@ -185,5 +200,50 @@ export async function zohoLeave(email: string, year: number): Promise<ZohoLeaveR
   cache.set(key, entry);
   if (cache.size > 200) for (const [other, value] of cache) { if (!value.pending && other !== key) { cache.delete(other); break; } }
   try { entry.result = await entry.pending; entry.checked = Date.now(); return entry.result; }
+  finally { entry.pending = undefined; }
+}
+
+export function approvedZohoLeaveOn(approved: ZohoLeaveData["approved"] | undefined, date: string) {
+  return approved?.find((row) => row.dates.includes(date));
+}
+
+type TeamApproved = Map<string, ZohoLeaveData["approved"]>;
+type TeamCache = { checked: number; fetched?: number; rows: TeamApproved; pending?: Promise<TeamApproved> };
+const teamCache = new Map<string, TeamCache>();
+
+export async function zohoTeamLeave(emails: string[], year: number): Promise<TeamApproved> {
+  let config: Config | null = null;
+  for (const email of emails) {
+    try { config = configuration(email); break; }
+    catch { continue; }
+  }
+  if (!config) return new Map();
+  const targets = emails.filter((email) => Object.hasOwn(config.employees, email)).sort();
+  const key = `${config.fingerprint}:${year}:${targets.join(",")}`;
+  const entry: TeamCache = teamCache.get(key) ?? { checked: 0, rows: new Map() };
+  if (entry.pending) return entry.pending;
+  if (Date.now() - entry.checked < TTL) return entry.rows;
+  const settings = config;
+  entry.pending = (async () => {
+    try {
+      const token = await accessToken(settings);
+      const rows: TeamApproved = new Map();
+      // The records endpoint accepts a list of employee IDs. Fetch only the mapped active people.
+      for (let start = 0; start < targets.length; start += 30) {
+        const batch = targets.slice(start, start + 30);
+        const approved = await fetchApproved(settings, year, batch.map((email) => settings.employees[email]), token);
+        for (const email of batch) rows.set(email, approved.get(settings.employees[email]) ?? []);
+      }
+      entry.rows = rows;
+      entry.fetched = Date.now();
+    } catch {
+      if (!entry.fetched || Date.now() - entry.fetched >= MAX_STALE) entry.rows = new Map();
+    }
+    entry.checked = Date.now();
+    return entry.rows;
+  })();
+  teamCache.set(key, entry);
+  if (teamCache.size > 30) for (const [other, value] of teamCache) { if (!value.pending && other !== key) { teamCache.delete(other); break; } }
+  try { return await entry.pending; }
   finally { entry.pending = undefined; }
 }

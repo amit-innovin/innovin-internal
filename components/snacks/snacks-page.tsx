@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
 import { useState } from "react";
 import { Cookie, Lightbulb } from "lucide-react";
 import { toast } from "sonner";

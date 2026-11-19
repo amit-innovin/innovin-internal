@@ -8,6 +8,7 @@ import { isPlanned, plannedOn } from "./plan";
 import { attendanceLocation } from "./presence";
 import { id, store } from "./store";
 import { todayIST } from "./time";
+import { approvedZohoLeaveOn, zohoLeave } from "./zoho-people";
 import type { AttendanceRow, DayMode } from "./types";
 
 // Rows from the old check-in flow have no declared mode; their position still classifies them.
@@ -28,7 +29,7 @@ export async function daysView(email: string, month: string) {
   const today = todayIST();
   const { first, last } = monthBounds(month);
   const closed = await closedMap(first < today ? first : today, last > today ? last : today);
-  const [me, rows, leave, todayRows, employees, overrides, todayOverride] = await Promise.all([
+  const [me, rows, leave, todayRows, employees, overrides, todayOverride, zoho, todayZoho] = await Promise.all([
     store.getEmployee(email),
     store.listAttendanceRange(email, first, last),
     store.listAwayByEmail(email, 200),
@@ -36,18 +37,23 @@ export async function daysView(email: string, month: string) {
     store.listEmployees(),
     store.listPlanOverrides(email, first, last),
     store.listPlanOverrides(email, today, today),
+    zohoLeave(email, Number(month.slice(0, 4))),
+    zohoLeave(email, Number(today.slice(0, 4))),
   ]);
   const officeDays = me?.officeDays ?? [];
   const holidays = holidaysFor(Number(month.slice(0, 4)));
   const from = fixableFrom(today);
 
+  const localLeaveOn = (date: string) => leave.find((row) => row.type === "leave" && (row.status === "pending" || row.status === "approved") && date >= row.startDate && date <= row.endDate);
+  const leaveStatus = (date: string, result: typeof zoho) => approvedZohoLeaveOn(result.data?.approved, date) ? "approved" as const : localLeaveOn(date)?.status ?? null;
+
   const days = Array.from({ length: Number(last.slice(8)) }, (_, i) => {
     const date = `${month}-${String(i + 1).padStart(2, "0")}`;
     const row = rows.find((r) => r.date === date);
-    const away = leave.find((r) => r.type === "leave" && (r.status === "pending" || r.status === "approved") && date >= r.startDate && date <= r.endDate);
+    const leave = leaveStatus(date, zoho);
     const working = isWorkingDay(date, closed);
     const override = overrides.find((o) => o.date === date)?.planned;
-    const planned = isPlanned({ date, today, officeDays, override, working, leave: !!away });
+    const planned = isPlanned({ date, today, officeDays, override, working, leave: !!leave });
     return {
       date,
       mode: dayMode(row),
@@ -60,7 +66,7 @@ export async function daysView(email: string, month: string) {
       planned,
       // Planned on top of the usual weekdays.
       added: planned && !officeDays.includes(weekdayIndex(date)),
-      leave: away ? away.status : null,
+      leave,
       fixable: date < today && date >= from,
     };
   });
@@ -89,7 +95,7 @@ export async function daysView(email: string, month: string) {
     // Your usual days plus single dates planned in or out ahead of time.
     sayHi: !!me?.sayHi,
     sent: Object.fromEntries(sentToday.map((h) => [h.to, sentLabel(h)])),
-    isOfficeDayToday: plannedOn({ date: today, officeDays, override: todayOverride[0]?.planned, working: isWorkingDay(today, closed), leave: false }),
+    isOfficeDayToday: plannedOn({ date: today, officeDays, override: todayOverride[0]?.planned, working: isWorkingDay(today, closed), leave: !!leaveStatus(today, todayZoho) }),
     days,
     around: {
       // First names, never a headcount (welfare: no "N in today" pressure).

@@ -1,18 +1,18 @@
 import { ADMIN_EMAIL, expect, test, signInEmployee, signInOffice } from "./fixtures";
 
 test.describe("Navigation", () => {
-  test("the new shell reaches every module", async ({ page, isMobile }) => {
+  test("the shell opens the member workflows inside Home", async ({ page, isMobile }) => {
     await signInEmployee(page, undefined, "/");
     const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
     await expect(main.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
 
     await main.getByRole("link", { name: "Days", exact: true }).click();
-    await expect(page).toHaveURL(/\/days$/);
+    await expect(page).toHaveURL(/[?&]view=days/);
     await expect(page.getByRole("heading", { level: 1, name: "Days" })).toBeVisible();
     await expect(main.getByRole("link", { name: "Days", exact: true })).toHaveAttribute("aria-current", "page");
 
     await main.getByRole("link", { name: /^Feed(, \d+ new)?$/ }).click();
-    await expect(page).toHaveURL(/\/feed$/);
+    await expect(page).toHaveURL(/[?&]view=feed/);
     await expect(main.getByRole("link", { name: /^Feed(, \d+ new)?$/ })).toHaveAttribute("aria-current", "page");
 
     await page.goto("/");
@@ -22,7 +22,7 @@ test.describe("Navigation", () => {
       await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
     } else {
       await main.getByRole("link", { name: "10K steps", exact: true }).click();
-      await expect(page).toHaveURL(/\/steps$/);
+      await expect(page).toHaveURL(/[?&]view=steps/);
       for (const [item, heading] of [["Settings", "Account"], ["Help", "Help"]]) {
         await page.goto("/");
         await page.getByRole("button", { name: "Account menu" }).click();

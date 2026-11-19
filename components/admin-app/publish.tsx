@@ -1,7 +1,8 @@
 "use client";
 // Admin › Publish: announcements (each shows once to everyone as a dialog; optional pin to the
 // top of the Feed) and events. Seen counts are counts, never names.
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useWorkspaceReplace } from "@/components/m3/workspace-link";
 import { useEffect, useRef, useState } from "react";
 import {
   useAdminOverview, useAnnouncements, useCalendar, useCancelEvent, useDeleteAnnouncement, useDeleteEvent, useDisconnectCalendar, useEditEvent, useEvents, usePostEvent, usePublishAnnouncement, useResendInvite,
@@ -19,12 +20,12 @@ const cat = (c: string) => CATS.find(([k]) => k === c) ?? CATS[5];
 
 export function PublishPage() {
   const params = useSearchParams();
-  const router = useRouter();
+  const replace = useWorkspaceReplace();
   const tab: Tab = params.get("tab") === "events" ? "events" : "announcements";
   return (
     <>
       <PageHead title="Publish" />
-      <Tabs label="What to publish" value={tab} onPick={(t) => router.replace(t === "events" ? "/admin/publish?tab=events" : "/admin/publish", { scroll: false })}
+      <Tabs label="What to publish" value={tab} onPick={(t) => replace(t === "events" ? "/admin/publish?tab=events" : "/admin/publish", { scroll: false })}
         options={[["announcements", "Announcements"], ["events", "Events"]]} />
       {tab === "announcements" ? <Announcements /> : <Events />}
     </>
@@ -107,19 +108,20 @@ function CalendarCard() {
   const disconnect = useDisconnectCalendar();
   const snack = useSnack();
   const params = useSearchParams();
-  const router = useRouter();
+  const replace = useWorkspaceReplace();
   const [confirm, setConfirm] = useState(false);
   const [problem, setProblem] = useState("");
   const shown = useRef(false);
   const s = status.data;
+  const connectHref = usePathname() === "/" ? "/api/admin/calendar/connect?workspace=1" : "/api/admin/calendar/connect";
   useEffect(() => {
     const result = params.get("calendar");
     if (!result || shown.current || !s) return;
     shown.current = true;
     if (result === "connected") snack("Google Calendar connected");
     else setProblem(result === "wrong-account" ? `Connect with your own work account (${s.me})` : CONNECT_RESULT[result] ?? CONNECT_RESULT.failed);
-    router.replace("/admin/publish?tab=events", { scroll: false });
-  }, [params, router, snack, s]);
+    replace("/admin/publish?tab=events", { scroll: false });
+  }, [params, replace, snack, s]);
   if (!s?.configured) return null;
   const n = s.upcoming ?? 0;
   const what = n === 0 ? "Invites stop going out from your calendar."
@@ -143,7 +145,7 @@ function CalendarCard() {
             </div>
           )}
         </>
-      ) : <div><a className="m3-btn m3-btn-filled" href="/api/admin/calendar/connect">Connect Google Calendar</a></div>}
+      ) : <div><a className="m3-btn m3-btn-filled" href={connectHref}>Connect Google Calendar</a></div>}
     </section>
   );
 }

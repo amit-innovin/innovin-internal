@@ -204,15 +204,16 @@ test.describe("Google Calendar invites", () => {
     await expect(card.getByRole("link", { name: "Connect Google Calendar" })).toBeVisible();
     expect((await calendarLog(page)).revoked.some((t) => t.startsWith(`rt:${me}:`))).toBe(true);
 
-    // Someone marked as left (still an admin) can't connect.
+    // Marking an admin as left revokes access to the admin page and Calendar connection.
     const adminCtx = await browser.newContext();
     const adminPage = await adminCtx.newPage();
     await signInEmployee(adminPage, ADMIN_EMAIL, "/admin");
     expect((await adminPage.request.patch("/api/people", { data: { email: me, left: true } })).ok()).toBe(true);
     await adminCtx.close();
     await page.goto("/admin/publish?tab=events");
-    await card.getByRole("link", { name: "Connect Google Calendar" }).click();
-    await page.waitForURL(/\/admin\/publish/);
-    await expect(page.getByText("People marked as left can't connect Google Calendar.")).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+    const connectResponse = await page.goto("/api/admin/calendar/connect");
+    expect(connectResponse?.ok()).toBe(true);
+    await expect(page).toHaveURL(/\/$/);
   });
 });

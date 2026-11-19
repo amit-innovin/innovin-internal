@@ -1,9 +1,10 @@
-import { HomePage } from "@/components/home/home-page";
+import { HomeWorkspace } from "@/components/home/workspace";
 import { requireUser } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
   const actor = await requireUser();
-  return <HomePage firstName={(actor.name || actor.email.split("@")[0]).split(/\s+/)[0]} />;
+  const name = actor.name || actor.email.split("@")[0];
+  return <HomeWorkspace name={name} firstName={name.split(/\s+/)[0]} isAdmin={actor.role === "admin"} />;
 }

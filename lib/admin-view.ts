@@ -7,6 +7,7 @@ import { snackTimes } from "./snack-times";
 import { currentRound } from "./snacks-rules";
 import { store } from "./store";
 import { todayIST } from "./time";
+import { approvedZohoLeaveOn, zohoLeave, zohoTeamLeave, type ZohoLeaveData } from "./zoho-people";
 import type { AttendanceRow, AwayRow, EmployeeRow } from "./types";
 
 // Remote isn't a mark any more: anyone not checked in and not on leave is "not in office".
@@ -24,13 +25,14 @@ const onLeave = (away: AwayRow[], email: string, date: string) =>
   away.find((a) => a.email === email && a.type === "leave" && (a.status === "approved" || a.status === "pending") && date >= a.startDate && date <= a.endDate) ?? null;
 
 // No counts or verdicts (no "3 of 8", no "Behind"): admins read the days themselves (teamMonth).
-function personRow(e: EmployeeRow, todayRow: AttendanceRow | undefined, away: AwayRow[], today: string): PersonRow {
+function personRow(e: EmployeeRow, todayRow: AttendanceRow | undefined, away: AwayRow[], today: string, zoho?: ZohoLeaveData["approved"]): PersonRow {
   const leave = onLeave(away, e.email, today);
+  const approved = approvedZohoLeaveOn(zoho, today);
   const mode = dayMode(todayRow) === "office" ? "office" : null;
   return {
     email: e.email, name: e.name || e.email.split("@")[0], role: e.role, exempt: e.officeExempt ?? false,
     schedule: e.officeExempt ? "Fully remote" : scheduleLabel(e.officeDays ?? []),
-    today: mode ?? (leave ? "leave" : null), markedAt: mode ? todayRow?.checkInAt ?? null : null, leaveType: leave?.leaveType ?? null,
+    today: mode ?? (approved || leave ? "leave" : null), markedAt: mode ? todayRow?.checkInAt ?? null : null, leaveType: approved?.type ?? leave?.leaveType ?? null,
     birthday: e.birthday ?? null, showBirthday: e.showBirthday ?? false, left: !!e.leftOn,
   };
 }
@@ -43,8 +45,9 @@ export async function adminOverview() {
   const times = await snackTimes();
   const round = currentRound(new Date(), times) ?? { id: "pm" as const, at: times.pmAt, closesAt: times.pmClose, open: false, next: null };
   const teaGoing = tea.filter((t) => t.round === round.id && t.going);
+  const zoho = await zohoTeamLeave(employees.filter((e) => !e.leftOn).map((e) => e.email), Number(today.slice(0, 4)));
   const people = employees
-    .map((e) => personRow(e, todayRows.find((r) => r.email === e.email), away, today))
+    .map((e) => personRow(e, todayRows.find((r) => r.email === e.email), away, today, zoho.get(e.email)))
     .sort((a, b) => a.name.localeCompare(b.name));
   const names = new Map(employees.map((e) => [e.email, (e.name || e.email).split(" ")[0]]));
   return {
@@ -60,11 +63,11 @@ export type AdminOverview = Awaited<ReturnType<typeof adminOverview>>;
 export async function personMonth(email: string, month: string) {
   const { first, last } = monthBounds(month);
   const closed = await closedMap(first, last);
-  const [rows, away, changes] = await Promise.all([store.listAttendanceRange(email, first, last), store.listAwayByEmail(email, 200), store.listAttendanceChanges(email, 10)]);
+  const [rows, away, changes, zoho] = await Promise.all([store.listAttendanceRange(email, first, last), store.listAwayByEmail(email, 200), store.listAttendanceChanges(email, 10), zohoLeave(email, Number(month.slice(0, 4)))]);
   const days = Array.from({ length: Number(last.slice(8)) }, (_, i) => {
     const date = `${month}-${String(i + 1).padStart(2, "0")}`;
     const mode = dayMode(rows.find((r) => r.date === date)) === "office" ? ("office" as const) : null;
-    return { date, working: isWorkingDay(date, closed), mode: mode ?? (onLeave(away, email, date) ? ("leave" as const) : null) };
+    return { date, working: isWorkingDay(date, closed), mode: mode ?? (approvedZohoLeaveOn(zoho.data?.approved, date) || onLeave(away, email, date) ? ("leave" as const) : null) };
   });
   return { month, days, changes };
 }
@@ -84,16 +87,17 @@ export async function teamMonth(month: string, today = todayIST()) {
     if (isClosed || isWorkingDay(date)) days.push({ date, closed: isClosed, future: date > today });
   }
   // Each person's own attendance and leave (all of it: a capped "newest N" list would drop old months).
-  const [rows, aways] = await Promise.all([
+  const [rows, aways, zoho] = await Promise.all([
     Promise.all(employees.map((e) => store.listAttendanceRange(e.email, first, last))),
     Promise.all(employees.map((e) => store.listAwayByEmail(e.email, 2147483647))),
+    zohoTeamLeave(employees.filter((e) => !e.leftOn).map((e) => e.email), Number(month.slice(0, 4))),
   ]);
   const people = employees.map((e, i) => {
     const marks: Record<string, "office" | "leave"> = {};
     for (const { date, closed: shut, future } of days) {
       if (shut || future) continue;
       if (dayMode(rows[i].find((r) => r.date === date)) === "office") marks[date] = "office";
-      else if (onLeave(aways[i], e.email, date)) marks[date] = "leave";
+      else if (approvedZohoLeaveOn(zoho.get(e.email), date) || onLeave(aways[i], e.email, date)) marks[date] = "leave";
     }
     return { email: e.email, name: e.name || e.email.split("@")[0], role: e.role, exempt: e.officeExempt ?? false, left: !!e.leftOn, marks };
   });

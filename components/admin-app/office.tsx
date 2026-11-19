@@ -1,6 +1,7 @@
 "use client";
 // Admin › Office: closed days, tea and snack times, and the snack shelf, as three tabs (tab in the URL).
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useWorkspaceReplace } from "@/components/m3/workspace-link";
 import { useEffect, useState } from "react";
 import {
   useAddClosedDay, useClosedDays, useRemoveClosedDay, useSetSnackTimes, useSnacks, useSnackTimes, useSnackWrite, useTea,
@@ -12,12 +13,12 @@ type Tab = "closed" | "tea" | "shelf";
 
 export function OfficePage() {
   const params = useSearchParams();
-  const router = useRouter();
+  const replace = useWorkspaceReplace();
   const tab: Tab = (["closed", "tea", "shelf"] as const).find((t) => t === params.get("tab")) ?? "closed";
   return (
     <>
       <PageHead title="Office" />
-      <Tabs label="Office settings" value={tab} onPick={(t) => router.replace(t === "closed" ? "/admin/office" : `/admin/office?tab=${t}`, { scroll: false })}
+      <Tabs label="Office settings" value={tab} onPick={(t) => replace(t === "closed" ? "/admin/office" : `/admin/office?tab=${t}`, { scroll: false })}
         options={[["closed", "Closed days"], ["tea", "Tea & snack times"], ["shelf", "Snack shelf"]]} />
       {tab === "closed" && <ClosedDays />}
       {tab === "tea" && <TeaTimes />}
@@ -48,7 +49,6 @@ function ClosedDays() {
         <div className="m3a-fcol"><label htmlFor="cd-date" className="m3a-lbl">Date</label><input id="cd-date" type="date" className="m3a-field" min={today} value={date} onChange={(e) => setDate(e.target.value)} /></div>
         <div className="m3a-fcol"><label htmlFor="cd-reason" className="m3a-lbl">Reason</label><input id="cd-reason" className="m3a-field" maxLength={120} placeholder="Building maintenance" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
         {dup && <p role="alert" className="m3a-alert">That date is already marked closed.</p>}
-        {/* Stays available once ordered: a second order that day moves the time on. */}
         <div><button type="button" className="m3-btn m3-btn-filled" disabled={cant} onClick={submit}>Mark closed</button></div>
       </section>
       <section aria-labelledby="cd-list-h" className="m3a-half m3a-card m3a-flush" style={{ gap: 0 }}>
@@ -106,7 +106,6 @@ function TeaTimes() {
           );
         })}
         <div style={{ maxWidth: 320 }}>{field("orderAt", "Snack order goes in", "t-order")}</div>
-        {/* Stays available once ordered: a second order that day moves the time on. */}
         <div><button type="button" className="m3-btn m3-btn-filled" disabled={cant} onClick={() => save.mutate(draft, { onSuccess: () => snack("Times saved"), onError: (e) => snack(e.message) })}>Save times</button></div>
       </section>
       <section aria-labelledby="ttoday-h" className="m3a-half m3a-card m3a-flush" style={{ gap: 0 }}>
@@ -154,10 +153,9 @@ function Shelf() {
             : <span className="m3a-tag" style={{ background: "#FFDDB0", color: "#4A2800" }}>Goes in at {hm(data.today.orderAt)}</span>}
         </div>
         {picks.length > 0 && <ul className="m3a-list">{picks.map((p) => <li key={p.name} style={{ padding: "10px 0", fontSize: 16 }}>{p.name} · {p.n}</li>)}</ul>}
-        {/* Stays available once ordered: a second order that day moves the time on. */}
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" className="m3-btn m3-btn-filled" disabled={order.isPending} onClick={() => order.mutate({ action: "order-placed" }, { onError: (e) => snack(e.message) })}>Mark ordered</button>
-          {ordered && <button type="button" className="m3-btn m3-btn-text" disabled={order.isPending} onClick={() => order.mutate({ action: "order-undo" }, { onSuccess: () => snack("Picks are open again"), onError: (e) => snack(e.message) })}>Undo</button>}
+          {!ordered && <button type="button" className="m3-btn m3-btn-filled" disabled={order.isPending} onClick={() => order.mutate({ action: "order-placed" }, { onError: (e) => snack(e.message) })}>Mark ordered</button>}
+          {data.today.canUndo && <button type="button" className="m3-btn m3-btn-text" disabled={order.isPending} onClick={() => order.mutate({ action: "order-undo" }, { onSuccess: () => snack("Order mark removed"), onError: (e) => snack(e.message) })}>Undo</button>}
         </div>
       </section>
       <section aria-label="Suggestions and shelf" className="m3a-card m3a-flush">

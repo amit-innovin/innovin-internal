@@ -5,7 +5,7 @@ import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";
 import { inOfficeToday, snackTimes } from "@/lib/snack-times";
-import { pickCounts, pickOpen } from "@/lib/snacks-rules";
+import { pickCounts, pickOpen, SNACK_ORDER_KEY } from "@/lib/snacks-rules";
 import { accountRef, keyedRef } from "@/lib/submitter";
 import { todayIST } from "@/lib/time";
 
@@ -21,9 +21,8 @@ const pickRef = (email: string) => keyedRef("snackpick", email);
 const istDay = (iso: string) => new Date(new Date(iso).getTime() + 5.5 * 3600_000).toISOString().slice(0, 10);
 // When today's order went in: an admin pressed "Mark ordered" (kept as a setting, so it works
 // with nothing picked), or marked a shelf item bought on today's date (office time). Null if not yet.
-const ORDER_KEY = "snackOrder";
 async function orderedAtToday(items: { orderedAt: string | null }[], today: string) {
-  const placed = await store.getSetting<{ date: string; at: string }>(ORDER_KEY);
+  const placed = await store.getSetting<{ date: string; at: string }>(SNACK_ORDER_KEY);
   const times = [placed?.date === today ? placed.at : null, ...items.map((i) => i.orderedAt)].filter((t): t is string => !!t && istDay(t) === today);
   return times.sort().at(-1) ?? null;
 }
@@ -49,7 +48,7 @@ async function view(email: string) {
       open: pickOpen(new Date(), times, ordered),
       orderAt: times.orderAt,
       ordered,
-      ...(admin ? { orderedAt } : {}),
+      ...(admin ? { orderedAt, canUndo: (await store.getSetting<{ date: string }>(SNACK_ORDER_KEY))?.date === today } : {}),
       ...(admin ? { picks: shelfIds.map((itemId) => ({ itemId, count: counts[itemId] ?? 0 })) } : {}),
       mine: picks.find((p) => p.voterRef === pickRef(email))?.itemId ?? null,
     },
@@ -95,33 +94,10 @@ export async function PATCH(req: NextRequest) {
   if (limited) return limited;
   const body = await readJSON(req);
   const itemId = str(body?.id), action = str(body?.action);
-  // { action: "order-placed" }: today's order went in. Every shelf item someone picked today is
-  // marked bought, and members see "Order placed" (picks close).
-  if (action === "order-placed") {
+  // Recording a manual purchase and undoing it are atomic and safe to retry.
+  if (action === "order-placed" || action === "order-undo") {
     if (!(await isAdmin())) return NextResponse.json({ error: "Only admins can manage the snack shelf" }, { status: 403 });
-    const today = todayIST(), now = new Date().toISOString();
-    const [items, picks] = await Promise.all([store.listSnacks(), store.listSnackPicks(today)]);
-    const picked = new Set(picks.map((p) => p.itemId));
-    // Each item's previous last-ordered time is kept, so Undo can put it back.
-    const previous: Record<string, string | null> = {};
-    for (const i of items) if (i.status === "shelf" && picked.has(i.id)) { previous[i.id] = i.orderedAt ?? null; await store.setSnackStatus(i.id, "shelf", now); }
-    await store.setSetting(ORDER_KEY, { date: today, at: now, previous });
-    return NextResponse.json(await view(session.email));
-  }
-  // { action: "order-undo" }: a mis-tap. Today's order marks come off and picks reopen.
-  if (action === "order-undo") {
-    if (!(await isAdmin())) return NextResponse.json({ error: "Only admins can manage the snack shelf" }, { status: 403 });
-    // Only the items this order marked come off, back to when they were last ordered. Items an
-    // admin marked "ordered" one by one keep their mark.
-    const placed = await store.getSetting<{ date: string; at: string; previous?: Record<string, string | null> }>(ORDER_KEY);
-    if (placed?.date === todayIST()) {
-      for (const i of await store.listSnacks()) {
-        if (i.status !== "shelf" || i.orderedAt !== placed.at) continue;
-        if (placed.previous && !(i.id in placed.previous)) continue;
-        await store.setSnackStatus(i.id, "shelf", placed.previous?.[i.id] ?? null);
-      }
-    }
-    await store.setSetting(ORDER_KEY, null);
+    await store.setSnackOrder(todayIST(), action === "order-placed" ? new Date().toISOString() : null);
     return NextResponse.json(await view(session.email));
   }
   if (!itemId) return badRequest();

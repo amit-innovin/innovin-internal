@@ -251,6 +251,7 @@ export type TeaAnswer = { date: string; round: TeaRound; email: string; going: b
 // "suggested" by anyone (anonymously) → "shelf" when an admin adds it → "dismissed".
 export type SnackItem = { id: string; name: string; note: string; status: "suggested" | "shelf" | "dismissed"; orderedAt: string | null; createdAt: string };
 // voterRef is a keyed hash of the voter, so one vote per person without storing who.
+export type SnackOrder = { date: string; at: string; previous?: Record<string, string | null> };
 export type SnackVote = { itemId: string; voterRef: string };
 export type BookRow = { id: string; title: string; author: string; createdAt: string };
 export type ReadingRow = { email: string; bookId: string; status: "want" | "reading" | "done"; page: number; pages: number; updatedAt: string };
@@ -277,6 +278,7 @@ export interface Store {
   listTeaAnswers(date: string): Promise<TeaAnswer[]>;
   // Today's snack: one pick per person per day, by anonymous voter ref. null clears it.
   setSnackPick(date: string, voterRef: string, itemId: string | null): Promise<void>;
+  setSnackOrder(date: string, at: string | null): Promise<void>;
   listSnackPicks(date: string): Promise<{ itemId: string; voterRef: string }[]>;
   getSetting<T = unknown>(key: string): Promise<T | null>;
   setSetting(key: string, value: unknown): Promise<void>;

@@ -3,18 +3,19 @@ import { currentActor } from "@/lib/admin";
 import { createOauthState } from "@/lib/auth";
 import { CAL_PKCE_COOKIE, CAL_STATE_COOKIE, calendarAuthUrl, calendarConfigured, pkcePair } from "@/lib/calendar";
 import { secureAuthCookie } from "@/lib/cookies";
+import { calendarReturnPath } from "@/lib/workspace-navigation";
 import { store } from "@/lib/store";
-
-const back = (req: NextRequest, result: string) => NextResponse.redirect(new URL(`/admin/publish?tab=events&calendar=${result}`, req.nextUrl.origin));
 
 // Starts "Connect Google Calendar" for the signed-in admin: signed state + PKCE, both in short-lived
 // httpOnly cookies scoped to these routes, and Google is told which account to expect.
 export async function GET(req: NextRequest) {
   const actor = await currentActor();
   if (!actor || actor.role !== "admin") return NextResponse.redirect(new URL("/", req.nextUrl.origin));
-  if (!calendarConfigured()) return back(req, "unavailable");
-  if ((await store.getEmployee(actor.email))?.leftOn) return back(req, "left");
-  const { cookie, state } = createOauthState("/admin/publish?tab=events");
+  const returnPath = calendarReturnPath(req.nextUrl.searchParams.get("workspace") === "1");
+  const back = (result: string) => NextResponse.redirect(new URL(`${returnPath}&calendar=${result}`, req.nextUrl.origin));
+  if (!calendarConfigured()) return back("unavailable");
+  if ((await store.getEmployee(actor.email))?.leftOn) return back("left");
+  const { cookie, state } = createOauthState(returnPath);
   const { verifier, challenge } = pkcePair();
   const redirectUri = new URL("/api/admin/calendar/callback", req.nextUrl.origin).toString();
   const res = NextResponse.redirect(calendarAuthUrl(redirectUri, state, challenge, actor.email));

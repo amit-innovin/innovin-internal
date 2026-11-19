@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // The admin People grid (canvas: M3AdminApp › People): who was in the office on which day, for
 // everyone, with no counts. Leave and closed days show; days after today are blank.
@@ -59,4 +59,37 @@ describe("teamMonth", () => {
     const t = await teamMonth("2026-11", "2026-11-19");
     expect(t.people.find((p) => p.email === "gone@innovinlabs.com")?.left).toBe(true);
   });
+});
+
+it("shows Zoho approvals for the mapped employee in both Days and the admin grid", async () => {
+  const email = "mapped@innovinlabs.com";
+  const date = "2026-11-02";
+  await person(email, "Mapped Employee");
+  await person("unmapped@innovinlabs.com", "Other Employee");
+  vi.stubEnv("ZOHO_CLIENT_ID", "test-id");
+  vi.stubEnv("ZOHO_CLIENT_SECRET", "test-secret");
+  vi.stubEnv("ZOHO_REFRESH_TOKEN", "test-refresh");
+  vi.stubEnv("ZOHO_DATE_FORMAT", "yyyy-MM-dd");
+  vi.stubEnv("ZOHO_EMPLOYEE_IDS", JSON.stringify({ [email]: "42" }));
+  vi.stubEnv("ZOHO_LEAVE_TYPE_IDS", JSON.stringify({ cl: "1", sl: "2", el: "3", fl: "4" }));
+  vi.stubGlobal("fetch", async (input: string | URL) => {
+    const url = new URL(input.toString());
+    if (url.hostname.startsWith("accounts.")) return Response.json({ access_token: "mock-token", expires_in: 3600 });
+    if (url.pathname.endsWith("bookedAndBalance")) return Response.json({ report: { "42": { "1": { balance: 2 } } } });
+    return Response.json({ records: { r1: {
+      "Employee.ID": "42", From: date, To: date, ApprovalStatus: "Approved",
+      Leavetype: "Casual leave", Unit: "Day", Days: { [date]: { LeaveCount: 1 } }, Reason: "Private",
+    } } });
+  });
+  try {
+    const { daysView } = await import("@/lib/days");
+    const [member, team] = await Promise.all([daysView(email, "2026-11"), teamMonth("2026-11", "2026-11-19")]);
+    expect(member.days.find((day) => day.date === date)).toMatchObject({ leave: "approved", planned: false });
+    expect(team.people.find((employee) => employee.email === email)?.marks[date]).toBe("leave");
+    expect(team.people.find((employee) => employee.email !== email)?.marks[date]).toBeUndefined();
+    expect(JSON.stringify([member, team])).not.toContain("Private");
+  } finally {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  }
 });

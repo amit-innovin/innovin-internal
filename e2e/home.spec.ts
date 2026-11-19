@@ -82,15 +82,15 @@ test.describe("Home", () => {
     await expect(page.getByText(/\d+ done · \d+ planned/)).toHaveCount(0);
   });
 
-  test("the bell and the Wi-Fi button go to their own pages; Speak up is one tap away", async ({ page, isMobile }) => {
+  test("the bell, Wi-Fi and Speak up open inside Home", async ({ page, isMobile }) => {
     await signInEmployee(page, uniqueEmail("home-nav"), "/");
-    await page.getByRole("link", { name: /^Notifications/ }).click();
-    await expect(page).toHaveURL(/\/notifications$/);
+    await page.locator(".m3-home").getByRole("link", { name: /^Notifications/ }).click();
+    await expect(page).toHaveURL(/[?&]view=notifications/);
     await page.goto("/");
     await page.getByRole("link", { name: "Check office Wi-Fi" }).click();
-    await expect(page).toHaveURL(/\/wifi/);
+    await expect(page).toHaveURL(/[?&]view=wifi/);
     await page.goto("/");
     await page.getByRole("link", { name: isMobile ? "Speak up anonymously" : "Speak up" }).filter({ visible: true }).first().click();
-    await expect(page).toHaveURL(/\/grievances/);
+    await expect(page).toHaveURL(/[?&]view=speak-up/);
   });
 });

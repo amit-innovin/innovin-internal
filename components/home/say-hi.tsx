@@ -25,7 +25,7 @@ export function useSayHiSetting() {
 }
 
 // "Say hi to {name}": a gesture, or an invite with a time. Up to 3 a day.
-function SayHiSheet({ person, sentToday, onClose }: { person: { email: string; name: string }; sentToday: number; onClose: () => void }) {
+export function SayHiSheet({ person, sentToday, onClose }: { person: { email: string; name: string }; sentToday: number; onClose: () => void }) {
   const client = useQueryClient();
   const [pick, setPick] = useState<HiKind | null>(null);
   const [time, setTime] = useState<"now" | "30" | "pick" | null>(null);

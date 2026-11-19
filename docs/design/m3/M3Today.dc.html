@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Innovin Today — desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006493;text-decoration:none}a:hover{color:#004C70}
+.card{background:#FFFFFF;border-radius:24px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;min-width:0}
+.pin{background:#FFFFFF;border-radius:24px;padding:16px 18px 18px;display:flex;flex-direction:column;justify-content:space-between;gap:14px;box-sizing:border-box;min-width:0;min-height:172px;color:#181C20;transition:box-shadow .2s,transform .12s}
+.pin:hover{box-shadow:0 2px 6px rgba(24,28,32,.06),0 8px 24px rgba(24,28,32,.06)}
+.pinhd{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
+.pinhd .when{margin-left:auto;font-size:12px;font-weight:500;color:#41474D;display:inline-flex;align-items:center;gap:2px}
+.big{font-size:34px;line-height:38px;font-weight:700;letter-spacing:-0.02em}
+.unit{font-size:15px;font-weight:600;color:#41474D;letter-spacing:0}
+.sec{display:flex;align-items:baseline;justify-content:space-between;padding:0 4px}
+.sec h2{margin:0;font-size:22px;line-height:28px;font-weight:700;letter-spacing:-0.01em}
+.sm{font-size:13px;line-height:18px;color:#41474D}
+.xs{font-size:12px;line-height:16px;color:#41474D}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 18px;border-radius:20px;border:0;font:600 14px/1 Figtree,system-ui,sans-serif;cursor:pointer;white-space:nowrap;transition:background-color .2s,transform .12s}
+.btn:active{transform:scale(.97)}
+.btn-sm{height:34px;padding:0 14px;font-size:13px}
+.filled{background:#006493;color:#FFFFFF}.filled:hover{background:#00557D}
+.tonal{background:#D3E5F5;color:#0C1D29}.tonal:hover{background:#C3DAEE}
+.outlined{background:transparent;color:#006493;border:1px solid #71787E}
+.text{background:transparent;color:#006493;padding:0 10px}.text:hover{background:#EEF5FB}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap}
+.tab{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:22px;font-size:14px;font-weight:600;color:#41474D;position:relative}
+.tab:hover{background:#DDE3EA;color:#181C20}
+.row{display:flex;align-items:center;gap:14px;padding:12px 4px;min-height:44px}
+.row + .row{border-top:1px solid #E6E9EE}
+.av{flex:none;border-radius:50%;display:grid;place-items:center;font-weight:700}
+.iconbtn{width:44px;height:44px;border-radius:22px;border:0;display:grid;place-items:center;cursor:pointer;background:transparent;color:#41474D;position:relative}
+.iconbtn:hover{background:#E3E8EF}
+.dot{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;font:700 12px/1 Figtree,system-ui,sans-serif;padding:0}
+.opt{display:flex;align-items:center;justify-content:space-between;height:42px;padding:0 14px;border-radius:12px;font:600 14px/1 Figtree,system-ui,sans-serif;cursor:pointer}
+.snack{height:40px;padding:0 16px;border-radius:20px;font:600 14px/1 Figtree,system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+</style>
+</helmet>
+
+<div style="width: 1704px; height: 968px; background: #F1F4FA; font-family: Figtree, system-ui, sans-serif; color: #181C20; display: flex; flex-direction: column; position: relative; overflow: hidden">
+
+  <!-- Top bar: brand · floating tabs · you. No sidebar. -->
+  <header style="flex: none; height: 76px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 32px; box-sizing: border-box; background: rgba(241, 244, 250, .92); border-bottom: 1px solid {{ barLine }}; position: relative; z-index: 5">
+    <a href="#" style="font-size: 22px; font-weight: 800; color: #006493; letter-spacing: -0.02em; justify-self: start">innovin</a>
+    <nav aria-label="Main" style="display: flex; gap: 2px; padding: 4px; border-radius: 28px; background: #E6EBF2">
+      <a href="#" class="tab" aria-current="page" style="background: #FFFFFF; color: #001E30; box-shadow: 0 1px 2px rgba(0,0,0,.08)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>Today</a>
+      <a href="#" class="tab"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 8h10M7 12h10M7 16h6"></path></svg>Feed<span style="min-width: 18px; height: 18px; border-radius: 9px; background: #BA1A1A; color: #FFFFFF; font-size: 11px; font-weight: 700; display: grid; place-items: center; padding: 0 5px; box-sizing: border-box">{{ feedNew }}</span></a>
+      <a href="#" class="tab"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg>Days</a>
+      <a href="#" class="tab"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"></path><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"></path><path d="M8 2v3M12 2v3"></path></svg>Tea &amp; snacks</a>
+      <a href="#" class="tab"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>Browse</a>
+    </nav>
+    <div style="justify-self: end; display: flex; align-items: center; gap: 6px">
+      <button type="button" class="iconbtn" onClick="{{ toggleNotifs }}" aria-label="Notifications, 3 new"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg><span style="position: absolute; top: 8px; right: 8px; width: 9px; height: 9px; border-radius: 5px; background: #BA1A1A; border: 2px solid #F1F4FA"></span></button>
+      <button type="button" aria-label="Account, Amit Jaison" style="border: 0; padding: 0; background: transparent; cursor: pointer"><span class="av" style="width: 40px; height: 40px; background: #CAE6FF; color: #001E30; font-size: 14px">AJ</span></button>
+    </div>
+  </header>
+
+  <main onScroll="{{ onScroll }}" style="flex: 1; min-height: 0; overflow-y: auto">
+    <div style="max-width: 1320px; margin: 0 auto; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 28px">
+
+      <!-- Large title, Apple style -->
+      <section style="display: flex; align-items: flex-end; gap: 24px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: .06em; color: #006493">THURSDAY 19 NOVEMBER</span>
+          <h1 style="margin: 0; font-size: 44px; line-height: 50px; font-weight: 700; letter-spacing: -0.025em">Good afternoon, Amit</h1>
+        </div>
+        <sc-if value="{{ showCheckIn }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; align-items: center; gap: 14px">
+            <span class="sm" style="text-align: right">In the office today?<br>Location is checked once.</span>
+            <button type="button" class="btn filled" onClick="{{ checkIn }}" style="height: 56px; border-radius: 16px; padding: 0 24px; font-size: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.2), 0 4px 8px rgba(0,100,147,.18)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>Check in</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ checking }}" hint-placeholder-val="{{ false }}">
+          <span class="chip" style="height: 40px; border-radius: 20px; padding: 0 16px; background: #CAE6FF; color: #001E30; font-size: 14px"><span style="width: 16px; height: 16px; border-radius: 8px; border: 2.5px solid #9CCBEA; border-top-color: #006493; box-sizing: border-box"></span>Checking your location…</span>
+        </sc-if>
+        <sc-if value="{{ checkedIn }}" hint-placeholder-val="{{ false }}">
+          <span style="display: flex; align-items: center; gap: 4px">
+            <span class="chip" style="height: 40px; border-radius: 20px; padding: 0 16px; background: #CDEBD6; color: #0B3D1F; font-size: 14px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>In office · since 2:41 pm</span>
+            <button type="button" class="btn btn-sm text" onClick="{{ undoCheckIn }}">Change</button>
+          </span>
+        </sc-if>
+      </section>
+
+      <!-- Signature: the Today ribbon -->
+      <section class="card" aria-label="Your day" style="padding: 18px 28px 20px; gap: 0">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px">
+          <span style="font-size: 14px; font-weight: 700">Your day</span>
+          <span class="xs">{{ ribbonNote }}</span>
+        </div>
+        <div style="position: relative; height: 92px">
+          <!-- track -->
+          <div style="position: absolute; left: 0; right: 0; top: 44px; height: 6px; border-radius: 3px; background: #E3E8EF"></div>
+          <div style="position: absolute; left: 0; width: 57.5%; top: 44px; height: 6px; border-radius: 3px; background: #9CCBEA"></div>
+          <sc-if value="{{ checkedIn }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; left: 56.8%; width: 0.7%; top: 44px; height: 6px; background: #2E7D4F"></div></sc-if>
+          <!-- hour ticks -->
+          <sc-for list="{{ hours }}" as="h" hint-placeholder-count="6">
+            <span class="xs" style="position: absolute; top: 72px; left: {{ h.left }}; transform: translateX(-50%); font-weight: 600; color: #71787E">{{ h.label }}</span>
+          </sc-for>
+          <!-- events -->
+          <sc-for list="{{ pins }}" as="p" hint-placeholder-count="3">
+            <button type="button" onClick="{{ p.go }}" style="position: absolute; left: {{ p.left }}; top: {{ p.top }}; transform: translateX(-50%); border: 0; background: transparent; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: inherit">
+              <span style="{{ p.labelStyle }}">{{ p.label }}</span>
+            </button>
+          </sc-for>
+          <sc-for list="{{ pins }}" as="p" hint-placeholder-count="3">
+            <span style="position: absolute; left: {{ p.left }}; top: 40px; width: 14px; height: 14px; border-radius: 7px; transform: translateX(-50%); box-sizing: border-box; {{ p.dotStyle }}"></span>
+          </sc-for>
+          <!-- now -->
+          <span style="position: absolute; left: 57.5%; top: 30px; height: 34px; width: 2px; background: #181C20; transform: translateX(-50%); border-radius: 1px"></span>
+          <span style="position: absolute; left: 57.5%; top: 6px; transform: translateX(-50%); font-size: 11px; font-weight: 800; letter-spacing: .04em; color: #FFFFFF; background: #181C20; border-radius: 6px; padding: 3px 6px">NOW 2:45</span>
+        </div>
+      </section>
+
+      <!-- Admins only -->
+      <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+        <section style="display: flex; flex-direction: column; gap: 12px">
+          <div class="sec"><h2 style="color: #65587B">Needs you</h2><a href="#" class="btn text">Admin tools</a></div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+            <a href="#" class="card" style="flex-direction: row; align-items: center; gap: 14px; color: #181C20"><span class="av" style="width: 44px; height: 44px; background: #FFDAD6; color: #410002; font-size: 16px">2</span><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 15px">Speak up reports</span><span class="xs">Oldest waiting since Tuesday</span></span><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></a>
+            <div class="card" style="flex-direction: row; align-items: center; gap: 14px"><span class="av" style="width: 44px; height: 44px; background: #CDEBD6; color: #0B3D1F"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><circle cx="9" cy="9" r="1"></circle><circle cx="15" cy="13" r="1"></circle><circle cx="10" cy="15.5" r="1"></circle></svg></span><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 15px">{{ orderTitle }}</span><span class="xs">{{ orderLine }}</span></span><button type="button" class="btn btn-sm" onClick="{{ markOrdered }}" style="{{ orderBtnStyle }}">{{ orderBtn }}</button></div>
+            <a href="#" class="card" style="flex-direction: row; align-items: center; gap: 14px; color: #181C20"><span class="av" style="width: 44px; height: 44px; background: #EBDCFF; color: #20142F"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg></span><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 15px">Connect Google Calendar</span><span class="xs">So event invites can go out</span></span><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></a>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- Pinned: Apple Health summary cards in Material -->
+      <section style="display: flex; flex-direction: column; gap: 12px">
+        <div class="sec"><h2>Pinned</h2><button type="button" class="btn text">Edit</button></div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+
+          <div class="pin">
+            <a href="#" class="pinhd" style="color: #65587B"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg>Office days<span class="when">This week<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></span></a>
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span><span class="big">{{ needBig }}</span> <span class="unit">{{ needUnit }}</span></span>
+              <div style="display: flex; justify-content: space-between">
+                <sc-for list="{{ week }}" as="d" hint-placeholder-count="5">
+                  <span style="display: flex; flex-direction: column; align-items: center; gap: 4px"><button type="button" class="dot" onClick="{{ d.tap }}" aria-label="{{ d.aria }}" style="{{ d.style }}">{{ d.n }}</button><span style="font-size: 11px; font-weight: {{ d.weight }}; color: #41474D">{{ d.label }}</span></span>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div class="pin">
+            <a href="#" class="pinhd" style="color: #2E7D4F"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4c1.7 0 3 2 3 4.5S9 13 7.5 13 5 11 5 8.5 5.3 4 7 4z"></path><path d="M5.5 15.5h4v2a2 2 0 0 1-4 0z"></path><path d="M17 7c1.7 0 2.5 2 2.5 4.5S18.5 16 17 16s-2.5-2-2.5-4.5S15.3 7 17 7z"></path><path d="M14.5 18.5h4v1a2 2 0 0 1-4 0z"></path></svg>10K steps<span class="when">Today<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></span></a>
+            <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px">
+              <span style="display: flex; flex-direction: column; gap: 8px"><span><span class="big">{{ stepsFmt }}</span> <span class="unit">steps</span></span><button type="button" class="btn btn-sm tonal" onClick="{{ addSteps }}" style="align-self: flex-start; background: #CDEBD6; color: #0B3D1F">+ Add 2,000</button></span>
+              <svg role="img" aria-label="{{ stepsAria }}" width="76" height="76" viewBox="0 0 44 44"><circle cx="22" cy="22" r="17" fill="none" stroke="#DDF1E4" stroke-width="7"></circle><circle cx="22" cy="22" r="17" fill="none" stroke="#2E7D4F" stroke-width="7" stroke-linecap="round" stroke-dasharray="{{ stepsDash }}" transform="rotate(-90 22 22)"></circle></svg>
+            </div>
+          </div>
+
+          <div class="pin">
+            <a href="#" class="pinhd" style="color: #8A4A00"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20c4-1 6-5 6-10M10 10c3 0 6-2 8-6M10 10c-3-1-5-3-6-6"></path></svg>Leave<span class="when">Zoho · 10 Nov<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></span></a>
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span><span class="big">3</span> <span class="unit">casual days left</span></span>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap"><span class="chip" style="background: #FFF1E3; color: #4A2800">Sick 6</span><span class="chip" style="background: #FFF1E3; color: #4A2800">Earned 9</span><span class="chip" style="background: #FFF1E3; color: #4A2800">Flexible 2</span></div>
+            </div>
+          </div>
+
+          <div class="pin">
+            <a href="#" class="pinhd" style="color: #006493"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0"></path><circle cx="12" cy="19.5" r="1"></circle></svg>Office Wi-Fi<span class="when">{{ wifiWhen }}<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></span></a>
+            <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px">
+              <span style="display: flex; flex-direction: column; gap: 8px"><span><span class="big">{{ wifiBig }}</span> <span class="unit">{{ wifiUnit }}</span></span><button type="button" class="btn btn-sm tonal" onClick="{{ runWifi }}" disabled="{{ wifiRunning }}" style="align-self: flex-start">{{ wifiBtn }}</button></span>
+              <svg aria-hidden="true" width="64" height="56" viewBox="0 0 64 56"><rect x="2" y="40" width="10" height="14" rx="3" fill="{{ bar1 }}"></rect><rect x="18" y="30" width="10" height="24" rx="3" fill="{{ bar2 }}"></rect><rect x="34" y="18" width="10" height="36" rx="3" fill="{{ bar3 }}"></rect><rect x="50" y="4" width="10" height="50" rx="3" fill="{{ bar4 }}"></rect></svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Up next + around the office -->
+      <div style="display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; align-items: start">
+        <section style="display: flex; flex-direction: column; gap: 12px">
+          <div class="sec"><h2>Up next</h2><a href="#" class="btn text">Calendar</a></div>
+          <div class="card" style="padding: 6px 20px; gap: 0">
+            <div class="row">
+              <span style="flex: none; width: 72px"><span style="display: block; font-size: 16px; font-weight: 700">4:00 pm</span><span class="xs">Today</span></span>
+              <span class="av" style="width: 40px; height: 40px; background: #FFF3CC; color: #5C4300"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"></path><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"></path></svg></span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 15px">{{ teaTitle }}</span><span class="xs">{{ teaLine }}</span></span>
+              <sc-if value="{{ teaAsk }}" hint-placeholder-val="{{ false }}"><span style="display: flex; gap: 4px"><button type="button" class="btn btn-sm filled" onClick="{{ teaYes }}">Yes, tea</button><button type="button" class="btn btn-sm text" onClick="{{ teaSkip }}">Skip</button></span></sc-if>
+              <sc-if value="{{ teaAnswered }}" hint-placeholder-val="{{ false }}"><button type="button" class="btn btn-sm text" onClick="{{ teaChange }}">Change</button></sc-if>
+            </div>
+            <div class="row">
+              <span style="flex: none; width: 72px"><span style="display: block; font-size: 16px; font-weight: 700">5:00 pm</span><span class="xs">Today</span></span>
+              <span class="av" style="width: 40px; height: 40px; background: #EBDCFF; color: #20142F"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"></path></svg></span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 15px">Poll closes · Friday lunch</span><span class="xs">{{ pollRowLine }}</span></span>
+              <sc-if value="{{ pollOpen }}" hint-placeholder-val="{{ true }}"><span style="display: flex; gap: 6px"><sc-for list="{{ pollOptions }}" as="o" hint-placeholder-count="3"><button type="button" class="btn btn-sm outlined" onClick="{{ o.pick }}">{{ o.label }}</button></sc-for></span></sc-if>
+              <sc-if value="{{ pollVoted }}" hint-placeholder-val="{{ false }}"><button type="button" class="btn btn-sm text" onClick="{{ clearVote }}">Change</button></sc-if>
+            </div>
+            <div class="row">
+              <span style="flex: none; width: 72px"><span style="display: block; font-size: 16px; font-weight: 700">Wed 25</span><span class="xs">4:30 pm</span></span>
+              <span class="av" style="width: 40px; height: 40px; background: #FFDDB0; color: #4A2800"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c2 3 3 5 3 7a3 3 0 0 1-6 0c0-2 1-4 3-7z"></path><path d="M5 15h14l-2 5H7z"></path></svg></span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 15px">Diwali potluck</span><span class="xs">Big room · bring one dish</span></span>
+              <button type="button" class="btn btn-sm" onClick="{{ toggleRsvp }}" aria-pressed="{{ going }}" style="{{ rsvpStyle }}">{{ rsvpLabel }}</button>
+            </div>
+          </div>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 12px">
+          <div class="sec"><h2>In the office</h2><span class="xs">Say hi is on</span></div>
+          <div class="card" style="gap: 18px">
+            <div style="display: flex; justify-content: space-between">
+              <sc-for list="{{ people }}" as="p" hint-placeholder-count="4">
+                <span style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 25%">
+                  <span class="av" style="width: 56px; height: 56px; font-size: 16px; {{ p.avStyle }}">{{ p.i }}</span>
+                  <span style="font-size: 14px; font-weight: 600">{{ p.name }}</span>
+                  <button type="button" class="btn btn-sm" onClick="{{ p.wave }}" aria-pressed="{{ p.waved }}" aria-label="{{ p.aria }}" style="height: 30px; padding: 0 12px; {{ p.style }}">{{ p.label }}</button>
+                </span>
+              </sc-for>
+            </div>
+            <div style="height: 1px; background: #E6E9EE"></div>
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-weight: 700; font-size: 15px">Today's snack</span><span class="xs">Order goes in at 3:30 pm</span></div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <sc-for list="{{ snacks }}" as="s" hint-placeholder-count="4"><button type="button" class="snack" onClick="{{ s.pick }}" aria-pressed="{{ s.on }}" disabled="{{ snacksLocked }}" style="{{ s.style }}">{{ s.name }}</button></sc-for>
+              </div>
+              <span class="xs">{{ snackLine }}</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- From the team: Feed highlights -->
+      <section style="display: flex; flex-direction: column; gap: 12px">
+        <div class="sec"><h2>From the team <span class="chip" style="vertical-align: middle; background: #CAE6FF; color: #001E30; margin-left: 6px">{{ feedNew }} new</span></h2><a href="#" class="btn text">Open Feed</a></div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+          <article class="card" style="border: 1.5px solid #006493; gap: 10px">
+            <div style="display: flex; align-items: center; gap: 10px"><span class="av" style="width: 36px; height: 36px; background: #FFDAD6; color: #410002; font-size: 15px">!</span><span style="display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 14px">Important · Anita</span><span class="xs">Monday</span></span></div>
+            <h3 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Office closed on Friday 27 November</h3>
+            <p class="sm" style="margin: 0">Power maintenance all day. Plan your office days around it.</p>
+            <div style="flex: 1"></div>
+            <button type="button" class="btn btn-sm" onClick="{{ ackAnn }}" style="align-self: flex-start; {{ annStyle }}">{{ annLabel }}</button>
+          </article>
+          <article class="card" style="gap: 10px">
+            <div style="display: flex; align-items: center; gap: 10px"><span class="av" style="width: 36px; height: 36px; background: #EBDCFF; color: #20142F; font-size: 12px">MR</span><span style="display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 14px">Poll · Meera</span><span class="xs">Closes today 5 pm</span></span></div>
+            <h3 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 700">Friday lunch: what should we order?</h3>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <sc-for list="{{ pollOptions }}" as="o" hint-placeholder-count="3">
+                <button type="button" class="opt" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="{{ o.style }}"><span>{{ o.label }}</span><sc-if value="{{ o.on }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg></sc-if></button>
+              </sc-for>
+            </div>
+          </article>
+          <article class="card" style="gap: 10px; padding: 0; overflow: hidden">
+            <div style="height: 132px; background: #DDF1E4; display: flex; align-items: flex-end; justify-content: center"><svg aria-hidden="true" width="260" height="112" viewBox="0 0 260 112"><rect x="0" y="94" width="260" height="18" fill="#B9DDC4"></rect><path d="M70 94V54M70 70c-12-5-17-14-15-24 10 2 15 10 15 24zM70 64c10-7 19-8 25-3-5 8-15 8-25 3z" stroke="#2E7D4F" stroke-width="4" fill="#5DAA74"></path><rect x="56" y="82" width="28" height="14" rx="4" fill="#C2662D"></rect><path d="M130 94V36M130 52c-15-3-22-13-20-27 12 3 18 13 20 27zM130 47c14-8 24-10 30-3-7 10-18 10-30 3z" stroke="#2E7D4F" stroke-width="4" fill="#5DAA74"></path><rect x="114" y="78" width="32" height="18" rx="4" fill="#B04F2C"></rect><path d="M190 94V64M190 74c-9-3-12-10-11-17 7 2 11 9 11 17zM190 71c7-5 14-5 18-2-4 7-11 7-18 2z" stroke="#2E7D4F" stroke-width="4" fill="#5DAA74"></path><rect x="178" y="84" width="24" height="12" rx="4" fill="#C2662D"></rect></svg></div>
+            <div style="padding: 0 20px 18px; display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; align-items: center; gap: 10px"><span class="av" style="width: 36px; height: 36px; background: #CDEBD6; color: #0B3D1F; font-size: 12px">DP</span><span style="display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 14px">Dev</span><span class="xs">Today 10:12 am</span></span></div>
+              <h3 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700">The balcony finally has plants</h3>
+              <button type="button" class="btn btn-sm" onClick="{{ toggleLike }}" aria-pressed="{{ liked }}" style="align-self: flex-start; {{ likeStyle }}">{{ likeLabel }}</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Quiet footer rows -->
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+        <a href="#" style="background: #24222F; color: #FFFFFF; border-radius: 24px; padding: 18px 22px; display: flex; align-items: center; gap: 14px">
+          <span class="av" style="width: 44px; height: 44px; background: #3A374A"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"></path></svg></span>
+          <span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 16px">Speak up anonymously</span><span style="font-size: 13px; color: #C9C6D6">Admins see the day it was sent, never who sent it.</span></span>
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>
+        </a>
+        <a href="#" class="card" style="flex-direction: row; align-items: center; gap: 14px; color: #181C20">
+          <span class="av" style="width: 44px; height: 44px; background: #EBEEF4; color: #41474D"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 1.5-2.5 2-2.5 3.5M12 17h.01"></path></svg></span>
+          <span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 16px">How innovin works</span><span class="xs">Office days, leave, tea rounds and privacy</span></span>
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#41474D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Notifications side sheet -->
+  <sc-if value="{{ notifsOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, .32); display: flex; justify-content: flex-end; z-index: 10">
+      <button type="button" aria-label="Close notifications" onClick="{{ toggleNotifs }}" style="flex: 1; border: 0; background: transparent; cursor: default"></button>
+      <aside aria-label="Notifications" style="width: 420px; height: 100%; background: #FFFFFF; border-radius: 28px 0 0 28px; padding: 22px 22px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 6px"><h2 style="margin: 0; font-size: 24px; font-weight: 700">Notifications</h2><button type="button" class="iconbtn" aria-label="Close" onClick="{{ toggleNotifs }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>
+        <div class="row"><span class="av" style="width: 40px; height: 40px; background: #CDEBD6; color: #0B3D1F; font-size: 13px">PR</span><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 14px">Priya waved at you</span><span class="xs">2 min ago</span></span><button type="button" class="btn btn-sm tonal">Wave back</button></div>
+        <div class="row"><span class="av" style="width: 40px; height: 40px; background: #24222F; color: #FFFFFF; font-size: 13px">SU</span><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 14px">An admin replied to your Speak up report</span><span class="xs">Today 11:20 am</span></span></div>
+        <div class="row"><span class="av" style="width: 40px; height: 40px; background: #EBDCFF; color: #20142F; font-size: 13px">MR</span><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700; font-size: 14px">New poll: Friday lunch</span><span class="xs">Today 9:05 am</span></span></div>
+        <div style="flex: 1"></div>
+        <a href="#" class="btn text" style="align-self: flex-start">Notification settings</a>
+      </aside>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"role":{"editor":"enum","options":["member","admin"],"default":"member","section":"Demo"},"startCheckedIn":{"editor":"boolean","default":false,"section":"Demo"},"$preview":{"width":1704,"height":968}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { phase: props.startCheckedIn ? 'in' : 'out', fri: false, tea: null, vote: null, going: false, liked: false, ack: false, snack: null, steps: 4210, waves: {}, wifi: 'idle', notifs: false, ordered: false, scrolled: false };
+  }
+  componentDidUpdate(prev) {
+    if (prev.startCheckedIn !== this.props.startCheckedIn) this.setState({ phase: this.props.startCheckedIn ? 'in' : 'out' });
+  }
+  renderVals() {
+    const s = this.state;
+    const isAdmin = (this.props.role ?? 'member') === 'admin';
+    const checkedIn = s.phase === 'in';
+    const fmt = (n) => n.toLocaleString('en-IN');
+
+    // Office days: 5 done before today, 8 needed this month
+    const need = Math.max(0, 8 - 5 - (checkedIn ? 1 : 0) - (s.fri ? 1 : 0));
+    const st = {
+      done: 'background: #65587B; color: #FFFFFF; border: 0',
+      planned: 'background: transparent; color: #65587B; border: 2px solid #65587B',
+      empty: 'background: transparent; color: #71787E; border: 1.5px dashed #C1C7CE',
+    };
+    const mk = (label, n, state, extra) => Object.assign({ label, n, weight: 500, aria: label + ' ' + n + ', ' + state, style: st[state] + '; cursor: default', tap: () => {} }, extra || {});
+    const today = checkedIn ? 'done' : 'empty';
+    const week = [
+      mk('Mon', 16, 'done'), mk('Tue', 17, 'done'), mk('Wed', 18, 'empty'),
+      mk('Today', 19, today, { weight: 800, style: st[today] + '; outline: 2px solid #181C20; outline-offset: 2px; cursor: default' }),
+      mk('Fri', 20, s.fri ? 'planned' : 'empty', { style: (s.fri ? st.planned : st.empty) + '; cursor: pointer', tap: () => this.setState({ fri: !s.fri }) }),
+    ];
+
+    // Today ribbon: 9 am to 7 pm
+    const pos = (h) => (((h - 9) / 10) * 100).toFixed(1) + '%';
+    const hours = [[9, '9 am'], [11, '11'], [13, '1 pm'], [15, '3'], [17, '5'], [19, '7 pm']].map(([h, label]) => ({ label, left: pos(h) }));
+    const pinLabel = (bg, fg) => 'display: inline-block; white-space: nowrap; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 8px; background: ' + bg + '; color: ' + fg;
+    const doneDot = 'background: #2E7D4F; border: 0';
+    const openDot = 'background: #FFFFFF; border: 3px solid #006493';
+    const teaDone = s.tea !== null;
+    const pins = [
+      { left: pos(15.5), top: '0px', label: s.snack ? 'Snack: ' + s.snack : 'Snack order 3:30', labelStyle: s.snack ? pinLabel('#CDEBD6', '#0B3D1F') : pinLabel('#FFF3CC', '#5C4300'), dotStyle: s.snack ? doneDot : openDot, go: () => {} },
+      { left: pos(16), top: '58px', label: teaDone ? (s.tea === 'yes' ? 'Tea · you’re in' : 'Tea · skipped') : 'Tea 4:00', labelStyle: teaDone ? pinLabel('#CDEBD6', '#0B3D1F') : pinLabel('#FFF3CC', '#5C4300'), dotStyle: teaDone ? doneDot : openDot, go: () => {} },
+      { left: pos(17), top: '0px', label: s.vote ? 'Voted ' + s.vote : 'Poll closes 5:00', labelStyle: s.vote ? pinLabel('#CDEBD6', '#0B3D1F') : pinLabel('#EBDCFF', '#20142F'), dotStyle: s.vote ? doneDot : openDot, go: () => {} },
+    ];
+    if (checkedIn) pins.unshift({ left: pos(14.68), top: '58px', label: 'Checked in 2:41', labelStyle: pinLabel('#CDEBD6', '#0B3D1F'), dotStyle: doneDot, go: () => {} });
+    const left = (s.snack ? 0 : 1) + (teaDone ? 0 : 1) + (s.vote ? 0 : 1);
+    const ribbonNote = !checkedIn ? 'Check in to join tea and pick a snack' : left === 0 ? 'All done for today' : left + ' thing' + (left > 1 ? 's' : '') + ' left today';
+
+    let teaTitle = 'Tea round', teaLine = 'Check in to join this round', teaAsk = false, teaAnswered = false;
+    if (checkedIn && s.tea === null) { teaLine = 'Answer by 3:45 pm'; teaAsk = true; }
+    if (checkedIn && s.tea === 'yes') { teaTitle = "You're in for tea"; teaLine = 'Comes round at 4:00 pm'; teaAnswered = true; }
+    if (checkedIn && s.tea === 'skip') { teaTitle = 'Skipping this round'; teaLine = 'Next round tomorrow at 11:00 am'; teaAnswered = true; }
+
+    const pollOptions = ['Biryani', 'Thali', 'Salad bowls'].map((label) => {
+      const on = s.vote === label;
+      return { label, on, pick: () => this.setState({ vote: on ? null : label }), style: on ? 'border: 0; background: #CAE6FF; color: #001E30' : 'border: 1px solid #C1C7CE; background: #FFFFFF; color: #181C20' };
+    });
+
+    const snacks = ['Samosa', 'Fruit bowl', 'Masala peanuts', 'Banana chips'].map((name) => {
+      const on = s.snack === name;
+      return { name, on, pick: () => this.setState({ snack: on ? null : name }), style: on ? 'border: 0; background: #CAE6FF; color: #001E30' : 'border: 1px solid #C1C7CE; background: #FFFFFF; color: #181C20' + (checkedIn ? '' : '; opacity: .45; cursor: default') };
+    });
+
+    const ppl = [['Priya', 'PR', '#CDEBD6', '#0B3D1F'], ['Dev', 'DP', '#D3E5F5', '#0C1D29'], ['Kiran', 'KS', '#FFDDB0', '#4A2800'], ['Meera', 'MR', '#EBDCFF', '#20142F']];
+    const people = ppl.map(([name, i, bg, fg]) => {
+      const waved = !!s.waves[name];
+      return { name, i, waved, aria: (waved ? 'Waved at ' : 'Wave at ') + name, avStyle: 'background: ' + bg + '; color: ' + fg, label: waved ? 'Waved' : 'Wave', style: waved ? 'background: #CDEBD6; color: #0B3D1F' : 'background: #D3E5F5; color: #0C1D29', wave: () => this.setState({ waves: Object.assign({}, s.waves, { [name]: !waved }) }) };
+    });
+
+    const pct = Math.min(1, s.steps / 10000);
+    const wifiDone = s.wifi === 'done';
+    const lit = '#006493', dim = '#DDE7F0';
+    const newCount = (s.ack ? 0 : 1) + (s.vote ? 0 : 1) + (s.liked ? 0 : 1);
+
+    return {
+      isAdmin,
+      barLine: s.scrolled ? '#DDE2E9' : 'transparent',
+      onScroll: (e) => { const y = e.currentTarget.scrollTop > 8; if (y !== s.scrolled) this.setState({ scrolled: y }); },
+      feedNew: newCount,
+      orderTitle: s.ordered ? 'Snacks marked ordered' : 'Snack order at 3:30 pm',
+      orderLine: s.ordered ? 'Marked at 2:46 pm' : 'Picks are in the Office tab',
+      orderBtn: s.ordered ? 'Undo' : 'Mark ordered',
+      orderBtnStyle: s.ordered ? 'background: transparent; color: #006493' : 'background: #006493; color: #FFFFFF',
+      markOrdered: () => this.setState({ ordered: !s.ordered }),
+      checkedIn, checking: s.phase === 'checking', showCheckIn: s.phase === 'out',
+      checkIn: () => { this.setState({ phase: 'checking' }); setTimeout(() => this.setState({ phase: 'in' }), 1100); },
+      undoCheckIn: () => this.setState({ phase: 'out', tea: null, snack: null }),
+      hours, pins, ribbonNote,
+      week,
+      needBig: need === 0 ? 'On track' : String(need),
+      needUnit: need === 0 ? 'for November' : 'more to plan in November',
+      stepsFmt: fmt(s.steps), stepsAria: fmt(s.steps) + ' of 10,000 steps',
+      stepsDash: (pct * 106.8).toFixed(1) + ' 106.8',
+      addSteps: () => this.setState({ steps: Math.min(99999, s.steps + 2000) }),
+      wifiWhen: wifiDone ? 'Just now' : 'Not checked today',
+      wifiBig: wifiDone ? '86' : s.wifi === 'running' ? '…' : '—',
+      wifiUnit: wifiDone ? 'Mbps · good' : s.wifi === 'running' ? 'testing' : 'Mbps',
+      wifiBtn: wifiDone ? 'Check again' : s.wifi === 'running' ? 'Checking…' : 'Check now',
+      wifiRunning: s.wifi === 'running',
+      bar1: wifiDone ? lit : dim, bar2: wifiDone ? lit : dim, bar3: wifiDone ? lit : dim, bar4: wifiDone ? lit : dim,
+      runWifi: () => { this.setState({ wifi: 'running' }); setTimeout(() => this.setState({ wifi: 'done' }), 1600); },
+      teaTitle, teaLine, teaAsk, teaAnswered,
+      teaYes: () => this.setState({ tea: 'yes' }), teaSkip: () => this.setState({ tea: 'skip' }), teaChange: () => this.setState({ tea: null }),
+      pollOptions, pollOpen: !s.vote, pollVoted: !!s.vote,
+      pollRowLine: s.vote ? 'You voted ' + s.vote : 'Waiting for your vote',
+      clearVote: () => this.setState({ vote: null }),
+      going: s.going, toggleRsvp: () => this.setState({ going: !s.going }),
+      rsvpLabel: s.going ? 'Going' : "I'm in",
+      rsvpStyle: s.going ? 'background: #CDEBD6; color: #0B3D1F' : 'background: #006493; color: #FFFFFF',
+      people,
+      snacks, snacksLocked: !checkedIn,
+      snackLine: !checkedIn ? 'Check in to pick. Nobody sees who picked what.' : s.snack ? 'Your pick: ' + s.snack + '. Switch until 3:30 pm.' : 'Pick one. Nobody sees who picked what.',
+      ackAnn: () => this.setState({ ack: !s.ack }),
+      annLabel: s.ack ? 'Seen' : 'Got it',
+      annStyle: s.ack ? 'background: #CDEBD6; color: #0B3D1F' : 'background: #006493; color: #FFFFFF',
+      liked: s.liked, toggleLike: () => this.setState({ liked: !s.liked }),
+      likeLabel: s.liked ? 'Thanked Dev' : 'Say thanks',
+      likeStyle: s.liked ? 'background: #CDEBD6; color: #0B3D1F' : 'background: #D3E5F5; color: #0C1D29',
+      notifsOpen: s.notifs, toggleNotifs: () => this.setState({ notifs: !s.notifs }),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -5,14 +5,14 @@ import { CAL_PKCE_COOKIE, CAL_STATE_COOKIE, CALENDAR_SCOPE, calendarConfigured, 
 import { store } from "@/lib/store";
 import { enforce } from "@/lib/guard";
 import { verifyIdToken } from "@/lib/google";
-import { calendarReturnPath } from "@/lib/workspace-navigation";
+import { CALENDAR_RETURN_PATH } from "@/lib/workspace-navigation";
 import { clientIp } from "@/lib/http";
 
 // Google sends the admin back here. Refused unless: the state and PKCE cookies match, the person is
 // still a signed-in admin, the Google account is that same admin, and calendar access was granted.
 export async function GET(req: NextRequest) {
   const state = verifyOauthState(req.cookies.get(CAL_STATE_COOKIE)?.value, req.nextUrl.searchParams.get("state"));
-  const returnPath = calendarReturnPath(state === calendarReturnPath(true));
+  const returnPath = CALENDAR_RETURN_PATH;
   const done = (result: string) => {
     const res = NextResponse.redirect(new URL(`${returnPath}&calendar=${result}`, req.nextUrl.origin));
     res.cookies.delete({ name: CAL_STATE_COOKIE, path: "/api/admin/calendar" });

@@ -2,16 +2,14 @@
 // Admin › People (canvas: M3AdminApp › People): a month grid of who was in on which day, with no
 // counts or verdicts; a name opens that person's panel (month, Fix a day, exempt, admin, left,
 // birthday). Filter, month and person live in the URL.
-import { useSearchParams } from "next/navigation";
-import { useWorkspaceReplace } from "@/components/m3/workspace-link";
-import { useMemo, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { Avatar } from "@/components/m3";
 import { Sheet } from "@/components/m3/sheet";
 import { useAdminOverview, useAdminPerson, useFixDay, useSetPerson, useTeamMonth, type PersonMonth, type PersonRow, type TeamMonth } from "@/lib/queries";
 import { Chips, Loading, PageHead, Switch, dayLabel, todayIST, useMe, useSnack } from "./ui";
 
-type Filter = "all" | "exempt" | "admin" | "left";
 type Kind = "in" | "leave" | "closed" | "out" | "none" | "wk";
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const MAX_DAY = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -35,6 +33,13 @@ const MARK: Record<"office" | "leave" | "closed" | "out", [string, string, strin
 function OfficeDays({ team, people, selected, onPick, month, onMonth }: { team: TeamMonth | undefined; people: TeamMonth["people"]; selected: string | null; onPick: (email: string) => void; month: string; onMonth: (m: string) => void }) {
   const monthName = MONTHS[Number(month.slice(5)) - 1];
   const thisMonth = todayIST().slice(0, 7);
+  // On a narrow screen the month doesn't fit: open it at today, the column admins look at first.
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scroller.current;
+    const cell = el?.querySelector<HTMLElement>(`[data-date="${todayIST()}"]`);
+    if (el && cell && el.scrollWidth > el.clientWidth) el.scrollLeft = Math.max(0, cell.offsetLeft - el.clientWidth / 2);
+  }, [team]);
   return (
     <section aria-labelledby="grid-h" className="m3a-card m3a-flush">
       <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 8px 4px 16px" }}>
@@ -43,14 +48,14 @@ function OfficeDays({ team, people, selected, onPick, month, onMonth }: { team: 
         <button type="button" className="m3-btn m3-btn-text" aria-label="Next month" style={{ width: 44, padding: 0 }} disabled={month >= thisMonth} onClick={() => onMonth(shiftMonth(month, 1))}><ChevronRight size={20} aria-hidden="true" /></button>
       </div>
       {!team ? <div style={{ padding: "4px 16px 16px" }}><span className="m3-small">Loading the month…</span></div> : (
-        <div style={{ overflowX: "auto", position: "relative" /* keeps the cells' hidden labels inside: the table never widens the page */ }}>
+        <div ref={scroller} style={{ overflowX: "auto", position: "relative" /* keeps the cells' hidden labels inside: the table never widens the page */ }}>
           <table style={{ borderCollapse: "collapse", width: "max-content", minWidth: "100%" }}>
             <thead>
               <tr>
                 <th scope="col" style={{ position: "sticky", left: 0, zIndex: 1, background: "var(--m3-surface)", padding: "4px 12px 6px 16px" }}><span className="vh">Person</span></th>
                 {team.days.map((d) => {
                   const dt = new Date(`${d.date}T00:00:00Z`);
-                  return <th key={d.date} scope="col" style={{ width: 30, padding: "4px 0 6px", textAlign: "center", fontSize: 12, lineHeight: "16px", fontWeight: 600, color: d.date === team.today ? "var(--m3-primary)" : "var(--m3-on-surface-variant)" }}>
+                  return <th key={d.date} data-date={d.date} scope="col" style={{ width: 30, padding: "4px 0 6px", textAlign: "center", fontSize: 12, lineHeight: "16px", fontWeight: 600, color: d.date === team.today ? "var(--m3-primary)" : "var(--m3-on-surface-variant)" }}>
                     <span aria-hidden="true" style={{ display: "block", fontSize: 11, fontWeight: 500 }}>{"SMTWTFS"[dt.getUTCDay()]}</span><span aria-hidden="true">{dt.getUTCDate()}</span><span className="vh">{dayLabel(d.date)}</span>
                   </th>;
                 })}
@@ -94,7 +99,7 @@ function OfficeDays({ team, people, selected, onPick, month, onMonth }: { team: 
 export function PeoplePage() {
   const overview = useAdminOverview();
   const params = useSearchParams();
-  const replace = useWorkspaceReplace();
+  const { replace } = useRouter();
   const [q, setQ] = useState("");
   const filter = (["all", "exempt", "admin", "left"] as const).find((f) => f === params.get("show")) ?? "all";
   const thisMonth = todayIST().slice(0, 7);

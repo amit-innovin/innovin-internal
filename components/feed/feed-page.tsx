@@ -63,12 +63,13 @@ function StillOpen({ posts }: { posts: FeedPost[] }) {
 function Earlier({ posts, canModerate, onWish }: { posts: FeedPost[]; canModerate: boolean; onWish: (email: string) => void }) {
   const [open, setOpen] = useState<FeedPost | null>(null);
   const remove = useRemoveNotice();
+  if (!posts.length) return null;
   const removable = open && open.type !== "announcement" && open.type !== "event" && (open.mine || canModerate);
   return (
     <section aria-labelledby="feed-earlier" className="td-sec">
       <div className="td-sech"><h2 id="feed-earlier">Earlier</h2></div>
       <div className="pg-card pg-flush">
-        {posts.length === 0 ? <p className="m3-small" style={{ margin: 0, padding: 16 }}>Nothing older yet.</p> : posts.slice(0, 30).map((p) => {
+        {posts.slice(0, 30).map((p) => {
           const { title, sub } = rowText(p);
           const who = p.type === "kudos" ? p.fromName : p.type === "announcement" ? p.authorName : p.type === "event" ? null : p.authorName;
           return (

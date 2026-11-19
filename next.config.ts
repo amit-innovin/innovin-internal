@@ -66,6 +66,8 @@ const nextConfig: NextConfig = {
       { source: "/attendance", destination: "/days", permanent: false },
       { source: "/reading", destination: "/", permanent: false },
       { source: "/admin/tools", destination: "/admin", permanent: false },
+      { source: "/admin/today", destination: "/admin", permanent: false },
+      { source: "/admin/snacks", destination: "/admin/office?tab=shelf", permanent: false },
       ...["/pantry", "/planner", "/people", "/admin/pantry"].map((source) => ({ source, destination: "/", permanent: false })),
     ];
   },

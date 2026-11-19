@@ -263,17 +263,12 @@ export interface Store {
   deleteNotice(id: string): Promise<boolean>;
   toggleNoticeReaction(id: string, email: string, emoji: string): Promise<boolean>;
   listNoticeReactions(ids: string[]): Promise<NoticeReaction[]>;
-  getWorkspaceProfile(email: string): Promise<WorkspaceProfile | null>;
-  listWorkspaceProfiles(): Promise<WorkspaceProfile[]>;
-  saveWorkspaceProfile(email: string, patch: Partial<Omit<WorkspaceProfile, "email">>): Promise<WorkspaceProfile>;
   // Returns the open session if one exists, otherwise inserts a new one.
   checkIn(row: AttendanceRow): Promise<AttendanceRow>;
   // Closes the open session; null when there isn't one.
   checkOut(email: string, date: string, at: string): Promise<AttendanceRow | null>;
   votePoll(noticeId: string, email: string, option: number | null): Promise<boolean>;
   listPollVotes(noticeIds: string[]): Promise<PollVote[]>;
-  setTea(date: string, email: string, going: boolean): Promise<void>;
-  listTea(date: string): Promise<TeaRow[]>;
   setTeaAnswer(date: string, round: TeaRound, email: string, going: boolean | null): Promise<void>;
   listTeaAnswers(date: string): Promise<TeaAnswer[]>;
   // Today's snack: one pick per person per day, by anonymous voter ref. null clears it.
@@ -290,11 +285,6 @@ export interface Store {
   toggleSnackVote(itemId: string, voterRef: string): Promise<boolean | null>;
   listSnackVotes(): Promise<SnackVote[]>;
   clearSnackVotes(itemId: string): Promise<void>;
-  addBook(row: BookRow): Promise<BookRow>;
-  listBooks(): Promise<BookRow[]>;
-  setReading(row: ReadingRow): Promise<ReadingRow>;
-  clearReading(email: string, bookId: string): Promise<void>;
-  listReadings(): Promise<ReadingRow[]>;
   setBirthday(email: string, birthday: string | null, show: boolean): Promise<boolean>;
   // One tap = the day's mark. Creates or replaces that person's row for the date (mode, source,
   // position, time) and clears any old check-out.
@@ -307,7 +297,6 @@ export interface Store {
   // One date added to or taken out of someone's usual office days; null removes the override.
   setPlanOverride(email: string, date: string, planned: boolean | null): Promise<void>;
   listPlanOverrides(email: string, from: string, to: string): Promise<PlanOverrideRow[]>;
-  listPlanOverridesOn(date: string): Promise<PlanOverrideRow[]>;
   // Admin-set office closures. addClosedDay is false when the date is already closed.
   listClosedDays(from: string, to: string): Promise<ClosedDayRow[]>;
   addClosedDay(row: ClosedDayRow): Promise<boolean>;
@@ -326,7 +315,6 @@ export interface Store {
   // marked (with the toggle) stays one.
   addSteps(email: string, date: string, add: number): Promise<{ steps: number; hit: boolean }>;
   listSteps(): Promise<StepsRow[]>;
-  listStepsByEmail(email: string, limit: number): Promise<StepsRow[]>;
   addGrievance(row: GrievanceRow): Promise<GrievanceRow>;
   setGrievanceStatus(id: string, status: GrievanceStatus): Promise<boolean>;
   setGrievanceReply(id: string, reply: string | null): Promise<boolean>;

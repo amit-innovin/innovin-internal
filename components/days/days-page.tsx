@@ -4,7 +4,7 @@ import { useState } from "react";
 import { QueryState } from "@/components/m3";
 import { PageHero } from "@/components/m3/hero";
 import { useDays } from "@/lib/queries";
-import { Calendar, type Day, type DayAction } from "./calendar";
+import { Calendar, LeaveLeft, type Day, type DayAction } from "./calendar";
 import { ComingUp } from "./coming-up";
 import { DaySheet } from "./day-sheet";
 import { LeaveRequests } from "./leave-requests";
@@ -31,6 +31,7 @@ export function DaysPage() {
             <ComingUp view={days.data} />
           </div>
           <aside className="pg-rail">
+            <LeaveLeft />
             <UsualDays key={days.data.officeDays.join(",")} officeDays={days.data.officeDays} />
             <LeaveRequests today={days.data.today} />
           </aside>

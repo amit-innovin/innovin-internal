@@ -4,10 +4,10 @@ import { MOCK_URL } from "./mock-url";
 // Sign-in and API guards that hold whatever the screens look like.
 test.describe("Sign-in and API guards", () => {
   test("new endpoints deny anonymous writes and reject invalid input", async ({ request, page }) => {
-    expect((await request.post("/api/workspace", { data: { mode: "office" } })).status()).toBe(401);
+    expect((await request.post("/api/days", { data: { mode: "office" } })).status()).toBe(401);
     expect((await request.post("/api/events", { data: { title: "Forged" } })).status()).toBe(401);
     await page.goto("/api/auth/google?next=/");
-    expect((await page.request.post("/api/workspace", { data: { mode: "admin" } })).status()).toBe(400);
+    expect((await page.request.post("/api/days", { data: { mode: "admin" } })).status()).toBe(400);
   });
 
   test("switching Google accounts clears the previous identity before the round trip", async ({ page }) => {

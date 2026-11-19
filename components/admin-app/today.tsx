@@ -1,10 +1,11 @@
 "use client";
+import { officeTime } from "@/lib/format";
 // Admin › Today: "Needs you" first, then one compact card for the day in the office.
-import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
+import Link from "next/link";
 import { useState } from "react";
 import { CalendarX, ChevronRight, Cookie, Flag, Megaphone, ShieldCheck, Wifi, type LucideIcon } from "lucide-react";
 import { useAdminOverview, useSnacks, useTea, type AdminData } from "@/lib/queries";
-import { Loading, PageHead, dayLabel, fmtTime, hm, todayIST } from "./ui";
+import { Loading, PageHead, dayLabel, fmtTime, todayIST } from "./ui";
 
 type Need = { id: string; title: string; href: string; icon: LucideIcon; tone: [string, string] };
 const KIND: Record<AdminData["needsYou"][number]["kind"], [LucideIcon, [string, string]]> = {
@@ -25,7 +26,7 @@ export function TodayPage() {
   if (!data) return <>{head}<Loading what="today" error={overview.error} onRetry={() => overview.refetch()} /></>;
 
   const needs: Need[] = data.needsYou.map((n) => ({ id: n.id, title: n.title, href: n.href, icon: KIND[n.kind][0], tone: KIND[n.kind][1] }));
-  if (snacks.data && !snacks.data.today.ordered) needs.push({ id: "order", title: `Snack order goes in at ${hm(snacks.data.today.orderAt)}`, href: "/admin/office?tab=shelf", icon: Cookie, tone: ["#CDEBD6", "#0B3D1F"] });
+  if (snacks.data && !snacks.data.today.ordered) needs.push({ id: "order", title: `Snack order goes in at ${officeTime(snacks.data.today.orderAt)}`, href: "/admin/office?tab=shelf", icon: Cookie, tone: ["#CDEBD6", "#0B3D1F"] });
 
   const t = data.tea;
   const nextPm = t.round === "am" && tea.data ? `Afternoon at ${fmtTime(tea.data.times.pm)} · ${tea.data.counts?.pm ?? 0} so far` : null;

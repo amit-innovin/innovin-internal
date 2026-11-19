@@ -1,4 +1,12 @@
 // Display helpers — everything is shown in office time (IST).
+
+// An office time of day ("16:00") as people say it: "4 pm", "3:30 pm", "11 am". Always with
+// am/pm, so a late round never reads like a morning one.
+export function officeTime(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm;
+  return `${h % 12 || 12}${m ? `:${String(m).padStart(2, "0")}` : ""} ${h < 12 ? "am" : "pm"}`;
+}
 const TZ = "Asia/Kolkata";
 
 const parts = (date: Date, opts: Intl.DateTimeFormatOptions) =>
@@ -21,9 +29,6 @@ export function fmtShortDate(iso: string) {
   return `${p.day} ${p.month}`;
 }
 
-// A YYYY-MM-DD span as "7 Oct" or "7 Oct – 9 Oct".
-export const fmtDateRange = (start: string, end: string) =>
-  start === end ? fmtShortDate(`${start}T00:00:00`) : `${fmtShortDate(`${start}T00:00:00`)} – ${fmtShortDate(`${end}T00:00:00`)}`;
 
 export function relativeDay(iso: string, now = Date.now()) {
   const days = Math.round((Date.parse(istDate(new Date(now))) - Date.parse(istDate(new Date(iso)))) / 86_400_000);

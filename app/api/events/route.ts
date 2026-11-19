@@ -9,7 +9,7 @@ import { sendPush } from "@/lib/push";
 import { calendarConfigured, mayExist, removeInvite, sendInvite, updateInvite } from "@/lib/calendar";
 import { id, store } from "@/lib/store";
 import { accountRef, setSubmitterCookie, submitterIdentity } from "@/lib/submitter";
-import type { EventCategory, EventRow } from "@/lib/types";
+import type { EventCategory } from "@/lib/types";
 
 const CATEGORIES: EventCategory[] = ["sports", "arts", "culture", "learning", "social", "company"];
 

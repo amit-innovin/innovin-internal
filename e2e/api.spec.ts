@@ -43,7 +43,7 @@ async function signedIn(who: string, name = who): Promise<APIRequestContext> {
 
 async function officeDevice() {
   const ctx = await signedIn(email());
-  expect((await ctx.post("/api/workspace", { data: { mode: "office" } })).status()).toBe(200);
+  expect((await ctx.post("/api/days", { data: { mode: "office", lat: 12.9352, lng: 77.6241, accuracyM: 20 } })).status()).toBe(200);
   return ctx;
 }
 
@@ -1022,23 +1022,15 @@ test.describe("Steps, Wi-Fi and notifications (Stage 5)", () => {
     expect(days.around.inToday.count).toBeUndefined();
   });
 
-  test("the workspace endpoint gives a member only their own data: no headcounts, no one else's day", async () => {
-    const viewer = await signedIn(email());
-    const ws = await (await viewer.get("/api/workspace")).json();
-    expect(ws.steps).toBeDefined();
-    expect(ws.people).toBeUndefined();
-    expect(ws.events).toBeUndefined();
-    expect(JSON.stringify(ws)).not.toMatch(/"going"|"mode":"(office|remote)"/);
-  });
-
   test("steps of people outside the league reach nobody, through any endpoint", async () => {
     const member = await signedIn(email()), outsider = await signedIn(email()), viewer = await signedIn(email());
     const eo = await whoAmI(outsider);
     await outsider.post("/api/steps", { data: { add: 7000 } });
     await member.post("/api/steps", { data: { add: 5000 } });
     await member.post("/api/steps/league", { data: { on: true } });
-    const ws = await (await viewer.get("/api/workspace")).json();
-    expect(JSON.stringify(ws.rankings ?? {})).not.toContain(eo);
+    // Not on Home, and not to a league member either.
+    expect(JSON.stringify(await (await viewer.get("/api/days")).json())).not.toContain(eo);
+    expect(JSON.stringify(await (await member.get("/api/steps")).json())).not.toContain(eo);
     // Someone who hasn't joined sees no league at all, not even its members.
     const notJoined = await (await viewer.get("/api/steps")).json();
     expect(notJoined.inLeague).toBe(false);

@@ -1,6 +1,6 @@
 // Material 3 primitives from the prototype (docs/design/m3/). Styles live in app/m3.css.
 // Tappable things are buttons (filled, tonal, outlined, text) or rows with a chevron; cards and chips only inform.
-import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
+import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
@@ -19,10 +19,6 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 
 export function StatusChip({ tone, children }: { tone: ChipTone; children: ReactNode }) {
   return <span className={cn("m3-chip", `m3-chip-${tone}`)}>{children}</span>;
-}
-
-export function IconCircle({ tone, children }: { tone: IconTone; children: ReactNode }) {
-  return <span className={cn("m3-icon", `m3-tone-${tone}`)} aria-hidden="true">{children}</span>;
 }
 
 export const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
@@ -49,11 +45,6 @@ export function ListRow({ href, onClick, leading, title, subtitle, trailing, che
   if (href) return <Link href={href} className="m3-row">{body}</Link>;
   if (onClick) return <button type="button" className="m3-row" onClick={onClick}>{body}</button>;
   return <div className="m3-row">{body}</div>;
-}
-
-// The icon-only Speak up button; the label is its accessible name and tooltip.
-export function Fab({ href, label, icon }: { href: string; label: string; icon: ReactNode }) {
-  return <Link href={href} className="m3 m3-fab" aria-label={label} title={label}>{icon}</Link>;
 }
 
 // Loading and error states that every query-backed screen uses the same way.

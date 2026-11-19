@@ -1,7 +1,6 @@
 "use client";
 import { PageHero } from "@/components/m3/hero";
-import { useSearchParams } from "next/navigation";
-import { useWorkspaceReplace } from "@/components/m3/workspace-link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
@@ -58,7 +57,7 @@ function Packets({ onCatch, caught }: { onCatch: () => void; caught: number }) {
 // tell admins where it's slow. Reports keep no identity; only the result and the area.
 export function WifiPage() {
   const params = useSearchParams();
-  const replace = useWorkspaceReplace();
+  const { replace } = useRouter();
   const days = useDays();
   const client = useQueryClient();
   const inOffice = days.data?.me?.mode === "office";

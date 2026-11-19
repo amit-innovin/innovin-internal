@@ -1,5 +1,4 @@
 import { store } from "@/lib/store";
-import { cookies } from "next/headers";
 import { pushSession } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { createOauthState, OAUTH_COOKIE, sanitizeNext, USER_COOKIE } from "@/lib/auth";

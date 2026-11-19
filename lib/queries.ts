@@ -3,12 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchJSON, readError, send } from "@/lib/fetcher";
 import type { DaysView } from "@/lib/days";
 import type { Notification } from "@/lib/notifications";
-import type { WorkspaceData } from "@/lib/workspace";
 
 export const queryKeys = {
   notifications: ["notifications"] as const,
   days: (month?: string) => (month ? (["days", month] as const) : (["days"] as const)),
-  workspace: ["workspace"] as const,
 };
 
 export type NotificationFeed = { items: Notification[]; unread: number; lastSeen: string | null };
@@ -114,10 +112,6 @@ export function useSetOfficeDays() {
 
 // Events, announcements and the steps board. Shared with the legacy screens' API until the
 // Feed and Steps screens get their own.
-export function useWorkspace() {
-  return useQuery({ queryKey: queryKeys.workspace, queryFn: () => fetchJSON<WorkspaceData>("/api/workspace") });
-}
-
 // ---- leave (read-only here; apply in Zoho People) ----
 export type LeaveBalances = { signedIn: boolean; applyUrl?: string; ledger?: { type: "cl" | "sl" | "el" | "fl"; entitled: number; used: number; pending: number; remaining: number }[]; source?: "zoho-snapshot" | "app-only"; asOf?: string | null; zoho?: import("./zoho-people").ZohoLeaveResult };
 export type MyLeaveRequest = { id: string; type: "leave" | "wfh"; leaveType: string | null; halfDay: boolean; days: number; startDate: string; endDate: string; status: "pending" | "approved" | "rejected" | "cancelled" };

@@ -41,7 +41,3 @@ export async function grievancesFromIds(ids: string[], limit: number) {
   return ids.length ? (await store.listGrievancesByIds(ids, limit)).map(strip) : [];
 }
 
-// Same rule for leave/WFH requests.
-export async function awayForDevice(deviceId: string | undefined, limit: number) {
-  return deviceId ? (await store.listAwayByRef(refFor(deviceId), limit)).map(strip) : [];
-}

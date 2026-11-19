@@ -39,7 +39,8 @@ test.describe("Feed", () => {
     const wide = (page.viewportSize()?.width ?? 0) >= 1100;
 
     if (wide) {
-      await expect(page.getByText("NEW SINCE YESTERDAY · 3")).toBeVisible();
+      await expect(page.getByText("3 new since yesterday, then everything else")).toBeVisible();
+      await expect(page.getByRole("region", { name: "New posts" }).locator("article")).toHaveCount(3);
       await expect(page.getByText("Results show after you vote", { exact: false })).toBeVisible();
     } else {
       await expect(page.getByText("1 / 3")).toBeVisible();

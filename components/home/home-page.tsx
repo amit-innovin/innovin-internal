@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CalendarDays, ChevronRight, CircleHelp, Cookie, Footprints, LoaderCircle, MapPin, Palmtree, ShieldCheck, Wifi } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, Button, QueryState } from "@/components/m3";
@@ -87,8 +87,21 @@ function Title({ firstName, name, days, check }: { firstName: string; name: stri
 // ---- Your day: 9 am to 7 pm with today's deadlines on it ----
 
 type Pin = { key: string; hours: number; label: string; done: boolean; tone: [string, string] };
-const START = 9, END = 19;
-const pos = (h: number) => `${Math.min(98, Math.max(2, ((h - START) / (END - START)) * 100)).toFixed(1)}%`;
+const hourLabel = (h: number, ends: boolean) => `${h % 12 || 12}${ends || h === 12 ? (h < 12 || h === 24 ? " am" : " pm") : ""}`;
+
+// Place each label in the first row where it clears its neighbours: rows alternate above and
+// below the line, so nothing overlaps however close the times are.
+function layoutPins(pins: Pin[], frac: (h: number) => number, width: number) {
+  const rightEdge: number[] = [];
+  return pins.map((p) => {
+    const w = p.label.length * 6.6 + 22;
+    const x = Math.min(width - w / 2, Math.max(w / 2, frac(p.hours) * width));
+    let row = rightEdge.findIndex((r) => r + 8 <= x - w / 2);
+    if (row === -1) row = rightEdge.length < 4 ? rightEdge.length : rightEdge.indexOf(Math.min(...rightEdge));
+    rightEdge[row] = x + w / 2;
+    return { ...p, x, row };
+  });
+}
 
 function useNow() {
   const [now, setNow] = useState<number | null>(null);
@@ -96,8 +109,23 @@ function useNow() {
   return now;
 }
 
+function useWidth() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(800);
+  useEffect(() => {
+    if (!ref.current) return;
+    // Re-place labels only on a real resize: the ribbon's height follows its width, and reacting to
+    // a scrollbar's few pixels would make the two chase each other.
+    const ro = new ResizeObserver(([e]) => setWidth((w) => (Math.abs(w - e.contentRect.width) > 24 ? Math.round(e.contentRect.width) : w)));
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
+  return { ref, width };
+}
+
 function YourDay({ days, tea, snacks, posts }: { days: DaysView; tea?: Tea; snacks?: Snacks; posts: FeedPost[] }) {
   const now = useNow();
+  const { ref, width } = useWidth();
   const inOffice = days.me?.mode === "office";
   const pins: Pin[] = [];
   const open: [string, string] = ["#FFF3CC", "#5C4300"], green: [string, string] = ["#CDEBD6", "#0B3D1F"], muted: [string, string] = ["#EBEEF4", "#41474D"];
@@ -122,28 +150,41 @@ function YourDay({ days, tea, snacks, posts }: { days: DaysView; tea?: Tea; snac
   pins.sort((a, b) => a.hours - b.hours);
   const left = pins.filter((p) => !p.done && p.key !== "in").length;
   const nowH = now === null ? null : istHours(new Date(now).toISOString());
+  // 9 am to 7 pm, stretched to take in anything earlier or later (an evening event, a late check-in).
+  const times = [...pins.map((p) => p.hours), ...(nowH === null ? [] : [nowH])];
+  const lo = Math.max(0, Math.min(9, Math.floor(Math.min(...times, 9))));
+  const hi = Math.min(24, Math.max(19, Math.ceil(Math.max(...times, 19) + 0.25)));
+  const frac = (h: number) => 0.02 + 0.96 * Math.min(1, Math.max(0, (h - lo) / (hi - lo)));
+  const pct = (h: number) => `${(frac(h) * 100).toFixed(2)}%`;
+  const placed = layoutPins(pins, frac, width);
+  const above = placed.filter((p) => p.row % 2 === 0).reduce((m, p) => Math.max(m, p.row / 2 + 1), 0);
+  const below = placed.filter((p) => p.row % 2 === 1).reduce((m, p) => Math.max(m, (p.row - 1) / 2 + 1), 0);
+  const LANE = 30, trackY = Math.max(1, above) * LANE + 10;
+  const height = trackY + 16 + below * LANE + 26;
+  const ticks: number[] = [];
+  for (let h = lo; h <= hi; h += 2) ticks.push(h);
+  if (ticks[ticks.length - 1] !== hi) ticks.push(hi);
   const note = !inOffice && pins.some((p) => p.key === "tea" || p.key === "snack") ? "Check in to join tea and pick a snack"
     : pins.length === 0 ? "Nothing scheduled today" : left === 0 ? "All done for today" : `${left} thing${left === 1 ? "" : "s"} left today`;
   return (
-    <section aria-label="Your day" className="td-card" style={{ gap: 4 }}>
+    <section aria-label="Your day" className="td-card" style={{ gap: 6 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <b style={{ fontSize: 14 }}>Your day{nowH !== null && <span className="m3-small" style={{ fontWeight: 600 }}> · now {at(new Date(now!).toISOString(), { hour: "numeric", minute: "2-digit" })}</span>}</b>
         <span className="m3-small">{note}</span>
       </div>
-      <div className="td-ribbon">
-        <div className="td-track" />
-        {nowH !== null && <div className="td-past" style={{ width: pos(nowH) }} />}
-        {[[9, "9 am"], [11, "11"], [13, "1 pm"], [15, "3"], [17, "5"], [19, "7 pm"]].map(([h, l]) => (
-          <span key={h} className={`td-hour${h === 11 || h === 15 || h === 17 ? " td-hour-mid" : ""}`} style={{ left: pos(h as number) }}>{l}</span>
+      <div ref={ref} className="td-ribbon" style={{ height }}>
+        <div className="td-track" style={{ top: trackY }} />
+        {nowH !== null && <div className="td-past" style={{ top: trackY, width: pct(nowH) }} />}
+        {ticks.map((h, i) => (
+          <span key={h} className={`td-hour${i > 0 && i < ticks.length - 1 && h !== 12 ? " td-hour-mid" : ""}`} style={{ left: pct(h), top: height - 18 }}>{hourLabel(h, i === 0 || i === ticks.length - 1)}</span>
         ))}
-        {pins.map((p, i) => <span key={p.key} className="td-pin-label" style={{ left: pos(p.hours), top: i % 2 ? 58 : 0, background: p.tone[0], color: p.tone[1] }}>{p.label}</span>)}
-        {pins.map((p) => <span key={`d-${p.key}`} className="td-pin-dot" aria-hidden="true" style={{ left: pos(p.hours), ...(p.done ? { background: "var(--m3-success)" } : { background: "#FFFFFF", border: "3px solid var(--m3-primary)" }) }} />)}
-        {nowH !== null && nowH >= START && nowH <= END && (
-          <>
-            <span className="td-now-line" aria-hidden="true" style={{ left: pos(nowH) }} />
-            <span className="td-now" style={{ left: pos(nowH) }}>NOW {at(new Date(now!).toISOString(), { hour: "numeric", minute: "2-digit" })}</span>
-          </>
-        )}
+        {placed.map((p) => {
+          const lane = Math.floor(p.row / 2);
+          const top = p.row % 2 === 0 ? trackY - 10 - (lane + 1) * LANE : trackY + 18 + lane * LANE;
+          return <span key={p.key} className="td-pin-label" style={{ left: p.x, top, background: p.tone[0], color: p.tone[1] }}>{p.label}</span>;
+        })}
+        {placed.map((p) => <span key={`d-${p.key}`} className="td-pin-dot" aria-hidden="true" style={{ left: pct(p.hours), top: trackY - 4, ...(p.done ? { background: "var(--m3-success)" } : { background: "#FFFFFF", border: "3px solid var(--m3-primary)" }) }} />)}
+        {nowH !== null && <span className="td-now-line" aria-hidden="true" style={{ left: pct(nowH), top: trackY - 9, height: 24 }} />}
       </div>
     </section>
   );
@@ -438,7 +479,7 @@ export function HomePage({ firstName, name, isAdmin }: { firstName: string; name
   }
   const d = days.data;
   return (
-    <div className="m3 m3-page m3-today m3-stack">
+    <div className={`m3 m3-page m3-today m3-stack${d.me ? " td-is-in" : ""}`}>
       <Title firstName={firstName} name={name} days={d} check={check} />
       <YourDay days={d} tea={tea} snacks={snacks} posts={posts} />
       <Link href="/grievances" className="td-speak" aria-label="Speak up anonymously">

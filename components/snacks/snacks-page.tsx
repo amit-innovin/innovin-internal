@@ -1,5 +1,5 @@
 "use client";
-import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
+import Link from "next/link";
 import { useState } from "react";
 import { Cookie, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
@@ -13,7 +13,7 @@ import { clock, TeaCard } from "./tea";
 
 function Gate() {
   return (
-    <section aria-labelledby="gate-h" className="m3-card m3-stack" style={{ gap: 10 }}>
+    <section aria-labelledby="gate-h" className="pg-card" style={{ gap: 10 }}>
       <h2 id="gate-h" className="m3-title" style={{ fontSize: 18 }}>Tea &amp; snacks are for people in the office today</h2>
       <p className="m3-body" style={{ margin: 0 }}>Check in on Home to book tea and pick a snack.</p>
       <Link href="/" className="m3-btn m3-btn-filled" style={{ alignSelf: "flex-end", height: 44, padding: "0 24px" }}>Check in</Link>
@@ -26,28 +26,29 @@ function TodaysSnacks({ snacks }: { snacks: Snacks }) {
   const { today } = snacks;
   const choose = (id: string, mine: boolean) => pick.mutate({ id, action: mine ? "unpick" : "pick" }, { onError: (e) => toast.error(e.message) });
   return (
-    <section aria-labelledby="today-h" className="m3-card m3-stack" style={{ gap: 14 }}>
+    <section aria-labelledby="today-h" className="pg-card" style={{ gap: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <h2 id="today-h" className="m3-title">Today&apos;s snacks</h2>
         <StatusChip tone={today.open ? "warn" : "success"}>{today.open ? `Order goes in at ${clock(today.orderAt)}` : "Order placed"}</StatusChip>
       </div>
       <p className="m3-small" style={{ margin: 0 }}>{today.open ? `Pick one for today. You can switch until the order goes in at ${clock(today.orderAt)}. Nobody sees who picked what.` : "Today's order is in. Picks open again tomorrow."}</p>
       {snacks.shelf.length === 0 && <p className="m3-small" style={{ margin: 0 }}>Nothing on today&apos;s list yet.</p>}
+      <div className="sn-grid">
       {snacks.shelf.map((s) => {
         const mine = today.mine === s.id;
         return (
-          <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span aria-hidden="true" style={{ flex: "none", width: 40, height: 40, borderRadius: 20, background: "#FFF1C2", color: "#3D2E00", display: "grid", placeItems: "center" }}><Cookie size={20} /></span>
-            <span style={{ flex: 1, minWidth: 0 }}>{s.name}</span>
+          <div key={s.id} className="sn-tile" data-mine={mine || undefined}>
+            <span aria-hidden="true" className="sn-icon"><Cookie size={22} /></span>
+            <span style={{ flex: 1, minWidth: 0, fontWeight: 600 }}>{s.name}</span>
             {today.open ? (
-              <button type="button" aria-pressed={mine} disabled={pick.isPending} onClick={() => choose(s.id, mine)}
-                style={{ flex: "none", height: 36, padding: "0 14px", borderRadius: 18, fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", border: mine ? 0 : "1px solid var(--m3-outline)", background: mine ? "var(--m3-secondary-container)" : "transparent", color: mine ? "var(--m3-on-secondary-container)" : "var(--m3-primary)" }}>
+              <button type="button" aria-pressed={mine} disabled={pick.isPending} onClick={() => choose(s.id, mine)} className={`m3-btn ${mine ? "m3-btn-filled" : "m3-btn-outlined"}`} style={{ height: 36, padding: "0 14px", fontSize: 13, flex: "none" }}>
                 {mine ? "Your pick" : today.mine ? "Switch to this" : "Pick this"}
               </button>
-            ) : mine ? <span className="m3-small" style={{ fontWeight: 600 }}>Your pick</span> : null}
+            ) : mine ? <span className="m3-small" style={{ fontWeight: 700 }}>Your pick</span> : null}
           </div>
         );
       })}
+      </div>
     </section>
   );
 }
@@ -57,7 +58,7 @@ function Suggestions({ list }: { list: SnackRow[] }) {
   const add = useSnackWrite<{ name: string }>("POST");
   const [name, setName] = useState("");
   return (
-    <section aria-labelledby="ideas-h" className="m3-card m3-stack" style={{ gap: 12 }}>
+    <section aria-labelledby="ideas-h" className="pg-card" style={{ gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <span aria-hidden="true" style={{ flex: "none", width: 40, height: 40, borderRadius: 20, background: "#FFF1C2", color: "#5C4300", display: "grid", placeItems: "center" }}><Lightbulb size={20} /></span>
         <span style={{ display: "flex", flexDirection: "column" }}>

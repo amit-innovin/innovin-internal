@@ -1,5 +1,5 @@
 "use client";
-import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
+import Link from "next/link";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CalendarDays, EyeOff, MailX, MonitorX, ShieldCheck } from "lucide-react";

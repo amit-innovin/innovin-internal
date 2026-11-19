@@ -2,9 +2,8 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Avatar, Button } from "@/components/m3";
+import { Button } from "@/components/m3";
 import { Sheet } from "@/components/m3/sheet";
-import type { DaysView } from "@/lib/days";
 import { readError, send } from "@/lib/fetcher";
 import type { HiKind } from "@/lib/types";
 
@@ -77,42 +76,3 @@ export function SayHiSheet({ person, sentToday, onClose }: { person: { email: st
   );
 }
 
-// Home's "In office today", with Say hi when you (and they) have it on.
-export function InOfficeToday({ days }: { days: DaysView }) {
-  const { inToday } = days.around;
-  const turnOn = useSayHiSetting();
-  const [hiFor, setHiFor] = useState<{ email: string; name: string } | null>(null);
-  const inOffice = days.me?.mode === "office";
-  // People with emails come only when you can wave; otherwise just their names.
-  const people = inToday.people.length ? inToday.people : inToday.names.map((name) => ({ email: name, name, sayHi: false }));
-  if (!people.length) return null;
-  const sentToday = Object.keys(days.sent).length;
-  return (
-    <section aria-label="In office today" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <h2 className="m3-title" style={{ padding: "0 4px" }}>In office today</h2>
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -18px", padding: "0 18px" }}>
-        {people.map((p) => {
-          const sent = days.sent[p.email];
-          const canWave = days.sayHi && inOffice && p.sayHi;
-          return (
-            <div key={p.email} className="m3-card" style={{ flex: "none", width: 120, padding: "14px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" }}>
-              <Avatar name={p.name} size={52} />
-              <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</span>
-              {canWave ? (
-                <button type="button" aria-pressed={!!sent} aria-label={sent ? `${sent} to ${p.name}` : `Wave at ${p.name}`} disabled={!!sent} onClick={() => setHiFor(p)}
-                  className={`m3-btn ${sent ? "m3-btn-tonal" : "m3-btn-outlined"}`} style={{ height: 32, padding: "0 10px", fontSize: 12 }}>{sent ?? "Wave"}</button>
-              ) : <span className="m3-small" style={{ fontSize: 12 }}>In today</span>}
-            </div>
-          );
-        })}
-      </div>
-      {!days.sayHi && (
-        <p className="m3-small" style={{ margin: "0 4px" }}>
-          Say hi is off. Turn it on to wave at people and get invites.{" "}
-          <button type="button" className="m3-btn m3-btn-text" style={{ height: 32, padding: "0 4px" }} disabled={turnOn.isPending} onClick={() => turnOn.mutate(true, { onError: (e) => toast.error(e.message) })}>Turn on</button>
-        </p>
-      )}
-      {hiFor && <SayHiSheet person={hiFor} sentToday={sentToday} onClose={() => setHiFor(null)} />}
-    </section>
-  );
-}

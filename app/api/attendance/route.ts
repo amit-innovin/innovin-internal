@@ -5,7 +5,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { USER_COOKIE, verifyUserSession } from "@/lib/auth";
 import { isAllowedEmail } from "@/lib/config";
 import { EMAIL_COOKIE, longLivedCookie } from "@/lib/cookies";
-import { officeLocation } from "@/lib/geo";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON } from "@/lib/http";
 import { holidaysFor, isWorkingDay, nonWorkingReason, workingDaysInMonth } from "@/lib/leave";

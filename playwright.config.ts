@@ -10,7 +10,6 @@ export const MAIN_URL = "http://localhost:3210";
 const db = process.env.E2E_DATABASE_URL;
 // Fake office at 12.935,77.624 — e2e geolocation tests check in from inside/outside this geofence.
 const serverEnv = (name: string) => ({
-  ADMIN_PASSCODE: "1704",
   ALLOWED_EMAIL_DOMAINS: "innovinlabs.com",
   // Never reach out to fast.com from tests — the speed test falls back to our own payload,
   // and the fast.com path is exercised with a stubbed target instead.

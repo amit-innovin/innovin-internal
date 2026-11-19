@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { Avatar } from "@/components/m3";
 import { Lappy } from "@/components/m3/lappy";
 import type { FeedPost } from "@/lib/feed";
-import type { Celebration } from "@/lib/member-features";
 import { readError, send } from "@/lib/fetcher";
 import { useReact, useRsvp, useVote } from "@/lib/queries";
 
@@ -13,14 +12,14 @@ import { useReact, useRsvp, useVote } from "@/lib/queries";
 export type BirthdayItem = { type: "birthday"; id: string; name: string; email: string; at: string };
 export type CardItem = FeedPost | BirthdayItem;
 
-const KIND: Record<string, { label: string; bg: string; color: string; card: string; tint: string }> = {
-  announcement: { label: "Announcement", bg: "#CAE6FF", color: "#001E30", card: "#F2F8FD", tint: "#CAE6FF" },
-  event: { label: "Event", bg: "#D3E5F5", color: "#0C1D29", card: "#F3F6FF", tint: "#D3E5F5" },
-  poll: { label: "Poll", bg: "#FFDDB0", color: "#4A2800", card: "#FFF7EC", tint: "#FFDDB0" },
-  kudos: { label: "Kudos", bg: "#FFD9E2", color: "#5C1130", card: "#FFF4F6", tint: "#FFD9E2" },
-  quote: { label: "Quote", bg: "#EBDCFF", color: "#20142F", card: "#F8F4FF", tint: "#EBDCFF" },
-  feedback: { label: "Feedback", bg: "#CDEBD6", color: "#0B3D1F", card: "#F2FAF4", tint: "#CDEBD6" },
-  birthday: { label: "Birthday", bg: "#FFE08A", color: "#3D2E00", card: "#FFFAEB", tint: "#FFE08A" },
+const KIND: Record<string, { label: string; bg: string; color: string }> = {
+  announcement: { label: "Announcement", bg: "#CAE6FF", color: "#001E30" },
+  event: { label: "Event", bg: "#D3E5F5", color: "#0C1D29" },
+  poll: { label: "Poll", bg: "#FFDDB0", color: "#4A2800" },
+  kudos: { label: "Kudos", bg: "#FFD9E2", color: "#5C1130" },
+  quote: { label: "Quote", bg: "#EBDCFF", color: "#20142F" },
+  feedback: { label: "Feedback", bg: "#CDEBD6", color: "#0B3D1F" },
+  birthday: { label: "Birthday", bg: "#FFE08A", color: "#3D2E00" },
 };
 
 const APPRECIATE = "👍";
@@ -34,7 +33,7 @@ export const when = (iso: string) => {
 };
 
 
-const actionStyle = (on: boolean): CSSProperties => ({ alignSelf: "flex-start", height: 44, padding: "0 20px", borderRadius: 22, border: 0, fontSize: 15, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", background: on ? "var(--m3-secondary-container)" : "var(--m3-primary)", color: on ? "var(--m3-on-secondary-container)" : "var(--m3-on-primary)" });
+const actionStyle = (on: boolean): CSSProperties => ({ alignSelf: "flex-start", height: 40, padding: "0 20px", borderRadius: 20, border: 0, fontSize: 15, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", background: on ? "var(--m3-secondary-container)" : "var(--m3-primary)", color: on ? "var(--m3-on-secondary-container)" : "var(--m3-on-primary)" });
 
 function Appreciate({ post }: { post: Extract<FeedPost, { reactions: unknown }> }) {
   const react = useReact();
@@ -116,19 +115,26 @@ export function PostCard({ item, onWish, style, footer }: { item: CardItem; onWi
   }
   const image = (item.type === "quote" || item.type === "feedback") ? item.image : null;
   return (
-    <article style={{ background: `radial-gradient(circle at 100% 0, ${kind.tint} 0 92px, ${kind.card} 93px)`, borderRadius: 28, padding: 20, display: "flex", flexDirection: "column", gap: 12, boxShadow: "0 2px 6px rgba(0,0,0,0.08)", ...style }}>
-      <span style={{ alignSelf: "flex-start", height: 26, padding: "0 10px", borderRadius: 8, background: kind.bg, color: kind.color, fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center" }}>{kind.label}</span>
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        {avatar}
-        <div><div style={{ fontSize: 15, fontWeight: 600 }}>{author}</div>{item.type !== "event" && <div className="m3-small">{when(item.at)}</div>}</div>
+    <article className="pc" style={style}>
+      <div className="pc-head">
+        {avatar ?? <span className="pc-glyph" style={{ background: kind.bg, color: kind.color }} aria-hidden="true">{kind.label[0]}</span>}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="pc-author">{author}</div>
+          {item.type !== "event" && <div className="m3-small">{when(item.at)}</div>}
+        </div>
+        <span className="pc-kind" style={{ background: kind.bg, color: kind.color }}>{kind.label}</span>
       </div>
-      {title && <h2 style={{ margin: 0, fontSize: 21, lineHeight: "28px", fontWeight: 600 }}>{title}</h2>}
-      {body && <p style={{ margin: 0, fontSize: 16, lineHeight: "24px", color: "#2B3036", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{body}</p>}
-      {image && <img src={image} alt="" style={{ width: "100%", maxHeight: 220, objectFit: "cover", borderRadius: 16 }} />}
-      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+      {title && <h2 className="pc-title">{title}</h2>}
+      {body && <p className="pc-body">{body}</p>}
+      {image && <img src={image} alt="" className="pc-img" />}
+      <div className="pc-foot">
         {action}
-        {meta && <span className="m3-small">{meta}</span>}
-        {"reactions" in item && !item.mine && <ReportPost id={item.id} />}
+        {(meta || ("reactions" in item && !item.mine)) && (
+          <div className="pc-meta">
+            {meta && <span className="m3-small">{meta}</span>}
+            {"reactions" in item && !item.mine && <ReportPost id={item.id} />}
+          </div>
+        )}
         {footer}
       </div>
     </article>

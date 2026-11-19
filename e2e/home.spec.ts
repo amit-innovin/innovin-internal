@@ -87,7 +87,7 @@ test.describe("Home", () => {
     await page.getByRole("link", { name: "Check now" }).click();
     await expect(page).toHaveURL(/\/wifi\?check=1$/);
     await page.goto("/");
-    await page.getByRole("link", { name: /Speak up anonymously/ }).click();
+    await page.locator(".td-speak").click();
     await expect(page).toHaveURL(/\/grievances$/);
   });
 

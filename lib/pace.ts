@@ -8,7 +8,6 @@ export type PaceState = "done" | "track" | "short" | "none";
 export type Pace = { state: PaceState; short: string; long: string; tone: "success" | "warn" | "neutral" };
 
 const monthName = (month: string) => new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));
-const days = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
 
 export function paceVerdict(input: { done: number; planned: number; target: number | null; month: string }): Pace {
   const { done, planned, target, month } = input;

@@ -1,4 +1,5 @@
 import { boardHref,eventHref,leaveHref } from "./journey";
+import { officeTime as clock } from "./format";
 import { fmtShortDate } from "./format";
 import { LEAVE_LABELS } from "./leave";
 import { inOfficeToday, snackTimes } from "./snack-times";
@@ -8,7 +9,6 @@ import { store } from "./store";
 import { todayIST } from "./time";
 
 // "11:00", "3:30", "4 PM", as the app says times elsewhere.
-const clock = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); const h12 = h % 12 || 12; return m === 0 && h >= 12 ? `${h12} PM` : `${h12}:${String(m).padStart(2, "0")}`; };
 import type { GrievanceRow } from "./types";
 
 // The notification feed is derived, not stored: there is no notifications table, just a read of
@@ -36,13 +36,12 @@ const LOOKBACK_DAYS = 30;
 export async function feedFor(opts: { email: string | null; grievances: Omit<GrievanceRow, "submitterRef">[]; now: number }) {
   const since = new Date(opts.now - LOOKBACK_DAYS * 86_400_000).toISOString();
 
-  const [announcements, events, away, employees] = await Promise.all([
+  const [announcements, events, away] = await Promise.all([
     store.listAnnouncements(10),
     // Every upcoming event, not just the soonest few: a new event further out must still notify
     // (the lookback filter below keeps only recently published or changed ones).
     store.listEvents(new Date(opts.now).toISOString(), 500),
     opts.email ? store.listAwayByEmail(opts.email, 20) : Promise.resolve([]),
-    opts.email ? store.listEmployees() : Promise.resolve([]),
   ]);
 
   const items: Notification[] = [];

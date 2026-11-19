@@ -47,12 +47,3 @@ export function PageHero({ page, title, subtitle, actions, back, children }: {
   );
 }
 
-// A section with a bold header, as on Today. `end` is a link or action on the right.
-export function PageSection({ title, label, end, children, id }: { title: ReactNode; label?: string; end?: ReactNode; children: ReactNode; id?: string }) {
-  return (
-    <section aria-label={label ?? (typeof title === "string" ? title : undefined)} className="td-sec" id={id}>
-      <div className="td-sech"><h2>{title}</h2>{end}</div>
-      {children}
-    </section>
-  );
-}

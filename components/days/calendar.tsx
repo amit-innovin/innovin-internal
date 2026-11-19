@@ -1,5 +1,5 @@
 "use client";
-import { useWorkspaceReplace } from "@/components/m3/workspace-link";
+import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { StatusChip } from "@/components/m3";
@@ -52,38 +52,22 @@ const LEGEND: [string, CSSProperties][] = [
 const PACE_TONE = { success: "success", warn: "warn", neutral: "neutral" } as const;
 
 export function Calendar({ view, onPick }: { view: DaysView; onPick: (day: Day, action: DayAction) => void }) {
-  const replace = useWorkspaceReplace();
-  const balances = useLeaveBalances();
+  const { replace } = useRouter();
   const { month, today } = view;
   const go = (by: number) => replace(`/days?month=${addMonths(month, by)}`, { scroll: false });
   const offset = (new Date(`${month}-01T00:00:00Z`).getUTCDay() + 6) % 7;
   const pace = paceVerdict({ done: view.summary.done, planned: plannedCount(view), target: view.summary.target, month });
   const left = view.days.filter((d) => d.date >= today && d.working).length;
-  const zoho = balances.data?.zoho;
-  const ledger = (zoho?.data?.balances ?? balances.data?.ledger ?? []).filter((l) => l.type in LEAVE_NAMES);
-  const checkedAt = zoho?.data?.fetchedAt ?? balances.data?.asOf;
-  const source = zoho?.data ? (zoho.state === "stale" ? "Zoho People · last available" : "Zoho People")
-    : balances.data?.source === "zoho-snapshot" ? "Copied Zoho balance" : "App estimate";
 
   return (
-    <section aria-labelledby="days-month" className="m3-card" style={{ padding: "16px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 2px" }}>
+    <section aria-labelledby="days-month" className="pg-card" style={{ padding: "18px 14px", gap: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 6px" }}>
+        <h2 id="days-month" style={{ margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.01em" }}>{month.slice(0, 4) === today.slice(0, 4) ? monthName(month) : monthTitle(month)}</h2>
+        <StatusChip tone={PACE_TONE[pace.tone]}>{pace.short}</StatusChip>
+        <span style={{ flex: 1 }} />
         <button type="button" className="m3-btn m3-btn-text" style={{ width: 44, padding: 0 }} aria-label="Previous month" disabled={month <= view.fixableFrom.slice(0, 7)} onClick={() => go(-1)}><ChevronLeft size={20} aria-hidden="true" /></button>
-        <h2 id="days-month" className="m3-title" style={{ flex: 1, textAlign: "center" }}>{month.slice(0, 4) === today.slice(0, 4) ? monthName(month) : monthTitle(month)}</h2>
         <button type="button" className="m3-btn m3-btn-text" style={{ width: 44, padding: 0 }} aria-label="Next month" disabled={month >= addMonths(today.slice(0, 7), PLAN_MONTHS_AHEAD)} onClick={() => go(1)}><ChevronRight size={20} aria-hidden="true" /></button>
       </div>
-      <div style={{ display: "flex", justifyContent: "center" }}><StatusChip tone={PACE_TONE[pace.tone]}>{pace.short}</StatusChip></div>
-      {ledger.length > 0 && (
-        <div role="group" aria-label="Leave left" style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", padding: "0 6px" }}>
-          <span className="m3-small" style={{ fontWeight: 600, color: "var(--m3-on-surface)" }}>Leave left</span>
-          {ledger.map((l) => (
-            <span key={l.type} style={{ height: 28, padding: "0 10px", borderRadius: 8, background: "#F1F4FA", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4 }}>
-              {LEAVE_NAMES[l.type]} <b style={{ fontVariantNumeric: "tabular-nums", color: l.type === "fl" ? "#8A5300" : "var(--m3-primary)" }}>{l.remaining ?? "—"}</b>
-            </span>
-          ))}
-          <span className="m3-small" style={{ flexBasis: "100%" }}>{source}{checkedAt ? ` · ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).format(new Date(checkedAt))}` : ""}</span>
-        </div>
-      )}
       {pace.state === "short" && month === today.slice(0, 7) && (
         <p className="m3-small" style={{ margin: "0 6px", color: "var(--m3-on-warn-container)" }}>{left} weekdays left in {monthName(month)}, including today. Tap a date to plan it.</p>
       )}
@@ -111,6 +95,34 @@ export function Calendar({ view, onPick }: { view: DaysView; onPick: (day: Day, 
           <span key={name} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><i style={{ width: 12, height: 12, borderRadius: 6, boxSizing: "border-box", ...swatch }} />{name}</span>
         ))}
       </div>
+    </section>
+  );
+}
+
+// Leave balances, beside the calendar: Zoho People is the source, and the card says so.
+export function LeaveLeft() {
+  const balances = useLeaveBalances();
+  const zoho = balances.data?.zoho;
+  const ledger = (zoho?.data?.balances ?? balances.data?.ledger ?? []).filter((l) => l.type in LEAVE_NAMES);
+  const checkedAt = zoho?.data?.fetchedAt ?? balances.data?.asOf;
+  const source = zoho?.data ? (zoho.state === "stale" ? "Zoho People · last available" : "Zoho People")
+    : balances.data?.source === "zoho-snapshot" ? "Copied Zoho balance" : "App estimate";
+  if (!ledger.length) return null;
+  return (
+    <section aria-labelledby="days-leave-left" className="pg-card" style={{ gap: 14 }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+        <h2 id="days-leave-left" className="m3-title" style={{ color: "#8A4A00" }}>Leave left</h2>
+        {balances.data?.applyUrl && <a href={balances.data.applyUrl} target="_blank" rel="noreferrer" className="m3-btn m3-btn-text" style={{ height: 32, padding: "0 6px", fontSize: 13 }}>Apply in Zoho</a>}
+      </div>
+      <div role="group" aria-label="Leave left" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }}>
+        {ledger.map((l) => (
+          <span key={l.type} style={{ borderRadius: 14, background: "#FFF1E3", padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <b style={{ fontSize: 24, lineHeight: "28px", fontVariantNumeric: "tabular-nums", color: "#4A2800" }}>{l.remaining ?? "—"}</b>
+            <span className="m3-small" style={{ color: "#4A2800" }}>{LEAVE_NAMES[l.type]}</span>
+          </span>
+        ))}
+      </div>
+      <span className="m3-small">{source}{checkedAt ? ` · ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).format(new Date(checkedAt))}` : ""}</span>
     </section>
   );
 }

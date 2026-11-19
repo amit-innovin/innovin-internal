@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import { Bell, CalendarDays, CircleHelp, LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { SpeakUpIcon } from "@/components/m3/icons";
 import { Avatar, ListRow, QueryState } from "@/components/m3";
 import { PageHero } from "@/components/m3/hero";
 import { Sheet } from "@/components/m3/sheet";
@@ -63,17 +65,38 @@ export function AccountPage() {
   const [settings, setSettings] = useState(false);
   const a = account.data;
   if (!a) return <div className="m3 m3-page m3-stack"><PageHero page="account" title="Account" /><QueryState error={account.error} onRetry={() => account.refetch()} what="your account" /></div>;
+  const officeDays = a.officeDays.length ? `Usually in ${usually(a.officeDays)}` : "Not set yet";
   return (
-    <div className="m3 m3-page m3-stack">
-      <PageHero page="account" title={a.name} subtitle={a.email} actions={<Avatar name={a.name} size={64} />}>
-        {a.officeDays.length > 0 && <span className="m3-chip m3-chip-neutral" style={{ alignSelf: "flex-start", marginTop: 6 }}>Usually in {usually(a.officeDays)}</span>}
+    <div className="m3 m3-page m3-stack" style={{ gap: 24 }}>
+      <PageHero page="account" title={a.name} subtitle={a.email} actions={<Avatar name={a.name} size={72} />}>
+        <span style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+          <span className="m3-chip m3-chip-neutral">{a.role === "admin" ? "Admin" : "Member"}</span>
+          {a.officeDays.length > 0 && <span className="m3-chip m3-chip-neutral">Usually in {usually(a.officeDays)}</span>}
+        </span>
       </PageHero>
-      <div className="pg-card pg-flush">
-        <ListRow onClick={() => setSettings(true)} title="Notification settings" subtitle="Tea round, events, kudos" chevron />
-        <ListRow href="/help" title="Help" chevron />
-        {a.role === "admin" && <ListRow href="/admin" title="Admin" subtitle="Opens the admin app" chevron />}
-        <button type="button" className="m3-row" onClick={signOut} style={{ color: "var(--m3-error)", fontWeight: 600 }}>Sign out</button>
-      </div>
+      <section aria-label="Settings" className="td-sec">
+        <div className="td-sech"><h2>Settings</h2></div>
+        <div className="pg-card pg-flush">
+          <ListRow onClick={() => setSettings(true)} leading={<span className="m3-icon m3-tone-secondary"><Bell size={20} aria-hidden="true" /></span>} title="Notification settings" subtitle={`Tea round, events, kudos · Say hi is ${a.sayHi ? "on" : "off"}`} chevron />
+          <ListRow href="/days" leading={<span className="m3-icon m3-tone-primary"><CalendarDays size={20} aria-hidden="true" /></span>} title="Usual office days" subtitle={officeDays} chevron />
+        </div>
+      </section>
+      <section aria-label="Help and privacy" className="td-sec">
+        <div className="td-sech"><h2>Help &amp; privacy</h2></div>
+        <div className="pg-card pg-flush">
+          <ListRow href="/help" leading={<span className="m3-icon m3-tone-neutral"><CircleHelp size={20} aria-hidden="true" /></span>} title="Help" subtitle="How office days, leave, tea and privacy work" chevron />
+          <ListRow href="/grievances" leading={<span className="m3-icon" style={{ background: "var(--m3-speak)", color: "#FFFFFF" }}><SpeakUpIcon size={20} /></span>} title="Speak up" subtitle="Anonymous. Admins never see who sent it." chevron />
+        </div>
+      </section>
+      {a.role === "admin" && (
+        <section aria-label="Admin" className="td-sec">
+          <div className="td-sech"><h2>Admin</h2></div>
+          <div className="pg-card pg-flush">
+            <ListRow href="/admin" leading={<span className="m3-icon m3-tone-tertiary"><ShieldCheck size={20} aria-hidden="true" /></span>} title="Admin" subtitle="Opens the admin app" chevron />
+          </div>
+        </section>
+      )}
+      <button type="button" className="m3-btn m3-btn-outlined" onClick={signOut} style={{ alignSelf: "flex-start", color: "var(--m3-error)", borderColor: "var(--m3-outline-variant)" }}><LogOut size={18} aria-hidden="true" />Sign out</button>
       {settings && <NotificationSettings sayHi={a.sayHi} onClose={() => setSettings(false)} />}
     </div>
   );

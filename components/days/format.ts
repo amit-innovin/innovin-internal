@@ -10,11 +10,5 @@ export const monthName = (month: string) => fmt(`${month}-01`, { month: "long" }
 export const monthTitle = (month: string) => fmt(`${month}-01`, { month: "long", year: "numeric" }); // November 2026
 export const dayNumber = (date: string) => Number(date.slice(8));
 
-export function nextDate(date: string) {
-  const d = at(date);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
-}
-
 export const LEAVE_NAMES = { cl: "Casual", sl: "Sick", el: "Earned", fl: "Flexible" } as const;
 export type LeaveKey = keyof typeof LEAVE_NAMES;

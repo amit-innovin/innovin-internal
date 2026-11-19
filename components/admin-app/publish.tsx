@@ -1,8 +1,7 @@
 "use client";
 // Admin › Publish: announcements (each shows once to everyone as a dialog; optional pin to the
 // top of the Feed) and events. Seen counts are counts, never names.
-import { usePathname, useSearchParams } from "next/navigation";
-import { useWorkspaceReplace } from "@/components/m3/workspace-link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   useAdminOverview, useAnnouncements, useCalendar, useCancelEvent, useDeleteAnnouncement, useDeleteEvent, useDisconnectCalendar, useEditEvent, useEvents, usePostEvent, usePublishAnnouncement, useResendInvite,
@@ -20,7 +19,7 @@ const cat = (c: string) => CATS.find(([k]) => k === c) ?? CATS[5];
 
 export function PublishPage() {
   const params = useSearchParams();
-  const replace = useWorkspaceReplace();
+  const { replace } = useRouter();
   const tab: Tab = params.get("tab") === "events" ? "events" : "announcements";
   return (
     <>
@@ -108,12 +107,11 @@ function CalendarCard() {
   const disconnect = useDisconnectCalendar();
   const snack = useSnack();
   const params = useSearchParams();
-  const replace = useWorkspaceReplace();
+  const { replace } = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [problem, setProblem] = useState("");
   const shown = useRef(false);
   const s = status.data;
-  const connectHref = usePathname() === "/" ? "/api/admin/calendar/connect?workspace=1" : "/api/admin/calendar/connect";
   useEffect(() => {
     const result = params.get("calendar");
     if (!result || shown.current || !s) return;
@@ -145,7 +143,7 @@ function CalendarCard() {
             </div>
           )}
         </>
-      ) : <div><a className="m3-btn m3-btn-filled" href={connectHref}>Connect Google Calendar</a></div>}
+      ) : <div><a className="m3-btn m3-btn-filled" href="/api/admin/calendar/connect">Connect Google Calendar</a></div>}
     </section>
   );
 }

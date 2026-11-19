@@ -79,7 +79,6 @@
 /* Microinteractions */
 .m3 button:active:not(:disabled), .m3 a.m3-row:active, .m3 .m3-btn:active { transform: scale(.96); }
 .m3 [aria-pressed="true"] { animation: m3-pop .32s var(--m3-ease); }
-.m3 .m3-bar-fill { transition: width .45s var(--m3-ease); }
 .m3 .m3-spin { animation: m3-spin .8s linear infinite; }
 @keyframes m3-pop { 0% { transform: scale(.92); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
 @keyframes m3-spin { to { transform: rotate(360deg); } }
@@ -101,13 +100,13 @@
 .m3-main { flex: 1 1 auto; min-width: 0; display: flex; justify-content: center; padding: 18px 18px calc(104px + env(safe-area-inset-bottom)); }
 @media (min-width: 768px) { .m3-main { padding: 24px 28px 48px; } }
 @media (min-width: 1100px) { .m3-main { padding: 28px 32px 56px; } }
-/* The grey ground belongs to rebuilt pages; Duo pages keep their own background. */
+/* Pages sit on the grey ground. */
 .m3-app:has(.m3-page), .m3-app:has(.m3-page) .m3-main, .m3-app:has(.m3-page) .m3-top { background: var(--m3-ground); }
 /* A rebuilt page's column: full width up to the reading measure. Today is wider (.m3-today). */
 .m3-page { width: 100%; max-width: 640px; }
 @media (min-width: 768px) { .m3-page { max-width: 760px; } }
 /* Detail screens' back arrow: phones only; wider screens have the top tabs. */
-@media (min-width: 768px) { .m3 .m3-back, .m3 .m3-hero-btn.m3-back { display: none; } }
+@media (min-width: 768px) { .m3 .m3-back { display: none; } }
 
 .m3-top { display: none; }
 .m3-wordmark { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--m3-primary) !important; text-decoration: none; justify-self: start; }
@@ -160,7 +159,7 @@
 /* Wide pages: the work on the left, a rail on the right from 1100px. */
 .m3-page.pg-wide { max-width: 1200px; gap: 22px; }
 @media (min-width: 768px) { .m3-page.pg-wide { max-width: 1200px; gap: 28px; } }
-.m3 .pg-cols { display: grid; gap: 22px; align-items: start; }
+.m3 .pg-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; align-items: start; }
 .m3 .pg-main, .m3 .pg-rail { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
 @media (min-width: 1100px) {
   .m3 .pg-cols { grid-template-columns: minmax(0, 1fr) 400px; gap: 28px; }
@@ -169,8 +168,6 @@
 .m3 .pg-card { background: var(--m3-surface); border-radius: 24px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .m3 .pg-flush { padding: 4px 0; overflow: hidden; }
 .m3 .pg-flush > .m3-row { padding-left: 20px; padding-right: 20px; }
-.m3 .pg-stat { display: flex; flex-direction: column; }
-.m3 .pg-stat b { font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 
 /* Speak up: the one dark surface in the app, so it reads as private wherever it appears. */
 .m3-speak-pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 20px; background: var(--m3-speak); color: #FFFFFF !important; font: 700 14px var(--m3-font); white-space: nowrap; }
@@ -198,13 +195,9 @@
 /* Admin app (prototype: docs/design/m3/M3AdminApp.dc.html and M3AdminAppPhone.dc.html): its own
    shell. A sidebar from 761px; below that a top bar and a bottom bar with More. */
 .m3a { min-height: 100dvh; background: var(--m3-ground); display: flex; flex-direction: column; align-items: stretch; font-size: 15px; line-height: 22px; }
-.m3a-side { flex: 0 0 256px; box-sizing: border-box; padding: 24px 12px; background: var(--m3-surface-container); display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100dvh; overflow-y: auto; }
 .m3a-brand { display: flex; align-items: center; gap: 8px; text-decoration: none; }
 .m3a-brand b { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--m3-primary); }
 .m3a-brand span { height: 24px; padding: 0 10px; border-radius: 12px; background: var(--m3-primary); color: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; }
-.m3a-item { display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 16px; border-radius: 24px; color: var(--m3-on-surface-variant); text-decoration: none; font-size: 15px; font-weight: 500; transition: background-color .2s ease; }
-.m3a-item[aria-current="page"] { background: var(--m3-secondary-container); color: var(--m3-on-secondary-container); font-weight: 700; }
-.m3a-item-label { flex: 1; }
 .m3a-badge { min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 10px; background: var(--m3-error); color: #FFFFFF; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; }
 .m3a-col { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .m3a-content { box-sizing: border-box; padding: 28px 32px 48px; width: 100%; max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
@@ -274,7 +267,6 @@
   .m3 .m3a-panel { position: fixed; inset: 0; z-index: 40; border-radius: 0; min-width: 0; max-width: none; overflow-y: auto; padding: 16px 16px 32px; }
 }
 @media (max-width: 760px) {
-  .m3a-side { display: none; }
   .m3a-top, .m3a-bottom { display: flex; }
   .m3a-content { padding: 16px 16px calc(112px + env(safe-area-inset-bottom)); gap: 16px; }
   .m3 .m3a-h1 { font-size: 24px; line-height: 32px; }
@@ -319,14 +311,14 @@
 .m3 .td-grow b { font-size: 15px; line-height: 20px; }
 
 /* Your day ribbon */
-.m3 .td-ribbon { position: relative; height: 92px; margin: 0 6px; }
-.m3 .td-track, .m3 .td-past { position: absolute; left: 0; top: 44px; height: 6px; border-radius: 3px; }
+.m3 .td-ribbon { position: relative; height: 92px; margin: 0 2px; }
+.m3 .td-track, .m3 .td-past { position: absolute; left: 0; height: 6px; border-radius: 3px; }
 .m3 .td-track { right: 0; background: #E3E8EF; }
 .m3 .td-past { background: #9CCBEA; }
-.m3 .td-hour { position: absolute; top: 72px; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--m3-outline); white-space: nowrap; }
+.m3 .td-hour { position: absolute; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--m3-outline); white-space: nowrap; }
 .m3 .td-pin-label { position: absolute; transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 8px; }
-.m3 .td-pin-dot { position: absolute; top: 40px; width: 14px; height: 14px; border-radius: 7px; transform: translateX(-50%); }
-.m3 .td-now-line { position: absolute; top: 36px; height: 22px; width: 2px; border-radius: 1px; background: var(--m3-on-surface); transform: translateX(-50%); }
+.m3 .td-pin-dot { position: absolute; width: 14px; height: 14px; border-radius: 7px; transform: translateX(-50%); }
+.m3 .td-now-line { position: absolute; width: 2px; border-radius: 1px; background: var(--m3-on-surface); transform: translateX(-50%); }
 .m3 .td-now { display: none; position: absolute; top: 6px; transform: translateX(-50%); font-size: 10px; font-weight: 800; letter-spacing: .04em; color: #FFFFFF; background: var(--m3-on-surface); border-radius: 6px; padding: 3px 6px; white-space: nowrap; }
 @media (max-width: 767px) { .m3 .td-hour-mid { display: none; } .m3 .td-pin-label { font-size: 11px; padding: 3px 7px; } }
 
@@ -364,22 +356,20 @@
 @media (min-width: 768px) { .m3 .td-team { margin: 0; padding: 0; } }
 @media (min-width: 1100px) { .m3 .td-team { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; overflow: visible; } .m3 .td-team > * { width: auto; } }
 
-.m3 .td-foot { display: grid; gap: 10px; }
-@media (min-width: 768px) { .m3 .td-foot { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; } }
 .m3 .td-speak { background: var(--m3-speak); color: #FFFFFF !important; border-radius: 24px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; }
 
 /* Phones: Check in as an extended FAB in the thumb zone */
 .m3 .td-fab { position: fixed; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 45; height: 56px; border-radius: 16px; padding: 0 20px; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,.2), 0 6px 14px rgba(0,100,147,.25); }
 @media (min-width: 768px) { .m3 .td-fab { display: none; } }
 @media (max-width: 767px) { .m3 .td-pin:not(.td-wide) .td-pinwhen { display: none; } }
-/* Today's Check in button takes the thumb spot until you're checked in; Speak up waits. */
-.m3-app:has(.td-fab) .m3-speak-fab { display: none; }
+/* On Today the thumb spot is Check in until you're checked in; Speak up takes it after, and never
+   flashes in while Today is still loading. */
+.m3-app:has(.m3-today:not(.td-is-in)) .m3-speak-fab { display: none; }
 @media (min-width: 768px) and (max-width: 1099px) { .m3-speak-pill { width: 40px; padding: 0; justify-content: center; font-size: 0; gap: 0; } }
 .m3 .td-speak-cta { flex: none; height: 40px; padding: 0 18px; border-radius: 20px; background: #FFFFFF; color: var(--m3-speak); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; }
 @media (max-width: 599px) { .m3 .td-speak-cta { display: none; } }
 /* Feed */
 .m3 .fd-grid { display: grid; gap: 16px; }
-@media (min-width: 1100px) { .m3 .fd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 .m3 .fd-share { height: 56px; border-radius: 16px; border: 0; background: var(--m3-ground); color: var(--m3-on-surface); font: 600 14px var(--m3-font); display: flex; align-items: center; gap: 10px; padding: 0 14px; cursor: pointer; }
 .m3 .fd-share:hover { background: var(--m3-surface-container); }
 .m3 .fd-share svg { color: #A1401F; }
@@ -388,6 +378,8 @@
 .m3 .pg-wide .m3-card { border-radius: 24px; }
 /* 10K steps */
 .m3 .st-hero { flex-direction: row; align-items: center; gap: 28px; padding: 24px; flex-wrap: wrap; }
+.m3 .st-hero > div { min-width: min(100%, 260px); }
+@media (max-width: 599px) { .m3 .st-hero { gap: 16px; padding: 18px; } .m3 .st-hero form input { min-width: 0; width: 100%; } }
 .m3 .st-ring { width: 140px; height: 140px; flex: none; }
 @media (min-width: 768px) { .m3 .st-ring { width: 180px; height: 180px; } }
 /* Event details: a calendar-page date block */
@@ -401,3 +393,20 @@
 @media (max-width: 1240px) { .m3a-topbar .m3-toptab svg { display: none; } .m3a-topbar .m3-toptab { padding: 0 10px; font-size: 13px; } }
 @media (max-width: 760px) { .m3a-topbar { display: none; } }
 @media (min-width: 761px) { .m3 .m3a-h1 { font-size: 40px; line-height: 46px; font-weight: 700; letter-spacing: -0.025em; } }
+/* Feed post card (Feed, Today, post sheet): white, the type as a small label, one action. */
+.m3 .pc { background: var(--m3-surface); border-radius: 24px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; color: var(--m3-on-surface); }
+.m3 .pc-head { display: flex; align-items: center; gap: 12px; }
+.m3 .pc-glyph { flex: none; width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; font-weight: 800; }
+.m3 .pc-author { font-size: 15px; font-weight: 600; line-height: 20px; overflow-wrap: anywhere; }
+.m3 .pc-kind { flex: none; height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; }
+.m3 .pc-title { margin: 0; font-size: 20px; line-height: 26px; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.m3 .pc-body { margin: 0; font-size: 15px; line-height: 23px; color: #2B3036; white-space: pre-wrap; overflow-wrap: anywhere; }
+.m3 .pc-img { width: 100%; max-height: 260px; object-fit: cover; border-radius: 16px; }
+.m3 .pc-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+.m3 .pc-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+/* Tea & snacks: today's snacks as tiles */
+.m3 .sn-grid { display: grid; gap: 10px; }
+@media (min-width: 600px) { .m3 .sn-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.m3 .sn-tile { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; background: var(--m3-ground); border: 2px solid transparent; transition: border-color .2s, background-color .2s; }
+.m3 .sn-tile[data-mine] { background: #FFF8E1; border-color: #E8C35A; }
+.m3 .sn-icon { flex: none; width: 44px; height: 44px; border-radius: 14px; background: #FFF1C2; color: #5C4300; display: grid; place-items: center; }

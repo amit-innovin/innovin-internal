@@ -74,12 +74,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       ]);
     });
 
-    it("reads tea from before rounds as an afternoon yes", async () => {
-      await store.setTea("2026-11-17", "c@innovinlabs.com", true);
-      expect((await store.listTeaAnswers("2026-11-17")).map(({ round, email, going }) => ({ round, email, going }))).toEqual([{ round: "pm", email: "c@innovinlabs.com", going: true }]);
-      expect((await store.listTea("2026-11-17")).map((t) => t.email)).toEqual(["c@innovinlabs.com"]);
-    });
-
     it("keeps one snack pick per person per day, and switching replaces it", async () => {
       await store.setSnackPick("2026-11-18", "ref-a", "samosa");
       await store.setSnackPick("2026-11-18", "ref-a", "fruit");
@@ -197,7 +191,7 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(answered?.repliedAt).toBeTruthy();
     });
 
-    it("keeps one plan override per person and date, and lists a date's overrides for everyone", async () => {
+    it("keeps one plan override per person and date, and null removes it", async () => {
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", true);
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", false);
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-19", true);
@@ -207,9 +201,9 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         { email: "a@innovinlabs.com", date: "2026-11-19", planned: true },
       ]);
       expect(await store.listPlanOverrides("a@innovinlabs.com", "2026-11-19", "2026-11-19")).toHaveLength(1);
-      expect((await store.listPlanOverridesOn("2026-11-18")).map((r) => r.email).sort()).toEqual(["a@innovinlabs.com", "b@innovinlabs.com"]);
       await store.setPlanOverride("a@innovinlabs.com", "2026-11-18", null);
-      expect(await store.listPlanOverridesOn("2026-11-18")).toEqual([{ email: "b@innovinlabs.com", date: "2026-11-18", planned: true }]);
+      expect(await store.listPlanOverrides("a@innovinlabs.com", "2026-11-01", "2026-11-30")).toEqual([{ email: "a@innovinlabs.com", date: "2026-11-19", planned: true }]);
+      expect(await store.listPlanOverrides("b@innovinlabs.com", "2026-11-18", "2026-11-18")).toEqual([{ email: "b@innovinlabs.com", date: "2026-11-18", planned: true }]);
     });
 
     it("keeps one sealed calendar token per admin and deletes it", async () => {
@@ -348,16 +342,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       ...p,
     });
 
-    describe("workspace", () => {
-      it("merges profile edits without losing presence and isolates colleagues", async () => {
-        await store.saveWorkspaceProfile("a@innovinlabs.com", { designation: "Product Designer", mode: "office", presenceDate: "2026-10-15" });
-        await store.saveWorkspaceProfile("a@innovinlabs.com", { desk: "B12", project: "Portal" });
-        expect(await store.getWorkspaceProfile("a@innovinlabs.com")).toMatchObject({ designation: "Product Designer", desk: "B12", mode: "office" });
-        expect(await store.getWorkspaceProfile("b@innovinlabs.com")).toBeNull();
-        expect(await store.listWorkspaceProfiles()).toHaveLength(1);
-      });
-    });
-
     describe("attendance", () => {
       it("keeps one row per person per day: repeat check-in is a no-op, check-in after checkout reopens it", async () => {
         const first = await store.checkIn(attendance());
@@ -447,7 +431,7 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(all[0].steps).toBe(12_400);
       });
 
-      it("lists everyone newest day first, and one person's history with a limit", async () => {
+      it("lists everyone newest day first", async () => {
         await store.setSteps(steps({ date: "2026-09-22" }));
         await store.setSteps(steps({ date: "2026-09-23", createdAt: iso(1000) }));
         await store.setSteps(steps({ email: "b@innovinlabs.com", date: "2026-09-23", hit: false }));
@@ -455,8 +439,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         // Same-date order between people is unspecified; the day ordering is not.
         expect(all.slice(0, 2).sort()).toEqual(["a@innovinlabs.com:2026-09-23", "b@innovinlabs.com:2026-09-23"]);
         expect(all[2]).toBe("a@innovinlabs.com:2026-09-22");
-        const mine = await store.listStepsByEmail("a@innovinlabs.com", 1);
-        expect(mine.map((s) => s.date)).toEqual(["2026-09-23"]);
       });
 
       it("legacy owner rows read back as admin", async () => {
@@ -596,14 +578,14 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect(await store.listPollVotes([poll.id])).toEqual([]);
       });
 
-      it("tea: one place per person per day, and leaving the round removes it", async () => {
-        await store.setTea("2026-09-23", "a@innovinlabs.com", true);
-        await store.setTea("2026-09-23", "a@innovinlabs.com", true);
-        await store.setTea("2026-09-23", "b@innovinlabs.com", true);
-        await store.setTea("2026-09-24", "a@innovinlabs.com", true);
-        expect((await store.listTea("2026-09-23")).map((t) => t.email).sort()).toEqual(["a@innovinlabs.com", "b@innovinlabs.com"]);
-        await store.setTea("2026-09-23", "a@innovinlabs.com", false);
-        expect((await store.listTea("2026-09-23")).map((t) => t.email)).toEqual(["b@innovinlabs.com"]);
+      it("tea: one answer per person per round per day, and clearing the answer removes it", async () => {
+        await store.setTeaAnswer("2026-09-23", "pm", "a@innovinlabs.com", true);
+        await store.setTeaAnswer("2026-09-23", "pm", "a@innovinlabs.com", true);
+        await store.setTeaAnswer("2026-09-23", "pm", "b@innovinlabs.com", true);
+        await store.setTeaAnswer("2026-09-24", "pm", "a@innovinlabs.com", true);
+        expect((await store.listTeaAnswers("2026-09-23")).map((t) => t.email).sort()).toEqual(["a@innovinlabs.com", "b@innovinlabs.com"]);
+        await store.setTeaAnswer("2026-09-23", "pm", "a@innovinlabs.com", null);
+        expect((await store.listTeaAnswers("2026-09-23")).map((t) => t.email)).toEqual(["b@innovinlabs.com"]);
       });
 
       it("snacks: items move between suggested, shelf and dismissed; votes toggle per voter and can be cleared", async () => {
@@ -620,19 +602,6 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
         expect((await store.listSnackVotes()).filter((v) => v.itemId === item.id)).toEqual([]);
         expect(await store.setSnackStatus("missing", "dismissed", null)).toBe(false);
         expect((await store.listSnacks()).map((s) => s.name)).toEqual(["Makhana"]);
-      });
-
-      it("reading: one row per person per book, updated in place and removable", async () => {
-        const book = await store.addBook({ id: uid(), title: "Deep Work", author: "Cal Newport", createdAt: iso() });
-        expect((await store.listBooks()).map((b) => b.title)).toEqual(["Deep Work"]);
-        await store.setReading({ email: "a@innovinlabs.com", bookId: book.id, status: "reading", page: 10, pages: 300, updatedAt: iso() });
-        await store.setReading({ email: "a@innovinlabs.com", bookId: book.id, status: "done", page: 300, pages: 300, updatedAt: iso(1000) });
-        await store.setReading({ email: "b@innovinlabs.com", bookId: book.id, status: "want", page: 0, pages: 0, updatedAt: iso() });
-        const rows = await store.listReadings();
-        expect(rows).toHaveLength(2);
-        expect(rows.find((r) => r.email === "a@innovinlabs.com")).toMatchObject({ status: "done", page: 300, updatedAt: iso(1000) });
-        await store.clearReading("b@innovinlabs.com", book.id);
-        expect((await store.listReadings()).map((r) => r.email)).toEqual(["a@innovinlabs.com"]);
       });
 
       it("a birthday is day and month only, hidden unless shown, and survives a re-sign-in", async () => {

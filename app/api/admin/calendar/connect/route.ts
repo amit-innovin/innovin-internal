@@ -3,7 +3,7 @@ import { currentActor } from "@/lib/admin";
 import { createOauthState } from "@/lib/auth";
 import { CAL_PKCE_COOKIE, CAL_STATE_COOKIE, calendarAuthUrl, calendarConfigured, pkcePair } from "@/lib/calendar";
 import { secureAuthCookie } from "@/lib/cookies";
-import { calendarReturnPath } from "@/lib/workspace-navigation";
+import { CALENDAR_RETURN_PATH } from "@/lib/workspace-navigation";
 import { store } from "@/lib/store";
 
 // Starts "Connect Google Calendar" for the signed-in admin: signed state + PKCE, both in short-lived
@@ -11,7 +11,7 @@ import { store } from "@/lib/store";
 export async function GET(req: NextRequest) {
   const actor = await currentActor();
   if (!actor || actor.role !== "admin") return NextResponse.redirect(new URL("/", req.nextUrl.origin));
-  const returnPath = calendarReturnPath(req.nextUrl.searchParams.get("workspace") === "1");
+  const returnPath = CALENDAR_RETURN_PATH;
   const back = (result: string) => NextResponse.redirect(new URL(`${returnPath}&calendar=${result}`, req.nextUrl.origin));
   if (!calendarConfigured()) return back("unavailable");
   if ((await store.getEmployee(actor.email))?.leftOn) return back("left");

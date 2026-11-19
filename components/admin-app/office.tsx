@@ -1,19 +1,19 @@
 "use client";
+import { officeTime } from "@/lib/format";
 // Admin › Office: closed days, tea and snack times, and the snack shelf, as three tabs (tab in the URL).
-import { useSearchParams } from "next/navigation";
-import { useWorkspaceReplace } from "@/components/m3/workspace-link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   useAddClosedDay, useClosedDays, useRemoveClosedDay, useSetSnackTimes, useSnacks, useSnackTimes, useSnackWrite, useTea,
   type Snacks, type SnackTimes,
 } from "@/lib/queries";
-import { Loading, PageHead, Tabs, clockIST, dayLabel, fmtTime, hm, todayIST, useSnack } from "./ui";
+import { Loading, PageHead, Tabs, clockIST, dayLabel, fmtTime, todayIST, useSnack } from "./ui";
 
 type Tab = "closed" | "tea" | "shelf";
 
 export function OfficePage() {
   const params = useSearchParams();
-  const replace = useWorkspaceReplace();
+  const { replace } = useRouter();
   const tab: Tab = (["closed", "tea", "shelf"] as const).find((t) => t === params.get("tab")) ?? "closed";
   return (
     <>
@@ -150,7 +150,7 @@ function Shelf() {
           <h2 id="ord-h" className="m3-title">Today&apos;s order</h2>
           {ordered
             ? <span className="m3a-tag" style={{ background: "#CDEBD6", color: "#0B3D1F" }}>Ordered{data.today.orderedAt ? ` at ${clockIST(data.today.orderedAt)}` : ""}</span>
-            : <span className="m3a-tag" style={{ background: "#FFDDB0", color: "#4A2800" }}>Goes in at {hm(data.today.orderAt)}</span>}
+            : <span className="m3a-tag" style={{ background: "#FFDDB0", color: "#4A2800" }}>Goes in at {officeTime(data.today.orderAt)}</span>}
         </div>
         {picks.length > 0 && <ul className="m3a-list">{picks.map((p) => <li key={p.name} style={{ padding: "10px 0", fontSize: 16 }}>{p.name} · {p.n}</li>)}</ul>}
         <div style={{ display: "flex", gap: 8 }}>

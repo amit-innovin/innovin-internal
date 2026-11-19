@@ -114,7 +114,6 @@ export async function markDay(input: { email: string; date: string; mode: DayMod
   const today = todayIST();
   if (input.date > today) return { ok: false, status: 409, code: "future", error: "You can't mark a day that hasn't happened yet" };
   const now = new Date().toISOString();
-  const before = dayMode(await store.getAttendance(input.email, input.date));
   // Nobody is in the office on a closed day, today or when fixing a past day.
   if (input.mode === "office" && (await closedMap(input.date, input.date)).has(input.date)) return { ok: false, status: 409, code: "closed", error: "The office is closed that day" };
 

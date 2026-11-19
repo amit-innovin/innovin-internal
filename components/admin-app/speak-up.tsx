@@ -1,8 +1,7 @@
 "use client";
 // Admin › Speak up: reported Feed posts first (Keep clears the reports, Remove deletes the post),
 // then the anonymous messages with the status and note their sender sees.
-import { useSearchParams } from "next/navigation";
-import { useWorkspaceReplace } from "@/components/m3/workspace-link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { useAllGrievances, useKeepPost, useRemovePost, useReported, useSetGrievance, type Grievance, type ReportedPost } from "@/lib/queries";
@@ -17,7 +16,7 @@ export function SpeakUpPage() {
   const list = useAllGrievances();
   const reported = useReported();
   const params = useSearchParams();
-  const replace = useWorkspaceReplace();
+  const { replace } = useRouter();
   const filter = (["open", "resolved", "all"] as const).find((f) => f === params.get("show")) ?? "open";
   if (!list.data) return <><PageHead title="Speak up" /><Loading what="Speak up" error={list.error} onRetry={() => list.refetch()} /></>;
   const all = [...list.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt));

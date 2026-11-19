@@ -1,6 +1,6 @@
 "use client";
 import { PageHero } from "@/components/m3/hero";
-import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";

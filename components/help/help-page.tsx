@@ -1,6 +1,6 @@
 "use client";
 import { PageHero } from "@/components/m3/hero";
-import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
+import Link from "next/link";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 

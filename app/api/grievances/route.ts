@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
-import { DEVICE_COOKIE, GRIEVANCE_IDS_COOKIE, longLivedCookie } from "@/lib/cookies";
+import { GRIEVANCE_IDS_COOKIE, longLivedCookie } from "@/lib/cookies";
 import { enforce } from "@/lib/guard";
 import { badRequest, clientIp, readJSON, str } from "@/lib/http";
 import { id, store } from "@/lib/store";

@@ -20,7 +20,6 @@ import type {
   Role,
   Store,
   WifiRow,
-  WorkspaceProfile,
   AttendanceChangeRow,
   ClosedDayRow,
   CalendarTokenRow,
@@ -29,8 +28,6 @@ import type {
   TeaRound,
   PlanOverrideRow,
   SnackItem,
-  BookRow,
-  ReadingRow,
 } from "./types";
 
 // Postgres persistence — used when DATABASE_URL is set (Neon, Supabase, Vercel Postgres).
@@ -548,21 +545,6 @@ class PgStore implements Store {
     const res = await this.q(`SELECT notice_id AS "noticeId", email, emoji FROM notice_reactions WHERE notice_id = ANY($1::text[])`, [ids]);
     return res.rows;
   }
-  async getWorkspaceProfile(email: string): Promise<WorkspaceProfile | null> {
-    const res = await this.q(`SELECT email, data FROM workspace_profiles WHERE email = $1`, [email]);
-    return res.rows[0] ? { ...res.rows[0].data, email } : null;
-  }
-  async listWorkspaceProfiles(): Promise<WorkspaceProfile[]> {
-    const res = await this.q(`SELECT email, data FROM workspace_profiles ORDER BY email`);
-    return res.rows.map((r) => ({ ...r.data, email: r.email }));
-  }
-  async saveWorkspaceProfile(email: string, patch: Partial<Omit<WorkspaceProfile, "email">>): Promise<WorkspaceProfile> {
-    const defaults = { designation: "", department: "", project: "", floor: "", desk: "", focus: "", mode: null, presenceDate: "" };
-    const res = await this.q(`INSERT INTO workspace_profiles (email, data) VALUES ($1, $2::jsonb)
-      ON CONFLICT (email) DO UPDATE SET data = workspace_profiles.data || $3::jsonb RETURNING data`,
-      [email, JSON.stringify({ ...defaults, ...patch }), JSON.stringify(patch)]);
-    return { ...res.rows[0].data, email };
-  }
   private pool: Pool | null = null;
   private ready: Promise<void> | null = null;
 
@@ -642,14 +624,6 @@ class PgStore implements Store {
     if (!ids.length) return [];
     const res = await this.q(`SELECT notice_id, email, option FROM poll_votes WHERE notice_id = ANY($1)`, [ids]);
     return res.rows.map((r) => ({ noticeId: r.notice_id, email: r.email, option: r.option }));
-  }
-  // The afternoon round, for callers from before rounds existed.
-  async setTea(date: string, email: string, going: boolean) {
-    await this.setTeaAnswer(date, "pm", email, going ? true : null);
-  }
-  async listTea(date: string) {
-    const res = await this.q(`SELECT * FROM tea_answers WHERE date = $1 AND round = 'pm' AND going ORDER BY created_at`, [date]);
-    return res.rows.map((r) => ({ date: r.date, email: r.email, createdAt: r.created_at?.toISOString?.() ?? r.created_at }));
   }
   async setTeaAnswer(date: string, round: TeaRound, email: string, going: boolean | null) {
     if (going === null) await this.q(`DELETE FROM tea_answers WHERE date = $1 AND round = $2 AND email = $3`, [date, round, email]);
@@ -740,29 +714,6 @@ class PgStore implements Store {
   async clearSnackVotes(itemId: string) {
     await this.q(`DELETE FROM snack_votes WHERE item_id = $1`, [itemId]);
   }
-  async addBook(row: BookRow) {
-    await this.q(`INSERT INTO books (id, title, author, created_at) VALUES ($1,$2,$3,$4)`, [row.id, row.title, row.author, row.createdAt]);
-    return row;
-  }
-  async listBooks() {
-    const res = await this.q(`SELECT * FROM books ORDER BY created_at`);
-    return res.rows.map((r) => ({ id: r.id, title: r.title, author: r.author, createdAt: r.created_at?.toISOString?.() ?? r.created_at }));
-  }
-  async setReading(row: ReadingRow) {
-    await this.q(
-      `INSERT INTO readings (email, book_id, status, page, pages, updated_at) VALUES ($1,$2,$3,$4,$5,$6)
-       ON CONFLICT (email, book_id) DO UPDATE SET status = EXCLUDED.status, page = EXCLUDED.page, pages = EXCLUDED.pages, updated_at = EXCLUDED.updated_at`,
-      [row.email, row.bookId, row.status, row.page, row.pages, row.updatedAt],
-    );
-    return row;
-  }
-  async clearReading(email: string, bookId: string) {
-    await this.q(`DELETE FROM readings WHERE email = $1 AND book_id = $2`, [email, bookId]);
-  }
-  async listReadings() {
-    const res = await this.q(`SELECT * FROM readings`);
-    return res.rows.map((r) => ({ email: r.email, bookId: r.book_id, status: r.status, page: r.page, pages: r.pages, updatedAt: r.updated_at?.toISOString?.() ?? r.updated_at }));
-  }
   async setBirthday(email: string, birthday: string | null, show: boolean) {
     const res = await this.q(`UPDATE employees SET birthday = $2, show_birthday = $3 WHERE email = $1`, [email, birthday, show]);
     return (res.rowCount ?? 0) > 0;
@@ -801,10 +752,6 @@ class PgStore implements Store {
   }
   async listPlanOverrides(email: string, from: string, to: string) {
     const res = await this.q(`SELECT email, date, planned FROM plan_overrides WHERE email = $1 AND date >= $2 AND date <= $3 ORDER BY date`, [email, from, to]);
-    return res.rows.map(planOverride);
-  }
-  async listPlanOverridesOn(date: string) {
-    const res = await this.q(`SELECT email, date, planned FROM plan_overrides WHERE date = $1 ORDER BY email`, [date]);
     return res.rows.map(planOverride);
   }
   async listClosedDays(from: string, to: string) {
@@ -1053,10 +1000,6 @@ class PgStore implements Store {
   }
   async listSteps() {
     const res = await this.q(`SELECT * FROM steps ORDER BY date DESC`);
-    return res.rows.map(steps);
-  }
-  async listStepsByEmail(email: string, limit: number) {
-    const res = await this.q(`SELECT * FROM steps WHERE email = $1 ORDER BY date DESC LIMIT $2`, [email, limit]);
     return res.rows.map(steps);
   }
   async setLeaveBalance(row: LeaveBalanceRow) {

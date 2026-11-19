@@ -148,17 +148,6 @@ export const jsonStore: Store = {
     return { result: true, changed: true };
   }),
   listNoticeReactions: (ids) => query((db) => db.noticeReactions.filter(n => ids.includes(n.noticeId))),
-  getWorkspaceProfile: (email) => query((db) => db.workspaceProfiles.find((p) => p.email === email) ?? null),
-  listWorkspaceProfiles: () => query((db) => db.workspaceProfiles),
-  saveWorkspaceProfile: (email, patch) => mutate((db) => {
-    let profile = db.workspaceProfiles.find((p) => p.email === email);
-    if (!profile) {
-      profile = { email, designation: "", department: "", project: "", floor: "", desk: "", focus: "", mode: null, presenceDate: "" };
-      db.workspaceProfiles.push(profile);
-    }
-    Object.assign(profile, patch, { email });
-    return { result: profile, changed: true };
-  }),
   // One row per person per day: a fresh check-in reopens the day's row (back in = in again),
   // so the row's checkInAt is always the most recent arrival.
   checkIn: (row) =>
@@ -191,9 +180,6 @@ export const jsonStore: Store = {
       return { result: true, changed: true };
     }),
   listPollVotes: (ids) => query((db) => db.pollVotes.filter((v) => ids.includes(v.noticeId))),
-  // The afternoon round, for callers from before rounds existed.
-  setTea: (date, email, going) => jsonStore.setTeaAnswer(date, "pm", email, going ? true : null),
-  listTea: (date) => query((db) => db.tea.filter((t) => t.date === date && (t.round ?? "pm") === "pm" && (t.going ?? true)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
   setTeaAnswer: (date, round, email, going) =>
     mutate((db) => {
       db.tea = db.tea.filter((t) => !(t.date === date && (t.round ?? "pm") === round && t.email === email));
@@ -251,16 +237,6 @@ export const jsonStore: Store = {
     }),
   listSnackVotes: () => query((db) => db.snackVotes),
   clearSnackVotes: (itemId) => mutate((db) => { db.snackVotes = db.snackVotes.filter((v) => v.itemId !== itemId); return { result: undefined, changed: true }; }),
-  addBook: (row) => mutate((db) => { db.books.push(row); return { result: row, changed: true }; }),
-  listBooks: () => query((db) => [...db.books].sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
-  setReading: (row) =>
-    mutate((db) => {
-      db.readings = db.readings.filter((r) => !(r.email === row.email && r.bookId === row.bookId));
-      db.readings.push(row);
-      return { result: row, changed: true };
-    }),
-  clearReading: (email, bookId) => mutate((db) => { db.readings = db.readings.filter((r) => !(r.email === email && r.bookId === bookId)); return { result: undefined, changed: true }; }),
-  listReadings: () => query((db) => db.readings),
   setBirthday: (email, birthday, show) =>
     mutate((db) => {
       const row = db.employees.find((e) => e.email === email);
@@ -306,7 +282,6 @@ export const jsonStore: Store = {
     }),
   listPlanOverrides: (email, from, to) =>
     query((db) => db.planOverrides.filter((r) => r.email === email && r.date >= from && r.date <= to).sort((a, b) => a.date.localeCompare(b.date))),
-  listPlanOverridesOn: (date) => query((db) => db.planOverrides.filter((r) => r.date === date)),
   listClosedDays: (from, to) => query((db) => db.closedDays.filter((r) => r.date >= from && r.date <= to).sort((a, b) => a.date.localeCompare(b.date))),
   addClosedDay: (row) =>
     mutate((db) => {
@@ -549,13 +524,6 @@ export const jsonStore: Store = {
     }),
   listSteps: () =>
     query((db) => db.steps.slice().sort((a, b) => b.date.localeCompare(a.date))),
-  listStepsByEmail: (email, limit) =>
-    query((db) =>
-      db.steps
-        .filter((s) => s.email === email)
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, limit),
-    ),
   setLeaveBalance: (row) =>
     mutate((db) => {
       const existing = db.leaveBalances.find((b) => b.email === row.email && b.year === row.year);

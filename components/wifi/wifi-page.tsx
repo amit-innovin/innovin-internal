@@ -1,6 +1,7 @@
 "use client";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
+import { useSearchParams } from "next/navigation";
+import { useWorkspaceReplace } from "@/components/m3/workspace-link";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, LoaderCircle } from "lucide-react";
@@ -57,7 +58,7 @@ function Packets({ onCatch, caught }: { onCatch: () => void; caught: number }) {
 // tell admins where it's slow. Reports keep no identity; only the result and the area.
 export function WifiPage() {
   const params = useSearchParams();
-  const router = useRouter();
+  const replace = useWorkspaceReplace();
   const days = useDays();
   const client = useQueryClient();
   const inOffice = days.data?.me?.mode === "office";
@@ -84,7 +85,7 @@ export function WifiPage() {
   useEffect(() => {
     if (params.get("check") === "1" && !started.current) {
       started.current = true;
-      router.replace("/wifi", { scroll: false });
+      replace("/wifi", { scroll: false });
       run();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

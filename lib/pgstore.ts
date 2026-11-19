@@ -1,5 +1,7 @@
 import { Pool } from "pg";
 import { pgConfig } from "./pgconfig";
+import { SNACK_ORDER_KEY } from "./snacks-rules";
+import type { SnackOrder } from "./types";
 import { STEP_GOAL } from "./steps";
 import type {
   NoticeRow,
@@ -661,6 +663,41 @@ class PgStore implements Store {
     if (itemId === null) await this.q(`DELETE FROM snack_picks WHERE date = $1 AND voter_ref = $2`, [date, voterRef]);
     else await this.q(`INSERT INTO snack_picks (date, voter_ref, item_id) VALUES ($1,$2,$3) ON CONFLICT (date, voter_ref) DO UPDATE SET item_id = EXCLUDED.item_id`, [date, voterRef, itemId]);
   }
+  async setSnackOrder(date: string, at: string | null) {
+    await this.init();
+    const client = await this.db().connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [SNACK_ORDER_KEY]);
+      const current = await client.query<{ value: SnackOrder | null }>("SELECT value FROM settings WHERE key = $1", [SNACK_ORDER_KEY]);
+      const order = current.rows[0]?.value;
+      if (at && order?.date !== date) {
+        const picked = await client.query(`SELECT id, ordered_at FROM snack_items
+          WHERE status = 'shelf' AND id IN (SELECT item_id FROM snack_picks WHERE date = $1) FOR UPDATE`, [date]);
+        const previous = Object.fromEntries(picked.rows.map((item) => {
+          return [item.id, item.ordered_at?.toISOString() ?? null];
+        }));
+        await client.query("UPDATE snack_items SET ordered_at = $1 WHERE id = ANY($2::text[])", [at, Object.keys(previous)]);
+        await client.query(`INSERT INTO settings (key, value) VALUES ($1, $2::jsonb)
+          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [SNACK_ORDER_KEY, JSON.stringify({ date, at, previous } satisfies SnackOrder)]);
+      } else if (!at && order?.date === date) {
+        if (order.previous) {
+          await client.query(`UPDATE snack_items AS item SET ordered_at = prior.value::timestamptz
+            FROM jsonb_each_text($1::jsonb) AS prior
+            WHERE item.id = prior.key AND item.status = 'shelf' AND item.ordered_at = $2`, [JSON.stringify(order.previous), order.at]);
+        } else {
+          await client.query("UPDATE snack_items SET ordered_at = NULL WHERE status = 'shelf' AND ordered_at = $1", [order.at]);
+        }
+        await client.query("DELETE FROM settings WHERE key = $1", [SNACK_ORDER_KEY]);
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
   async listSnackPicks(date: string) {
     const res = await this.q(`SELECT item_id, voter_ref FROM snack_picks WHERE date = $1`, [date]);
     return res.rows.map((r) => ({ itemId: r.item_id as string, voterRef: r.voter_ref as string }));
@@ -1007,7 +1044,7 @@ class PgStore implements Store {
   }
   async addSteps(email: string, date: string, add: number) {
     const res = await this.q(
-      `INSERT INTO steps (id, email, date, hit, steps, created_at) VALUES ($1,$2,$3,$4 >= $5,LEAST($4, 200000),now())
+      `INSERT INTO steps (id, email, date, hit, steps, created_at) VALUES ($1,$2,$3,$4::int >= $5::int,LEAST($4, 200000),now())
        ON CONFLICT (email, date) DO UPDATE SET steps = LEAST(COALESCE(steps.steps, 0) + $4, 200000), hit = steps.hit OR LEAST(COALESCE(steps.steps, 0) + $4, 200000) >= $5
        RETURNING steps, hit`,
       [crypto.randomUUID(), email, date, add, STEP_GOAL],

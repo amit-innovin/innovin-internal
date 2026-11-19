@@ -1,6 +1,6 @@
 "use client";
 // Admin › Today: "Needs you" first, then one compact card for the day in the office.
-import Link from "next/link";
+import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
 import { useState } from "react";
 import { CalendarX, ChevronRight, Cookie, Flag, Megaphone, ShieldCheck, Wifi, type LucideIcon } from "lucide-react";
 import { useAdminOverview, useSnacks, useTea, type AdminData } from "@/lib/queries";

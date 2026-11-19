@@ -1,6 +1,6 @@
 // Material 3 primitives from the prototype (docs/design/m3/). Styles live in app/m3.css.
 // Tappable things are buttons (filled, tonal, outlined, text) or rows with a chevron; cards and chips only inform.
-import Link from "next/link";
+import { WorkspaceLink as Link } from "@/components/m3/workspace-link";
 import { ChevronRight } from "lucide-react";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";

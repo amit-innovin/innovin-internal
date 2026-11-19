@@ -118,8 +118,8 @@ export function useWorkspace() {
   return useQuery({ queryKey: queryKeys.workspace, queryFn: () => fetchJSON<WorkspaceData>("/api/workspace") });
 }
 
-// ---- leave (read-only here; requests are still made on the legacy leave form) ----
-export type LeaveBalances = { signedIn: boolean; applyUrl?: string; ledger?: { type: "cl" | "sl" | "el" | "fl"; entitled: number; used: number; pending: number; remaining: number }[]; source?: "zoho-snapshot" | "app-only"; asOf?: string | null };
+// ---- leave (read-only here; apply in Zoho People) ----
+export type LeaveBalances = { signedIn: boolean; applyUrl?: string; ledger?: { type: "cl" | "sl" | "el" | "fl"; entitled: number; used: number; pending: number; remaining: number }[]; source?: "zoho-snapshot" | "app-only"; asOf?: string | null; zoho?: import("./zoho-people").ZohoLeaveResult };
 export type MyLeaveRequest = { id: string; type: "leave" | "wfh"; leaveType: string | null; halfDay: boolean; days: number; startDate: string; endDate: string; status: "pending" | "approved" | "rejected" | "cancelled" };
 
 export function useLeaveBalances() {
@@ -236,7 +236,7 @@ export type Snacks = {
   suggestions: SnackRow[];
   canManage: boolean;
   // picks (counts per item) only come to admins.
-  today: { open: boolean; orderAt: string; ordered: boolean; orderedAt?: string | null; picks?: { itemId: string; count: number }[]; mine: string | null };
+  today: { open: boolean; orderAt: string; ordered: boolean; orderedAt?: string | null; canUndo?: boolean; picks?: { itemId: string; count: number }[]; mine: string | null };
 };
 export function useSnackWrite<T>(method: "POST" | "PATCH") {
   const client = useQueryClient();

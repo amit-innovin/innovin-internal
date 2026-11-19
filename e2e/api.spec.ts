@@ -995,7 +995,7 @@ test.describe("Steps, Wi-Fi and notifications (Stage 5)", () => {
     expect(JSON.stringify((await (await b.get("/api/steps")).json()).league)).not.toContain(ea);
   });
 
-  test("a Wi-Fi report needs an office check-in and keeps no identity", async () => {
+  test("a Wi-Fi report needs an office check-in, stays anonymous and is only visible to admins", async ({ request }) => {
     const remote = await signedIn(email());
     const res = await remote.post("/api/wifi", { data: { quality: "poor", downMbps: 3, upMbps: 1, area: "Pantry" } });
     expect(res.status()).toBe(403);
@@ -1004,7 +1004,11 @@ test.describe("Steps, Wi-Fi and notifications (Stage 5)", () => {
     expect((await ctx.post("/api/wifi", { data: { quality: "poor", downMbps: 3, upMbps: 1, area: "Somewhere" } })).status()).toBe(400);
     const note = `Calls drop ${Date.now()}`;
     expect((await ctx.post("/api/wifi", { data: { quality: "poor", downMbps: 3, upMbps: 1, area: "Pantry", note } })).status()).toBe(200);
-    const row = (await (await ctx.get("/api/wifi")).json()).find((r: { note: string }) => r.note === note);
+    expect((await request.get("/api/wifi")).status()).toBe(401);
+    expect((await ctx.get("/api/wifi")).status()).toBe(401);
+    const reports = await (await admin()).get("/api/wifi");
+    expect(reports.status()).toBe(200);
+    const row = (await reports.json()).find((r: { note: string }) => r.note === note);
     expect(row).toMatchObject({ quality: "poor", area: "Pantry" });
     expect(JSON.stringify(row)).not.toMatch(/@innovinlabs\.com|submitterRef/);
     expect((await ctx.get("/api/wifi/ping")).status()).toBe(204);

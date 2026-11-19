@@ -35,7 +35,7 @@ it("reads only the mapped employee and keeps missing balances distinct from zero
   const result = await zohoLeave("a@innovinlabs.com", 2026);
   expect(result.state).toBe("ready");
   expect(result.data?.balances.find(b => b.type === "sl")?.remaining).toBeNull();
-  expect(result.data?.approved).toHaveLength(1);
+  expect(result.data?.approved).toMatchObject([{ dates: ["2026-11-02"] }]);
   expect(JSON.stringify(result)).not.toContain("Private reason");
   expect((await zohoLeave("b@innovinlabs.com", 2026)).state).toBe("unmapped");
   expect(fetcher).toHaveBeenCalledTimes(3);
@@ -46,4 +46,27 @@ it("fails closed when the provider returns another employee", async () => {
   const result = await zohoLeave("a@innovinlabs.com", 2026);
   expect(result.state).toBe("unavailable");
   expect(result.data).toBeUndefined();
+});
+
+it("groups team approval dates by mapped employee and ignores zero-day entries", async () => {
+  configure();
+  vi.stubEnv("ZOHO_EMPLOYEE_IDS", JSON.stringify({ "a@innovinlabs.com": employee, "b@innovinlabs.com": "42" }));
+  const fetcher = vi.fn(async (input: string | URL) => {
+    const url = new URL(input.toString());
+    if (url.hostname.startsWith("accounts.")) return Response.json({ access_token: "fixture-token", expires_in: 3600 });
+    expect(JSON.parse(url.searchParams.get("employee")!)).toEqual([employee, "42"]);
+    expect(url.pathname).toContain("leaves/records");
+    return Response.json({ records: { r1: {
+      "Employee.ID": "42", ApprovalStatus: "Approved", Unit: "Days", From: "2026-11-02", To: "2026-11-03",
+      Leavetype: "Casual", Days: { "2026-11-02": { LeaveCount: 0 }, "2026-11-03": { LeaveCount: 0.5 } },
+    } } });
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const { zohoTeamLeave, approvedZohoLeaveOn } = await import("@/lib/zoho-people");
+  const records = await zohoTeamLeave(["b@innovinlabs.com", "a@innovinlabs.com", "unmapped@innovinlabs.com"], 2026);
+  expect(records.get("a@innovinlabs.com")).toEqual([]);
+  expect(records.has("unmapped@innovinlabs.com")).toBe(false);
+  expect(approvedZohoLeaveOn(records.get("b@innovinlabs.com"), "2026-11-02")).toBeUndefined();
+  expect(approvedZohoLeaveOn(records.get("b@innovinlabs.com"), "2026-11-03")?.days).toBe(0.5);
+  expect(fetcher).toHaveBeenCalledTimes(2);
 });

@@ -1,7 +1,8 @@
 "use client";
 // Admin › Speak up: reported Feed posts first (Keep clears the reports, Remove deletes the post),
 // then the anonymous messages with the status and note their sender sees.
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useWorkspaceReplace } from "@/components/m3/workspace-link";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { useAllGrievances, useKeepPost, useRemovePost, useReported, useSetGrievance, type Grievance, type ReportedPost } from "@/lib/queries";
@@ -16,7 +17,7 @@ export function SpeakUpPage() {
   const list = useAllGrievances();
   const reported = useReported();
   const params = useSearchParams();
-  const router = useRouter();
+  const replace = useWorkspaceReplace();
   const filter = (["open", "resolved", "all"] as const).find((f) => f === params.get("show")) ?? "open";
   if (!list.data) return <><PageHead title="Speak up" /><Loading what="Speak up" error={list.error} onRetry={() => list.refetch()} /></>;
   const all = [...list.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -34,7 +35,7 @@ export function SpeakUpPage() {
               <ul className="m3a-list m3a-topline">{posts.map((p) => <Reported key={p.id} post={p} />)}</ul>
             </section>
           )}
-          <Chips label="Filter messages" value={filter} onPick={(f: Filter) => router.replace(f === "open" ? "/admin/speak-up" : `/admin/speak-up?show=${f}`, { scroll: false })}
+          <Chips label="Filter messages" value={filter} onPick={(f: Filter) => replace(f === "open" ? "/admin/speak-up" : `/admin/speak-up?show=${f}`, { scroll: false })}
             options={[["open", `Open ${open}`], ["resolved", `Resolved ${all.length - open}`], ["all", `All ${all.length}`]]} />
           {shown.map((g) => <Message key={g.id} g={g} />)}
           {shown.length === 0 && <div className="m3a-card"><p className="m3-body" style={{ margin: 0, color: "var(--m3-on-surface-variant)" }}>Nothing here.</p></div>}

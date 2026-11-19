@@ -1,5 +1,5 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { useWorkspaceReplace } from "@/components/m3/workspace-link";
 import type { CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { StatusChip } from "@/components/m3";
@@ -52,14 +52,18 @@ const LEGEND: [string, CSSProperties][] = [
 const PACE_TONE = { success: "success", warn: "warn", neutral: "neutral" } as const;
 
 export function Calendar({ view, onPick }: { view: DaysView; onPick: (day: Day, action: DayAction) => void }) {
-  const router = useRouter();
+  const replace = useWorkspaceReplace();
   const balances = useLeaveBalances();
   const { month, today } = view;
-  const go = (by: number) => router.replace(`/days?month=${addMonths(month, by)}`, { scroll: false });
+  const go = (by: number) => replace(`/days?month=${addMonths(month, by)}`, { scroll: false });
   const offset = (new Date(`${month}-01T00:00:00Z`).getUTCDay() + 6) % 7;
   const pace = paceVerdict({ done: view.summary.done, planned: plannedCount(view), target: view.summary.target, month });
   const left = view.days.filter((d) => d.date >= today && d.working).length;
-  const ledger = (balances.data?.ledger ?? []).filter((l) => l.type in LEAVE_NAMES);
+  const zoho = balances.data?.zoho;
+  const ledger = (zoho?.data?.balances ?? balances.data?.ledger ?? []).filter((l) => l.type in LEAVE_NAMES);
+  const checkedAt = zoho?.data?.fetchedAt ?? balances.data?.asOf;
+  const source = zoho?.data ? (zoho.state === "stale" ? "Zoho People · last available" : "Zoho People")
+    : balances.data?.source === "zoho-snapshot" ? "Copied Zoho balance" : "App estimate";
 
   return (
     <section aria-labelledby="days-month" className="m3-card" style={{ padding: "16px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -74,10 +78,10 @@ export function Calendar({ view, onPick }: { view: DaysView; onPick: (day: Day, 
           <span className="m3-small" style={{ fontWeight: 600, color: "var(--m3-on-surface)" }}>Leave left</span>
           {ledger.map((l) => (
             <span key={l.type} style={{ height: 28, padding: "0 10px", borderRadius: 8, background: "#F1F4FA", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 4 }}>
-              {LEAVE_NAMES[l.type]} <b style={{ fontVariantNumeric: "tabular-nums", color: l.type === "fl" ? "#8A5300" : "var(--m3-primary)" }}>{l.remaining}</b>
+              {LEAVE_NAMES[l.type]} <b style={{ fontVariantNumeric: "tabular-nums", color: l.type === "fl" ? "#8A5300" : "var(--m3-primary)" }}>{l.remaining ?? "—"}</b>
             </span>
           ))}
-          {balances.data?.asOf && <span className="m3-small" style={{ flexBasis: "100%" }}>Updated {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).format(new Date(balances.data.asOf))}</span>}
+          <span className="m3-small" style={{ flexBasis: "100%" }}>{source}{checkedAt ? ` · ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).format(new Date(checkedAt))}` : ""}</span>
         </div>
       )}
       {pace.state === "short" && month === today.slice(0, 7) && (

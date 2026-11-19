@@ -90,6 +90,23 @@ export function storeContract(name: string, getStore: () => Promise<Store>, rese
       expect(await store.listSnackPicks("2026-11-18")).toEqual([{ itemId: "fruit", voterRef: "ref-b" }]);
     });
 
+    it("records a snack order once and restores the original timestamps on undo", async () => {
+      const date = "2026-11-18";
+      const previous = "2026-11-17T08:00:00.000Z";
+      const at = `${date}T08:00:00.000Z`;
+      await store.addSnack({ id: "samosa", name: "Samosa", note: "", status: "shelf", orderedAt: previous, createdAt: previous });
+      await store.addSnack({ id: "fruit", name: "Fruit", note: "", status: "shelf", orderedAt: null, createdAt: previous });
+      await store.setSnackPick(date, "ref-a", "samosa");
+      await store.setSnackPick(date, "ref-b", "fruit");
+      await store.setSnackOrder(date, at);
+      await Promise.all([store.setSnackOrder(date, `${date}T09:00:00.000Z`), store.setSnackOrder(date, `${date}T10:00:00.000Z`)]);
+      expect((await store.getSnack("samosa"))?.orderedAt).toBe(at);
+      await store.setSnackOrder(date, null);
+      await store.setSnackOrder(date, null);
+      expect((await store.getSnack("samosa"))?.orderedAt).toBe(previous);
+      expect((await store.getSnack("fruit"))?.orderedAt).toBeNull();
+    });
+
     it("stores settings by key", async () => {
       expect(await store.getSetting("snackTea")).toBeNull();
       await store.setSetting("snackTea", { orderAt: "12:30" });

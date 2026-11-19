@@ -8,6 +8,7 @@ import { weekdayIndex } from "@/lib/office-days";
 import { addMonths, PLAN_MONTHS_AHEAD } from "@/lib/plan";
 import { store } from "@/lib/store";
 import { todayIST, validDate } from "@/lib/time";
+import { approvedZohoLeaveOn, zohoLeave } from "@/lib/zoho-people";
 
 export const dynamic = "force-dynamic";
 
@@ -23,12 +24,15 @@ export async function PATCH(req: NextRequest) {
   if (typeof date !== "string" || !validDate(date) || typeof body?.planned !== "boolean") return badRequest("Send a date and whether you plan to come in");
 
   const today = todayIST();
-  const [me, closed, away] = await Promise.all([store.getEmployee(session.email), closedMap(date, date), store.listAwayByEmail(session.email, 200)]);
+  const unavailable = () => NextResponse.json({ error: "You can't plan that day", code: "not-plannable" }, { status: 409 });
+  if (date <= today || date.slice(0, 7) > addMonths(today.slice(0, 7), PLAN_MONTHS_AHEAD)) return unavailable();
+  const [me, closed, away, zoho] = await Promise.all([
+    store.getEmployee(session.email), closedMap(date, date), store.listAwayByEmail(session.email, 200),
+    zohoLeave(session.email, Number(date.slice(0, 4))),
+  ]);
   if (!me) return NextResponse.json({ error: "Sign in again to plan your days" }, { status: 404 });
   const onLeave = away.some((r) => r.type === "leave" && (r.status === "pending" || r.status === "approved") && date >= r.startDate && date <= r.endDate);
-  if (date <= today || date.slice(0, 7) > addMonths(today.slice(0, 7), PLAN_MONTHS_AHEAD) || !isWorkingDay(date, closed) || onLeave) {
-    return NextResponse.json({ error: "You can't plan that day", code: "not-plannable" }, { status: 409 });
-  }
+  if (!isWorkingDay(date, closed) || onLeave || approvedZohoLeaveOn(zoho.data?.approved, date)) return unavailable();
   const usual = (me.officeDays ?? []).includes(weekdayIndex(date));
   await store.setPlanOverride(session.email, date, body.planned === usual ? null : body.planned);
   return NextResponse.json(await daysView(session.email, date.slice(0, 7)));

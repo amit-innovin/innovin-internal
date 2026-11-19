@@ -1,5 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { SNACK_ORDER_KEY } from "./snacks-rules";
+import type { SnackOrder } from "./types";
 import { STEP_GOAL } from "./steps";
 import type {
   NoticeRow,
@@ -205,6 +207,28 @@ export const jsonStore: Store = {
       if (itemId !== null) db.snackPicks.push({ date, voterRef, itemId });
       return { result: undefined, changed: true };
     }),
+  setSnackOrder: (date, at) => mutate((db) => {
+    const order = db.settings[SNACK_ORDER_KEY] as SnackOrder | null | undefined;
+    if ((at && order?.date === date) || (!at && order?.date !== date)) return { result: undefined, changed: false };
+    if (at) {
+      const picked = new Set(db.snackPicks.filter((pick) => pick.date === date).map((pick) => pick.itemId));
+      const previous: Record<string, string | null> = {};
+      for (const item of db.snacks) {
+        if (item.status !== "shelf" || !picked.has(item.id)) continue;
+        previous[item.id] = item.orderedAt ?? null;
+        item.orderedAt = at;
+      }
+      db.settings[SNACK_ORDER_KEY] = { date, at, previous } satisfies SnackOrder;
+    } else if (order) {
+      for (const item of db.snacks) {
+        if (item.status === "shelf" && item.orderedAt === order.at && (!order.previous || Object.hasOwn(order.previous, item.id))) {
+          item.orderedAt = order.previous?.[item.id] ?? null;
+        }
+      }
+      db.settings[SNACK_ORDER_KEY] = null;
+    }
+    return { result: undefined, changed: true };
+  }),
   listSnackPicks: (date) => query((db) => db.snackPicks.filter((p) => p.date === date).map(({ itemId, voterRef }) => ({ itemId, voterRef }))),
   getSetting: <T,>(key: string) => query((db) => (key in db.settings ? (db.settings[key] as T) : null)),
   setSetting: (key, value) => mutate((db) => { db.settings[key] = value; return { result: undefined, changed: true }; }),

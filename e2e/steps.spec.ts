@@ -20,6 +20,7 @@ test.describe("10K steps", () => {
       await page.getByRole("button", { name: "Add", exact: true }).click();
       await expect(today).toContainText(total);
     }
+    await page.reload();
     await expect(today).toContainText("5,000");
     await expect(page.getByRole("region", { name: "Last 7 days" })).toBeVisible();
   });

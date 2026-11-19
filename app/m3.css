@@ -265,3 +265,25 @@
   .m3 .m3a-wnote { grid-column: 1 / -1; }
   .m3 .m3a-warea { grid-column: 1 / -1; order: -1; font-weight: 600; }
 }
+
+.m3-workspace { min-width: 0; }
+.m3-workspace > .m3-page { margin-inline: auto; }
+.m3-workspace-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 14px; }
+.m3-workspace-nav a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  min-height: 44px;
+  border-radius: 22px;
+  color: var(--m3-on-surface-variant);
+  font-size: 14px;
+  font-weight: 600;
+}
+.m3-workspace-nav a:hover { background: var(--m3-surface-container); }
+.m3-workspace-nav a[aria-current="page"] { background: var(--m3-primary-container); color: var(--m3-on-primary-container); }
+.m3-workspace-tools, .m3-home-grid { display: grid; gap: 16px; min-width: 0; }
+@media (min-width: 1100px) {
+  .m3-workspace-admin, .m3-workspace-overview { max-width: 1140px; }
+  .m3-workspace-overview > .m3-home { max-width: none; }
+  .m3-home-grid { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+}

@@ -304,7 +304,7 @@ test.describe("API: behaviour", () => {
     expect(mine.me.checkOutAt).toBeNull();
   });
 
-  test("attendance GET exposes only the count and the caller's own status", async () => {
+  test("attendance GET exposes only the caller's own status: no headcount", async () => {
     const who = email();
     const ctx = await signedIn(who);
     await ctx.post("/api/attendance", { data: { email: who, action: "in" } });
@@ -315,10 +315,10 @@ test.describe("API: behaviour", () => {
     expect(mine.me.checkOutAt).toBeNull();
     // `office` (the geofence) is exposed on purpose — the client needs it to decide auto
     // check-in. Everyone else's sessions stay hidden.
-    expect(Object.keys(mine).sort()).toEqual(["count", "email", "me", "office"]);
+    expect(Object.keys(mine).sort()).toEqual(["email", "me", "office"]);
 
     const stranger = await (await (await signedIn(email())).get("/api/attendance")).json();
-    expect(stranger.count).toBe(mine.count);
+    expect(stranger.count).toBeUndefined();
     expect(stranger.email).not.toBe(who);
     expect(stranger.me).toBeNull();
   });
@@ -583,12 +583,14 @@ test.describe("API: behaviour", () => {
     noRef(overview);
   });
 
-  test("people directory exposes names and presence tags only to employees, never coords or refs", async () => {
+  test("the people directory (who's in, since when, where) is for admins only, never coords or refs", async () => {
     const who = `presence.${Date.now().toString(36)}@innovinlabs.com`; // firstName → "Presence"
     const ctx = await signedIn(who, "Presence");
     await ctx.post("/api/attendance", { data: { email: who, action: "in", lat: 12.9352, lng: 77.6241 } });
+    // Members see colleagues in the office on Home (first names, from /api/days), not this.
+    expect((await ctx.get("/api/people")).status()).toBe(401);
 
-    const res = await (await ctx.get("/api/people")).json();
+    const res = await (await (await admin()).get("/api/people")).json();
     const me = res.inToday.find((p: { name: string }) => p.name === "Presence");
     expect(me).toMatchObject({ name: "Presence", where: "office" });
     expect(me.since).toBeTruthy();
@@ -1007,6 +1009,13 @@ test.describe("Steps, Wi-Fi and notifications (Stage 5)", () => {
     expect(JSON.stringify(row)).not.toMatch(/@innovinlabs\.com|submitterRef/);
     expect((await ctx.get("/api/wifi/ping")).status()).toBe(204);
     expect((await ctx.post("/api/wifi/upload", { data: "x".repeat(10_000), headers: { "Content-Type": "application/octet-stream" } })).status()).toBe(204);
+  });
+
+  test("Home's In office today carries first names, never a headcount", async () => {
+    const viewer = await signedIn(email());
+    const days = await (await viewer.get("/api/days")).json();
+    expect(Array.isArray(days.around.inToday.names)).toBe(true);
+    expect(days.around.inToday.count).toBeUndefined();
   });
 
   test("the workspace endpoint gives a member only their own data: no headcounts, no one else's day", async () => {

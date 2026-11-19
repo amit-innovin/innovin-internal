@@ -49,7 +49,7 @@ function view(over: Partial<DaysView> = {}): DaysView {
       day("2026-11-20", { working: false, off: "Holiday" }),
       day("2026-11-23", { planned: true }),
     ],
-    around: { inToday: { count: 0, names: [] }, next: { date: "2026-11-17", count: 0, names: [], mine: false } },
+    around: { inToday: { names: [] }, next: { date: "2026-11-17", count: 0, names: [], mine: false } },
     ...over,
   } as DaysView;
 }

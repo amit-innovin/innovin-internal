@@ -12,12 +12,9 @@ export type SessionLite = { email: string; name: string };
 
 export async function attendanceStatus(email: string | null, ip: string | null) {
   const date = todayIST();
-  const [rows, day] = await Promise.all([
-    store.listAttendance(date),
-    email ? store.getAttendance(email, date) : Promise.resolve(null),
-  ]);
+  const day = email ? await store.getAttendance(email, date) : null;
+  // No headcount: who's in is shown to members only as first names on Home.
   return {
-    count: new Set(rows.map((r) => r.email)).size,
     email,
     // Lets the client do confident auto check-in inside the geofence. The office's own
     // coordinates aren't secret to the people who work there.

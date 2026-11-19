@@ -92,7 +92,8 @@ export async function daysView(email: string, month: string) {
     isOfficeDayToday: plannedOn({ date: today, officeDays, override: todayOverride[0]?.planned, working: isWorkingDay(today, closed), leave: false }),
     days,
     around: {
-      inToday: { count: inToday.length, names: inToday.slice(0, 6), people: canWave ? inOffice.filter((r) => r.email !== email).map((r) => ({ email: r.email, name: firstName(byEmail.get(r.email)?.name ?? "", r.email), sayHi: !!byEmail.get(r.email)?.sayHi })) : [] },
+      // First names, never a headcount (welfare: no "N in today" pressure).
+      inToday: { names: inToday.slice(0, 6), people: canWave ? inOffice.filter((r) => r.email !== email).map((r) => ({ email: r.email, name: firstName(byEmail.get(r.email)?.name ?? "", r.email), sayHi: !!byEmail.get(r.email)?.sayHi })) : [] },
     },
   };
 }

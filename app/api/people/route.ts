@@ -15,9 +15,11 @@ import type { Role } from "@/lib/types";
 // The office directory: everyone who's signed in, plus who's physically/virtually
 // in today. Presence shows names and broad tags, with work emails only for directory
 // employees. Raw coordinates are never returned.
+// Admins only: who's in, since when and where. Members see colleagues in the office on Home,
+// as first names (from /api/days).
 export async function GET(req: NextRequest) {
-  if (!verifyUserSession(req.cookies.get(USER_COOKIE)?.value)) {
-    return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
+  if (!verifyUserSession(req.cookies.get(USER_COOKIE)?.value) || !(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const [employees, dayRows] = await Promise.all([store.listEmployees(), store.listAttendance(todayIST())]);
   const byEmail = new Map(employees.map((e) => [e.email, e]));

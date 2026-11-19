@@ -19,7 +19,7 @@ const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : n
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-// Employee-only: today's headcount and the verified caller's own status.
+// Employee-only: the verified caller's own status (no headcount).
 export async function GET(req: NextRequest) {
   const session = verifyUserSession(req.cookies.get(USER_COOKIE)?.value);
   if (!session) return NextResponse.json({ error: "Sign in with your Innovin Google account" }, { status: 401 });
